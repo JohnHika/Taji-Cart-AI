@@ -1,0 +1,42 @@
+# Root-level
+*.log
+*.env
+.env.*  
+*.pdf
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Node dependencies
+client/node_modules/
+server/node_modules/
+
+# Logs and temporary files
+client/npm-debug.log*
+server/npm-debug.log*
+client/yarn-debug.log*
+client/yarn-error.log*
+server/yarn-debug.log*
+server/yarn-error.log*
+
+# Build outputs
+client/dist/
+server/dist/
+build/
+coverage/
+
+# Vite/React stuff
+client/.vite/
+client/.cache/
+
+# VS Code settings (optional but helpful)
+.vscode/
+
+# Python cache (since you have a Python script too)
+__pycache__/
+*.py[cod]
+*.sqlite3
+
+# Uploads (optional - only if you don't want to track uploaded files)
+server/uploads/

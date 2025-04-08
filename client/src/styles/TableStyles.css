@@ -1,0 +1,188 @@
+/* Custom styles for the table header */
+.custom-table th {
+  background-color: #333;
+  color: white;
+  padding: 0.75rem 1rem;
+  text-align: left;
+  font-weight: 500;
+}
+
+/* Custom styles for table cells */
+.custom-table td {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid #eee;
+  vertical-align: middle;
+}
+
+/* Hover effect for table rows */
+.custom-table tbody tr:hover {
+  background-color: #f9fafb;
+}
+
+/* Add these styles to handle text overflow */
+
+.custom-table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed; /* Important for controlling column widths */
+}
+
+/* Fixed header styles with text wrapping */
+.custom-table thead th {
+  position: sticky;
+  top: 0;
+  background-color: #333;
+  color: white;
+  padding: 0.75rem 1rem;
+  text-align: left;
+  font-weight: 500;
+  z-index: 10;
+  white-space: normal; /* Allow text to wrap */
+  word-break: break-word; /* Break long words if needed */
+  overflow-wrap: break-word; /* Modern property for word breaking */
+  hyphens: auto; /* Add hyphens when breaking words */
+  max-width: 200px; /* Maximum width for header cells */
+}
+
+/* Table cell styles with text wrapping */
+.custom-table tbody td {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid #eee;
+  vertical-align: middle;
+  white-space: normal; /* Allow text to wrap */
+  word-break: break-word; /* Break long words if needed */
+  overflow-wrap: break-word; /* Modern property for word breaking */
+  max-width: 250px; /* Maximum width for data cells */
+  min-width: 100px; /* Minimum width to prevent tiny columns */
+}
+
+/* Special handling for specific column types */
+.custom-table .image-cell {
+  width: 100px; /* Fixed width for image columns */
+  max-width: 100px;
+}
+
+.custom-table .actions-cell {
+  width: 120px; /* Fixed width for action columns */
+  max-width: 120px;
+  white-space: nowrap; /* Keep actions on single line */
+}
+
+.custom-table .name-cell {
+  min-width: 150px; /* Minimum width for name columns */
+}
+
+/* Ellipsis for very long text with tooltip option */
+.custom-table .truncate-text {
+  max-height: 3rem; /* About 3 lines of text */
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  cursor: pointer; /* Indicates the user can interact */
+}
+
+/* Ensure proper table layout */
+.custom-table table {
+  width: 100%;
+  border-collapse: collapse;
+  color: #1f2937; /* text-gray-800 */
+}
+
+/* Base table styles (light mode) */
+.custom-table thead {
+  background-color: #f9fafb; /* bg-gray-50 */
+  border-bottom: 1px solid #e5e7eb; /* border-gray-200 */
+}
+
+.custom-table th {
+  padding: 1rem;
+  text-align: left;
+  font-weight: 500;
+  color: #4b5563; /* text-gray-600 */
+}
+
+.custom-table tbody tr {
+  border-bottom: 1px solid #e5e7eb; /* border-gray-200 */
+}
+
+.custom-table tbody tr:hover {
+  background-color: #f3f4f6; /* hover:bg-gray-100 */
+}
+
+.custom-table td {
+  padding: 1rem;
+  color: #4b5563; /* text-gray-600 */
+}
+
+/* Dark mode table styles - these will be applied when dark mode is active */
+@media (prefers-color-scheme: dark) {
+  .custom-table table {
+    color: #f9fafb; /* dark:text-gray-50 */
+  }
+  
+  .custom-table thead {
+    background-color: #1f2937; /* dark:bg-gray-800 */
+    border-bottom: 1px solid #374151; /* dark:border-gray-700 */
+  }
+  
+  .custom-table th {
+    color: #e5e7eb; /* dark:text-gray-200 */
+  }
+  
+  .custom-table tbody tr {
+    border-bottom: 1px solid #374151; /* dark:border-gray-700 */
+  }
+  
+  .custom-table tbody tr:hover {
+    background-color: #2d3748; /* dark:hover:bg-gray-700 */
+  }
+  
+  .custom-table td {
+    color: #e5e7eb; /* dark:text-gray-200 */
+  }
+}
+
+/* If your app has a class-based dark mode toggle, use this instead */
+.dark .custom-table table {
+  color: #f9fafb; /* dark:text-gray-50 */
+}
+
+.dark .custom-table thead {
+  background-color: #1f2937; /* dark:bg-gray-800 */
+  border-bottom: 1px solid #374151; /* dark:border-gray-700 */
+}
+
+.dark .custom-table th {
+  color: #e5e7eb; /* dark:text-gray-200 */
+}
+
+.dark .custom-table tbody tr {
+  border-bottom: 1px solid #374151; /* dark:border-gray-700 */
+}
+
+.dark .custom-table tbody tr:hover {
+  background-color: #2d3748; /* dark:hover:bg-gray-700 */
+}
+
+.dark .custom-table td {
+  color: #e5e7eb; /* dark:text-gray-200 */
+}
+
+/* Ensure transitions work for both light and dark mode */
+.custom-table table,
+.custom-table thead,
+.custom-table tbody,
+.custom-table tr,
+.custom-table th,
+.custom-table td {
+  transition-property: background-color, border-color, color;
+  transition-duration: 200ms;
+}
+
+/* For horizontal scrolling on small screens */
+@media (max-width: 768px) {
+  .custom-table table {
+    min-width: 650px;
+  }
+}
