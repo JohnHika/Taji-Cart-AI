@@ -3,6 +3,7 @@ import App from '../App';
 import MpesaPaymentStatus from '../components/MpesaPaymentStatus';
 import PrivateRoute from '../components/PrivateRoute';
 import Dashboard from '../layouts/Dashboard';
+import DeliveryLayout from '../layouts/DeliveryLayout';
 import ActiveCampaigns from '../pages/ActiveCampaigns';
 import Address from '../pages/Address';
 import AdminChatMonitor from '../pages/admin/AdminChatMonitor';
@@ -10,10 +11,15 @@ import AllOrdersAdmin from '../pages/admin/AllOrdersAdmin';
 import ChatSessionView from '../pages/admin/ChatSessionView';
 import CommunityPerksAdmin from '../pages/admin/CommunityPerksAdmin';
 import LoyaltyProgramAdmin from '../pages/admin/LoyaltyProgramAdmin';
-import UsersAdmin from '../pages/admin/UsersAdmin'; // Import the UsersAdmin component
+import UsersAdmin from '../pages/admin/UsersAdmin';
 import CategoryPage from '../pages/CategoryPage';
 import Checkout from '../pages/CheckoutPage';
 import CommunityPerks from '../pages/CommunityPerks';
+import ActiveDeliveries from '../pages/delivery/ActiveDeliveries';
+import CompletedDeliveries from '../pages/delivery/CompletedDeliveries';
+import DeliveryDashboard from '../pages/delivery/Dashboard';
+import DeliveryHistory from '../pages/delivery/DeliveryHistory';
+import DeliveryMap from '../pages/delivery/DeliveryMap';
 import DeliverySimulator from '../pages/DeliverySimulator';
 import ErrorPage from '../pages/ErrorPage';
 import Home from '../pages/Home';
@@ -67,24 +73,24 @@ const router = createBrowserRouter([
           </PrivateRoute>
         )
       },
+      // Ensure category routes are properly defined
       {
         path: 'categories',
         element: <CategoryPage />
       },
       {
+        path: 'product',
+        element: <ProductPage />
+      },
+      {
         path: 'subcategory',
         element: <SubCategoryPage />
       },
+      // Fixed pattern to match category and subcategory URLs
       {
-        path: 'campaigns',
-        element: <ActiveCampaigns />
-      },
-      // Updated pattern to match URLs with leading hyphens
-      {
-        path: '-:categoryName-:categoryId/:subcategoryName-:subcategoryId',
+        path: ':categoryName-:categoryId',
         element: <ProductListPage />
       },
-      // Original pattern for backward compatibility
       {
         path: ':categoryName-:categoryId/:subcategoryName-:subcategoryId',
         element: <ProductListPage />
@@ -94,12 +100,43 @@ const router = createBrowserRouter([
         element: <ProductDisplayPage />
       },
       {
+        path: 'campaigns',
+        element: <ActiveCampaigns />
+      },
+      {
         path: 'success',
         element: <Success />
       },
       {
         path: 'mpesa-payment-status',
         element: <MpesaPaymentStatus />
+      },
+      // Delivery routes with specialized layout
+      {
+        path: 'delivery',
+        element: <DeliveryLayout />,
+        children: [
+          {
+            path: 'dashboard',
+            element: <Dashboard />
+          },
+          {
+            path: 'active',
+            element: <ActiveDeliveries />
+          },
+          {
+            path: 'completed',
+            element: <CompletedDeliveries />
+          },
+          {
+            path: 'history',
+            element: <DeliveryHistory />
+          },
+          {
+            path: 'map',
+            element: <DeliveryMap />
+          }
+        ]
       },
       {
         path: 'dashboard',
@@ -208,6 +245,27 @@ const router = createBrowserRouter([
                 <ActiveCampaigns />
               </PrivateRoute>
             )
+          },
+          // Delivery specific routes
+          {
+            path: 'delivery/dashboard',
+            element: <DeliveryDashboard />
+          },
+          {
+            path: 'delivery/active',
+            element: <ActiveDeliveries />
+          },
+          {
+            path: 'delivery/completed',
+            element: <CompletedDeliveries />
+          },
+          {
+            path: 'delivery/history',
+            element: <DeliveryHistory />
+          },
+          {
+            path: 'delivery/map',
+            element: <DeliveryMap />
           }
         ]
       },

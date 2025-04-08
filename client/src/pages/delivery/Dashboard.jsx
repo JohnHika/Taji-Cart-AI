@@ -12,6 +12,8 @@ import {
     FaUser
 } from 'react-icons/fa';
 import { useSelector } from 'react-redux';
+import Axios from '../../utils/Axios';
+import AxiosToastError from '../../utils/AxiosToastError';
 
 const Dashboard = () => {
   const [dashboardData, setDashboardData] = useState(null);
@@ -24,83 +26,48 @@ const Dashboard = () => {
     const fetchDashboardData = async () => {
       try {
         setLoading(true);
+        setError(null);
         
-        // Placeholder API calls - replace with your actual endpoints
-        // const dashboardResponse = await Axios({
-        //   url: '/api/delivery/dashboard',
-        //   method: 'GET'
-        // });
-        
-        // For now, using dummy data
-        setDashboardData({
-          pendingDeliveries: 3,
-          todayDeliveries: 5,
-          totalDeliveries: 42,
-          averageRating: 4.8
+        // Get delivery driver stats
+        const statsResponse = await Axios({
+          url: '/api/delivery/stats',
+          method: 'GET'
         });
         
-        setActiveOrders([
-          {
-            _id: '1',
-            orderId: 'ORD38912',
-            createdAt: new Date(),
-            status: 'driver_assigned',
-            customer: {
-              name: 'Jane Smith',
-              address: '123 Main St, Nairobi',
-              phone: '+254712345678'
-            },
-            deliveryAddress: '123 Main St, Nairobi, Kenya',
-            total: 2500
-          },
-          {
-            _id: '2',
-            orderId: 'ORD38915',
-            createdAt: new Date(),
-            status: 'out_for_delivery',
-            customer: {
-              name: 'John Doe',
-              address: '456 Park Ave, Nairobi',
-              phone: '+254723456789'
-            },
-            deliveryAddress: '456 Park Ave, Nairobi, Kenya',
-            total: 1800
-          }
-        ]);
+        if (statsResponse.data.success) {
+          setDashboardData(statsResponse.data.data);
+        } else {
+          throw new Error(statsResponse.data.message || 'Failed to load dashboard stats');
+        }
         
-        setError(null);
-      } catch (err) {
-        console.error('Error fetching delivery dashboard data:', err);
-        setError('Failed to load dashboard data. Please try again.');
-        toast.error('Error loading dashboard data');
+        // Get active deliveries
+        const activeResponse = await Axios({
+          url: '/api/delivery/active-orders',
+          method: 'GET'
+        });
+        
+        if (activeResponse.data.success) {
+          setActiveOrders(activeResponse.data.data || []);
+        } else {
+          throw new Error(activeResponse.data.message || 'Failed to load active deliveries');
+        }
+        
+      } catch (error) {
+        console.error('Error fetching delivery dashboard data:', error);
+        setError(error.message || 'Failed to load dashboard data. Please try again later.');
+        AxiosToastError(error);
       } finally {
         setLoading(false);
       }
     };
     
     fetchDashboardData();
+    
+    // Set up polling to refresh data every minute
+    const intervalId = setInterval(fetchDashboardData, 60000);
+    
+    return () => clearInterval(intervalId);
   }, []);
-  
-  const handleStatusUpdate = (orderId, newStatus) => {
-    toast.success(`Order ${orderId} status updated to ${newStatus}`);
-    // Update the orders list accordingly
-    setActiveOrders(activeOrders.map(order => 
-      order._id === orderId ? { ...order, status: newStatus } : order
-    ));
-  };
-  
-  const getNextStatus = (currentStatus) => {
-    switch (currentStatus) {
-      case 'driver_assigned':
-        return 'out_for_delivery';
-      case 'out_for_delivery':
-        return 'nearby';
-      case 'nearby':
-        return 'delivered';
-      default:
-        return null;
-    }
-  };
   
   const getStatusLabel = (status) => {
     switch (status) {
@@ -117,6 +84,19 @@ const Dashboard = () => {
     }
   };
   
+  const getNextStatus = (status) => {
+    switch (status) {
+      case 'driver_assigned':
+        return 'out_for_delivery';
+      case 'out_for_delivery':
+        return 'nearby';
+      case 'nearby':
+        return 'delivered';
+      default:
+        return null;
+    }
+  };
+  
   const formatDate = (dateString) => {
     return new Date(dateString).toLocaleString('en-US', {
       year: 'numeric',
@@ -125,6 +105,47 @@ const Dashboard = () => {
       hour: '2-digit',
       minute: '2-digit'
     });
+  };
+  
+  const handleStatusUpdate = async (orderId, newStatus) => {
+    try {
+      const response = await Axios({
+        url: '/api/delivery/update-status',
+        method: 'POST',
+        data: {
+          orderId,
+          status: newStatus
+        }
+      });
+      
+      if (response.data.success) {
+        toast.success(`Order status updated to ${getStatusLabel(newStatus)}`);
+        
+        // Update local state to reflect the change
+        setActiveOrders(prev => 
+          prev.map(order => 
+            order._id === orderId ? {...order, status: newStatus} : order
+          )
+        );
+        
+        // If the order is now delivered, refresh the dashboard stats
+        if (newStatus === 'delivered') {
+          const statsResponse = await Axios({
+            url: '/api/delivery/stats',
+            method: 'GET'
+          });
+          
+          if (statsResponse.data.success) {
+            setDashboardData(statsResponse.data.data);
+          }
+        }
+      } else {
+        toast.error(response.data.message || 'Failed to update order status');
+      }
+    } catch (error) {
+      console.error('Error updating order status:', error);
+      AxiosToastError(error);
+    }
   };
   
   if (loading) {
@@ -152,7 +173,7 @@ const Dashboard = () => {
   }
   
   return (
-    <div className="container mx-auto py-8 px-4">
+    <div className="container mx-auto py-4">
       <div className="mb-8">
         <h1 className="text-2xl font-bold mb-2 dark:text-white">Delivery Dashboard</h1>
         <p className="text-gray-600 dark:text-gray-400">Welcome back, {user.name}</p>
@@ -279,7 +300,7 @@ const Dashboard = () => {
                     <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">Order Summary</h4>
                     <div className="flex justify-between text-gray-700 dark:text-gray-300">
                       <span>Order Total:</span>
-                      <span className="font-medium">${order.total.toFixed(2)}</span>
+                      <span className="font-medium">KSh {order.total.toFixed(2)}</span>
                     </div>
                   </div>
                   
@@ -301,7 +322,7 @@ const Dashboard = () => {
                       >
                         {order.status === 'nearby' ? (
                           <>
-                            <FaCheckCircle className="mr-2" />
+                            <FaCalendarCheck className="mr-2" />
                             Mark Delivered
                           </>
                         ) : order.status === 'out_for_delivery' ? (

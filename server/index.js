@@ -113,6 +113,12 @@ app.use('/api/loyalty', loyaltyRouter); // Adjusted to consistent path structure
 app.use('/api', campaignRouter); // Register the community campaign routes
 app.use('/api/tracking', trackingRouter); // Add this line with your other routes
 
+// Import delivery routes using ES module syntax
+import deliveryRoutes from './routes/delivery.js';
+
+// Register delivery routes
+app.use('/api/delivery', deliveryRoutes);
+
 // Admin loyalty routes at /api/admin/loyalty/... to match the frontend requests
 // These routes map directly to the controller functions
 app.get('/api/admin/loyalty/cards', auth, admin, getLoyaltyCards);

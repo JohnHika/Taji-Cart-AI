@@ -47,6 +47,7 @@ const Login = () => {
             if(response.data.error) {
                 // Enhanced error messaging for login failures
                 toast.error(response.data.message || "Login failed. Please check your credentials.");
+                setIsLoading(false);
                 return;
             }
 
@@ -71,6 +72,8 @@ const Login = () => {
                 })
                 
                 toast.success(response.data.message)
+                
+                // Redirect to home page instead of dashboard
                 navigate("/")
             }
         } catch (error) {

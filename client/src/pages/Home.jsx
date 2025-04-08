@@ -1,26 +1,59 @@
 import React, { useEffect, useState } from 'react';
-import { FaUsers } from 'react-icons/fa'; // Import FaUsers icon
-import { useSelector } from 'react-redux';
-import { Link, useNavigate } from 'react-router-dom';
-import bannerMobile from '../assets/banner-mobile.jpg';
-import banner from '../assets/banner1.jpg';
+import { FaUsers } from 'react-icons/fa';
+import { useDispatch, useSelector } from "react-redux";
+import { Link, useNavigate } from "react-router-dom";
+import SummaryApi from "../common/SummaryApi"; // Fixed in previous change
+import bannerMobile from "../assets/banner-mobile.jpg";
+import banner from "../assets/banner1.jpg";
 import CategoryWiseProductDisplay from '../components/CategoryWiseProductDisplay';
-import CommunityCampaignProgress from '../components/CommunityCampaignProgress';
-import UserActiveCampaigns from '../components/UserActiveCampaigns';
-import Axios from '../utils/Axios';
-import { valideURLConvert } from '../utils/valideURLConvert';
+import CommunityCampaignProgress from "../components/CommunityCampaignProgress";
+import UserActiveCampaigns from "../components/UserActiveCampaigns";
+import { setAllCategory } from "../store/productSlice"; // Updated import path
+import Axios from "../utils/Axios";
+import { valideURLConvert } from "../utils/valideURLConvert";
 
 const Home = () => {
   const loadingCategory = useSelector(state => state.product.loadingCategory)
   const categoryData = useSelector(state => state.product.allCategory)
   const subCategoryData = useSelector(state => state.product.allSubCategory)
   const navigate = useNavigate()
+  const dispatch = useDispatch();
   const [featuredCampaign, setFeaturedCampaign] = useState(null);
   const [loadingCampaign, setLoadingCampaign] = useState(true);
 
   useEffect(() => {
     fetchFeaturedCampaign();
   }, []);
+
+  useEffect(() => {
+    // Explicitly fetch categories on home page load
+    const fetchCategoriesData = async () => {
+      try {
+        console.log("Home page: Explicitly fetching categories");
+        
+        const response = await Axios({
+          ...SummaryApi.getCategory,
+          timeout: 10000 // 10 second timeout
+        });
+        
+        if (response.data && response.data.data) {
+          console.log(`Home page: Retrieved ${response.data.data.length} categories`);
+          dispatch(setAllCategory(response.data.data || []));
+        } else {
+          console.error("Home page: No categories data in response", response);
+        }
+      } catch (error) {
+        console.error("Home page: Error fetching categories:", error);
+      }
+    };
+
+    // Check if categories are already in the state
+    if (!categoryData || categoryData.length === 0) {
+      fetchCategoriesData();
+    } else {
+      console.log("Home page: Categories already loaded:", categoryData.length);
+    }
+  }, [dispatch, categoryData]);
 
   const fetchFeaturedCampaign = async () => {
     try {

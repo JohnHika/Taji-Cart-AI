@@ -1,5 +1,7 @@
-import React from 'react';
+import React, { useState } from 'react';
+import toast from 'react-hot-toast';
 import {
+    FaBars,
     FaBoxOpen,
     FaHistory,
     FaMapMarkedAlt,
@@ -8,13 +10,26 @@ import {
     FaTruck,
     FaUserCircle
 } from 'react-icons/fa';
-import { useDispatch } from 'react-redux';
-import { Link, useLocation } from 'react-router-dom';
+import { useDispatch, useSelector } from 'react-redux';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import logoLight from '../assets/Taji_Cart_Ai.png';
+import logoDark from '../assets/Taji_Cart_Ai_Light.png';
+import SummaryApi from '../common/SummaryApi';
+import { useTheme } from '../context/ThemeContext';
 import { logout } from '../store/userSlice';
+import Axios from '../utils/Axios';
+import AxiosToastError from '../utils/AxiosToastError';
 
 const DeliveryNavigation = () => {
   const location = useLocation();
   const dispatch = useDispatch();
+  const navigate = useNavigate();
+  const user = useSelector(state => state.user);
+  const { darkMode } = useTheme();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  
+  // Use the appropriate logo based on theme
+  const currentLogo = darkMode ? logoLight : logoDark;
   
   const isActive = (path) => {
     return location.pathname === path ? 
@@ -22,17 +37,45 @@ const DeliveryNavigation = () => {
       'text-gray-700 hover:bg-primary-100 dark:text-gray-200 dark:hover:bg-gray-700';
   };
   
-  const handleLogout = () => {
-    dispatch(logout());
+  const handleLogout = async () => {
+    try {
+      const response = await Axios({
+        ...SummaryApi.logout
+      });
+      
+      if(response.data.success) {
+        dispatch(logout());
+        localStorage.clear();
+        sessionStorage.clear();
+        toast.success(response.data.message);
+        navigate("/");
+      }
+    } catch (error) {
+      console.error("Logout error:", error);
+      AxiosToastError(error);
+    }
+  };
+  
+  const toggleMobileMenu = () => {
+    setMobileMenuOpen(!mobileMenuOpen);
   };
   
   return (
-    <div className="bg-white dark:bg-gray-800 shadow-md w-full">
+    <div className="bg-white dark:bg-gray-800 shadow-md w-full sticky top-0 z-30">
       <div className="container mx-auto px-4">
         <div className="flex justify-between items-center py-3">
           <div className="flex items-center">
-            <h1 className="text-xl font-bold text-primary-200 mr-8">Taji Driver</h1>
-            <nav className="hidden md:flex space-x-1">
+            <Link to="/delivery/dashboard" className="flex items-center">
+              <img 
+                src={currentLogo} 
+                alt="Taji Cart Logo" 
+                className="h-auto w-auto max-h-12 object-contain" 
+                style={{ maxWidth: '120px' }}
+              />
+              <span className="ml-2 text-xl font-bold text-primary-200 hidden md:block">Driver Portal</span>
+            </Link>
+            
+            <nav className="hidden md:flex ml-8 space-x-1">
               <Link 
                 to="/delivery/dashboard" 
                 className={`px-3 py-2 rounded-md text-sm font-medium ${isActive('/delivery/dashboard')}`}
@@ -67,62 +110,106 @@ const DeliveryNavigation = () => {
           </div>
           
           <div className="flex items-center space-x-4">
-            <Link 
-              to="/profile" 
-              className="text-gray-700 hover:text-primary-200 dark:text-gray-200 dark:hover:text-primary-300"
-            >
-              <FaUserCircle size={20} />
-            </Link>
+            {/* User info */}
+            <span className="hidden md:block text-sm text-gray-700 dark:text-gray-300">
+              {user.name}
+            </span>
+            
+            {/* Desktop menu */}
+            <div className="hidden md:flex items-center space-x-4">
+              <Link 
+                to="/dashboard/profile" 
+                className="text-gray-700 hover:text-primary-200 dark:text-gray-200 dark:hover:text-primary-300"
+              >
+                <FaUserCircle size={20} />
+              </Link>
+              <button 
+                onClick={handleLogout}
+                className="text-gray-700 hover:text-red-500 dark:text-gray-200 dark:hover:text-red-400"
+              >
+                <FaSignOutAlt size={20} />
+              </button>
+            </div>
+            
+            {/* Mobile menu button */}
             <button 
-              onClick={handleLogout}
-              className="text-gray-700 hover:text-red-500 dark:text-gray-200 dark:hover:text-red-400"
+              className="md:hidden text-gray-700 dark:text-gray-200 focus:outline-none" 
+              onClick={toggleMobileMenu}
             >
-              <FaSignOutAlt size={20} />
+              <FaBars size={24} />
             </button>
           </div>
         </div>
       </div>
       
-      {/* Mobile menu - Only visible on small screens */}
-      <div className="md:hidden border-t border-gray-200 dark:border-gray-700">
-        <div className="grid grid-cols-5 text-center">
-          <Link 
-            to="/delivery/dashboard" 
-            className={`p-2 ${location.pathname === '/delivery/dashboard' ? 'text-primary-200' : 'text-gray-600 dark:text-gray-400'}`}
-          >
-            <FaTachometerAlt className="mx-auto" />
-            <span className="text-xs">Dashboard</span>
-          </Link>
-          <Link 
-            to="/delivery/active" 
-            className={`p-2 ${location.pathname === '/delivery/active' ? 'text-primary-200' : 'text-gray-600 dark:text-gray-400'}`}
-          >
-            <FaTruck className="mx-auto" />
-            <span className="text-xs">Active</span>
-          </Link>
-          <Link 
-            to="/delivery/completed" 
-            className={`p-2 ${location.pathname === '/delivery/completed' ? 'text-primary-200' : 'text-gray-600 dark:text-gray-400'}`}
-          >
-            <FaBoxOpen className="mx-auto" />
-            <span className="text-xs">Completed</span>
-          </Link>
-          <Link 
-            to="/delivery/history" 
-            className={`p-2 ${location.pathname === '/delivery/history' ? 'text-primary-200' : 'text-gray-600 dark:text-gray-400'}`}
-          >
-            <FaHistory className="mx-auto" />
-            <span className="text-xs">History</span>
-          </Link>
-          <Link 
-            to="/delivery/map" 
-            className={`p-2 ${location.pathname === '/delivery/map' ? 'text-primary-200' : 'text-gray-600 dark:text-gray-400'}`}
-          >
-            <FaMapMarkedAlt className="mx-auto" />
-            <span className="text-xs">Map</span>
-          </Link>
+      {/* Mobile menu - Only visible on small screens when toggled */}
+      {mobileMenuOpen && (
+        <div className="md:hidden border-t border-gray-200 dark:border-gray-700 p-4">
+          <div className="flex flex-col space-y-3">
+            <Link 
+              to="/delivery/dashboard" 
+              className={`p-2 ${isActive('/delivery/dashboard')} rounded flex items-center`}
+              onClick={toggleMobileMenu}
+            >
+              <FaTachometerAlt className="mr-2" />
+              <span>Dashboard</span>
+            </Link>
+            <Link 
+              to="/delivery/active" 
+              className={`p-2 ${isActive('/delivery/active')} rounded flex items-center`}
+              onClick={toggleMobileMenu}
+            >
+              <FaTruck className="mr-2" />
+              <span>Active Deliveries</span>
+            </Link>
+            <Link 
+              to="/delivery/completed" 
+              className={`p-2 ${isActive('/delivery/completed')} rounded flex items-center`}
+              onClick={toggleMobileMenu}
+            >
+              <FaBoxOpen className="mr-2" />
+              <span>Completed</span>
+            </Link>
+            <Link 
+              to="/delivery/history" 
+              className={`p-2 ${isActive('/delivery/history')} rounded flex items-center`}
+              onClick={toggleMobileMenu}
+            >
+              <FaHistory className="mr-2" />
+              <span>History</span>
+            </Link>
+            <Link 
+              to="/delivery/map" 
+              className={`p-2 ${isActive('/delivery/map')} rounded flex items-center`}
+              onClick={toggleMobileMenu}
+            >
+              <FaMapMarkedAlt className="mr-2" />
+              <span>Map View</span>
+            </Link>
+            
+            <div className="border-t border-gray-200 dark:border-gray-700 pt-2 mt-2">
+              <Link
+                to="/dashboard/profile"
+                className="p-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded flex items-center"
+                onClick={toggleMobileMenu}
+              >
+                <FaUserCircle className="mr-2" />
+                <span>My Profile</span>
+              </Link>
+              <button
+                onClick={() => {
+                  handleLogout();
+                  toggleMobileMenu();
+                }}
+                className="w-full p-2 text-left text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded flex items-center"
+              >
+                <FaSignOutAlt className="mr-2" />
+                <span>Log Out</span>
+              </button>
+            </div>
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 };

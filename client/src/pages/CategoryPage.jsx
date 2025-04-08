@@ -47,6 +47,18 @@ const CategoryPage = () => {
         fetchCategory()
     }, [])
 
+    useEffect(() => {
+        // Add debug logging to help troubleshoot
+        console.log("CategoryPage mounted");
+        console.log("Categories from store:", categories);
+        
+        // If categories are empty, fetch them
+        if (!categories || categories.length === 0) {
+          console.log("Categories not found in store, fetching...");
+          fetchCategories();
+        }
+    }, [categories]);
+
     const handleDeleteCategory = async() => {
         try {
             const response = await Axios({

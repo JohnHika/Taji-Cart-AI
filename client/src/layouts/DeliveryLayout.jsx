@@ -1,8 +1,8 @@
 import React from 'react';
 import { useSelector } from 'react-redux';
 import { Navigate, Outlet } from 'react-router-dom';
-import DeliveryNavigation from './DeliveryNavigation';
-import Footer from './Footer';
+import DeliveryNavigation from '../components/DeliveryNavigation';
+import Footer from '../components/Footer';
 
 const DeliveryLayout = () => {
   const user = useSelector(state => state.user);

@@ -56,44 +56,31 @@ function App() {
         });
         
         console.log("Category response status:", categoryResponse.status);
-        console.log("Category data received:", categoryResponse.data);
         
         if (categoryResponse.data && categoryResponse.data.data) {
           console.log(`Retrieved ${categoryResponse.data.data.length} categories`);
           dispatch(setAllCategory(categoryResponse.data.data || []));
-          toast.success("Categories loaded successfully");
+          
+          // Also fetch subcategories
+          const subCategoryResponse = await Axios({
+            ...SummaryApi.getSubCategory,
+            timeout: 10000
+          });
+          
+          if (subCategoryResponse.data && subCategoryResponse.data.data) {
+            console.log(`Retrieved ${subCategoryResponse.data.data.length} subcategories`);
+            dispatch(setAllSubCategory(subCategoryResponse.data.data || []));
+          }
+          
+          return true;
         } else {
-          console.warn("No category data in response", categoryResponse.data);
-          toast.warning("No categories found");
+          console.error("No data in category response");
+          return false;
         }
-        
-        // Only fetch subcategories if categories succeeded
-        console.log("Fetching subcategories from:", SummaryApi.getAllSubCategory.url);
-        const subCategoryResponse = await Axios({
-          url: SummaryApi.getAllSubCategory.url,
-          method: SummaryApi.getAllSubCategory.method,
-          timeout: 10000
-        });
-        
-        console.log("SubCategory response status:", subCategoryResponse.status);
-        console.log("SubCategory data received:", subCategoryResponse.data);
-        
-        if (subCategoryResponse.data && subCategoryResponse.data.data) {
-          console.log(`Retrieved ${subCategoryResponse.data.data.length} subcategories`);
-          dispatch(setAllSubCategory(subCategoryResponse.data.data || []));
-        } else {
-          console.warn("No subcategory data in response");
-        }
-        
-        console.log("Product data fetching completed successfully");
-        return true;
-      } catch (connectionError) {
-        console.error("Connection error details:", connectionError);
+      } catch (error) {
+        console.error("Error fetching categories:", error);
         console.error("Server might not be running or accessible");
         toast.error("Failed to connect to product server");
-        
-        // Use any cached data if available
-        console.log("Attempting to use cached category data");
         return false;
       }
     } catch (error) {
@@ -103,7 +90,6 @@ function App() {
     } finally {
       console.log("Setting loading to false in fetchProductData");
       dispatch(setLoadingCategory(false));
-      setIsLoading(false);
     }
   };
 
@@ -177,6 +163,26 @@ function App() {
       isMounted = false;
     };
   }, [dispatch]);
+
+  // Ensure categories and products are fetched on initial load
+  useEffect(() => {
+    // Fetch product data on initial load and whenever the app becomes active
+    fetchProductData();
+    
+    // Add an event listener for when the page becomes visible again
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        console.log("Page is visible again, refreshing product data");
+        fetchProductData();
+      }
+    };
+    
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, []);
 
   // Monitor category state for debugging
   useEffect(() => {
