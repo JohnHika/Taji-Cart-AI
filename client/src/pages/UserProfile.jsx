@@ -480,9 +480,15 @@ const UserProfile = () => {
                             <span className={`px-2 py-1 text-xs font-medium rounded-full ${
                               user.isAdmin || user.role === 'admin' 
                                 ? 'bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200' 
-                                : 'bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200'
+                                : user.isDelivery || user.role === 'delivery'
+                                  ? 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200'
+                                  : 'bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200'
                             }`}>
-                              {user.isAdmin || user.role === 'admin' ? 'Administrator' : 'Customer'}
+                              {user.isAdmin || user.role === 'admin' 
+                                ? 'Administrator' 
+                                : user.isDelivery || user.role === 'delivery'
+                                  ? 'Delivery Personnel'
+                                  : 'Customer'}
                             </span>
                           </div>
                         </div>

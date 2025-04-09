@@ -12,6 +12,15 @@ const instance = axios.create({
   }
 });
 
+// Add an interceptor to include the token in every request
+axios.interceptors.request.use(config => {
+  const token = sessionStorage.getItem('token');
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+
 // Flag to prevent multiple refresh token requests
 let isRefreshing = false;
 // Queue of requests that failed due to token expiration

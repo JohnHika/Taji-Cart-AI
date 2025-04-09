@@ -8,6 +8,35 @@ import './index.css';
 import router from './route/index';
 import { store } from './store/store.js';
 
+// Global error handler
+const originalConsoleError = console.error;
+console.error = function(...args) {
+  // Log original error
+  originalConsoleError.apply(console, args);
+  
+  // Check if this is a React error
+  const errorText = args.join(' ');
+  if (
+    errorText.includes('React') || 
+    errorText.includes('Error:') || 
+    errorText.includes('Exception:')
+  ) {
+    // Alert the user with a toast if possible
+    try {
+      if (window.toast) {
+        window.toast.error("An error occurred. Check console for details.");
+      }
+    } catch (e) {
+      // Don't crash if toast fails
+    }
+  }
+};
+
+// Add unhandled promise rejection handler
+window.addEventListener('unhandledrejection', function(event) {
+  console.error('Unhandled Promise Rejection:', event.reason);
+});
+
 // Add this for debugging
 window.addEventListener('error', (event) => {
   console.error('Global error caught:', event.error);

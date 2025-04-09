@@ -48,6 +48,12 @@ const auth = async(request, response, next) => {
                 console.log("Auth from Authorization header")
             }
             
+            // Inside your auth middleware function:
+            console.log('Auth headers:', request.headers.authorization ? 'Present' : 'Missing');
+            console.log('Cookie data:', request.cookies);
+            console.log('User verified:', request.user ? 'Yes' : 'No');
+            console.log('User role:', request.user?.role);
+            
             next()
         } catch (jwtError) {
             console.log("JWT verification failed:", jwtError.message)

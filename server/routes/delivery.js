@@ -1,11 +1,13 @@
 import express from 'express';
 import * as deliveryController from '../controllers/deliveryController.js';
-import auth from '../middleware/auth.js';  // Change this line
+import auth from '../middleware/auth.js';
+import { delivery } from '../middleware/Delivery.js';
 
 const router = express.Router();
 
-// Apply authentication to all delivery routes
-router.use(auth);  // Change this line
+// Apply both auth and delivery role middleware to all routes
+router.use(auth);
+router.use(delivery);
 
 // Dashboard statistics
 router.get('/stats', deliveryController.getDeliveryStats);

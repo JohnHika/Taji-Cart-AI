@@ -1,9 +1,20 @@
 import React, { useState } from 'react';
-import Axios from '../utils/Axios';
-import SummaryApi from '../common/SummaryApi';
 import toast from 'react-hot-toast';
+import SummaryApi from '../common/SummaryApi';
+import Axios from '../utils/Axios';
 
-const MpesaPayment = ({ cartItems, totalAmount, addressId, onSuccess, onError }) => {
+const MpesaPayment = ({ 
+  cartItems, 
+  totalAmount, 
+  addressId, 
+  onSuccess, 
+  onError, 
+  communityRewardId, 
+  communityDiscountAmount,
+  fulfillment_type = 'delivery',
+  pickup_location = '',
+  pickup_instructions = ''
+}) => {
   const [phoneNumber, setPhoneNumber] = useState('');
   const [loading, setLoading] = useState(false);
   
@@ -28,7 +39,12 @@ const MpesaPayment = ({ cartItems, totalAmount, addressId, onSuccess, onError })
           addressId,
           list_items: cartItems,
           subTotalAmt: totalAmount,
-          totalAmt: totalAmount
+          totalAmt: totalAmount,
+          communityRewardId,
+          communityDiscountAmount,
+          fulfillment_type,
+          pickup_location,
+          pickup_instructions
         }
       });
       

@@ -1,12 +1,13 @@
 export const baseURL = "http://localhost:8080";
 
+// Define SummaryApi first before trying to use it
 const SummaryApi = {
     register: {
-        url: 'http://localhost:8080/api/user/register', // Use absolute URL
+        url: 'http://localhost:8080/api/user/register',
         method: 'POST'
     },
     login: {
-        url: 'http://localhost:8080/api/user/login', // Use absolute URL
+        url: 'http://localhost:8080/api/user/login',
         method: 'POST'
     },
     forgot_password: {
@@ -46,7 +47,7 @@ const SummaryApi = {
         method: 'post'
     },
     uploadImage: {
-        url: 'http://localhost:8080/api/upload/upload', // Changed from /api/file/upload
+        url: 'http://localhost:8080/api/upload/upload',
         method: 'post'
     },
     getCategory: {
@@ -66,6 +67,10 @@ const SummaryApi = {
         method: 'post'
     },
     getAllSubCategory: {
+        url: 'http://localhost:8080/api/subcategory/get',
+        method: 'get'
+    },
+    getSubCategory: {
         url: 'http://localhost:8080/api/subcategory/get',
         method: 'get'
     },
@@ -112,7 +117,6 @@ const SummaryApi = {
     addTocart: {
         url: 'http://localhost:8080/api/cart/create',
         method: 'POST',
-        // Any other required configuration
     },
     getCartItem: {
         url: 'http://localhost:8080/api/cart/get',
@@ -166,7 +170,6 @@ const SummaryApi = {
         url: 'http://localhost:8080/api/product/get',
         method: 'POST',
         data: {
-            // Add any required parameters
         }
     },
     getUserRoyalCard: {
@@ -210,9 +213,61 @@ const SummaryApi = {
         method: 'get'
     },
     rateProduct: {
-        url: "http://localhost:8080/api/product/rate", // Make sure this matches the endpoint in the route directory
+        url: "http://localhost:8080/api/product/rate",
         method: 'POST'
+    },
+    getOrderReceipt: {
+        url: 'http://localhost:8080/api/order/receipt',
+        method: 'get'
+    },
+    getOrderDetails: {
+        url: 'http://localhost:8080/api/order/details',
+        method: 'get'
+    },
+    getOrders: {
+        url: 'http://localhost:8080/api/order/order-list',
+        method: 'get'
+    },
+    getMostRecentOrder: {
+        url: 'http://localhost:8080/api/order/recent',
+        method: 'get'
+    },
+    verifyPickup: {
+        url: '/api/order/staff/verify-pickup-code',
+        method: 'POST'
+    },
+    completePickup: {
+        url: '/api/order/staff/complete-pickup',
+        method: 'POST'
+    },
+    getPendingPickups: {
+        url: '/api/order/staff/pending-pickups',
+        method: 'GET'
+    },
+    getVerificationHistory: {
+        url: '/api/order/staff/verification-history',
+        method: 'GET'
     }
 };
+
+// Now that SummaryApi is defined, you can perform logging and validation
+console.log("==================== SUMMARY API CONFIGURATION ====================");
+console.log("API endpoints available:", Object.keys(SummaryApi || {}));
+
+// Check if critical endpoints exist
+const REQUIRED_ENDPOINTS = [
+  'getCategory', 
+  'getSubCategory', 
+  'getProductByCategory',
+  'getProductByCategoryAndSubCategory'
+];
+
+REQUIRED_ENDPOINTS.forEach(endpoint => {
+  if (!SummaryApi[endpoint]) {
+    console.error(`❌ CRITICAL ERROR: Missing required API endpoint: ${endpoint}`);
+  } else {
+    console.log(`✅ Found API endpoint: ${endpoint}`, SummaryApi[endpoint]);
+  }
+});
 
 export default SummaryApi;

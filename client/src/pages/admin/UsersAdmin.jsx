@@ -134,7 +134,8 @@ const UsersAdmin = () => {
       filtered = filtered.filter(user => 
         (user.name && user.name.toLowerCase().includes(searchTerm.toLowerCase())) ||
         (user.email && user.email.toLowerCase().includes(searchTerm.toLowerCase())) ||
-        (user.mobile && user.mobile.toString().includes(searchTerm))
+        (user.mobile && user.mobile.toString().includes(searchTerm)) ||
+        (user.role && user.role.toLowerCase().includes(searchTerm.toLowerCase())) // Allow searching by role
       );
     }
     
@@ -156,7 +157,7 @@ const UsersAdmin = () => {
     setIsRoleModalOpen(true);
   };
 
-  const handleSaveRole = async (userId, isAdmin, isDelivery) => {
+  const handleSaveRole = async (userId, isAdmin, isDelivery, isStaff) => {
     try {
       setLoading(true);
       
@@ -164,19 +165,31 @@ const UsersAdmin = () => {
       const adminResponse = await Axios({
         url: '/api/user/admin/update-role',
         method: 'PUT',
-        data: { userId, isAdmin }
+        data: { 
+          userId, 
+          isAdmin,
+          // Set the appropriate role based on hierarchy
+          role: isAdmin ? 'admin' : isStaff ? 'staff' : isDelivery ? 'delivery' : 'user'
+        }
       });
 
-      // Handle delivery role separately
+      // Handle delivery role
       const deliveryResponse = await Axios({
         url: '/api/user/admin/set-delivery',
         method: 'PUT',
         data: { userId, isDelivery }
       });
+      
+      // Handle staff role
+      const staffResponse = await Axios({
+        url: '/api/user/admin/set-staff',
+        method: 'PUT',
+        data: { userId, isStaff }
+      });
 
-      if (adminResponse.data.success && deliveryResponse.data.success) {
+      if (adminResponse.data.success && deliveryResponse.data.success && staffResponse.data.success) {
         // Fetch updated user list to ensure correct data
-        fetchUsersWithRefresh();
+        fetchUsersWithCacheBusting();
         toast.success('User role updated successfully');
       } else {
         toast.error('Failed to update user role');

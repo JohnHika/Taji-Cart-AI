@@ -1254,3 +1254,72 @@ export async function setDeliveryRoleController(req, res) {
         });
     }
 }
+
+/**
+ * Set or unset staff role (admin only)
+ */
+export async function setStaffRoleController(req, res) {
+    try {
+        const { userId, isStaff } = req.body;
+        
+        if (!userId) {
+            return res.status(400).json({
+                message: "User ID is required",
+                success: false,
+                error: true
+            });
+        }
+        
+        console.log(`Setting staff role for user ${userId} to: ${isStaff}`);
+        
+        // Update both fields for consistency
+        const updateData = {
+            isStaff: Boolean(isStaff),
+            // Only set role to staff if isStaff is true and user is not an admin
+            ...(isStaff ? { role: 'staff' } : {})
+        };
+        
+        // If we're removing staff status, set role back to user
+        // (but don't change admin to user)
+        if (!isStaff) {
+            const currentUser = await UserModel.findById(userId);
+            if (currentUser && currentUser.role === 'staff') {
+                updateData.role = 'user';
+            }
+        }
+        
+        const updatedUser = await UserModel.findByIdAndUpdate(
+            userId, 
+            updateData,
+            { new: true, runValidators: true }
+        );
+        
+        if (!updatedUser) {
+            return res.status(404).json({
+                message: "User not found",
+                success: false,
+                error: true
+            });
+        }
+        
+        return res.status(200).json({
+            message: `User staff role ${updatedUser.isStaff ? 'assigned' : 'removed'} successfully`,
+            success: true,
+            error: false,
+            data: {
+                _id: updatedUser._id,
+                name: updatedUser.name,
+                email: updatedUser.email,
+                isStaff: updatedUser.isStaff,
+                role: updatedUser.role
+            }
+        });
+    } catch (error) {
+        console.error("Error updating user staff role:", error);
+        return res.status(500).json({
+            message: error.message || "Failed to update user staff role",
+            success: false,
+            error: true
+        });
+    }
+}

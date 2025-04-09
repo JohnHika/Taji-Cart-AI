@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import { useDispatch, useSelector } from "react-redux";
+import { useLocation } from "react-router-dom";
 import SummaryApi from "../common/SummaryApi";
 import { handleAddAddress } from "../store/addressSlice";
 import { handleAddItemCart } from "../store/cartProduct";
@@ -12,17 +13,28 @@ import { getRoyalCardDiscount, pricewithDiscount } from "../utils/PriceWithDisco
 const globalContext = createContext();
 
 const GlobalProvider = ({ children }) => {
-    const dispatch = useDispatch()
+    const dispatch = useDispatch();
+    const location = useLocation();
     const [totalPrice, setTotalPrice] = useState(0);
     const [totalQty, setTotalQty] = useState(0);
     const [notDiscountTotalPrice, setNotDiscountTotalPrice] = useState(0);
     const [royalCardData, setRoyalCardData] = useState(null);
     const [royalDiscount, setRoyalDiscount] = useState(0);
     const cart = useSelector(state => state.cartItem?.cart || []);
-    const user = useSelector(state => state?.user)
+    const user = useSelector(state => state?.user);
+
+    // Add route debugging
+    useEffect(() => {
+        console.log("GlobalProvider: Route changed to", location.pathname);
+
+        // Check if this is a category route
+        if (location.pathname.includes('-')) {
+            console.log("GlobalProvider: Detected category route with state:", location.state);
+        }
+    }, [location.pathname, location.state]);
 
     // Fetch user's Royal card data
-    const fetchRoyalCardData = async() => {
+    const fetchRoyalCardData = async () => {
         try {
             if (!user?._id) return;
 
@@ -34,7 +46,7 @@ const GlobalProvider = ({ children }) => {
             if (response.data?.success) {
                 const cardData = response.data.data;
                 setRoyalCardData(cardData);
-                
+
                 // Calculate royal discount based on tier
                 const discount = getRoyalCardDiscount(cardData.tier);
                 setRoyalDiscount(discount);
@@ -45,24 +57,24 @@ const GlobalProvider = ({ children }) => {
         }
     };
 
-    const fetchCartItem = async() => {
+    const fetchCartItem = async () => {
         try {
             if (!user?._id) {
                 console.log("No authenticated user, skipping cart fetch");
                 return;
             }
-            
+
             console.log("Fetching cart items...");
-            
+
             // Make the request with cookie-based auth (withCredentials is enabled in Axios.js)
             const response = await Axios({
                 url: SummaryApi.getCartItem.url,
                 method: SummaryApi.getCartItem.method
             });
-            
+
             // Log raw response
             console.log("Raw cart response:", response.data);
-            
+
             if (response.data.success) {
                 console.log("Cart fetch successful:", response.data);
                 dispatch(handleAddItemCart(response.data.data || []));
@@ -76,91 +88,91 @@ const GlobalProvider = ({ children }) => {
                 console.log("Error data:", error.response.data);
             }
         }
-    }
+    };
 
-    const updateCartItem = async(id,qty)=>{
-      try {
-          const response = await Axios({
-            url: SummaryApi.updateCartItemQty.url,
-            method: SummaryApi.updateCartItemQty.method,
-            data : {
-              _id : id,
-              qty : qty
+    const updateCartItem = async (id, qty) => {
+        try {
+            const response = await Axios({
+                url: SummaryApi.updateCartItemQty.url,
+                method: SummaryApi.updateCartItemQty.method,
+                data: {
+                    _id: id,
+                    qty: qty
+                }
+            });
+            const { data: responseData } = response;
+
+            if (responseData.success) {
+                // toast.success(responseData.message)
+                fetchCartItem();
+                return responseData;
             }
-          })
-          const { data : responseData } = response
+        } catch (error) {
+            AxiosToastError(error);
+            return error;
+        }
+    };
 
-          if(responseData.success){
-              // toast.success(responseData.message)
-              fetchCartItem()
-              return responseData
-          }
-      } catch (error) {
-        AxiosToastError(error)
-        return error
-      }
-    }
-    
-    const deleteCartItem = async(cartId)=>{
-      try {
-          const response = await Axios({
-            url: SummaryApi.deleteCartItem.url,
-            method: SummaryApi.deleteCartItem.method,
-            data : {
-              _id : cartId
+    const deleteCartItem = async (cartId) => {
+        try {
+            const response = await Axios({
+                url: SummaryApi.deleteCartItem.url,
+                method: SummaryApi.deleteCartItem.method,
+                data: {
+                    _id: cartId
+                }
+            });
+            const { data: responseData } = response;
+
+            if (responseData.success) {
+                toast.success(responseData.message);
+                fetchCartItem();
             }
-          })
-          const { data : responseData} = response
+        } catch (error) {
+            AxiosToastError(error);
+        }
+    };
 
-          if(responseData.success){
-            toast.success(responseData.message)
-            fetchCartItem()
-          }
-      } catch (error) {
-         AxiosToastError(error)
-      }
-    }
+    const clearCartItems = async () => {
+        try {
+            const response = await Axios({
+                url: SummaryApi.clearCart.url,
+                method: SummaryApi.clearCart.method
+            });
 
-    const clearCartItems = async() => {
-      try {
-          const response = await Axios({
-            url: SummaryApi.clearCart.url,
-            method: SummaryApi.clearCart.method
-          });
-          
-          if(response.data.success) {
-            dispatch(handleAddItemCart([]));
-            console.log("Cart cleared successfully");
-          }
-      } catch (error) {
-         AxiosToastError(error);
-         console.error("Failed to clear cart:", error);
-      }
-    }
+            if (response.data.success) {
+                dispatch(handleAddItemCart([]));
+                console.log("Cart cleared successfully");
+            }
+        } catch (error) {
+            AxiosToastError(error);
+            console.error("Failed to clear cart:", error);
+        }
+    };
 
-    useEffect(()=>{
-      const qty = cart.reduce((preve,curr)=>{
-          return preve + curr.quantity
-      },0)
-      setTotalQty(qty)
-      
-      const tPrice = cart.reduce((preve,curr)=>{
-          // Apply both product discount and Royal card discount
-          const priceAfterDiscount = pricewithDiscount(
-              curr?.productId?.price,
-              curr?.productId?.discount,
-              royalDiscount // Apply Royal card discount
-          )
+    useEffect(() => {
+        const qty = cart.reduce((preve, curr) => {
+            return preve + curr.quantity;
+        }, 0);
+        setTotalQty(qty);
 
-          return preve + (priceAfterDiscount * curr.quantity)
-      },0)
-      setTotalPrice(tPrice)
+        const tPrice = cart.reduce((preve, curr) => {
+            // Apply both product discount and Royal card discount
+            const priceAfterDiscount = pricewithDiscount(
+                curr?.productId?.price,
+                curr?.productId?.discount,
+                royalDiscount // Apply Royal card discount
+            );
 
-      const notDiscountPrice = cart.reduce((preve,curr)=>{
-        return preve + (curr?.productId?.price * curr.quantity)
-      },0)
-      setNotDiscountTotalPrice(notDiscountPrice)
-  },[cart, royalDiscount]) // Added royalDiscount as dependency
+            return preve + (priceAfterDiscount * curr.quantity);
+        }, 0);
+        setTotalPrice(tPrice);
+
+        const notDiscountPrice = cart.reduce((preve, curr) => {
+            return preve + (curr?.productId?.price * curr.quantity);
+        }, 0);
+        setNotDiscountTotalPrice(notDiscountPrice);
+    }, [cart, royalDiscount]); // Added royalDiscount as dependency
 
     const handleLogoutOut = async () => {
         try {
@@ -169,89 +181,92 @@ const GlobalProvider = ({ children }) => {
                 url: SummaryApi.logout.url,
                 method: SummaryApi.logout.method
             });
-            
+
             // Clear local state
-            dispatch(handleAddItemCart([]))
-            setRoyalCardData(null)
-            setRoyalDiscount(0)
-            
+            dispatch(handleAddItemCart([]));
+            setRoyalCardData(null);
+            setRoyalDiscount(0);
+
             // Clear localStorage as fallback
-            localStorage.clear()
+            localStorage.clear();
         } catch (error) {
             console.error("Logout error:", error);
             // Still clear local state even if API call fails
-            dispatch(handleAddItemCart([]))
-            setRoyalCardData(null)
-            setRoyalDiscount(0)
-            localStorage.clear()
+            dispatch(handleAddItemCart([]));
+            setRoyalCardData(null);
+            setRoyalDiscount(0);
+            localStorage.clear();
         }
-    }
+    };
 
-    const fetchAddress = async()=>{
-      try {
-        const response = await Axios({
-          url: SummaryApi.getAddress.url,
-          method: SummaryApi.getAddress.method
-        })
-        const { data : responseData } = response
+    const fetchAddress = async () => {
+        try {
+            const response = await Axios({
+                url: SummaryApi.getAddress.url,
+                method: SummaryApi.getAddress.method
+            });
+            const { data: responseData } = response;
 
-        if(responseData.success){
-          dispatch(handleAddAddress(responseData.data))
+            if (responseData.success) {
+                dispatch(handleAddAddress(responseData.data));
+            }
+        } catch (error) {
+            // AxiosToastError(error)
         }
-      } catch (error) {
-          // AxiosToastError(error)
-      }
-    }
-    
-    const fetchOrder = async()=>{
-      try {
-        const response = await Axios({
-          url: SummaryApi.getOrderItems.url,
-          method: SummaryApi.getOrderItems.method
-        })
-        const { data : responseData } = response
+    };
 
-        if(responseData.success){
-            dispatch(setOrder(responseData.data))
+    const fetchOrder = async () => {
+        try {
+            const response = await Axios({
+                url: SummaryApi.getOrderItems.url,
+                method: SummaryApi.getOrderItems.method
+            });
+            const { data: responseData } = response;
+
+            if (responseData.success) {
+                dispatch(setOrder(responseData.data));
+            }
+        } catch (error) {
+            console.log(error);
         }
-      } catch (error) {
-        console.log(error)
-      }
-    }
+    };
 
-    useEffect(()=>{
-      if (user?._id) {
-        // Only fetch data if user is logged in
-        fetchCartItem()
-        fetchAddress()
-        fetchOrder()
-        fetchRoyalCardData() // Fetch Royal card data when user is logged in
-      } else {
-        // Clear data when user is not logged in
-        dispatch(handleAddItemCart([]))
-        setRoyalCardData(null)
-        setRoyalDiscount(0)
-      }
-    },[user, user?._id])
-    
-    return(
-        <globalContext.Provider value={{
-            fetchCartItem,
-            updateCartItem,
-            deleteCartItem,
-            clearCartItems,
-            fetchAddress,
-            totalPrice,
-            totalQty,
-            notDiscountTotalPrice,
-            fetchOrder,
-            royalCardData,
-            royalDiscount
-        }}>
+    useEffect(() => {
+        if (user?._id) {
+            // Only fetch data if user is logged in
+            fetchCartItem();
+            fetchAddress();
+            fetchOrder();
+            fetchRoyalCardData(); // Fetch Royal card data when user is logged in
+        } else {
+            // Clear data when user is not logged in
+            dispatch(handleAddItemCart([]));
+            setRoyalCardData(null);
+            setRoyalDiscount(0);
+        }
+    }, [user, user?._id]);
+
+    const contextValue = {
+        fetchCartItem,
+        updateCartItem,
+        deleteCartItem,
+        clearCartItems,
+        fetchAddress,
+        totalPrice,
+        totalQty,
+        notDiscountTotalPrice,
+        fetchOrder,
+        royalCardData,
+        royalDiscount
+    };
+
+    return (
+        <globalContext.Provider value={contextValue}>
+            {console.log("GlobalProvider rendering with path:", location.pathname)}
             {children}
         </globalContext.Provider>
-    )
-}
+    );
+};
 
 export const useGlobalContext = () => useContext(globalContext);
 export default GlobalProvider;

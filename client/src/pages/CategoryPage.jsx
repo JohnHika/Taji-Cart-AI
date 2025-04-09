@@ -24,6 +24,10 @@ const CategoryPage = () => {
         _id: ""
     })
     const [searchTerm, setSearchTerm] = useState('')
+    const [categories, setCategories] = useState([]);  // Added categories state
+    const [error, setError] = useState(null);
+    const [showAddForm, setShowAddForm] = useState(false);
+    const [editingCategory, setEditingCategory] = useState(null);
     
     const fetchCategory = async() => {
         try {
@@ -58,6 +62,31 @@ const CategoryPage = () => {
           fetchCategories();
         }
     }, [categories]);
+
+    const fetchCategories = async () => {
+        try {
+          setLoading(true);
+          setError(null);
+          
+          const response = await Axios({
+            url: '/api/category/get',  // Changed from '/api/categories' to '/api/category/get'
+            method: 'GET'
+          });
+          
+          if (response.data.success) {
+            setCategories(response.data.data || []);
+          } else {
+            setError(response.data.message || 'Failed to fetch categories');
+            toast.error('Failed to fetch categories');
+          }
+        } catch (error) {
+          console.error('Error fetching categories:', error);
+          setError('An error occurred while fetching categories');
+          AxiosToastError(error);
+        } finally {
+          setLoading(false);
+        }
+    };
 
     const handleDeleteCategory = async() => {
         try {

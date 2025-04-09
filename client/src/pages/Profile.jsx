@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
-import { FaExclamationTriangle, FaEye, FaEyeSlash, FaKey, FaLock, FaRegUserCircle, FaShieldAlt, FaSpinner } from "react-icons/fa";
+import { FaExclamationTriangle, FaEye, FaEyeSlash, FaKey, FaLock, FaRegUserCircle, FaShieldAlt, FaSpinner, FaTruck, FaUser, FaUserShield, FaUserTie } from "react-icons/fa";
 import { useDispatch, useSelector } from 'react-redux';
 import { useLocation, useNavigate } from 'react-router-dom';
 import SummaryApi from '../common/SummaryApi';
@@ -282,6 +282,71 @@ const Profile = () => {
         }
     }
 
+    // Add this helper function to determine account type with enhanced staff detection
+    const getAccountType = (user) => {
+        console.log("Determining account type for user:", user);
+        
+        // Check all possible staff indicators
+        if (
+            user.isStaff === true || 
+            user.role === 'staff' || 
+            user.userType === 'staff' ||
+            user.accountType === 'staff' ||
+            (typeof user.permissions === 'object' && user.permissions?.staff === true)
+        ) {
+            return { 
+                type: 'Staff', 
+                color: 'text-purple-600 dark:text-purple-400', 
+                icon: <FaUserTie className="mr-1" /> 
+            };
+        }
+        
+        // Check for admin role
+        if (
+            user.isAdmin === true || 
+            user.role === 'admin' || 
+            user.userType === 'admin' ||
+            user.accountType === 'admin'
+        ) {
+            return { 
+                type: 'Admin', 
+                color: 'text-red-600 dark:text-red-400', 
+                icon: <FaUserShield className="mr-1" /> 
+            };
+        }
+        
+        // Check for delivery personnel
+        if (
+            user.isDelivery === true || 
+            user.role === 'delivery' || 
+            user.userType === 'delivery' ||
+            user.accountType === 'delivery'
+        ) {
+            return { 
+                type: 'Delivery Personnel', 
+                color: 'text-blue-600 dark:text-blue-400', 
+                icon: <FaTruck className="mr-1" /> 
+            };
+        }
+        
+        // Default to customer
+        return { 
+            type: 'Customer', 
+            color: 'text-green-600 dark:text-green-400', 
+            icon: <FaUser className="mr-1" /> 
+        };
+    };
+
+    if (user.role === 'staff') {
+        // Render profile settings for staff
+        return (
+            <div className="max-w-3xl mx-auto bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md transition-colors duration-200">
+                <h1 className="text-2xl font-bold mb-6 text-gray-800 dark:text-white transition-colors duration-200">Profile Settings</h1>
+                {/* Profile avatar and other settings */}
+            </div>
+        );
+    }
+
     return (
         <div className="container mx-auto p-4">
             <h1 className="text-2xl font-bold mb-6 dark:text-white">My Account</h1>
@@ -440,6 +505,34 @@ const Profile = () => {
                                 <p className="text-xs text-gray-500 dark:text-gray-400 transition-colors duration-200">
                                     Phone number with country code (e.g., +254712345678)
                                 </p>
+                            </div>
+
+                            <div className="mb-4">
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                    Account Type
+                                </label>
+                                <div className="flex items-center">
+                                    {(() => {
+                                        const accountInfo = getAccountType(user);
+                                        return (
+                                            <span className={`flex items-center font-medium ${accountInfo.color}`}>
+                                                {accountInfo.icon}
+                                                {accountInfo.type}
+                                            </span>
+                                        );
+                                    })()}
+                                </div>
+                                
+                                {/* Debug info - only visible in development */}
+                                {process.env.NODE_ENV === 'development' && (
+                                    <div className="mt-2 p-2 bg-gray-100 dark:bg-gray-700 rounded text-xs font-mono">
+                                        <div>Role properties:</div>
+                                        <div>- isStaff: {String(user.isStaff)}</div>
+                                        <div>- role: {user.role || 'undefined'}</div>
+                                        <div>- userType: {user.userType || 'undefined'}</div>
+                                        <div>- accountType: {user.accountType || 'undefined'}</div>
+                                    </div>
+                                )}
                             </div>
 
                             <div className="mt-2">

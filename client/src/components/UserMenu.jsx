@@ -1,14 +1,17 @@
 import React from 'react'
 import toast from 'react-hot-toast'
 import {
+    FaBoxes,
     FaBoxOpen,
     FaBullhorn,
+    FaClipboardCheck,
     FaGift,
     FaHistory,
     FaLayerGroup,
     FaListAlt,
     FaMapMarkedAlt,
     FaMapMarkerAlt,
+    FaQrcode,
     FaShoppingBag,
     FaSignOutAlt,
     FaTachometerAlt,
@@ -25,13 +28,16 @@ import { logout } from '../store/userSlice'
 import Axios from '../utils/Axios'
 import AxiosToastError from '../utils/AxiosToastError'
 import isadmin from '../utils/isAdmin'
+import isStaff from '../utils/isStaff'
 import Divider from './Divider'
 
 const UserMenu = ({close}) => {
    const user = useSelector((state)=> state.user)
    const dispatch = useDispatch()
    const navigate = useNavigate()
+   const isAdmin = isadmin(user.role)
    const isDelivery = user.role === 'delivery'
+   const isUserStaff = isStaff(user)
 
    const handleLogout = async()=>{
         try {
@@ -71,6 +77,11 @@ const UserMenu = ({close}) => {
           {isDelivery && (
             <span className="text-medium text-blue-600 dark:text-blue-400">
               (delivery)
+            </span>
+          )}
+          {isUserStaff && (
+            <span className="text-medium text-green-600 dark:text-green-400">
+              (staff)
             </span>
           )}
         </span>
@@ -144,7 +155,7 @@ const UserMenu = ({close}) => {
         )}
 
         {/* Admin specific menu items */}
-        {isadmin(user.role) && (
+        {isAdmin && (
           <Link
             onClick={handleClose}
             to={"/dashboard/category"}
@@ -154,7 +165,7 @@ const UserMenu = ({close}) => {
           </Link>
         )}
 
-        {isadmin(user.role) && (
+        {isAdmin && (
           <Link
             onClick={handleClose}
             to={"/dashboard/subcategory"}
@@ -164,7 +175,7 @@ const UserMenu = ({close}) => {
           </Link>
         )}
 
-        {isadmin(user.role) && (
+        {isAdmin && (
           <Link
             onClick={handleClose}
             to={"/dashboard/upload-product"}
@@ -174,7 +185,7 @@ const UserMenu = ({close}) => {
           </Link>
         )}
 
-        {isadmin(user.role) && (
+        {isAdmin && (
           <Link
             onClick={handleClose}
             to={"/dashboard/product"}
@@ -184,7 +195,7 @@ const UserMenu = ({close}) => {
           </Link>
         )}
 
-        {isadmin(user.role) && (
+        {isAdmin && (
           <Link
             onClick={handleClose}
             to={"/dashboard/admin-community-perks"}
@@ -226,6 +237,39 @@ const UserMenu = ({close}) => {
         >
           <FaMapMarkerAlt className="mr-2 text-red-500" /> Save Address
         </Link>
+
+        {/* Staff specific menu items */}
+        {isUserStaff && (
+          <>
+            <Divider />
+            <div className="font-semibold dark:text-white px-2 pt-1">Staff Functions</div>
+            
+            <Link
+              onClick={handleClose}
+              to="/dashboard/staff/verify-pickup"
+              className="px-2 hover:bg-orange-200 dark:hover:bg-orange-900/30 dark:hover:text-white py-1 flex items-center"
+            >
+              <FaQrcode className="mr-2 text-green-500" /> Verify Pickup
+            </Link>
+            
+            <Link
+              onClick={handleClose}
+              to="/dashboard/staff/pending-pickups"
+              className="px-2 hover:bg-orange-200 dark:hover:bg-orange-900/30 dark:hover:text-white py-1 flex items-center"
+            >
+              <FaBoxes className="mr-2 text-orange-500" /> Pending Pickups
+            </Link>
+            
+            <Link
+              onClick={handleClose}
+              to="/dashboard/staff/completed-verifications"
+              className="px-2 hover:bg-orange-200 dark:hover:bg-orange-900/30 dark:hover:text-white py-1 flex items-center"
+            >
+              <FaClipboardCheck className="mr-2 text-blue-500" /> Verification History
+            </Link>
+            <Divider />
+          </>
+        )}
 
         <button
           onClick={handleLogout}

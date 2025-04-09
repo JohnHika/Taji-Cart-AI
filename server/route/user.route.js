@@ -1,4 +1,5 @@
-import { Router } from 'express'
+import { Router } from 'express';
+import { verifyPickupController } from '../controllers/order.controller.js';
 import {
     blockUserController,
     changePassword,
@@ -11,7 +12,8 @@ import {
     registerUserController,
     resetpassword,
     searchUsers,
-    setDeliveryRoleController, // Add this new import
+    setDeliveryRoleController,
+    setStaffRoleController,
     unblockUserController,
     updateUserDetails,
     updateUserRoleController,
@@ -19,11 +21,11 @@ import {
     userDetails,
     verifyEmailController,
     verifyForgotPasswordOtp
-} from '../controllers/user.controller.js'
-import { admin } from '../middleware/Admin.js'
-import auth from '../middleware/auth.js'
-import { delivery } from '../middleware/Delivery.js'
-import upload from '../middleware/multer.js'
+} from '../controllers/user.controller.js';
+import { admin } from '../middleware/Admin.js';
+import auth from '../middleware/auth.js';
+import { delivery } from '../middleware/Delivery.js';
+import upload from '../middleware/multer.js';
 
 const userRouter = Router()
 
@@ -48,11 +50,15 @@ userRouter.get('/admin/users/search', auth, admin, searchUsers)
 userRouter.get('/admin/users', auth, admin, getAllUsersController)
 userRouter.put('/admin/update-role', auth, admin, updateUserRoleController)
 userRouter.put('/admin/set-delivery', auth, admin, setDeliveryRoleController)
+userRouter.put('/admin/set-staff', auth, admin, setStaffRoleController)
 userRouter.put('/admin/block-user', auth, admin, blockUserController)
 userRouter.put('/admin/unblock-user', auth, admin, unblockUserController)
 userRouter.delete('/admin/delete-user/:userId', auth, admin, deleteUserController)
 
 // Delivery routes
 userRouter.get('/delivery/profile', auth, delivery, userDetails)
+
+// Staff routes
+userRouter.post('/staff/verify-pickup', auth, verifyPickupController);
 
 export default userRouter

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import { FaBox, FaCalendarAlt, FaMapMarkerAlt, FaMoneyBillWave, FaShoppingBag, FaSpinner, FaTruck } from 'react-icons/fa'
+import { FaBox, FaCalendarAlt, FaMapMarkerAlt, FaMoneyBillWave, FaQrcode, FaShoppingBag, FaSpinner, FaStore, FaTruck } from 'react-icons/fa'
 import { useDispatch, useSelector } from 'react-redux'
 import { Link } from 'react-router-dom'
 import { toast } from 'react-toastify'
@@ -120,6 +120,18 @@ const MyOrders = () => {
                     <div className="flex items-center gap-2 mb-1">
                       <FaBox className="text-primary-100" />
                       <span className="font-medium dark:text-gray-200">Order #{order?.orderId}</span>
+                      
+                      {/* Fulfillment type badge */}
+                      <span className={`ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                        order.fulfillment_type === 'delivery' 
+                          ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
+                          : 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200'
+                      }`}>
+                        {order.fulfillment_type === 'delivery' 
+                          ? <><FaTruck className="mr-1" size={10} /> Delivery</>
+                          : <><FaStore className="mr-1" size={10} /> Pickup</>
+                        }
+                      </span>
                     </div>
                     <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
                       <FaCalendarAlt />
@@ -224,17 +236,39 @@ const MyOrders = () => {
                     
                     <div className="bg-gray-50 dark:bg-gray-750 p-3 rounded-md">
                       <div className="flex items-center gap-2 mb-2 text-gray-700 dark:text-gray-300 font-medium">
-                        <FaMapMarkerAlt className="text-red-600" />
-                        <span>Delivery Information</span>
+                        {order.fulfillment_type === 'delivery' ? (
+                          <><FaMapMarkerAlt className="text-red-600" /><span>Delivery Information</span></>
+                        ) : (
+                          <><FaStore className="text-purple-600" /><span>Pickup Information</span></>
+                        )}
                       </div>
                       <div className="text-gray-600 dark:text-gray-400 space-y-1">
                         <div className="flex justify-between">
                           <span>Status:</span>
                           <span className="capitalize dark:text-gray-300">{order.status || 'Processing'}</span>
                         </div>
-                        {order.deliveryAddress && (
+                        
+                        {order.fulfillment_type === 'delivery' && order.deliveryAddress && (
                           <div className="dark:text-gray-300 mt-1 leading-snug">
                             {order.deliveryAddress}
+                          </div>
+                        )}
+                        
+                        {order.fulfillment_type === 'pickup' && order.pickup_location && (
+                          <div className="dark:text-gray-300 mt-1 leading-snug">
+                            Pickup Location: {order.pickup_location}
+                          </div>
+                        )}
+                        
+                        {order.fulfillment_type === 'pickup' && order.pickupVerificationCode && (
+                          <div className="mt-2 p-2 bg-gray-100 dark:bg-gray-700 rounded border border-gray-200 dark:border-gray-600">
+                            <div className="flex items-center justify-between">
+                              <span className="text-sm">Verification Code:</span>
+                              <span className="font-mono font-bold text-primary-100">
+                                <FaQrcode className="inline mr-1" />
+                                {order.pickupVerificationCode}
+                              </span>
+                            </div>
                           </div>
                         )}
                       </div>

@@ -10,6 +10,8 @@ const RoleManagementModal = ({ isOpen, onClose, user, onSave }) => {
         setRole('admin');
       } else if (user.isDelivery || user.role === 'delivery') {
         setRole('driver');
+      } else if (user.isStaff || user.role === 'staff') {
+        setRole('staff');
       } else {
         setRole('customer');
       }
@@ -22,7 +24,8 @@ const RoleManagementModal = ({ isOpen, onClose, user, onSave }) => {
     e.preventDefault();
     const isAdmin = role === 'admin';
     const isDelivery = role === 'driver';
-    onSave(user._id, isAdmin, isDelivery);
+    const isStaff = role === 'staff';
+    onSave(user._id, isAdmin, isDelivery, isStaff);
   };
   
   return (
@@ -72,6 +75,21 @@ const RoleManagementModal = ({ isOpen, onClose, user, onSave }) => {
                 <input
                   type="radio"
                   name="role"
+                  value="staff"
+                  checked={role === 'staff'}
+                  onChange={() => setRole('staff')}
+                  className="h-5 w-5 text-blue-600"
+                />
+                <span className="flex items-center">
+                  <FaUser className="mr-2 text-gray-500 dark:text-gray-400" />
+                  <span className="font-medium text-gray-700 dark:text-gray-300">Staff</span>
+                </span>
+              </label>
+              
+              <label className="flex items-center space-x-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700">
+                <input
+                  type="radio"
+                  name="role"
                   value="admin"
                   checked={role === 'admin'}
                   onChange={() => setRole('admin')}
@@ -93,7 +111,7 @@ const RoleManagementModal = ({ isOpen, onClose, user, onSave }) => {
                   className="h-5 w-5 text-blue-600"
                 />
                 <span className="flex items-center">
-                  <FaTruck className="mr-2 text-green-500" />
+                  <FaTruck className="mr-2 text-blue-500" />
                   <span className="font-medium text-gray-700 dark:text-gray-300">Driver</span>
                 </span>
               </label>

@@ -131,3 +131,85 @@ export async function handleMpesaCallback(request, response) {
     return response.status(200).json({ success: true }); // Always return success to M-Pesa
   }
 }
+
+export async function initiateMpesaPayment(request, response) {
+  try {
+    const { 
+      phoneNumber, 
+      amount, 
+      cartItems, 
+      addressId,
+      communityRewardId,
+      communityDiscountAmount,
+      fulfillment_type = 'delivery',
+      pickup_location = '',
+      pickup_instructions = ''
+    } = request.body;
+    
+    // Validate required fields based on fulfillment type
+    if (fulfillment_type === 'delivery' && !addressId) {
+      return response.status(400).json({
+        success: false,
+        message: 'Delivery address is required for delivery orders'
+      });
+    }
+    
+    if (fulfillment_type === 'pickup' && !pickup_location) {
+      return response.status(400).json({
+        success: false,
+        message: 'Pickup location is required for pickup orders'
+      });
+    }
+    
+    // Generate a unique checkout request ID
+    const checkoutRequestId = `ORDER-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+    
+    // Format phone number (remove leading 0 and add country code if needed)
+    let formattedPhone = phoneNumber;
+    if (phoneNumber.startsWith('0')) {
+      formattedPhone = '254' + phoneNumber.substring(1);
+    }
+    
+    // Create pending order in database
+    const orderId = `ORD-${new mongoose.Types.ObjectId()}`;
+    const pendingOrder = new OrderModel({
+      userId: request.userId,
+      orderId: orderId,
+      items: cartItems.map(item => ({
+        productId: item.productId._id,
+        quantity: item.quantity,
+        price: item.productId.price
+      })),
+      checkoutRequestId: checkoutRequestId,
+      payment_status: 'pending',
+      paymentMethod: 'mpesa',
+      fulfillment_type: fulfillment_type,
+      pickup_location: pickup_location,
+      pickup_instructions: pickup_instructions,
+      delivery_address: fulfillment_type === 'delivery' ? addressId : null,
+      subTotalAmt: amount,
+      totalAmt: amount,
+      status: 'pending'
+    });
+    
+    await pendingOrder.save();
+    
+    // Here you would integrate with the actual M-Pesa API
+    // For now, we'll simulate a successful payment
+    
+    return response.json({
+      success: true,
+      message: 'M-Pesa payment initiated successfully',
+      data: {
+        checkoutRequestId,
+        orderId
+      }
+    });
+  } catch (error) {
+    console.error('M-Pesa initialization error:', error);
+    return response.status(500).json({
+      success: false,
+      message: error.message || 'Failed to initiate M-Pesa payment'
+    });
+  }
+}

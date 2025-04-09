@@ -71,10 +71,14 @@ const userSchema = new mongoose.Schema({
     },
     role : {
         type : String,
-        enum : ['user', 'admin', 'delivery'],
+        enum : ['user', 'admin', 'delivery', 'staff'],  // Added 'staff' role
         default : 'user'
     },
     isDelivery: {
+        type: Boolean,
+        default: false
+    },
+    isStaff: {  // Added isStaff boolean flag for consistency
         type: Boolean,
         default: false
     }

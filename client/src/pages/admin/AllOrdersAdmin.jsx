@@ -1,19 +1,19 @@
 import React, { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
 import {
-  FaCalendarAlt,
-  FaChartBar,
-  FaCheckCircle,
-  FaExclamationTriangle,
-  FaFileInvoiceDollar,
-  FaInfoCircle,
-  FaMapMarkerAlt,
-  FaSearch,
-  FaShoppingBag,
-  FaSpinner,
-  FaTimes,
-  FaTruck,
-  FaUserAlt
+    FaCalendarAlt,
+    FaChartBar,
+    FaCheckCircle,
+    FaExclamationTriangle,
+    FaFileInvoiceDollar,
+    FaInfoCircle,
+    FaMapMarkerAlt,
+    FaSearch,
+    FaShoppingBag,
+    FaSpinner,
+    FaTimes,
+    FaTruck,
+    FaUserAlt
 } from 'react-icons/fa';
 import Axios from '../../utils/Axios';
 
@@ -480,6 +480,9 @@ const AllOrdersAdmin = () => {
   // Add pagination state
   const [currentPage, setCurrentPage] = useState(1);
   const [ordersPerPage, setOrdersPerPage] = useState(10);
+  
+  // Add new state for fulfillment filtering
+  const [fulfillmentFilter, setFulfillmentFilter] = useState('all');
   
   useEffect(() => {
     fetchAllOrders();

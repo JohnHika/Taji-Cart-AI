@@ -12,9 +12,10 @@ const Dashboard = () => {
   
   // Render menu based on user role
   const renderMenu = () => {
-    if (isAdmin) return <AdminMenu />
-    return <UserMenu />
-  }
+    if (isAdmin) return <AdminMenu />;
+    if (user.role === 'staff') return <UserMenu />; // Ensure staff users see the correct menu
+    return <UserMenu />;
+  };
   
   return (
     <section className='bg-white dark:bg-gray-900 transition-colors duration-200'>

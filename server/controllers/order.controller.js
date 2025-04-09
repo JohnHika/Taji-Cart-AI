@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import util from 'util';
 import Stripe from "../config/stripe.js";
 import CartProductModel from "../models/cartproduct.model.js";
 import DeliveryPersonnelModel from "../models/deliverypersonnel.model.js"; // Add this import
@@ -10,10 +11,30 @@ import UserModel from "../models/user.model.js";
 import { getIO } from '../socket/socket.js'; // Add this import
 import { processOrderContribution } from './communitycampaign.controller.js'; // Add this import
 
+// Add this helper function to better log objects
+const inspectObject = (obj) => util.inspect(obj, {depth: 3, colors: true});
+
 export async function CashOnDeliveryOrderController(request, response) {
     try {
         const userId = request.userId // auth middleware 
-        const { list_items, totalAmt, addressId, subTotalAmt } = request.body 
+        const { list_items, totalAmt, addressId, subTotalAmt, fulfillment_type, pickup_location, pickup_instructions } = request.body 
+
+        // Validate inputs based on fulfillment type
+        if (fulfillment_type === 'delivery' && !addressId) {
+            return response.status(400).json({
+                message: "Delivery address is required for delivery orders",
+                error: true,
+                success: false
+            });
+        }
+
+        if (fulfillment_type === 'pickup' && !pickup_location) {
+            return response.status(400).json({
+                message: "Pickup location is required for pickup orders",
+                error: true,
+                success: false
+            });
+        }
 
         // Check stock availability first
         for (const item of list_items) {
@@ -35,6 +56,15 @@ export async function CashOnDeliveryOrderController(request, response) {
             }
         }
 
+        // Generate verification code for pickup orders
+        const generateVerificationCode = () => {
+            return Math.random().toString(36).substring(2, 8).toUpperCase();
+        };
+
+        const pickupVerificationCode = fulfillment_type === 'pickup' 
+            ? generateVerificationCode() 
+            : "";
+
         const payload = list_items.map(el => {
             return({
                 userId: userId,
@@ -46,7 +76,11 @@ export async function CashOnDeliveryOrderController(request, response) {
                 },
                 paymentId: "",
                 payment_status: "CASH ON DELIVERY",
-                delivery_address: addressId,
+                delivery_address: fulfillment_type === 'delivery' ? addressId : null,
+                fulfillment_type: fulfillment_type || 'delivery',
+                pickup_location: pickup_location || '',
+                pickup_instructions: pickup_instructions || '',
+                pickupVerificationCode: pickupVerificationCode,
                 subTotalAmt: subTotalAmt,
                 totalAmt: totalAmt,
             })
@@ -101,6 +135,19 @@ export async function CashOnDeliveryOrderController(request, response) {
             console.error("Error processing community campaign contribution:", error);
             // Continue with order processing regardless of campaign error
         }
+
+        // Create user notification
+        const orderNotification = {
+            type: 'order_placed',
+            title: 'Order Placed Successfully',
+            message: fulfillment_type === 'delivery' 
+                ? 'Your order has been placed and will be delivered soon.' 
+                : `Your order has been placed. You can pick it up at ${pickup_location}. Your verification code is ${pickupVerificationCode}`,
+            isRead: false,
+            userId: userId
+        };
+
+        await NotificationModel.create(orderNotification);
 
         return response.json({
             message: "Order successfully",
@@ -232,7 +279,7 @@ export async function paymentController(request,response){
         return response.status(200).json(session)
 
     } catch (error) {
-        console.error("Stripe checkout error:", error)
+        console.error("Stripe checkout error:", error);
         return response.status(500).json({
             message: error.message || error,
             error: true,
@@ -614,8 +661,20 @@ export async function getAllOrdersAdmin(request, response) {
       });
     }
 
+    // Handle filtering by fulfillment type
+    const { fulfillment_type, status } = request.query;
+    let query = {};
+
+    if (fulfillment_type) {
+      query.fulfillment_type = fulfillment_type;
+    }
+
+    if (status) {
+      query.status = status;
+    }
+
     // Improve the populate to include more user information
-    const orders = await OrderModel.find({})
+    const orders = await OrderModel.find(query)
       .sort({ createdAt: -1 })
       .populate({
         path: 'userId',
@@ -956,9 +1015,10 @@ export async function updateOrderLocation(request, response) {
 // Get orders assigned to delivery personnel
 export async function getAssignedOrders(request, response) {
     try {
-        // For testing purposes, this endpoint returns all orders with delivery_assigned status
+        // Only get delivery orders (not pickup)
         const orders = await OrderModel.find({ 
-            status: { $in: ['driver_assigned', 'out_for_delivery', 'nearby'] } 
+            status: { $in: ['driver_assigned', 'out_for_delivery', 'nearby'] },
+            fulfillment_type: 'delivery'
         });
         
         return response.json({
@@ -974,3 +1034,390 @@ export async function getAssignedOrders(request, response) {
         });
     }
 }
+
+// Verify pickup code
+export async function verifyPickupCode(request, response) {
+    console.log("=== verifyPickupCode called ===");
+    console.log("Request body:", inspectObject(request.body));
+    
+    try {
+        const { orderId, verificationCode } = request.body;
+        
+        console.log(`Verifying pickup: orderId=${orderId}, code=${verificationCode}`);
+        
+        if (!verificationCode) {
+            console.log("Error: No verification code provided");
+            return response.status(400).json({
+                message: "Verification code is required",
+                success: false
+            });
+        }
+        
+        // If no orderId, try to find by verification code directly
+        let query = {};
+        if (orderId) {
+            console.log(`Looking up by orderId: ${orderId}`);
+            query = { _id: orderId };
+        } else {
+            console.log(`Looking up by verification code: ${verificationCode}`);
+            query = { 
+                pickupVerificationCode: verificationCode,
+                fulfillment_type: 'pickup'
+            };
+        }
+        
+        console.log("MongoDB query:", inspectObject(query));
+        
+        // Log all pickup orders for debugging
+        console.log("DEBUG: Querying all pickup orders");
+        const allPickupOrders = await OrderModel.find({ fulfillment_type: 'pickup' })
+            .select('_id orderId pickupVerificationCode status');
+        console.log("All pickup orders:", inspectObject(allPickupOrders));
+        
+        const order = await OrderModel.findOne(query)
+            .populate('userId', 'name email mobile')
+            .populate({
+                path: 'items.productId',
+                select: 'name price image'
+            });
+        
+        console.log("Order lookup result:", order ? "Found" : "Not found");
+        if (order) {
+            console.log("Order details:", {
+                id: order._id,
+                status: order.status,
+                fulfillment_type: order.fulfillment_type,
+                pickupVerificationCode: order.pickupVerificationCode
+            });
+        }
+        
+        if (!order) {
+            console.log("Order not found with the provided criteria");
+            return response.status(404).json({
+                message: "Order not found",
+                success: false
+            });
+        }
+        
+        if (order.fulfillment_type !== 'pickup') {
+            console.log("Not a pickup order. Fulfillment type:", order.fulfillment_type);
+            return response.status(400).json({
+                message: "This is not a pickup order",
+                success: false
+            });
+        }
+        
+        if (order.status === 'picked_up') {
+            console.log("Order already picked up");
+            return response.status(400).json({
+                message: "This order has already been picked up",
+                success: false
+            });
+        }
+        
+        if (orderId && order.pickupVerificationCode !== verificationCode) {
+            console.log("Invalid verification code provided");
+            console.log(`Expected: ${order.pickupVerificationCode}, Received: ${verificationCode}`);
+            return response.status(400).json({
+                message: "Invalid verification code",
+                success: false
+            });
+        }
+        
+        console.log("Verification successful, returning order details");
+        
+        return response.json({
+            message: "Order verified successfully",
+            success: true,
+            data: order
+        });
+        
+    } catch (error) {
+        console.error("Error verifying pickup code:", error);
+        return response.status(500).json({
+            message: "Internal server error",
+            error: error.message,
+            success: false
+        });
+    }
+}
+
+// Get most recent order for current user
+export async function getMostRecentOrder(request, response) {
+  try {
+    const userId = request.userId;
+    
+    if (!userId) {
+      return response.status(401).json({
+        message: "Authentication required",
+        success: false
+      });
+    }
+    
+    console.log(`Fetching most recent order for user ${userId}`);
+    
+    // Find most recent order for this user
+    const recentOrder = await OrderModel.findOne({ 
+      userId: userId 
+    })
+    .sort({ createdAt: -1 })
+    .populate({
+      path: 'items.productId',
+      select: 'name image price'
+    })
+    .populate('delivery_address');
+    
+    if (!recentOrder) {
+      console.log(`No orders found for user ${userId}`);
+      return response.status(404).json({
+        message: "No orders found",
+        success: false
+      });
+    }
+    
+    console.log(`Successfully found recent order ${recentOrder._id} for user ${userId}`);
+    
+    return response.json({
+      message: "Recent order retrieved successfully",
+      success: true,
+      order: recentOrder
+    });
+    
+  } catch (error) {
+    console.error("Error fetching recent order:", error);
+    return response.status(500).json({
+      message: "Internal server error",
+      success: false,
+      error: error.message
+    });
+  }
+}
+
+/**
+ * Verify an order pickup code
+ * This is used by staff to verify a customer's pickup code
+ */
+export const verifyPickupController = async (req, res) => {
+  try {
+    const { pickupCode } = req.body;
+    
+    if (!pickupCode) {
+      return res.status(400).json({
+        message: "Pickup code is required",
+        success: false
+      });
+    }
+    
+    // Find order with this pickup code
+    const order = await OrderModel.findOne({ 
+      pickupCode, 
+      deliveryMethod: 'store-pickup', 
+      status: { $nin: ['Cancelled', 'Picked Up'] }
+    }).populate('userId', 'name email mobile');
+    
+    if (!order) {
+      return res.status(404).json({
+        message: "Invalid pickup code or order already picked up",
+        success: false
+      });
+    }
+    
+    // Return order details for verification
+    return res.status(200).json({
+      success: true,
+      data: {
+        orderId: order._id,
+        orderNumber: order.orderNumber,
+        customerName: order.userId?.name || 'Unknown Customer',
+        customerEmail: order.userId?.email,
+        customerPhone: order.userId?.mobile,
+        totalAmount: order.totalAmt,
+        items: order.products.map(p => ({
+          productId: p.productId,
+          productName: p.name,
+          quantity: p.quantity,
+          price: p.price
+        })),
+        pickupCode: order.pickupCode,
+        status: order.status
+      }
+    });
+    
+  } catch (error) {
+    console.error("Error verifying pickup code:", error);
+    return res.status(500).json({
+      message: error.message || "Error verifying pickup code",
+      success: false
+    });
+  }
+};
+
+/**
+ * Complete an order pickup after verification
+ */
+export const completePickupController = async (req, res) => {
+  try {
+    const { orderId, pickupCode } = req.body;
+    const staffUserId = req.userId;
+    
+    if (!orderId || !pickupCode) {
+      return res.status(400).json({
+        message: "Order ID and pickup code are required",
+        success: false
+      });
+    }
+    
+    // Get staff user details
+    const staffUser = await UserModel.findById(staffUserId);
+    if (!staffUser) {
+      return res.status(404).json({
+        message: "Staff user not found",
+        success: false
+      });
+    }
+    
+    // Find order and verify pickup code
+    const order = await OrderModel.findOne({ 
+      _id: orderId, 
+      pickupCode, 
+      deliveryMethod: 'store-pickup',
+      status: { $nin: ['Cancelled', 'Picked Up'] } 
+    }).populate('userId', 'name email mobile');
+    
+    if (!order) {
+      return res.status(404).json({
+        message: "Invalid order ID or pickup code",
+        success: false
+      });
+    }
+    
+    // Update order status
+    order.status = 'Picked Up';
+    order.updatedAt = new Date();
+    
+    // Add verification record
+    if (!order.pickupVerification) {
+      order.pickupVerification = {};
+    }
+    
+    order.pickupVerification = {
+      verifiedBy: staffUser.name || staffUser.email || staffUserId,
+      verifiedById: staffUserId,
+      verifiedAt: new Date()
+    };
+    
+    await order.save();
+    
+    // Create a verification history record
+    // This would be a separate collection in a real implementation
+    // For now, just return success
+    
+    // Return success with updated order details
+    return res.status(200).json({
+      success: true,
+      message: "Order pickup completed successfully",
+      data: {
+        orderId: order._id,
+        orderNumber: order.orderNumber,
+        customerName: order.userId?.name || 'Unknown Customer',
+        customerEmail: order.userId?.email,
+        customerPhone: order.userId?.mobile,
+        totalAmount: order.totalAmt,
+        items: order.products.map(p => ({
+          productId: p.productId,
+          productName: p.name,
+          quantity: p.quantity,
+          price: p.price
+        })),
+        pickupCode: order.pickupCode,
+        status: order.status,
+        verifiedBy: staffUser.name || staffUser.email,
+        verifiedAt: new Date()
+      }
+    });
+    
+  } catch (error) {
+    console.error("Error completing pickup:", error);
+    return res.status(500).json({
+      message: error.message || "Error completing pickup",
+      success: false
+    });
+  }
+};
+
+/**
+ * Get pending pickups for staff
+ */
+export const getPendingPickupsController = async (req, res) => {
+  try {
+    // Find all orders with store pickup that haven't been picked up yet
+    const pendingPickups = await OrderModel.find({
+      deliveryMethod: 'store-pickup',
+      status: { $nin: ['Cancelled', 'Picked Up'] }
+    }).populate('userId', 'name email mobile').sort({ createdAt: -1 });
+    
+    // Format response data
+    const formattedPickups = pendingPickups.map(order => ({
+      _id: order._id,
+      orderNumber: order.orderNumber,
+      customerName: order.userId?.name || 'Unknown Customer',
+      customerPhone: order.userId?.mobile,
+      totalAmount: order.totalAmt,
+      createdAt: order.createdAt,
+      pickupCode: order.pickupCode,
+      status: order.status
+    }));
+    
+    return res.status(200).json({
+      success: true,
+      data: formattedPickups
+    });
+    
+  } catch (error) {
+    console.error("Error fetching pending pickups:", error);
+    return res.status(500).json({
+      message: error.message || "Error fetching pending pickups",
+      success: false
+    });
+  }
+};
+
+/**
+ * Get verification history for staff
+ */
+export const getVerificationHistoryController = async (req, res) => {
+  try {
+    // Find all orders that have been picked up and have verification records
+    const verifiedPickups = await OrderModel.find({
+      deliveryMethod: 'store-pickup',
+      status: 'Picked Up',
+      'pickupVerification.verifiedAt': { $exists: true }
+    }).populate('userId', 'name email mobile')
+      .populate('pickupVerification.verifiedById', 'name email')
+      .sort({ 'pickupVerification.verifiedAt': -1 });
+    
+    // Format response data
+    const formattedHistory = verifiedPickups.map(order => ({
+      _id: order._id,
+      orderNumber: order.orderNumber,
+      customerName: order.userId?.name || 'Unknown Customer',
+      customerPhone: order.userId?.mobile,
+      totalAmount: order.totalAmt,
+      pickupCode: order.pickupCode,
+      verifiedBy: order.pickupVerification?.verifiedBy || 'Unknown Staff',
+      verifiedAt: order.pickupVerification?.verifiedAt
+    }));
+    
+    return res.status(200).json({
+      success: true,
+      data: formattedHistory
+    });
+    
+  } catch (error) {
+    console.error("Error fetching verification history:", error);
+    return res.status(500).json({
+      message: error.message || "Error fetching verification history",
+      success: false
+    });
+  }
+};

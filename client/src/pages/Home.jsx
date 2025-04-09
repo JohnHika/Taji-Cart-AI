@@ -1,14 +1,15 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { FaUsers } from 'react-icons/fa';
 import { useDispatch, useSelector } from "react-redux";
 import { Link, useNavigate } from "react-router-dom";
-import SummaryApi from "../common/SummaryApi"; // Fixed in previous change
+import { toast } from 'react-toastify';
 import bannerMobile from "../assets/banner-mobile.jpg";
 import banner from "../assets/banner1.jpg";
+import SummaryApi from "../common/SummaryApi";
 import CategoryWiseProductDisplay from '../components/CategoryWiseProductDisplay';
 import CommunityCampaignProgress from "../components/CommunityCampaignProgress";
 import UserActiveCampaigns from "../components/UserActiveCampaigns";
-import { setAllCategory } from "../store/productSlice"; // Updated import path
+import { setAllCategory, setAllSubCategory } from "../store/productSlice";
 import Axios from "../utils/Axios";
 import { valideURLConvert } from "../utils/valideURLConvert";
 
@@ -26,14 +27,13 @@ const Home = () => {
   }, []);
 
   useEffect(() => {
-    // Explicitly fetch categories on home page load
     const fetchCategoriesData = async () => {
       try {
         console.log("Home page: Explicitly fetching categories");
         
         const response = await Axios({
           ...SummaryApi.getCategory,
-          timeout: 10000 // 10 second timeout
+          timeout: 10000
         });
         
         if (response.data && response.data.data) {
@@ -47,13 +47,74 @@ const Home = () => {
       }
     };
 
-    // Check if categories are already in the state
     if (!categoryData || categoryData.length === 0) {
       fetchCategoriesData();
     } else {
       console.log("Home page: Categories already loaded:", categoryData.length);
     }
   }, [dispatch, categoryData]);
+
+  const fetchSubCategories = async () => {
+    try {
+      console.log("Explicitly fetching subcategories");
+      
+      // Check if the API endpoint is defined before using it
+      if (!SummaryApi.getSubCategory) {
+        console.error("SubCategory API endpoint is not defined in SummaryApi!");
+        console.log("Available API endpoints:", Object.keys(SummaryApi));
+        
+        // Try using getAllSubCategory instead (checking endpoint naming differences)
+        const endpoint = SummaryApi.getAllSubCategory || {
+          url: 'http://localhost:8080/api/subcategory/get',
+          method: 'get'
+        };
+        
+        console.log("Using fallback endpoint:", endpoint);
+        
+        const response = await Axios({
+          ...endpoint,
+          timeout: 10000
+        });
+        
+        console.log("SubCategory API response:", response);
+        
+        if (response.data && response.data.data) {
+          console.log(`Retrieved ${response.data.data.length} subcategories`);
+          dispatch(setAllSubCategory(response.data.data || []));
+          return response.data.data;
+        } else {
+          console.error("No subcategories data in response", response);
+          return [];
+        }
+      } else {
+        // Original code path when API is defined
+        console.log("SubCategory API endpoint:", SummaryApi.getSubCategory);
+        
+        const response = await Axios({
+          ...SummaryApi.getSubCategory,
+          timeout: 10000
+        });
+        
+        console.log("SubCategory API response:", response);
+        
+        if (response.data && response.data.data) {
+          console.log(`Retrieved ${response.data.data.length} subcategories`);
+          dispatch(setAllSubCategory(response.data.data || []));
+          return response.data.data;
+        } else {
+          console.error("No subcategories data in response", response);
+          return [];
+        }
+      }
+    } catch (error) {
+      console.error("Error fetching subcategories:", error);
+      if (error.response) {
+        console.error("Error response data:", error.response.data);
+        console.error("Error response status:", error.response.status);
+      }
+      return [];
+    }
+  };
 
   const fetchFeaturedCampaign = async () => {
     try {
@@ -64,7 +125,6 @@ const Home = () => {
       });
       
       if (response.data.success && response.data.data && response.data.data.length > 0) {
-        // Get the first active campaign to feature
         setFeaturedCampaign(response.data.data[0]);
       }
     } catch (error) {
@@ -74,24 +134,88 @@ const Home = () => {
     }
   };
 
-  const handleRedirectProductListpage = (id,cat)=>{
-      console.log(id,cat)
-      const subcategory = subCategoryData.find(sub =>{
-        const filterData = sub.category.some(c => {
-          return c._id == id
-        })
+  const debouncedFetchSubCategories = useCallback(() => {
+    fetchSubCategories();
+  }, []);
 
-        return filterData ? true : null
-      })
-      const url = `/${valideURLConvert(cat)}-${id}/${valideURLConvert(subcategory.name)}-${subcategory._id}`
+  useEffect(() => {
+    if (!subCategoryData || subCategoryData.length === 0) {
+      debouncedFetchSubCategories();
+    }
+  }, [subCategoryData, debouncedFetchSubCategories]);
 
-      navigate(url)
-      console.log(url)
-  }
+  const handleRedirectProductListpage = async (id, cat) => {
+    console.log("--------- Category Navigation Debug ----------");
+    console.log("1. Category clicked:", { id, name: cat });
+    
+    const loadingToast = toast.loading("Loading category products...");
+    
+    try {
+      if (!subCategoryData || subCategoryData.length === 0) {
+        console.log("No subcategories loaded yet, fetching them now...");
+        await fetchSubCategories();
+      }
+      
+      console.log("2. Available subCategories count:", subCategoryData?.length || 0);
+      
+      // Find matching subcategories for this category
+      const matchingSubcategories = subCategoryData.filter(sub => 
+        sub.category && Array.isArray(sub.category) && 
+        sub.category.some(c => c._id == id)
+      );
+      
+      console.log(`Found ${matchingSubcategories.length} matching subcategories`);
+      
+      // First preferred option: Category with specific subcategory
+      const subcategory = matchingSubcategories.length > 0 ? matchingSubcategories[0] : null;
+      
+      if (subcategory) {
+        console.log("3. Found subcategory:", subcategory.name);
+        
+        // Use consistent URL format: /category-name-categoryId
+        // Don't include subcategory in URL to avoid route matching issues
+        const url = `/${valideURLConvert(cat)}-${id}`;
+        console.log("4. Navigating to:", url);
+        
+        // Pass subcategory info via state
+        const navigationState = {
+          categoryId: id,
+          categoryName: cat,
+          subcategoryId: subcategory._id,
+          subcategoryName: subcategory.name,
+          matchingSubcategories: matchingSubcategories.map(s => ({ id: s._id, name: s.name }))
+        };
+        
+        toast.dismiss(loadingToast);
+        toast.success(`Showing products in ${cat}`);
+        navigate(url, { state: navigationState });
+      } else {
+        console.warn("No subcategory found for this category");
+        
+        // Simpler URL format to avoid route matching issues
+        const directUrl = `/${valideURLConvert(cat)}-${id}`;
+        console.log("Navigating to:", directUrl);
+        
+        toast.dismiss(loadingToast);
+        navigate(directUrl, { 
+          state: { 
+            categoryId: id, 
+            categoryName: cat 
+          } 
+        });
+      }
+    } catch (error) {
+      console.error("Navigation error:", error);
+      toast.dismiss(loadingToast);
+      toast.error("Something went wrong");
+      navigate('/');
+    }
+    
+    console.log("--------- End Navigation Debug ----------");
+  };
 
   return (
    <section className='bg-white dark:bg-gray-900 transition-colors'>
-      {/* Banner section - No changes needed */}
       <div className='container mx-auto'>
           <div className={`w-full h-full min-h-48 bg-blue-100 dark:bg-blue-900 rounded ${!banner && "animate-pulse my-2" } `}>
               <img
@@ -107,25 +231,20 @@ const Home = () => {
           </div>
       </div>
       
-      {/* Categories section - Horizontally scrollable on mobile */}
       <div className='container mx-auto px-4 my-6'>
         <div className='flex items-center justify-between mb-4'>
           <h2 className='text-2xl font-semibold text-gray-800 dark:text-gray-200'>Categories</h2>
           
-          {/* Optional: View All button */}
           <Link to="/categories" className='text-primary-200 hover:underline text-sm font-medium'>
             View All
           </Link>
         </div>
         
-        {/* Horizontal scrollable container */}
         <div className='relative'>
-          {/* The scrollable container */}
           <div className='flex overflow-x-auto pb-4 scrollbar-hide space-x-4 
               scroll-smooth snap-x snap-mandatory lg:flex-wrap lg:justify-center lg:space-x-0 lg:gap-4'>
             {
               loadingCategory ? (
-                // Loading placeholders
                 new Array(12).fill(null).map((c, index) => (
                   <div 
                     key={index+"loadingcategory"} 
@@ -137,7 +256,6 @@ const Home = () => {
                   </div>
                 ))
               ) : (
-                // Category items
                 categoryData.map((cat) => (
                   <div 
                     key={cat._id+"displayCategory"} 
@@ -169,7 +287,6 @@ const Home = () => {
             }
           </div>
           
-          {/* Optional: Gradient fades to indicate more content */}
           <div className='absolute top-0 right-0 bottom-0 w-12 bg-gradient-to-l from-white dark:from-gray-900 to-transparent 
               pointer-events-none lg:hidden'></div>
           <div className='absolute top-0 left-0 bottom-0 w-12 bg-gradient-to-r from-white dark:from-gray-900 to-transparent 
@@ -177,7 +294,6 @@ const Home = () => {
         </div>
       </div>
 
-      {/* Community Challenges section */}
       <section className="container mx-auto px-4 py-6">
         <div className="mb-2">
           <h2 className="text-xl font-bold flex items-center">
@@ -187,10 +303,8 @@ const Home = () => {
           <p className="text-sm text-gray-600 dark:text-gray-400">Join other shoppers to unlock exclusive rewards!</p>
         </div>
         
-        {/* User's active campaigns */}
         <UserActiveCampaigns />
         
-        {/* Featured campaign */}
         {loadingCampaign ? (
           <div className="h-40 bg-gray-100 dark:bg-gray-800 animate-pulse rounded-lg"></div>
         ) : featuredCampaign ? (
@@ -203,7 +317,6 @@ const Home = () => {
         )}
       </section>
 
-      {/* Category-wise product display - Keep as is */}
       {
         categoryData?.map((c) => (
           <CategoryWiseProductDisplay 
@@ -217,4 +330,4 @@ const Home = () => {
   )
 }
 
-export default Home
+export default Home;

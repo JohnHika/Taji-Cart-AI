@@ -4,10 +4,10 @@ import dotenv from 'dotenv';
 import express from 'express';
 import mongoose from 'mongoose';
 
-import deliveryRouter from './route/delivery.route.js';
 import orderRouter from './route/order.route.js';
 import productRouter from './route/product.route.js';
 import userRouter from './route/user.route.js';
+import deliveryRoutes from './routes/delivery.js'; // Not delivery.route.js
 
 dotenv.config();
 
@@ -46,9 +46,10 @@ mongoose.connection.on('error', (err) => {
 });
 
 app.use('/api/users', userRouter);
+app.use('/api/user', userRouter);
 app.use('/api/products', productRouter);
 app.use('/api/orders', orderRouter);
-app.use('/api/delivery', deliveryRouter);
+app.use('/api/delivery', deliveryRoutes);
 
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);

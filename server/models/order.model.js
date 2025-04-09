@@ -42,9 +42,22 @@ const orderSchema = new mongoose.Schema({
         type: String,
         default: ""
     },
+    fulfillment_type: {
+        type: String,
+        enum: ['delivery', 'pickup'],
+        default: 'delivery'
+    },
+    pickup_location: {
+        type: String,
+        default: ""
+    },
+    pickup_instructions: {
+        type: String,
+        default: ""
+    },
     status: {
         type: String,
-        enum: ['pending', 'processing', 'driver_assigned', 'out_for_delivery', 'nearby', 'delivered', 'cancelled'],
+        enum: ['pending', 'processing', 'driver_assigned', 'out_for_delivery', 'nearby', 'delivered', 'ready_for_pickup', 'picked_up', 'cancelled'],
         default: 'pending'
     },
     statusHistory: {
@@ -52,7 +65,7 @@ const orderSchema = new mongoose.Schema({
             status: {
                 type: String,
                 required: true,
-                enum: ['pending', 'processing', 'shipped', 'driver_assigned', 'out_for_delivery', 'nearby', 'delivered', 'cancelled']
+                enum: ['pending', 'processing', 'shipped', 'driver_assigned', 'out_for_delivery', 'nearby', 'delivered', 'ready_for_pickup', 'picked_up', 'cancelled']
             },
             timestamp: {
                 type: Date,
@@ -72,10 +85,22 @@ const orderSchema = new mongoose.Schema({
         lastUpdated: Date
     },
     estimatedDeliveryTime: Date,
+    estimatedPickupTime: Date,
     deliveryPersonnel: {
         type: mongoose.Schema.ObjectId,
         ref: 'DeliveryPersonnel'
-    }
+    },
+    pickupVerificationCode: {
+        type: String,
+        default: ""
+    },
+    pickupVerification: {
+        verifiedBy: { type: String },
+        verifiedById: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+        verifiedAt: { type: Date }
+    },
+    pickupCode: { type: String },
+    deliveryMethod: { type: String, enum: ['delivery', 'store-pickup'], default: 'delivery' }
 }, {
     timestamps: true
 })

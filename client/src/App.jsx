@@ -16,6 +16,8 @@ import { setUserDetails } from './store/userSlice';
 import Axios from './utils/Axios';
 import fetchUserDetails from './utils/fetchUserDetails';
 
+// Import staff pages
+
 // CartSynchronizer component
 const CartSynchronizer = () => {
   const location = useLocation();
@@ -189,13 +191,64 @@ function App() {
     console.log("Categories updated:", categories.length);
   }, [categories]);
 
+  // Add a specific effect to handle dynamic routes
+  useEffect(() => {
+    // Check if the current route is a category route
+    const isCategoryRoute = location.pathname.includes('-');
+    if (isCategoryRoute) {
+      console.log("App detected category route:", location.pathname);
+      console.log("App has navigation state:", location.state);
+      
+      // Ensure categories are loaded for category routes
+      if (!categories || categories.length === 0) {
+        console.log("Categories not loaded yet for category route - fetching now");
+        fetchProductData();
+      }
+    }
+  }, [location.pathname, categories]);
+
+  // Add a special handler for direct URL navigation to category routes
+  useEffect(() => {
+    // Check if we're on a category page (URL contains a dash which indicates category-id format)
+    const isCategoryRoute = location.pathname.match(/\/[^/]+-[a-f0-9]+/);
+    
+    if (isCategoryRoute) {
+      console.log("🚨 Direct navigation to category route detected:", location.pathname);
+      
+      // Force data loading for direct URL navigation
+      if (!categories || categories.length === 0) {
+        console.log("Categories not loaded for direct category navigation - loading now");
+        fetchProductData();
+      }
+      
+      // Check if state is missing (happens with direct URL navigation)
+      if (!location.state) {
+        console.log("⚠️ No state available for category route - this likely means direct URL access");
+        
+        // Try to extract category/subcategory IDs from URL
+        const pathParts = location.pathname.split('/').filter(Boolean);
+        if (pathParts.length > 0) {
+          const categoryPart = pathParts[0];
+          const categoryMatch = categoryPart.match(/-([\da-f]+)$/);
+          
+          if (categoryMatch && categoryMatch[1]) {
+            const extractedCategoryId = categoryMatch[1];
+            console.log("Extracted category ID from URL:", extractedCategoryId);
+            
+            // You might want to fetch specific data here or set state
+          }
+        }
+      }
+    }
+  }, [location.pathname, categories, location.state]);
+
   return (
     <GlobalProvider> 
       <Header/>
       <CartSynchronizer />
       <main className='min-h-[78vh]'>
-        {/* Main content will be rendered via the router's Outlet */}
-        <Outlet/>
+        {/* Add key to force remounting of child components when pathname changes */}
+        <Outlet key={location.pathname} />
       </main>
       <Footer/>
       <Toaster/>

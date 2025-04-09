@@ -2,6 +2,7 @@ import React from 'react';
 import {
     FaBan,
     FaCheckCircle,
+    FaIdBadge,
     FaTimesCircle,
     FaTrash,
     FaTruck,
@@ -70,13 +71,16 @@ const UserTable = ({ users, onDelete, onChangeRole, onBlockUser, onUnblockUser, 
             <td className="py-2 px-4 border-b dark:border-gray-600">
               <span className={`flex items-center px-2 py-1 rounded text-xs font-medium ${
                 user.isAdmin ? 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200' : 
+                user.isStaff || user.role === 'staff' ? 'bg-teal-100 text-teal-800 dark:bg-teal-900 dark:text-teal-200' :
                 user.isDelivery || user.role === 'delivery' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' :
                 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
               }`}>
                 {user.isAdmin ? <FaUserShield className="mr-1" /> : 
+                 user.isStaff || user.role === 'staff' ? <FaIdBadge className="mr-1" /> :
                  user.isDelivery || user.role === 'delivery' ? <FaTruck className="mr-1" /> : 
                  <FaUser className="mr-1" />}
                 {user.isAdmin ? 'Admin' : 
+                 user.isStaff || user.role === 'staff' ? 'Staff' :
                  user.isDelivery || user.role === 'delivery' ? 'Driver' : 
                  'Customer'}
               </span>

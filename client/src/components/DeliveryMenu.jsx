@@ -24,6 +24,10 @@ const DeliveryMenu = ({ close }) => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   
+  if (user.role === 'staff') {
+    return null; // Prevent staff from accessing delivery menus
+  }
+
   const isActive = (path) => {
     return location.pathname.includes(path) ? 'bg-orange-200 dark:bg-orange-900/30' : '';
   };

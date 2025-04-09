@@ -8,9 +8,10 @@ import { Navigate, useLocation } from 'react-router-dom';
  * @param {object} props 
  * @param {React.ReactNode} props.children - The component or elements to render when authenticated
  * @param {boolean} [props.requireAdmin=false] - Whether the route requires admin privileges
+ * @param {boolean} [props.requireStaff=false] - Whether the route requires staff privileges
  * @returns {React.ReactNode}
  */
-const PrivateRoute = ({ children, requireAdmin = false }) => {
+const PrivateRoute = ({ children, requireAdmin = false, requireStaff = false }) => {
   const user = useSelector(state => state.user);
   const location = useLocation();
   
@@ -24,18 +25,29 @@ const PrivateRoute = ({ children, requireAdmin = false }) => {
     user?.isAdmin === true || 
     user?.userType === 'admin' ||
     user?.type === 'admin';
+    
+  // Check for staff status
+  const isStaff = 
+    user?.role === 'staff' || 
+    user?.isStaff === true || 
+    isAdmin; // Admins can do everything staff can do
   
-  // Check if user is an admin if required
-  const isAuthorized = requireAdmin ? isAuthenticated && isAdmin : isAuthenticated;
-
+  // Check if logged in
   if (!isAuthenticated) {
-    // Redirect to login if not authenticated, saving the current location for redirect after login
+    console.log('User not authenticated, redirecting to login');
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
   
+  // Check if admin is required but user is not admin
   if (requireAdmin && !isAdmin) {
-    // Redirect to home if admin access is required but user is not an admin
-    return <Navigate to="/" replace />;
+    console.log('Admin required but user is not admin, redirecting');
+    return <Navigate to="/dashboard/profile" replace />;
+  }
+  
+  // Check if staff is required but user is not staff
+  if (requireStaff && !isStaff) {
+    console.log('Staff required but user is not staff, redirecting');
+    return <Navigate to="/dashboard/profile" replace />;
   }
 
   // User is authenticated and authorized, render the protected component

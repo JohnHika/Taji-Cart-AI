@@ -5,11 +5,19 @@ import User from '../models/user.model.js';
 // Get delivery driver statistics
 export const getDeliveryStats = async (req, res) => {
   try {
-    const driverId = req.user._id;
+    // Check for userId instead of req.user
+    if (!req.userId) {
+      return res.status(401).json({
+        success: false,
+        message: 'Authentication failed - user not found'
+      });
+    }
+    
+    const driverId = req.userId;
     
     // Get pending deliveries (assigned but not delivered)
     const pendingDeliveries = await Order.countDocuments({
-      driverId,
+      deliveryPersonnel: driverId,
       status: { $in: ['driver_assigned', 'out_for_delivery', 'nearby'] }
     });
     
@@ -18,14 +26,14 @@ export const getDeliveryStats = async (req, res) => {
     today.setHours(0, 0, 0, 0);
     
     const todayDeliveries = await Order.countDocuments({
-      driverId,
+      deliveryPersonnel: driverId,
       status: 'delivered',
       deliveredAt: { $gte: today }
     });
     
     // Get total completed deliveries
     const totalDeliveries = await Order.countDocuments({
-      driverId,
+      deliveryPersonnel: driverId,
       status: 'delivered'
     });
     
@@ -54,7 +62,15 @@ export const getDeliveryStats = async (req, res) => {
 // Get active orders for delivery driver
 export const getActiveOrders = async (req, res) => {
   try {
-    const driverId = req.user._id;
+    // Add null check before accessing req.userId
+    if (!req.userId) {
+      return res.status(401).json({
+        success: false,
+        message: 'Authentication failed - user not found'
+      });
+    }
+    
+    const driverId = req.userId;
     
     // Since we might not have actual orders assigned to this driver yet,
     // let's provide sample data for testing
@@ -91,7 +107,7 @@ export const getActiveOrders = async (req, res) => {
     
     // Try to fetch real orders, but use mock data if none are found
     const activeOrders = await Order.find({
-      driverId,
+      deliveryPersonnel: driverId,
       status: { $in: ['driver_assigned', 'out_for_delivery', 'nearby'] }
     }).populate('userId', 'name email phone');
     
@@ -130,7 +146,7 @@ export const getActiveOrders = async (req, res) => {
 // Get completed orders for delivery driver
 export const getCompletedOrders = async (req, res) => {
   try {
-    const driverId = req.user._id;
+    const driverId = req.userId;
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
     
@@ -172,7 +188,7 @@ export const getCompletedOrders = async (req, res) => {
     
     // Try to fetch real orders, but use mock data if none are found
     const completedOrders = await Order.find({
-      driverId,
+      deliveryPersonnel: driverId,
       status: 'delivered'
     }).populate('userId', 'name email phone')
       .sort({ deliveredAt: -1 })
@@ -221,7 +237,7 @@ export const getCompletedOrders = async (req, res) => {
 // Get delivery history with date range filtering
 export const getDeliveryHistory = async (req, res) => {
   try {
-    const driverId = req.user._id;
+    const driverId = req.userId;
     const { startDate, endDate } = req.query;
     
     // Mock delivery history data
@@ -315,7 +331,7 @@ export const exportDeliveryHistory = async (req, res) => {
 export const updateOrderStatus = async (req, res) => {
   try {
     const { orderId, status } = req.body;
-    const driverId = req.user._id;
+    const driverId = req.userId;
     
     if (!orderId || !status) {
       return res.status(400).json({
@@ -349,7 +365,7 @@ export const updateOrderStatus = async (req, res) => {
 // Update driver location
 export const updateDriverLocation = async (req, res) => {
   try {
-    const driverId = req.user._id;
+    const driverId = req.userId;
     const { location } = req.body;
     
     if (!location || typeof location.lat !== 'number' || typeof location.lng !== 'number') {

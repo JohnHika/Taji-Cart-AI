@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { BsCart4 } from "react-icons/bs";
+import { FaUserTie } from "react-icons/fa";
 import { FaRegCircleUser } from "react-icons/fa6";
 import { GoTriangleDown, GoTriangleUp } from "react-icons/go";
 import { useSelector } from 'react-redux';
@@ -15,6 +16,16 @@ import DisplayCartItem from './DisplayCartItem';
 import Search from './Search';
 import ThemeToggle from './ThemeToggle';
 import UserMenu from './UserMenu';
+
+// Add this helper function to check if user is staff
+const isUserStaff = (user) => {
+    return (
+        user.isStaff === true || 
+        user.role === 'staff' || 
+        user.userType === 'staff' ||
+        user.accountType === 'staff'
+    );
+};
 
 const Header = () => {
     const [isMobile] = useMobile();
@@ -103,6 +114,16 @@ const Header = () => {
                                                     <div className='absolute right-0 top-12'>
                                                         <div className='bg-white dark:bg-gray-700 rounded p-4 min-w-52 lg:shadow-lg'>
                                                             <UserMenu close={handleCloseUserMenu} />
+                                                            {isUserStaff(user) && (
+                                                                <Link 
+                                                                    to="/staff/dashboard" 
+                                                                    className="flex items-center px-4 py-2 text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-700"
+                                                                    onClick={handleCloseUserMenu}
+                                                                >
+                                                                    <FaUserTie className="mr-2" />
+                                                                    Staff Dashboard
+                                                                </Link>
+                                                            )}
                                                         </div>
                                                     </div>
                                                 )

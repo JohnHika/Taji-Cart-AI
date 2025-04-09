@@ -21,18 +21,46 @@ const userSlice  = createSlice({
     initialState : initialValue,
     reducers : {
         setUserDetails : (state,action) =>{
-            state._id = action.payload?._id
-            state.name  = action.payload?.name
-            state.email = action.payload?.email
-            state.avatar = action.payload?.avatar
-            state.mobile = action.payload?.mobile
-            state.verify_email = action.payload?.verify_email
-            state.last_login_date = action.payload?.last_login_date
-            state.status = action.payload?.status
-            state.address_details = action.payload?.address_details
-            state.shopping_cart = action.payload?.shopping_cart
-            state.orderHistory = action.payload?.orderHistory
-            state.role = action.payload?.role
+            console.log("Setting user details in Redux:", action.payload);
+            
+            // Create a new user object with enhanced role detection
+            const userData = { ...action.payload };
+            
+            // EXPLICITLY handle staff role detection - with extensive logging
+            console.log("Checking user role:", userData.role);
+            
+            // Convert role to lowercase for case-insensitive comparison
+            const userRole = (userData.role || '').toLowerCase();
+            
+            if (userRole === 'staff') {
+                console.log("STAFF ROLE DETECTED - Setting isStaff flag");
+                userData.isStaff = true;
+                userData.accountType = 'staff';
+            } else if (userRole === 'admin') {
+                userData.isAdmin = true;
+                userData.accountType = 'admin';
+            } else if (userRole === 'delivery') {
+                userData.isDelivery = true;
+                userData.accountType = 'delivery';
+            } else {
+                // Default to customer/regular user
+                userData.accountType = 'customer';
+            }
+            
+            console.log("Final user data with processed roles:", userData);
+
+            state._id = userData?._id
+            state.name  = userData?.name
+            state.email = userData?.email
+            state.avatar = userData?.avatar
+            state.mobile = userData?.mobile
+            state.verify_email = userData?.verify_email
+            state.last_login_date = userData?.last_login_date
+            state.status = userData?.status
+            state.address_details = userData?.address_details
+            state.shopping_cart = userData?.shopping_cart
+            state.orderHistory = userData?.orderHistory
+            state.role = userData?.role
             state.isAuthenticated = true;
         },
         updatedAvatar : (state,action)=>{

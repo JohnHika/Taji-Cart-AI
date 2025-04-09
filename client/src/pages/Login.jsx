@@ -41,7 +41,7 @@ const Login = () => {
         try {
             const response = await Axios({
                 ...SummaryApi.login,
-                data : data
+                data: data
             })
             
             if(response.data.error) {
@@ -52,7 +52,9 @@ const Login = () => {
             }
 
             if(response.data.success) {
-                // Using sessionStorage instead of localStorage for session-based JWT
+                console.log("Login successful, user data:", response.data.data);
+                
+                // Store tokens in sessionStorage for security
                 sessionStorage.setItem('accesstoken', response.data.data.accesstoken)
                 sessionStorage.setItem('refreshToken', response.data.data.refreshToken)
 
@@ -62,7 +64,17 @@ const Login = () => {
                 }
 
                 const userDetails = await fetchUserDetails()
-                dispatch(setUserDetails(userDetails.data))
+                console.log("User details retrieved:", userDetails);
+                
+                // Set user details in Redux store with role information
+                dispatch(setUserDetails({
+                    ...userDetails.data,
+                    // Ensure role information is prominently available
+                    accountType: userDetails.data.role || 
+                                 (userDetails.data.isAdmin ? 'admin' : 
+                                  userDetails.data.isDelivery ? 'delivery' : 
+                                  userDetails.data.isStaff ? 'staff' : 'customer')
+                }))
                 
                 dispatch(fetchCartItems())
                 

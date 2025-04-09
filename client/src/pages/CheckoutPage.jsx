@@ -1,14 +1,15 @@
 import { loadStripe } from '@stripe/stripe-js';
 import React, { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
-import { FaCrown } from 'react-icons/fa';
+import { FaCrown, FaStore } from 'react-icons/fa';
 import { FaXmark } from 'react-icons/fa6';
 import { useDispatch, useSelector } from 'react-redux';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import SummaryApi from '../common/SummaryApi';
 import ActiveRewards from '../components/ActiveRewards'; // Import the ActiveRewards component
 import AddAddress from '../components/AddAddress';
 import CommunityCampaignProgress from '../components/CommunityCampaignProgress'; // Import the CommunityCampaignProgress component
+import FulfillmentModal from '../components/FulfillmentModal';
 import MpesaPayment from '../components/MpesaPayment'; // Import the MpesaPayment component
 import { useTheme } from '../context/ThemeContext';
 import { useGlobalContext } from '../provider/GlobalProvider';
@@ -20,8 +21,22 @@ import { DisplayPriceInShillings } from '../utils/DisplayPriceInShillings';
 const CheckoutPage = ({ isCutView = false, onClose = null }) => {
   const { notDiscountTotalPrice, totalPrice, totalQty, fetchCartItem, fetchOrder, royalCardData, royalDiscount } = useGlobalContext();
   const { darkMode } = useTheme();
+  const location = useLocation();
   const [openAddress, setOpenAddress] = useState(false);
   const [showMpesaForm, setShowMpesaForm] = useState(false); // State to control M-Pesa form visibility
+  const [showFulfillmentModal, setShowFulfillmentModal] = useState(false);
+  
+  // Get fulfillment method from location state if available
+  const [fulfillmentMethod, setFulfillmentMethod] = useState(
+    location.state?.fulfillmentMethod || 'delivery'
+  );
+  const [pickupLocation, setPickupLocation] = useState(
+    location.state?.pickupLocation || ''
+  );
+  const [pickupInstructions, setPickupInstructions] = useState(
+    location.state?.pickupInstructions || ''
+  );
+  
   const addressList = useSelector(state => state.addresses.addressList);
   const [selectAddress, setSelectAddress] = useState(null); // Changed from 0 to null to ensure validation
   const [addressError, setAddressError] = useState(false); // State to track address selection error
@@ -125,11 +140,23 @@ const CheckoutPage = ({ isCutView = false, onClose = null }) => {
     ? Math.max(0, priceAfterCommunityDiscount - pointsValue) 
     : priceAfterCommunityDiscount;
 
+  // Pickup locations (in a real app, these would likely come from an API)
+  const pickupLocations = [
+    { name: 'Main Store', address: 'Taji Cart HQ, 123 Main Street, Nairobi' },
+    { name: 'Westlands Branch', address: '456 Westlands Road, Westlands, Nairobi' },
+    { name: 'Mombasa Road Store', address: '789 Mombasa Road, Nairobi' }
+  ];
+
   // Validate address is selected before payment
   const validateAddress = () => {
-    if (!isPaymentEnabled) {
-      setAddressError(true);
-      toast.error('Please select a delivery address before proceeding');
+    if (fulfillmentMethod === 'delivery') {
+      if (!isPaymentEnabled) {
+        setAddressError(true);
+        toast.error('Please select a delivery address before proceeding');
+        return false;
+      }
+    } else if (fulfillmentMethod === 'pickup' && !pickupLocation) {
+      toast.error('Please select a pickup location');
       return false;
     }
     return true;
@@ -143,13 +170,16 @@ const CheckoutPage = ({ isCutView = false, onClose = null }) => {
         ...SummaryApi.CashOnDeliveryOrder,
         data : {
           list_items : cartItemsList,
-          addressId : addressList[selectAddress]._id,
+          addressId : fulfillmentMethod === 'delivery' ? addressList[selectAddress]._id : null,
           subTotalAmt : totalPrice,
           totalAmt : finalPrice,
           usePoints: usePoints,
           pointsUsed: usePoints ? pointsValue : 0,
           communityRewardId: selectedReward ? selectedReward._id : null,
-          communityDiscountAmount: selectedReward && selectedReward.type === 'discount' ? communityDiscount : 0
+          communityDiscountAmount: selectedReward && selectedReward.type === 'discount' ? communityDiscount : 0,
+          fulfillment_type: fulfillmentMethod,
+          pickup_location: pickupLocation,
+          pickup_instructions: pickupInstructions
         }
       });
 
@@ -213,12 +243,15 @@ const CheckoutPage = ({ isCutView = false, onClose = null }) => {
             ...SummaryApi.payment_url,
             data: {
               list_items: cartItemsList,
-              addressId: addressList[selectAddress]._id,
+              addressId: fulfillmentMethod === 'delivery' ? addressList[selectAddress]._id : null,
               subTotalAmt: totalPrice,
               totalAmt: finalPrice,
               royalDiscount: royalDiscount,
               communityRewardId: selectedReward ? selectedReward._id : null,
-              communityDiscountAmount: selectedReward && selectedReward.type === 'discount' ? communityDiscount : 0
+              communityDiscountAmount: selectedReward && selectedReward.type === 'discount' ? communityDiscount : 0,
+              fulfillment_type: fulfillmentMethod,
+              pickup_location: pickupLocation,
+              pickup_instructions: pickupInstructions
             }
         });
 
@@ -275,6 +308,18 @@ const CheckoutPage = ({ isCutView = false, onClose = null }) => {
     toast.error(errorMessage || "M-Pesa payment failed");
     setShowMpesaForm(false);
   }
+
+  // Handle fulfillment method selection
+  const handleFulfillmentSelect = (data) => {
+    setFulfillmentMethod(data.fulfillment_type);
+    setPickupLocation(data.pickup_location);
+    setPickupInstructions(data.pickup_instructions);
+  };
+
+  // Pre-checkout handler to show fulfillment modal first
+  const handlePreCheckout = (paymentMethod) => {
+    setShowFulfillmentModal(true);
+  };
 
   // Check if there are active addresses available
   const hasActiveAddresses = addressList.some(address => address.status);
@@ -547,12 +592,11 @@ const CheckoutPage = ({ isCutView = false, onClose = null }) => {
     );
   }
 
-  // Full page render (original implementation)
-  return (
-    <section className='bg-blue-50 dark:bg-gray-800 transition-colors duration-200'>
-      <div className='container mx-auto p-4 flex flex-col lg:flex-row w-full gap-5 justify-between'>
-        <div className='w-full'>
-          {/***address***/}
+  // Update UI based on fulfillment method
+  const renderAddressOrPickupSection = () => {
+    if (fulfillmentMethod === 'delivery') {
+      return (
+        <>
           <h3 className='text-lg font-semibold dark:text-white'>Choose your address</h3>
           {!hasActiveAddresses && (
             <div className="bg-yellow-100 border border-yellow-400 text-yellow-700 dark:bg-yellow-800/30 dark:border-yellow-700 dark:text-yellow-200 px-4 py-2 rounded mb-4">
@@ -619,6 +663,47 @@ const CheckoutPage = ({ isCutView = false, onClose = null }) => {
               Add address
             </div>
           </div>
+        </>
+      );
+    } else {
+      return (
+        <>
+          <h3 className='text-lg font-semibold dark:text-white mb-2'>Pickup Information</h3>
+          <div className='bg-white dark:bg-gray-700 p-4 rounded shadow transition-colors duration-200'>
+            <div className="flex items-center gap-2 mb-3">
+              <FaStore className="text-purple-500" />
+              <span className="font-medium dark:text-white">Pickup Location:</span>
+            </div>
+            <p className="mb-3 dark:text-gray-200">{pickupLocation}</p>
+            
+            {pickupInstructions && (
+              <>
+                <div className="flex items-center gap-2 mb-2 mt-4">
+                  <span className="font-medium dark:text-white">Your Instructions:</span>
+                </div>
+                <p className="text-gray-600 dark:text-gray-300 italic">{pickupInstructions}</p>
+              </>
+            )}
+            
+            <button 
+              onClick={() => navigate(-1)} // Go back to previous page
+              className="mt-4 px-4 py-2 bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300 rounded hover:bg-purple-200 dark:hover:bg-purple-800/40"
+            >
+              Change Pickup Location
+            </button>
+          </div>
+        </>
+      );
+    }
+  };
+
+  // Full page render (original implementation)
+  return (
+    <section className='bg-blue-50 dark:bg-gray-800 transition-colors duration-200'>
+      <div className='container mx-auto p-4 flex flex-col lg:flex-row w-full gap-5 justify-between'>
+        <div className='w-full'>
+          {/* Address or Pickup Section */}
+          {renderAddressOrPickupSection()}
         </div>
 
         <div className='w-full max-w-md bg-white dark:bg-gray-700 py-4 px-2 rounded shadow transition-colors duration-200'>
@@ -762,36 +847,39 @@ const CheckoutPage = ({ isCutView = false, onClose = null }) => {
           <div className='w-full flex flex-col gap-4 mt-4 px-4'>
             <button 
               className={`py-2 px-4 rounded text-white font-semibold transition-colors duration-200 ${
-                isPaymentEnabled 
+                (fulfillmentMethod === 'delivery' && isPaymentEnabled) || (fulfillmentMethod === 'pickup')
                   ? 'bg-green-600 hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-600' 
                   : 'bg-gray-400 dark:bg-gray-600 cursor-not-allowed'
               }`} 
               onClick={handleOnlinePayment}
-              disabled={!isPaymentEnabled}
+              disabled={fulfillmentMethod === 'delivery' && !isPaymentEnabled}
             >
-              Pay with Card {!isPaymentEnabled && '(Select Address First)'}
+              Pay with Card {fulfillmentMethod === 'delivery' && !isPaymentEnabled && '(Select Address First)'}
             </button>
+            
             <button 
               className={`py-2 px-4 rounded text-white font-semibold transition-colors duration-200 ${
-                isPaymentEnabled 
+                (fulfillmentMethod === 'delivery' && isPaymentEnabled) || (fulfillmentMethod === 'pickup')
                   ? 'bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600' 
                   : 'bg-gray-400 dark:bg-gray-600 cursor-not-allowed'
               }`}
               onClick={handleShowMpesaForm}
-              disabled={!isPaymentEnabled}
+              disabled={fulfillmentMethod === 'delivery' && !isPaymentEnabled}
             >
-              Pay with M-Pesa {!isPaymentEnabled && '(Select Address First)'}
+              Pay with M-Pesa {fulfillmentMethod === 'delivery' && !isPaymentEnabled && '(Select Address First)'}
             </button>
+            
             <button 
               className={`py-2 px-4 border-2 font-semibold transition-colors duration-200 ${
-                isPaymentEnabled 
+                (fulfillmentMethod === 'delivery' && isPaymentEnabled) || (fulfillmentMethod === 'pickup')
                   ? 'border-green-600 text-green-600 hover:bg-green-600 hover:text-white dark:border-green-500 dark:text-green-400 dark:hover:bg-green-700' 
                   : 'border-gray-400 text-gray-400 dark:border-gray-600 dark:text-gray-500 cursor-not-allowed'
               }`}
               onClick={handleCashOnDelivery}
-              disabled={!isPaymentEnabled}
+              disabled={fulfillmentMethod === 'delivery' && !isPaymentEnabled}
             >
-              Cash on Delivery {!isPaymentEnabled && '(Select Address First)'}
+              Cash on {fulfillmentMethod === 'delivery' ? 'Delivery' : 'Pickup'} 
+              {fulfillmentMethod === 'delivery' && !isPaymentEnabled && '(Select Address First)'}
             </button>
           </div>
         </div>
@@ -813,16 +901,28 @@ const CheckoutPage = ({ isCutView = false, onClose = null }) => {
             <MpesaPayment
               cartItems={cartItemsList}
               totalAmount={totalPrice}
-              addressId={addressList[selectAddress]?._id}
+              addressId={fulfillmentMethod === 'delivery' ? addressList[selectAddress]?._id : null}
               onSuccess={handleMpesaSuccess}
               onError={handleMpesaError}
               communityRewardId={selectedReward?._id}
               communityDiscountAmount={selectedReward?.type === 'discount' ? communityDiscount : 0}
+              fulfillment_type={fulfillmentMethod}
+              pickup_location={pickupLocation}
+              pickup_instructions={pickupInstructions}
             />
           </div>
         </div>
       )}
 
+      {/* Fulfillment Method Modal */}
+      <FulfillmentModal 
+        isOpen={showFulfillmentModal}
+        onClose={() => setShowFulfillmentModal(false)}
+        onSelect={handleFulfillmentSelect}
+        pickupLocations={pickupLocations}
+      />
+
+      {/* Address Modal */}
       {
         openAddress && (
           <AddAddress close={() => setOpenAddress(false)} />
