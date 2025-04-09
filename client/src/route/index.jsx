@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
 import { createBrowserRouter } from 'react-router-dom';
 import App from '../App';
+import CategoryFallbackErrorPage from '../components/CategoryFallbackErrorPage';
 import MpesaPaymentStatus from '../components/MpesaPaymentStatus';
 import PrivateRoute from '../components/PrivateRoute';
 import Dashboard from '../layouts/Dashboard';
@@ -93,10 +94,7 @@ const router = createBrowserRouter([
   {
     path: '/',
     element: <App />,
-    errorElement: (
-      // Custom error element that tries to recover from category page errors
-      <CategoryFallbackErrorPage />
-    ),
+    errorElement: <CategoryFallbackErrorPage />,
     children: [
       {
         index: true,
@@ -426,9 +424,7 @@ const router = createBrowserRouter([
       // Improved catch-all route
       {
         path: '*',
-        element: (
-          <CategoryAwareErrorPage />
-        )
+        element: <CategoryFallbackErrorPage />
       }
     ]
   }
