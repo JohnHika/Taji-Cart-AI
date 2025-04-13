@@ -1,6 +1,8 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { FaArrowLeft, FaBoxOpen, FaExclamationTriangle, FaQrcode, FaSpinner } from 'react-icons/fa';
 import { useNavigate } from 'react-router-dom';
+import { toast } from 'react-toastify';
+import io from 'socket.io-client';
 import SummaryApi from '../../common/SummaryApi';
 import Axios from '../../utils/Axios';
 
@@ -9,6 +11,77 @@ const PendingPickups = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const navigate = useNavigate();
+  const socketRef = useRef(null);
+
+  // Connect to socket when component mounts
+  useEffect(() => {
+    const connectSocket = () => {
+      try {
+        // Connect to the socket server
+        const socket = io(process.env.REACT_APP_API_URL || '', {
+          path: '/socket.io',
+          transports: ['websocket'],
+          auth: {
+            token: localStorage.getItem('token')
+          }
+        });
+
+        socket.on('connect', () => {
+          console.log('Socket connected for staff pending pickups');
+          
+          // Join staff-pickups room to receive pickup order updates
+          socket.emit('join', 'staff-pickups');
+        });
+
+        socket.on('disconnect', () => {
+          console.log('Socket disconnected from staff pickups');
+        });
+
+        // Listen for new pickup orders
+        socket.on('new_pickup_order', (data) => {
+          console.log('New pickup order received', data);
+          toast.info(`New pickup order received: #${data.orderNumber || data._id.substring(0,8)}`);
+          
+          // Add to our list of pickups
+          setPickups(prevPickups => [data, ...prevPickups]);
+        });
+
+        // Listen for pickup order status updates
+        socket.on('pickup_status_updated', (data) => {
+          console.log('Pickup status updated', data);
+          
+          setPickups(prevPickups => 
+            prevPickups.map(pickup => 
+              pickup._id === data._id ? { ...pickup, ...data } : pickup
+            ).filter(pickup => 
+              // Keep only orders that are still pending or ready for pickup
+              pickup.status !== 'picked_up' && pickup.status !== 'cancelled'
+            )
+          );
+          
+          // If order was picked up or cancelled, show a toast
+          if (data.status === 'picked_up' || data.status === 'cancelled') {
+            toast.info(`Order #${data.orderNumber || data._id.substring(0,8)} ${data.status}`);
+          }
+        });
+
+        socketRef.current = socket;
+      } catch (err) {
+        console.error('Socket connection error:', err);
+      }
+    };
+
+    connectSocket();
+
+    // Clean up socket connection when component unmounts
+    return () => {
+      if (socketRef.current) {
+        console.log('Cleaning up socket connection');
+        socketRef.current.disconnect();
+        socketRef.current = null;
+      }
+    };
+  }, []);
 
   useEffect(() => {
     fetchPendingPickups();

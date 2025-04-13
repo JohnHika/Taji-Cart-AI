@@ -57,7 +57,7 @@ const orderSchema = new mongoose.Schema({
     },
     status: {
         type: String,
-        enum: ['pending', 'processing', 'driver_assigned', 'out_for_delivery', 'nearby', 'delivered', 'ready_for_pickup', 'picked_up', 'cancelled'],
+        enum: ['pending', 'processing', 'dispatched', 'driver_assigned', 'out_for_delivery', 'nearby', 'delivered', 'ready_for_pickup', 'picked_up', 'cancelled'],
         default: 'pending'
     },
     statusHistory: {
@@ -65,7 +65,7 @@ const orderSchema = new mongoose.Schema({
             status: {
                 type: String,
                 required: true,
-                enum: ['pending', 'processing', 'shipped', 'driver_assigned', 'out_for_delivery', 'nearby', 'delivered', 'ready_for_pickup', 'picked_up', 'cancelled']
+                enum: ['pending', 'processing', 'dispatched', 'shipped', 'driver_assigned', 'out_for_delivery', 'nearby', 'delivered', 'ready_for_pickup', 'picked_up', 'cancelled']
             },
             timestamp: {
                 type: Date,
@@ -75,7 +75,11 @@ const orderSchema = new mongoose.Schema({
                 lat: Number,
                 lng: Number
             },
-            note: String
+            note: String,
+            updatedBy: {
+                type: mongoose.Schema.ObjectId,
+                ref: 'User'
+            }
         }],
         default: []
     },
@@ -89,6 +93,11 @@ const orderSchema = new mongoose.Schema({
     deliveryPersonnel: {
         type: mongoose.Schema.ObjectId,
         ref: 'DeliveryPersonnel'
+    },
+    dispatchInfo: {
+        dispatchedAt: { type: Date },
+        dispatchedBy: { type: mongoose.Schema.ObjectId, ref: 'User' },
+        dispatchNotes: { type: String }
     },
     pickupVerificationCode: {
         type: String,

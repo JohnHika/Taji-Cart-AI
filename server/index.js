@@ -114,7 +114,7 @@ app.use('/api', campaignRouter); // Register the community campaign routes
 app.use('/api/tracking', trackingRouter); // Add this line with your other routes
 
 // Import delivery routes using ES module syntax
-import deliveryRoutes from './routes/delivery.js';
+import deliveryRoutes from './route/delivery.route.js';
 
 // Register delivery routes
 app.use('/api/delivery', deliveryRoutes);

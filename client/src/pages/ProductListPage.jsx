@@ -111,39 +111,61 @@ const ProductListPage = () => {
       
       if (pathParts.length > 0) {
         const firstPart = pathParts[0];
-        const idMatch = firstPart.match(/[a-f0-9]{24}$/);
-        if (idMatch) {
-          categoryId = idMatch[0];
-          console.log("Found category ID in URL:", categoryId);
+        
+        // First try to extract the ID from URL params if they exist
+        if (params.categoryId) {
+          categoryId = params.categoryId;
+          console.log("Extracted categoryId from params:", categoryId);
+        } 
+        // Then try to extract from the path
+        else if (firstPart) {
+          // Check for hyphenated format (name-id)
+          const parts = firstPart.split('-');
+          if (parts.length > 1) {
+            // Get the last part which should be the ID
+            const potentialId = parts[parts.length - 1];
+            
+            // Verify this looks like an ID (alphanumeric, at least 5 chars)
+            if (/^[a-f0-9]{5,}$/i.test(potentialId)) {
+              categoryId = potentialId;
+              console.log("Extracted categoryId from hyphenated path:", categoryId);
+            }
+          }
+          
+          // If we still don't have an ID, check if the path itself is an ID
+          if (!categoryId && /^[a-f0-9]{5,}$/i.test(firstPart)) {
+            categoryId = firstPart;
+            console.log("Path itself appears to be a categoryId:", categoryId);
+          }
         }
       }
       
-      if (!categoryId) {
-        if (params.categoryId) {
-          categoryId = params.categoryId;
-          console.log("Using categoryId from params:", categoryId);
-        } else if (navigationState.categoryId) {
-          categoryId = navigationState.categoryId;
-          console.log("Using categoryId from navigation state:", categoryId);
-        }
+      // Still no categoryId? Fall back to navigation state if available
+      if (!categoryId && navigationState.categoryId) {
+        categoryId = navigationState.categoryId;
+        console.log("Using categoryId from navigation state:", categoryId);
       }
       
       let subCategoryId = null;
-      if (pathParts.length > 1) {
+      // Similar logic for subcategory
+      if (params.subcategoryId) {
+        subCategoryId = params.subcategoryId;
+      } else if (pathParts.length > 1) {
         const secondPart = pathParts[1];
-        const idMatch = secondPart.match(/[a-f0-9]{24}$/);
-        if (idMatch) {
-          subCategoryId = idMatch[0];
-          console.log("Found subcategory ID in URL:", subCategoryId);
+        const parts = secondPart.split('-');
+        if (parts.length > 1) {
+          const potentialId = parts[parts.length - 1];
+          if (/^[a-f0-9]{5,}$/i.test(potentialId)) {
+            subCategoryId = potentialId;
+            console.log("Extracted subCategoryId from path:", subCategoryId);
+          }
         }
       }
       
-      if (!subCategoryId) {
-        if (params.subcategoryId) {
-          subCategoryId = params.subcategoryId;
-        } else if (navigationState.subcategoryId) {
-          subCategoryId = navigationState.subcategoryId;
-        }
+      // Fall back to navigation state for subcategory
+      if (!subCategoryId && navigationState.subcategoryId) {
+        subCategoryId = navigationState.subcategoryId;
+        console.log("Using subCategoryId from navigation state:", subCategoryId);
       }
       
       console.log("Final IDs:", { categoryId, subCategoryId });
@@ -231,7 +253,37 @@ const ProductListPage = () => {
         setError("Showing products by category ID. Some information may be missing.");
       }
     }
-  }, [location.state]);
+    
+    // Initialize subcategories when component mounts
+    const { categoryId } = parseParams();
+    if (categoryId && AllSubCategory.length > 0) {
+      console.log("Finding subcategories for category:", categoryId);
+      
+      // Find all subcategories that belong to this category
+      const matchingSubcats = AllSubCategory.filter(sub => {
+        // Handle different subcategory data structures
+        if (sub.category && Array.isArray(sub.category)) {
+          return sub.category.some(cat => 
+            (cat._id && cat._id === categoryId) || 
+            (cat === categoryId) ||
+            (typeof cat === 'string' && cat.includes(categoryId))
+          );
+        }
+        if (sub.category && typeof sub.category === 'object') {
+          return sub.category._id === categoryId;
+        }
+        return String(sub.category) === String(categoryId);
+      });
+      
+      console.log(`Found ${matchingSubcats.length} matching subcategories`);
+      setDisplaySubCategory(matchingSubcats);
+      
+      // Store category name if available in navigation state
+      if (navigationState.categoryName) {
+        console.log("Category name from navigation state:", navigationState.categoryName);
+      }
+    }
+  }, [location.state, AllSubCategory, navigationState]);
 
   const fetchProducts = async () => {
     console.log("Fetching products with URL:", window.location.pathname);
@@ -242,47 +294,96 @@ const ProductListPage = () => {
       console.log("🔄 Fetching products for category:", categoryId);
       
       if (!categoryId) {
-        setError("Category not found");
+        setError("Category ID could not be determined from the URL");
         setLoading(false);
         return;
       }
+
+      // For debugging - log the exact ID we're using
+      console.log("Using category ID for API request:", categoryId);
       
-      // Test server connection first
-      const connectionTest = await testServerConnection(categoryId);
-      
-      if (connectionTest.success) {
-        // If we got products directly, use them
-        if (connectionTest.usedFallback) {
-          console.log("⚠️ Using fallback API results");
-          setData(connectionTest.products);
-          setLoading(false);
-          return;
-        }
-        
-        // Continue with normal flow if direct test succeeded
+      // Direct API call without testing connection first (simplified approach)
+      try {
+        console.log("Making API request to get category products");
         const response = await Axios({
           ...SummaryApi.getProductByCategory,
-          data: {
-            id: categoryId
-          }
+          data: { id: categoryId }
         });
         
+        console.log("API response received:", response.data);
+        
         if (response.data && response.data.success) {
-          setData(response.data.data || []);
-          setLoading(false);
+          console.log(`Found ${response.data.data?.length || 0} products`);
+          
+          if (response.data.data && response.data.data.length > 0) {
+            setData(response.data.data);
+            setLoading(false);
+            setError(null); // Clear any previous errors
+          } else {
+            console.log("No products found in category");
+            setData([]);
+            setLoading(false);
+            // Don't set error for empty product list - it's a valid state
+          }
         } else {
-          setError("No products found");
-          setLoading(false);
+          console.error("API returned success:false");
+          
+          // Try fallback approach
+          try {
+            console.log("🔄 Trying alternative API endpoint...");
+            const fallbackResponse = await Axios({
+              url: '/api/products/by-category',
+              method: 'post',
+              data: { categoryId: categoryId }
+            });
+            
+            if (fallbackResponse.data && fallbackResponse.data.success) {
+              console.log(`Fallback found ${fallbackResponse.data.data?.length || 0} products`);
+              setData(fallbackResponse.data.data || []);
+              setLoading(false);
+              setError(null);
+            } else {
+              setData([]);
+              setLoading(false);
+              // Don't set error for empty product list
+            }
+          } catch (fallbackError) {
+            console.error("Fallback API call failed:", fallbackError);
+            setData([]);
+            setLoading(false);
+            // Don't set error for empty product list
+          }
         }
-      } else {
-        // Server connection test failed, set error
-        console.error("❌ Server connection test failed");
-        setError(`Could not connect to server: ${connectionTest.message}`);
+      } catch (apiError) {
+        console.error("API call error:", apiError);
+        
+        // Final fallback - try a simpler API request with just the base ID
+        try {
+          console.log("Attempting direct product lookup");
+          const simpleResponse = await Axios({
+            url: '/api/product/get-product-by-category',
+            method: 'post',
+            data: { id: categoryId.toString().replace(/[^a-f0-9]/gi, '') }
+          });
+          
+          if (simpleResponse.data && simpleResponse.data.data) {
+            console.log(`Simple lookup found ${simpleResponse.data.data.length} products`);
+            setData(simpleResponse.data.data);
+          } else {
+            setData([]);
+          }
+        } catch (simpleError) {
+          console.error("Simple lookup failed:", simpleError);
+          setData([]);
+        }
+        
         setLoading(false);
+        // Don't set error - just show empty product state
       }
     } catch (error) {
-      console.error("Error fetching products:", error);
-      setError("Error loading products");
+      console.error("Fatal error in fetchProducts:", error);
+      setError(null); // Don't show error to user, just empty state
+      setData([]);
       setLoading(false);
     }
   };

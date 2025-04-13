@@ -1,6 +1,7 @@
-import React, { useEffect, useState } from 'react';
-import { FaSpinner, FaTruck, FaMapMarkerAlt, FaUser, FaCalendarCheck } from 'react-icons/fa';
+import React, { useEffect, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
+import { FaCalendarCheck, FaMapMarkerAlt, FaSpinner, FaTruck, FaUser } from 'react-icons/fa';
+import io from 'socket.io-client';
 import Axios from '../../utils/Axios';
 import AxiosToastError from '../../utils/AxiosToastError';
 
@@ -8,6 +9,80 @@ const ActiveDeliveries = () => {
   const [activeOrders, setActiveOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const socketRef = useRef(null);
+
+  useEffect(() => {
+    // Connect to Socket.IO for real-time updates
+    const connectSocket = () => {
+      try {
+        // Connect to the socket server
+        const socket = io(process.env.REACT_APP_API_URL || '', {
+          path: '/socket.io',
+          transports: ['websocket'],
+          auth: {
+            token: localStorage.getItem('token')
+          }
+        });
+
+        socket.on('connect', () => {
+          console.log('Socket connected for delivery assignments');
+          
+          // Join delivery room to receive updates
+          socket.emit('join', 'delivery-updates');
+        });
+
+        socket.on('disconnect', () => {
+          console.log('Socket disconnected from delivery updates');
+        });
+
+        // Listen for new delivery assignments
+        socket.on('new_delivery_assigned', (data) => {
+          console.log('New delivery assigned', data);
+          toast.success(`New delivery assigned: Order #${data.orderId}`);
+          
+          // Add to our list of active orders
+          setActiveOrders(prevOrders => [data, ...prevOrders]);
+        });
+
+        // Listen for order status updates
+        socket.on('order_status_updated', (data) => {
+          console.log('Order status updated', data);
+          
+          if (data.status === 'cancelled') {
+            toast.info(`Order #${data.orderId} has been cancelled`);
+            // Remove from active orders
+            setActiveOrders(prevOrders => 
+              prevOrders.filter(order => order._id !== data._id)
+            );
+          } else {
+            // Update the order status
+            setActiveOrders(prevOrders => 
+              prevOrders.map(order => 
+                order._id === data._id ? { ...order, status: data.status } : order
+              )
+            );
+          }
+        });
+        
+        // Store the socket reference
+        socketRef.current = socket;
+      } catch (err) {
+        console.error('Socket connection error:', err);
+      }
+    };
+
+    // Initialize socket connection
+    connectSocket();
+
+    // Clean up socket connection when component unmounts
+    return () => {
+      if (socketRef.current) {
+        console.log('Cleaning up socket connection');
+        socketRef.current.disconnect();
+        socketRef.current = null;
+      }
+    };
+  }, []);
 
   useEffect(() => {
     const fetchActiveDeliveries = async () => {
@@ -36,12 +111,7 @@ const ActiveDeliveries = () => {
     };
     
     fetchActiveDeliveries();
-    
-    // Set up polling to refresh data every 30 seconds
-    const intervalId = setInterval(fetchActiveDeliveries, 30000);
-    
-    return () => clearInterval(intervalId);
-  }, []);
+  }, []); // Removed interval polling since we now use socket.io for real-time updates
   
   const getStatusLabel = (status) => {
     switch (status) {

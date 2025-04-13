@@ -38,6 +38,9 @@ const UserMenu = ({close}) => {
    const isAdmin = isadmin(user.role)
    const isDelivery = user.role === 'delivery'
    const isUserStaff = isStaff(user)
+   
+   // Only show staff functions if the user is staff but NOT admin
+   const showStaffFunctions = isUserStaff && !isAdmin
 
    const handleLogout = async()=>{
         try {
@@ -79,7 +82,7 @@ const UserMenu = ({close}) => {
               (delivery)
             </span>
           )}
-          {isUserStaff && (
+          {showStaffFunctions && (
             <span className="text-medium text-green-600 dark:text-green-400">
               (staff)
             </span>
@@ -238,8 +241,8 @@ const UserMenu = ({close}) => {
           <FaMapMarkerAlt className="mr-2 text-red-500" /> Save Address
         </Link>
 
-        {/* Staff specific menu items */}
-        {isUserStaff && (
+        {/* Staff specific menu items - only show if user is staff but not admin */}
+        {showStaffFunctions && (
           <>
             <Divider />
             <div className="font-semibold dark:text-white px-2 pt-1">Staff Functions</div>

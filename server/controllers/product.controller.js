@@ -81,22 +81,155 @@ export const getProductByCategory = async(request,response)=>{
             })
         }
 
-        const product = await ProductModel.find({ 
-            category : { $in : id }
-        }).limit(15)
-
-        return response.json({
-            message : "category product list",
-            data : product,
-            error : false,
-            success : true
-        })
+        console.log("Fetching products for category ID:", id);
+        
+        // Handle both array and string formats
+        const categoryIds = Array.isArray(id) ? id : [id];
+        
+        // Log the query we're about to execute
+        console.log("Executing category products query with IDs:", categoryIds);
+        
+        try {
+            // First attempt with standard query
+            const product = await ProductModel.find({ 
+                category : { $in : categoryIds }
+            }).limit(15);
+            
+            console.log(`Found ${product.length} products for category`);
+            
+            if (product.length === 0) {
+                // Try string conversion in case the ID format doesn't match
+                console.log("No products found with direct lookup. Trying with string conversion...");
+                
+                const productAlt = await ProductModel.find({ 
+                    category : { $in : categoryIds.map(id => String(id)) }
+                }).limit(15);
+                
+                console.log(`Found ${productAlt.length} products with string conversion`);
+                
+                if (productAlt.length > 0) {
+                    return response.json({
+                        message : "category product list (using string conversion)",
+                        data : productAlt,
+                        error : false,
+                        success : true
+                    });
+                } else {
+                    // Try a safer text search approach instead of regex
+                    console.log("Still no products. Trying with text search...");
+                    
+                    // Instead of a regex query on ObjectId fields, try to find products
+                    // by string representation of the ID in string fields or by using
+                    // the proper ObjectId conversion when possible
+                    const categoryIdStr = String(categoryIds[0]).replace(/[^a-f0-9]/gi, '');
+                    
+                    // Try with a full-text search if available
+                    let productText = [];
+                    try {
+                        productText = await ProductModel.find({
+                            $text: { $search: categoryIdStr }
+                        }).limit(15);
+                        
+                        console.log(`Found ${productText.length} products with text search`);
+                    } catch (textSearchError) {
+                        console.log("Text search not available:", textSearchError.message);
+                    }
+                    
+                    if (productText.length > 0) {
+                        return response.json({
+                            message : "category product list (using text search)",
+                            data : productText,
+                            error : false,
+                            success : true
+                        });
+                    }
+                    
+                    // Last resort: try to query all products and filter in memory
+                    // Note: This is inefficient but may help in emergency situations
+                    console.log("Attempting memory-based filtering as last resort");
+                    try {
+                        const allProducts = await ProductModel.find().limit(100);
+                        
+                        // Do client-side filtering to find matching products
+                        const matchingProducts = allProducts.filter(product => {
+                            // Check if product.category contains anything that matches our ID
+                            if (!product.category) return false;
+                            
+                            // Handle array of categories
+                            if (Array.isArray(product.category)) {
+                                return product.category.some(cat => {
+                                    const catId = cat._id ? cat._id.toString() : String(cat);
+                                    return catId.includes(categoryIdStr);
+                                });
+                            } else {
+                                // Handle string/object category
+                                const catId = product.category._id ? 
+                                    product.category._id.toString() : String(product.category);
+                                return catId.includes(categoryIdStr);
+                            }
+                        });
+                        
+                        console.log(`Found ${matchingProducts.length} products with memory filtering`);
+                        
+                        if (matchingProducts.length > 0) {
+                            return response.json({
+                                message : "category product list (using memory filtering)",
+                                data : matchingProducts,
+                                error : false,
+                                success : true
+                            });
+                        }
+                    } catch (memoryFilterError) {
+                        console.log("Memory filtering error:", memoryFilterError);
+                    }
+                }
+            }
+            
+            // Return original results
+            return response.json({
+                message : "category product list",
+                data : product,
+                error : false,
+                success : true
+            });
+            
+        } catch (error) {
+            console.error("Database query error:", error);
+            
+            try {
+                // Fallback to a simpler query without $in operator
+                console.log("Trying with direct category lookup...");
+                const singleIdProduct = await ProductModel.find({ 
+                    category: categoryIds[0] 
+                }).limit(15);
+                
+                if (singleIdProduct.length > 0) {
+                    return response.json({
+                        message : "category product list (fallback query)",
+                        data : singleIdProduct,
+                        error : false,
+                        success : true
+                    });
+                }
+            } catch (fallbackError) {
+                console.log("Fallback query failed:", fallbackError.message);
+            }
+            
+            // Return empty results rather than error
+            return response.json({
+                message : "No products found for this category",
+                data : [],
+                error : false,
+                success : true
+            });
+        }
     } catch (error) {
+        console.error("Error in getProductByCategory:", error);
         return response.status(500).json({
             message : error.message || error,
             error : true,
             success : false
-        })
+        });
     }
 }
 

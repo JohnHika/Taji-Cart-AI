@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { FaBox, FaCheck, FaCreditCard, FaCrown, FaInfoCircle, FaMobileAlt, FaMoneyBillWave, FaReceipt, FaSpinner, FaStore, FaTruck } from 'react-icons/fa';
+import React, { useEffect, useState, useRef } from 'react';
+import { FaBox, FaCheck, FaCreditCard, FaCrown, FaDownload, FaInfoCircle, FaMobileAlt, FaMoneyBillWave, FaPrint, FaReceipt, FaSpinner, FaStore, FaTruck } from 'react-icons/fa';
 import { useSelector } from 'react-redux';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import SummaryApi from '../common/SummaryApi';
@@ -13,6 +13,203 @@ function Success() {
   const [orderDetails, setOrderDetails] = useState(null);
   const [error, setError] = useState(null);
   const user = useSelector(state => state.user);
+  const receiptRef = useRef(null);
+
+  // Function to print receipt
+  const printReceipt = () => {
+    const content = receiptRef.current;
+    if (!content) return;
+
+    const originalContents = document.body.innerHTML;
+    const printContents = `
+      <style>
+        @media print {
+          body {
+            font-family: Arial, sans-serif;
+            color: #000;
+            background-color: #fff;
+          }
+          .receipt-container {
+            padding: 20px;
+            max-width: 800px;
+            margin: 0 auto;
+          }
+          .receipt-header {
+            text-align: center;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #000;
+            padding-bottom: 10px;
+          }
+          .receipt-logo {
+            font-size: 24px;
+            font-weight: bold;
+          }
+          .receipt-title {
+            font-size: 18px;
+            margin: 10px 0;
+          }
+          .receipt-section {
+            margin: 15px 0;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+          }
+          .receipt-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 5px 0;
+          }
+          .receipt-footer {
+            margin-top: 30px;
+            text-align: center;
+            padding-top: 10px;
+            border-top: 1px solid #ddd;
+          }
+          .verification-code {
+            font-family: monospace;
+            font-size: 16px;
+            font-weight: bold;
+            padding: 10px;
+            background-color: #f0f0f0;
+            border-radius: 4px;
+            margin: 10px 0;
+          }
+          .pickup-info {
+            padding: 10px;
+            background-color: #f9f9f9;
+            border-radius: 4px;
+            margin: 10px 0;
+          }
+          table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 10px 0;
+          }
+          table th, table td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+          }
+          table th {
+            background-color: #f2f2f2;
+          }
+        }
+      </style>
+      <div class="receipt-container">
+        <div class="receipt-header">
+          <div class="receipt-logo">Taji Cart</div>
+          <div class="receipt-title">PAYMENT RECEIPT</div>
+          <div>Order #${orderDetails.orderId || (orderDetails._id && orderDetails._id.substring(orderDetails._id.length - 8))}</div>
+          <div>Date: ${formatDate(orderDetails.createdAt)}</div>
+        </div>
+        
+        <div class="receipt-section">
+          <strong>Customer Information:</strong>
+          <div>Name: ${user.name || 'Customer'}</div>
+          <div>Email: ${user.email || 'N/A'}</div>
+          <div>Phone: ${user.mobile || 'N/A'}</div>
+        </div>
+        
+        ${orderDetails.fulfillment_type === 'pickup' ? `
+          <div class="receipt-section pickup-info">
+            <strong>Pickup Information:</strong>
+            <div>Location: ${orderDetails.pickup_location || 'Store Location'}</div>
+            <div>Status: ${orderDetails.status || 'Ready for pickup'}</div>
+            ${orderDetails.pickupInstructions ? `<div>Instructions: ${orderDetails.pickupInstructions}</div>` : ''}
+            <div class="verification-code">Verification Code: ${orderDetails.pickupVerificationCode || 'N/A'}</div>
+            <div><strong>Important:</strong> Present this code when picking up your order</div>
+          </div>
+        ` : `
+          <div class="receipt-section">
+            <strong>Delivery Information:</strong>
+            <div>Address: ${orderDetails.delivery_address ? 
+              (orderDetails.delivery_address.address_line || orderDetails.delivery_address.address) + 
+              (orderDetails.delivery_address.city ? `, ${orderDetails.delivery_address.city}` : '') : 
+              (orderDetails.deliveryAddress || 'Your registered address')}
+            </div>
+            <div>Status: ${orderDetails.status || 'Pending'}</div>
+          </div>
+        `}
+        
+        <div class="receipt-section">
+          <strong>Order Items:</strong>
+          <table>
+            <thead>
+              <tr>
+                <th>Item</th>
+                <th>Qty</th>
+                <th>Price</th>
+                <th>Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${orderDetails.items && orderDetails.items.length > 0 ? 
+                orderDetails.items.map(item => `
+                  <tr>
+                    <td>${item.productId ? item.productId.name : 'Product'}</td>
+                    <td>${item.quantity || 1}</td>
+                    <td>${DisplayPriceInShillings(item.productId ? item.productId.price : 0).replace('KES', '')}</td>
+                    <td>${DisplayPriceInShillings(item.productId ? item.productId.price * (item.quantity || 1) : 0).replace('KES', '')}</td>
+                  </tr>
+                `).join('') : 
+                `<tr>
+                  <td colspan="4">Order details will be available in your order history</td>
+                </tr>`
+              }
+            </tbody>
+          </table>
+        </div>
+        
+        <div class="receipt-section">
+          <strong>Payment Summary:</strong>
+          <div class="receipt-row">
+            <span>Subtotal:</span>
+            <span>${DisplayPriceInShillings(orderDetails.subTotalAmt || orderDetails.totalAmt || 0).replace('KES', '')}</span>
+          </div>
+          ${orderDetails.pointsUsed > 0 ? `
+            <div class="receipt-row">
+              <span>Points Applied:</span>
+              <span>- KES ${orderDetails.pointsUsed.toLocaleString()}</span>
+            </div>
+          ` : ''}
+          ${orderDetails.royalDiscount > 0 ? `
+            <div class="receipt-row">
+              <span>Royal ${orderDetails.royalCardTier || ''} Discount:</span>
+              <span>${orderDetails.royalDiscount}% off</span>
+            </div>
+          ` : ''}
+          ${orderDetails.communityDiscountAmount > 0 ? `
+            <div class="receipt-row">
+              <span>Community Discount:</span>
+              <span>${orderDetails.communityDiscountAmount}% off</span>
+            </div>
+          ` : ''}
+          <div class="receipt-row">
+            <span>Delivery Fee:</span>
+            <span>${orderDetails.deliveryFee ? DisplayPriceInShillings(orderDetails.deliveryFee).replace('KES', '') : 'Free'}</span>
+          </div>
+          <div class="receipt-row" style="font-weight: bold; border-top: 1px solid #ddd; padding-top: 10px; margin-top: 10px;">
+            <span>Total:</span>
+            <span>${DisplayPriceInShillings(orderDetails.totalAmt || 0).replace('KES', '')}</span>
+          </div>
+          <div style="margin-top: 10px;">
+            <div>Payment Method: ${orderDetails.paymentMethod || 'Online Payment'}</div>
+            <div>Payment Status: ${orderDetails.payment_status || 'Paid'}</div>
+          </div>
+        </div>
+        
+        <div class="receipt-footer">
+          <p>Thank you for shopping with Taji Cart!</p>
+          <p>For questions or support, please contact our customer service.</p>
+        </div>
+      </div>
+    `;
+    
+    document.body.innerHTML = printContents;
+    window.print();
+    document.body.innerHTML = originalContents;
+    window.location.reload(); // Reload the page to restore components
+  };
 
   useEffect(() => {
     const fetchOrderDetails = async () => {
@@ -284,7 +481,7 @@ function Success() {
             </p>
           </div>
         ) : orderDetails ? (
-          <div className='border dark:border-gray-700 rounded-lg overflow-hidden mb-6'>
+          <div className='border dark:border-gray-700 rounded-lg overflow-hidden mb-6' ref={receiptRef}>
             <div className='bg-gray-50 dark:bg-gray-750 p-4 border-b dark:border-gray-700'>
               <div className='flex justify-between items-center'>
                 <h3 className='text-lg font-semibold text-gray-800 dark:text-white flex items-center'>
@@ -525,6 +722,16 @@ function Success() {
         )}
 
         <div className='flex flex-col space-y-3'>
+          {/* Add Print Receipt button for pickup orders */}
+          {orderDetails && orderDetails.fulfillment_type === 'pickup' && (
+            <button 
+              onClick={printReceipt}
+              className='w-full py-2 px-4 bg-green-600 hover:bg-green-700 text-white font-medium rounded transition-colors flex items-center justify-center'
+            >
+              <FaPrint className="mr-2" /> Print Pickup Receipt
+            </button>
+          )}
+          
           <button 
             onClick={handleViewOrders}
             className='w-full py-2 px-4 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded transition-colors'

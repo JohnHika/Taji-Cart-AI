@@ -17,14 +17,21 @@ import Search from './Search';
 import ThemeToggle from './ThemeToggle';
 import UserMenu from './UserMenu';
 
-// Add this helper function to check if user is staff
-const isUserStaff = (user) => {
-    return (
+// Modified helper function to check if user is staff but not admin
+const isUserStaffNotAdmin = (user) => {
+    // Check if the user is staff but NOT admin
+    const isStaff = (
         user.isStaff === true || 
         user.role === 'staff' || 
         user.userType === 'staff' ||
         user.accountType === 'staff'
     );
+    
+    // Check if user is admin
+    const isAdmin = user.role === 'admin';
+    
+    // Return true only if user is staff but not admin
+    return isStaff && !isAdmin;
 };
 
 const Header = () => {
@@ -114,7 +121,7 @@ const Header = () => {
                                                     <div className='absolute right-0 top-12'>
                                                         <div className='bg-white dark:bg-gray-700 rounded p-4 min-w-52 lg:shadow-lg'>
                                                             <UserMenu close={handleCloseUserMenu} />
-                                                            {isUserStaff(user) && (
+                                                            {isUserStaffNotAdmin(user) && (
                                                                 <Link 
                                                                     to="/staff/dashboard" 
                                                                     className="flex items-center px-4 py-2 text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-700"

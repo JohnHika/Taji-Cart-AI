@@ -4,6 +4,7 @@ import {
     CashOnDeliveryOrderController,
     completePickupController,
     getAllOrdersAdmin,
+    getAllPickupOrdersHistory,
     getAssignedOrders,
     getOrderBySessionController,
     getOrderDetailsController,
@@ -45,11 +46,13 @@ orderRouter.post('/verify-pickup', auth, staff, verifyPickupController);
 orderRouter.put('/complete-pickup', auth, staff, completePickupController);
 orderRouter.get('/pending-pickups', auth, staff, getPendingPickupsController);
 orderRouter.get('/verification-history', auth, staff, getVerificationHistoryController);
+orderRouter.get('/pickup-orders-history', auth, staff, getAllPickupOrdersHistory);
 
 // Staff routes for order verification
 orderRouter.post('/staff/verify-pickup-code', auth, staff, verifyPickupCode);
 orderRouter.post('/staff/complete-pickup', auth, staff, completePickupController);
 orderRouter.get('/staff/pending-pickups', auth, staff, getPendingPickupsController);
 orderRouter.get('/staff/verification-history', auth, staff, getVerificationHistoryController);
+orderRouter.get('/staff/pickup-orders-history', auth, staff, getAllPickupOrdersHistory);
 
 export default orderRouter

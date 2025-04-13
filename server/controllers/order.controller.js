@@ -1041,11 +1041,14 @@ export async function verifyPickupCode(request, response) {
     console.log("Request body:", inspectObject(request.body));
     
     try {
-        const { orderId, verificationCode } = request.body;
+        const { orderId, verificationCode, pickupCode, code } = request.body;
         
-        console.log(`Verifying pickup: orderId=${orderId}, code=${verificationCode}`);
+        // Accept multiple parameter names to be more flexible with frontend implementations
+        const actualCode = verificationCode || pickupCode || code;
         
-        if (!verificationCode) {
+        console.log(`Verifying pickup: orderId=${orderId}, code=${actualCode}`);
+        
+        if (!actualCode) {
             console.log("Error: No verification code provided");
             return response.status(400).json({
                 message: "Verification code is required",
@@ -1057,67 +1060,83 @@ export async function verifyPickupCode(request, response) {
         let query = {};
         if (orderId) {
             console.log(`Looking up by orderId: ${orderId}`);
-            query = { _id: orderId };
+            // When orderId is provided, we'll retrieve the order first then verify the code
+            query._id = orderId;
         } else {
-            console.log(`Looking up by verification code: ${verificationCode}`);
-            query = { 
-                pickupVerificationCode: verificationCode,
-                fulfillment_type: 'pickup'
-            };
+            console.log(`Looking up by verification code: ${actualCode}`);
+            // Check both possible field names for maximum compatibility
+            query.$or = [
+                { pickupVerificationCode: actualCode },
+                { pickupCode: actualCode }
+            ];
+            query.fulfillment_type = 'pickup';
         }
         
         console.log("MongoDB query:", inspectObject(query));
         
-        // Log all pickup orders for debugging
-        console.log("DEBUG: Querying all pickup orders");
-        const allPickupOrders = await OrderModel.find({ fulfillment_type: 'pickup' })
-            .select('_id orderId pickupVerificationCode status');
-        console.log("All pickup orders:", inspectObject(allPickupOrders));
-        
-        const order = await OrderModel.findOne(query)
-            .populate('userId', 'name email mobile')
-            .populate({
-                path: 'items.productId',
-                select: 'name price image'
-            });
-        
-        console.log("Order lookup result:", order ? "Found" : "Not found");
-        if (order) {
-            console.log("Order details:", {
-                id: order._id,
-                status: order.status,
-                fulfillment_type: order.fulfillment_type,
-                pickupVerificationCode: order.pickupVerificationCode
+        let order;
+        try {
+            order = await OrderModel.findOne(query)
+                .populate('userId', 'name email mobile')
+                .lean();  // Using lean() for better performance with large documents
+        } catch (findError) {
+            console.error("Error finding order:", findError);
+            return response.status(500).json({
+                message: "Database error while looking up order",
+                error: findError.message,
+                success: false
             });
         }
         
         if (!order) {
             console.log("Order not found with the provided criteria");
             return response.status(404).json({
-                message: "Order not found",
+                message: "Order not found with the provided verification code",
                 success: false
             });
         }
         
-        if (order.fulfillment_type !== 'pickup') {
-            console.log("Not a pickup order. Fulfillment type:", order.fulfillment_type);
+        // Log order details for debugging
+        console.log("Order lookup result: Found");
+        console.log("Order details:", {
+            id: order._id,
+            status: order.status,
+            fulfillment_type: order.fulfillment_type,
+            pickupVerificationCode: order.pickupVerificationCode || order.pickupCode || "No code found"
+        });
+        
+        // Check if this is a pickup order - be flexible with field names
+        if (order.fulfillment_type !== 'pickup' && order.deliveryMethod !== 'store-pickup') {
+            console.log("Not a pickup order. Type:", order.fulfillment_type || order.deliveryMethod);
             return response.status(400).json({
                 message: "This is not a pickup order",
                 success: false
             });
         }
         
+        // Check if order is already picked up - return a different response code but with success=true
+        // This helps the frontend distinguish between "not found" and "already picked up"
+        // Use the correct enum value 'picked_up'
         if (order.status === 'picked_up') {
             console.log("Order already picked up");
-            return response.status(400).json({
+            return response.status(200).json({
                 message: "This order has already been picked up",
-                success: false
+                success: true,
+                alreadyPickedUp: true,
+                data: {
+                    orderId: order._id,
+                    status: order.status,
+                    pickupTime: order.pickupVerification?.verifiedAt || order.updatedAt
+                }
             });
         }
         
-        if (orderId && order.pickupVerificationCode !== verificationCode) {
+        // When orderId is provided, verify the code matches
+        // Check both possible field names for the verification code
+        const storedCode = order.pickupVerificationCode || order.pickupCode;
+        if (orderId && storedCode && storedCode !== actualCode) {
             console.log("Invalid verification code provided");
-            console.log(`Expected: ${order.pickupVerificationCode}, Received: ${verificationCode}`);
+            console.log(`Expected: ${storedCode}, Received: ${actualCode}`);
             return response.status(400).json({
                 message: "Invalid verification code",
                 success: false
@@ -1125,6 +1144,26 @@ export async function verifyPickupCode(request, response) {
         }
         
         console.log("Verification successful, returning order details");
+        
+        // Get product details if needed
+        try {
+            if (order.items && order.items.length > 0) {
+                // If we have items array with productId references, populate them
+                const populatedOrder = await OrderModel.findById(order._id)
+                    .populate('userId', 'name email mobile')
+                    .populate({
+                        path: 'items.productId',
+                        select: 'name price image'
+                    });
+                
+                if (populatedOrder) {
+                    order = populatedOrder.toObject();
+                }
+            }
+        } catch (populateError) {
+            console.error("Error populating product details:", populateError);
+            // Continue with original order if population fails
+        }
         
         return response.json({
             message: "Order verified successfully",
@@ -1257,12 +1296,15 @@ export const verifyPickupController = async (req, res) => {
  */
 export const completePickupController = async (req, res) => {
   try {
-    const { orderId, pickupCode } = req.body;
+    const { orderId, pickupCode, verificationCode } = req.body;
     const staffUserId = req.userId;
     
-    if (!orderId || !pickupCode) {
+    // Support both field names for flexibility
+    const actualCode = pickupCode || verificationCode;
+    
+    if (!orderId || !actualCode) {
       return res.status(400).json({
-        message: "Order ID and pickup code are required",
+        message: "Order ID and pickup/verification code are required",
         success: false
       });
     }
@@ -1276,23 +1318,63 @@ export const completePickupController = async (req, res) => {
       });
     }
     
-    // Find order and verify pickup code
+    console.log(`Processing pickup completion for order ${orderId} with code ${actualCode}`);
+    
+    // Find order with more flexible query that checks both field names
     const order = await OrderModel.findOne({ 
-      _id: orderId, 
-      pickupCode, 
-      deliveryMethod: 'store-pickup',
-      status: { $nin: ['Cancelled', 'Picked Up'] } 
+      _id: orderId,
+      $or: [
+        { pickupCode: actualCode },
+        { pickupVerificationCode: actualCode }
+      ]
     }).populate('userId', 'name email mobile');
     
     if (!order) {
+      console.log(`Order not found with ID ${orderId} and code ${actualCode}`);
       return res.status(404).json({
         message: "Invalid order ID or pickup code",
         success: false
       });
     }
     
-    // Update order status
-    order.status = 'Picked Up';
+    // Check if order is a pickup order
+    if (order.fulfillment_type !== 'pickup' && order.deliveryMethod !== 'store-pickup') {
+      console.log(`Order ${orderId} is not a pickup order. Type: ${order.fulfillment_type || order.deliveryMethod}`);
+      return res.status(400).json({
+        message: "This is not a pickup order",
+        success: false
+      });
+    }
+    
+    // Check if already picked up and return a specific message
+    if (order.status === 'picked_up') {
+      console.log(`Order ${orderId} was already picked up at ${order.pickupVerification?.verifiedAt || order.updatedAt}`);
+      return res.status(200).json({
+        success: true,
+        alreadyVerified: true,
+        message: "This order has already been picked up and verified",
+        data: {
+          orderId: order._id,
+          orderNumber: order.orderId || order.orderNumber,
+          customerName: order.userId?.name || 'Unknown Customer',
+          status: order.status,
+          verifiedBy: order.pickupVerification?.verifiedBy || 'Unknown Staff',
+          verifiedAt: order.pickupVerification?.verifiedAt || order.updatedAt
+        }
+      });
+    }
+    
+    // Check if order is cancelled
+    if (order.status === 'cancelled') {
+      console.log(`Attempted pickup of cancelled order ${orderId}`);
+      return res.status(400).json({
+        message: "This order has been cancelled and cannot be picked up",
+        success: false
+      });
+    }
+    
+    // Update order status - use the correct enum value 'picked_up'
+    order.status = 'picked_up';
     order.updatedAt = new Date();
     
     // Add verification record
@@ -1307,10 +1389,7 @@ export const completePickupController = async (req, res) => {
     };
     
     await order.save();
-    
-    // Create a verification history record
-    // This would be a separate collection in a real implementation
-    // For now, just return success
+    console.log(`Order ${orderId} successfully marked as picked up by ${staffUser.name || staffUserId}`);
     
     // Return success with updated order details
     return res.status(200).json({
@@ -1318,18 +1397,18 @@ export const completePickupController = async (req, res) => {
       message: "Order pickup completed successfully",
       data: {
         orderId: order._id,
-        orderNumber: order.orderNumber,
+        orderNumber: order.orderId || order.orderNumber,
         customerName: order.userId?.name || 'Unknown Customer',
         customerEmail: order.userId?.email,
         customerPhone: order.userId?.mobile,
-        totalAmount: order.totalAmt,
-        items: order.products.map(p => ({
-          productId: p.productId,
-          productName: p.name,
+        totalAmount: order.totalAmt || order.totalAmount,
+        items: (order.items || order.products || []).map(p => ({
+          productId: p.productId?._id || p.productId,
+          productName: p.name || p.product_details?.name || 'Unknown Product',
           quantity: p.quantity,
           price: p.price
         })),
-        pickupCode: order.pickupCode,
+        pickupCode: order.pickupVerificationCode || order.pickupCode,
         status: order.status,
         verifiedBy: staffUser.name || staffUser.email,
         verifiedAt: new Date()
@@ -1352,19 +1431,19 @@ export const getPendingPickupsController = async (req, res) => {
   try {
     // Find all orders with store pickup that haven't been picked up yet
     const pendingPickups = await OrderModel.find({
-      deliveryMethod: 'store-pickup',
-      status: { $nin: ['Cancelled', 'Picked Up'] }
+      fulfillment_type: 'pickup',
+      status: { $in: ['processing', 'ready_for_pickup'] }
     }).populate('userId', 'name email mobile').sort({ createdAt: -1 });
     
     // Format response data
     const formattedPickups = pendingPickups.map(order => ({
       _id: order._id,
-      orderNumber: order.orderNumber,
+      orderNumber: order.orderId,
       customerName: order.userId?.name || 'Unknown Customer',
       customerPhone: order.userId?.mobile,
       totalAmount: order.totalAmt,
       createdAt: order.createdAt,
-      pickupCode: order.pickupCode,
+      pickupCode: order.pickupVerificationCode,
       status: order.status
     }));
     
@@ -1417,6 +1496,190 @@ export const getVerificationHistoryController = async (req, res) => {
     console.error("Error fetching verification history:", error);
     return res.status(500).json({
       message: error.message || "Error fetching verification history",
+      success: false
+    });
+  }
+};
+
+/**
+ * Get all pickup orders history with verification status
+ * This provides a comprehensive view of all pickup orders and their verification status
+ */
+export const getAllPickupOrdersHistory = async (req, res) => {
+  try {
+    // Check for admin/staff privileges
+    const isStaffOrAdmin = req.isAdmin || req.userRole === 'admin' || req.userRole === 'staff';
+    
+    if (!isStaffOrAdmin) {
+      console.log(`Pickup order history access denied: isAdmin=${req.isAdmin}, userRole=${req.userRole}`);
+      return res.status(403).json({
+        message: "Access denied. Staff or admin privileges required.",
+        success: false
+      });
+    }
+    
+    // Query parameters
+    const { 
+      status, 
+      dateFrom, 
+      dateTo, 
+      location,
+      verificationStatus,
+      sort = 'createdAt',
+      order = 'desc',
+      page = 1,
+      limit = 20
+    } = req.query;
+    
+    console.log(`Fetching pickup orders with filters: status=${status}, verificationStatus=${verificationStatus}, dateFrom=${dateFrom}, dateTo=${dateTo}`);
+    
+    // Base query - always filter for pickup orders regardless of field name variations
+    const baseQuery = {
+      $or: [
+        { fulfillment_type: 'pickup' },
+        { deliveryMethod: 'store-pickup' }
+      ]
+    };
+    
+    // Add status filter if provided
+    if (status) {
+      baseQuery.status = status;
+    }
+    
+    // Add date range filter if provided
+    if (dateFrom || dateTo) {
+      baseQuery.createdAt = {};
+      if (dateFrom) {
+        baseQuery.createdAt.$gte = new Date(dateFrom);
+      }
+      if (dateTo) {
+        // Set to end of day for the to-date
+        const endDate = new Date(dateTo);
+        endDate.setHours(23, 59, 59, 999);
+        baseQuery.createdAt.$lte = endDate;
+      }
+    }
+    
+    // Add pickup location filter if provided
+    if (location) {
+      baseQuery.pickup_location = new RegExp(location, 'i');
+    }
+    
+    // Add verification status filter - account for both status formats
+    if (verificationStatus === 'verified') {
+      baseQuery.$or = [
+        { status: 'picked_up' },
+        { 'pickupVerification.verifiedAt': { $exists: true } }
+      ];
+    } else if (verificationStatus === 'unverified') {
+      baseQuery.$and = [
+        { status: { $nin: ['picked_up', 'cancelled'] } },
+        { 'pickupVerification.verifiedAt': { $exists: false } }
+      ];
+    }
+    
+    // Count total matching documents for pagination
+    const totalCount = await OrderModel.countDocuments(baseQuery);
+    
+    // Calculate pagination
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+    const totalPages = Math.ceil(totalCount / parseInt(limit));
+    
+    // Sorting logic
+    const sortOptions = {};
+    sortOptions[sort] = order === 'asc' ? 1 : -1;
+    
+    // Debug the final query
+    console.log("Final query:", JSON.stringify(baseQuery));
+    console.log(`Total matching orders: ${totalCount}`);
+    
+    // Fetch pickup orders with populated user info
+    const pickupOrders = await OrderModel.find(baseQuery)
+      .sort(sortOptions)
+      .skip(skip)
+      .limit(parseInt(limit))
+      .populate('userId', 'name email mobile')
+      .populate({
+        path: 'pickupVerification.verifiedById',
+        select: 'name email'
+      })
+      .lean();
+    
+    console.log(`Found ${pickupOrders.length} pickup orders out of ${totalCount} total`);
+    
+    // If no orders found, return empty array with message
+    if (pickupOrders.length === 0) {
+      return res.status(200).json({
+        success: true,
+        message: "No pickup orders found matching the criteria",
+        data: [],
+        pagination: {
+          total: 0,
+          page: parseInt(page),
+          limit: parseInt(limit),
+          totalPages: 0
+        }
+      });
+    }
+    
+    // Enhance the response with verification status
+    const enhancedOrders = pickupOrders.map(order => {
+      // Determine verification status - only use the canonical status value 'picked_up'
+      let verificationStatus = 'unverified';
+      let verificationDate = null;
+      
+      if (order.status === 'picked_up') {
+        verificationStatus = 'verified';
+        verificationDate = order.updatedAt || order.pickupVerification?.verifiedAt;
+      } else if (order.status === 'cancelled') {
+        verificationStatus = 'cancelled';
+      }
+      
+      // Get verification code from any field it might be in
+      const verificationCode = order.pickupVerificationCode || order.pickupCode || 'N/A';
+      
+      // Format output with standardized field names
+      return {
+        _id: order._id,
+        orderNumber: order.orderId || order.orderNumber,
+        customerName: order.userId?.name || 'Unknown Customer',
+        customerEmail: order.userId?.email,
+        customerPhone: order.userId?.mobile || order.userId?.phone,
+        createdAt: order.createdAt,
+        totalAmount: order.totalAmt || order.totalAmount,
+        pickupLocation: order.pickup_location || order.pickupLocation,
+        pickupCode: verificationCode,
+        status: order.status,
+        verificationStatus: verificationStatus,
+        verificationDate: verificationDate,
+        verifiedBy: order.pickupVerification?.verifiedBy,
+        items: order.items || order.products || []
+      };
+    });
+    
+    return res.status(200).json({
+      success: true,
+      message: "Pickup orders history retrieved successfully",
+      data: enhancedOrders,
+      pagination: {
+        total: totalCount,
+        page: parseInt(page),
+        limit: parseInt(limit),
+        totalPages
+      },
+      filters: {
+        status,
+        dateFrom,
+        dateTo,
+        location,
+        verificationStatus
+      }
+    });
+    
+  } catch (error) {
+    console.error("Error fetching pickup orders history:", error);
+    return res.status(500).json({
+      message: error.message || "Error fetching pickup orders history",
       success: false
     });
   }

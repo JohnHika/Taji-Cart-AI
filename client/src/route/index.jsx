@@ -31,9 +31,20 @@ import ProductPage from '../pages/Product';
 import ProductDisplayPage from '../pages/ProductDisplayPage';
 import ProductListPage from '../pages/ProductListPage';
 import Register from '../pages/Register';
+import SearchPage from '../pages/SearchPage'; // Add SearchPage import
+
+// Import new staff components
+import StaffDashboard from '../pages/staff/Dashboard';
+import DeliveryManagement from '../pages/staff/DeliveryManagement';
+import DispatchedOrders from '../pages/staff/DeliveryManagement/DispatchedOrders';
+import DriversManagement from '../pages/staff/DeliveryManagement/DriversManagement';
+import PendingDispatch from '../pages/staff/DeliveryManagement/PendingDispatch';
+
+// Legacy staff pages
 import PendingPickups from '../pages/staff/PendingPickups';
 import VerificationHistory from '../pages/staff/VerificationHistory';
 import VerificationSuccess from '../pages/staff/VerificationSuccess';
+import VerifyPickup from '../pages/staff/VerifyPickup';
 import SubCategoryPage from '../pages/SubCategoryPage';
 import Success from '../pages/Success';
 import UploadProduct from '../pages/UploadProduct';
@@ -45,9 +56,8 @@ console.log("Configuring routes:", {
   // List all your routes here for debugging
   categoryRoutes: [
     "/:categoryName-:categoryId",
-    "/:categoryName-:categoryId/:subcategoryName-:subcategoryId"
+    "/:categoryName/:categoryId"
   ],
-  // Add other route groups as needed
 });
 
 // Add this at the top of the file (before the router definition)
@@ -56,8 +66,8 @@ console.log("Current location:", window.location.pathname);
 
 // Add a function to determine if a path should be treated as a category page
 function isCategoryRoute(path) {
-  // Check if the URL contains a MongoDB ObjectID (24 hex characters) at the end
-  return /[a-f0-9]{24}$/.test(path);
+  // More lenient check for alphanumeric IDs at the end
+  return /[a-f0-9]{12,}$/.test(path) || /-[a-f0-9]{12,}$/.test(path);
 }
 
 // Get the current path
@@ -100,6 +110,7 @@ const router = createBrowserRouter([
         index: true,
         element: <Home />
       },
+      // Standard app routes
       {
         path: 'login',
         element: <Login />
@@ -107,6 +118,11 @@ const router = createBrowserRouter([
       {
         path: 'register',
         element: <Register />
+      },
+      // Add search route
+      {
+        path: 'search',
+        element: <RouteDebugger component={SearchPage} routeName="Search Page" />
       },
       {
         path: 'checkout',
@@ -121,77 +137,36 @@ const router = createBrowserRouter([
         element: <OrderTracking />
       },
       {
-        path: 'delivery-simulator',
-        element: (
-          <PrivateRoute>
-            <DeliverySimulator />
-          </PrivateRoute>
-        )
-      },
-      // Move these important routes higher in the list for priority matching
-      // Fixed pattern to match category and subcategory URLs
-      {
-        path: 'product-category/:categoryId',
-        element: <ProductListPage />
-      },
-      {
-        path: ':categoryName-:categoryId',
-        element: (
-          <>
-            {console.log("Rendering category-only route")}
-            <ProductListPage />
-          </>
-        )
-      },
-      {
-        path: ':categoryName-:categoryId/:subcategoryName-:subcategoryId',
-        element: (
-          <>
-            {console.log("Rendering category-subcategory route")}
-            <ProductListPage />
-          </>
-        )
-      },
-      // Catch all category routes with multiple formats
-      // Format: /category-name-ID
-      {
-        path: ':name-:id([a-f0-9]{24})',
-        element: <ProductListPage />,
-      },
-      
-      // Format: /category-name-with-hyphens-ID
-      {
-        path: '*-:id([a-f0-9]{24})',
-        element: <ProductListPage />,
-      },
-      
-      // Fallback for just IDs: /ID
-      {
-        path: ':id([a-f0-9]{24})',
-        element: <ProductListPage />,
-      },
-      
-      // Special catch-all route that should match any category ID pattern
-      // This will catch direct navigation to category pages that might otherwise not match
-      {
-        path: '*-:categoryId([a-f0-9]+)',
-        element: (
-          <RouteDebugger 
-            component={ProductListPage} 
-            routeName="Catch-all category route" 
-          />
-        )
-      },
-      // Then list more specific routes
-      {
         path: 'product/:productId',
         element: <ProductDisplayPage />
       },
-      // Ensure category routes are properly defined
       {
         path: 'categories',
         element: <CategoryPage />
       },
+      
+      // Core category routes - With proper flexibility for IDs
+      {
+        path: 'product-category/:categoryId',
+        element: <ProductListPage />
+      },
+      // Primary category pattern with name and ID
+      {
+        path: ':categoryName-:categoryId',
+        element: <RouteDebugger component={ProductListPage} routeName="Category by name-id" />
+      },
+      // Subcategory pattern
+      {
+        path: ':categoryName-:categoryId/:subcategoryName-:subcategoryId',
+        element: <RouteDebugger component={ProductListPage} routeName="Category with subcategory" />
+      },
+      // Generic pattern for any hyphenated path with an ID at the end
+      {
+        path: '*-:id',
+        element: <RouteDebugger component={ProductListPage} routeName="Generic category route" />,
+      },
+      
+      // Other app routes
       {
         path: 'product',
         element: <ProductPage />
@@ -212,6 +187,68 @@ const router = createBrowserRouter([
         path: 'mpesa-payment-status',
         element: <MpesaPaymentStatus />
       },
+      {
+        path: 'delivery-simulator',
+        element: (
+          <PrivateRoute>
+            <DeliverySimulator />
+          </PrivateRoute>
+        )
+      },
+      
+      // NEW STAFF ROUTES - Direct access to staff dashboard and delivery management
+      {
+        path: 'staff',
+        element: (
+          <PrivateRoute requireStaff={true}>
+            <StaffDashboard />
+          </PrivateRoute>
+        )
+      },
+      {
+        path: 'staff/dashboard',
+        element: (
+          <PrivateRoute requireStaff={true}>
+            <StaffDashboard />
+          </PrivateRoute>
+        )
+      },
+      // Staff delivery management routes with tab-based navigation
+      {
+        path: 'staff/delivery',
+        element: (
+          <PrivateRoute requireStaff={true}>
+            <DeliveryManagement />
+          </PrivateRoute>
+        ),
+        children: [
+          {
+            index: true,
+            element: <PendingDispatch />
+          },
+          {
+            path: 'pending',
+            element: <PendingDispatch />
+          },
+          {
+            path: 'dispatched',
+            element: <DispatchedOrders />
+          },
+          {
+            path: 'active',
+            element: <div>Active Deliveries</div> // Placeholder for future implementation
+          },
+          {
+            path: 'completed',
+            element: <div>Completed Deliveries</div> // Placeholder for future implementation
+          },
+          {
+            path: 'drivers',
+            element: <DriversManagement />
+          }
+        ]
+      },
+      
       // Delivery routes with specialized layout
       {
         path: 'delivery',
@@ -239,6 +276,7 @@ const router = createBrowserRouter([
           }
         ]
       },
+      // Dashboard routes
       {
         path: 'dashboard',
         element: (
@@ -251,6 +289,7 @@ const router = createBrowserRouter([
             path: 'profile',
             element: <UserProfile />
           },
+          // Admin routes
           {
             path: 'upload-product',
             element: (
@@ -307,6 +346,7 @@ const router = createBrowserRouter([
               </PrivateRoute>
             )
           },
+          // User routes
           {
             path: 'myorders',
             element: (
@@ -370,38 +410,44 @@ const router = createBrowserRouter([
           },
           // Staff specific routes
           {
-            path: 'dashboard/staff',
+            path: 'staff',
             element: (
-              <PrivateRoute>
-                <Dashboard />
+              <PrivateRoute requireStaff={true}>
+                <StaffDashboard />
               </PrivateRoute>
-            ),
-            children: [
-              {
-                path: 'pending-pickups',
-                element: (
-                  <PrivateRoute requireStaff={true}>
-                    <PendingPickups />
-                  </PrivateRoute>
-                )
-              },
-              {
-                path: 'completed-verifications',
-                element: (
-                  <PrivateRoute requireStaff={true}>
-                    <VerificationHistory />
-                  </PrivateRoute>
-                )
-              },
-              {
-                path: 'verification-success',
-                element: (
-                  <PrivateRoute requireStaff={true}>
-                    <VerificationSuccess />
-                  </PrivateRoute>
-                )
-              }
-            ]
+            )
+          },
+          {
+            path: 'staff/pending-pickups',
+            element: (
+              <PrivateRoute requireStaff={true}>
+                <PendingPickups />
+              </PrivateRoute>
+            )
+          },
+          {
+            path: 'staff/completed-verifications',
+            element: (
+              <PrivateRoute requireStaff={true}>
+                <VerificationHistory />
+              </PrivateRoute>
+            )
+          },
+          {
+            path: 'staff/verify-pickup',
+            element: (
+              <PrivateRoute requireStaff={true}>
+                <VerifyPickup />
+              </PrivateRoute>
+            )
+          },
+          {
+            path: 'staff/verification-success',
+            element: (
+              <PrivateRoute requireStaff={true}>
+                <VerificationSuccess />
+              </PrivateRoute>
+            )
           }
         ]
       },

@@ -1,19 +1,22 @@
 import React, { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
 import {
-    FaCalendarAlt,
-    FaChartBar,
-    FaCheckCircle,
-    FaExclamationTriangle,
-    FaFileInvoiceDollar,
-    FaInfoCircle,
-    FaMapMarkerAlt,
-    FaSearch,
-    FaShoppingBag,
-    FaSpinner,
-    FaTimes,
-    FaTruck,
-    FaUserAlt
+  FaChartBar,
+  FaCheckCircle,
+  FaExclamationTriangle,
+  FaFileInvoiceDollar,
+  FaInfoCircle,
+  FaMapMarkerAlt,
+  FaMotorcycle,
+  FaPaperPlane,
+  FaSearch,
+  FaSpinner,
+  FaStore,
+  FaThLarge,
+  FaThList,
+  FaTimes,
+  FaTruck,
+  FaUserAlt
 } from 'react-icons/fa';
 import Axios from '../../utils/Axios';
 
@@ -35,12 +38,74 @@ try {
 }
 
 const OrderDetailModal = ({ order, onClose, onStatusChange }) => {
-  if (!order) return null;
+  const [availableDrivers, setAvailableDrivers] = useState([]);
+  const [selectedDriver, setSelectedDriver] = useState('');
+  const [loadingDrivers, setLoadingDrivers] = useState(false);
+  const [dispatchingOrder, setDispatchingOrder] = useState(false);
+  
+  // Fetch available drivers when the order is in shipped status
+  useEffect(() => {
+    if (order && order.status === 'shipped') {
+      fetchAvailableDrivers();
+    }
+  }, [order]);
+  
+  const fetchAvailableDrivers = async () => {
+    try {
+      setLoadingDrivers(true);
+      const response = await Axios({
+        url: '/api/delivery/available-drivers',
+        method: 'GET'
+      });
+      
+      if (response.data.success) {
+        setAvailableDrivers(response.data.data || []);
+      } else {
+        toast.error('Failed to load available drivers');
+      }
+    } catch (error) {
+      console.error('Error fetching available drivers:', error);
+      toast.error('Failed to load available drivers');
+    } finally {
+      setLoadingDrivers(false);
+    }
+  };
+  
+  const handleDispatchOrder = async () => {
+    try {
+      setDispatchingOrder(true);
+      const response = await Axios({
+        url: `/api/delivery/dispatch/${order._id}`,
+        method: 'POST',
+        data: selectedDriver ? { driverId: selectedDriver } : {}
+      });
+      
+      if (response.data.success) {
+        toast.success('Order dispatched successfully');
+        onStatusChange(order._id, 'driver_assigned');
+      } else {
+        toast.error(response.data.message || 'Failed to dispatch order');
+      }
+    } catch (error) {
+      console.error('Error dispatching order:', error);
+      toast.error('Failed to dispatch order');
+    } finally {
+      setDispatchingOrder(false);
+    }
+  };
   
   const handleStatusChange = (e) => {
     const newStatus = e.target.value;
     onStatusChange(order._id, newStatus);
   };
+
+  if (!order) return null;
+
+  // Determine if order is ready for dispatch (shipped status)
+  const isReadyForDispatch = order.status === 'shipped';
+  
+  // Determine if order is in delivery process
+  const isInDeliveryProcess = ['driver_assigned', 'out_for_delivery', 'nearby'].includes(order.status);
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
@@ -103,52 +168,225 @@ const OrderDetailModal = ({ order, onClose, onStatusChange }) => {
             )}
           </div>
           
-          {/* Order Status and Payment */}
-          <div className="flex flex-wrap justify-between gap-4">
-            <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg flex-1 min-w-[250px]">
-              <h3 className="font-medium mb-3 dark:text-white">Order Information</h3>
-              <div className="space-y-2 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-gray-600 dark:text-gray-300">Order ID:</span>
-                  <span className="font-medium dark:text-white">{order.orderId || order._id}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600 dark:text-gray-300">Date Ordered:</span>
-                  <span className="dark:text-white">{order.createdAt && (
-                    typeof format === 'function' ? 
-                      format(new Date(order.createdAt), 'PPP p') : 
-                      formatDate(order.createdAt)
-                  )}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600 dark:text-gray-300">Last Updated:</span>
-                  <span className="dark:text-white">{order.updatedAt && (
-                    typeof format === 'function' ? 
-                      format(new Date(order.updatedAt), 'PPP p') : 
-                      formatDate(order.updatedAt)
-                  )}</span>
+          {/* Dispatch Order Section - Only show for orders ready for dispatch */}
+          {isReadyForDispatch && (
+            <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg">
+              <h3 className="font-medium mb-3 text-blue-900 dark:text-blue-300 flex items-center">
+                <FaPaperPlane className="mr-2" /> Dispatch Order
+              </h3>
+              <div className="space-y-3">
+                <p className="text-sm text-blue-800 dark:text-blue-300">
+                  This order is ready to be dispatched. Assign a delivery driver or dispatch automatically.
+                </p>
+                <div className="flex flex-wrap gap-3 items-end">
+                  <div className="flex-grow min-w-[200px]">
+                    <label className="block text-sm font-medium text-blue-800 dark:text-blue-300 mb-1">
+                      Select Driver (Optional)
+                    </label>
+                    {loadingDrivers ? (
+                      <div className="flex items-center text-blue-800 dark:text-blue-300">
+                        <FaSpinner className="animate-spin mr-2" /> Loading available drivers...
+                      </div>
+                    ) : (
+                      <select
+                        className="w-full border border-blue-300 dark:border-blue-700 rounded-md p-2 bg-white dark:bg-gray-700 text-gray-800 dark:text-white"
+                        value={selectedDriver}
+                        onChange={(e) => setSelectedDriver(e.target.value)}
+                      >
+                        <option value="">Auto-assign driver</option>
+                        {availableDrivers.map(driver => (
+                          <option key={driver._id} value={driver._id}>
+                            {driver.name} {driver.isOnline ? '(Online)' : '(Offline)'}
+                          </option>
+                        ))}
+                      </select>
+                    )}
+                  </div>
+                  <button
+                    className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md flex items-center disabled:opacity-50"
+                    onClick={handleDispatchOrder}
+                    disabled={dispatchingOrder}
+                  >
+                    {dispatchingOrder ? <FaSpinner className="animate-spin mr-2" /> : <FaTruck className="mr-2" />}
+                    {dispatchingOrder ? 'Dispatching...' : 'Dispatch Order'} 
+                  </button>
                 </div>
               </div>
             </div>
+          )}
+          
+          {/* Order Status and Payment */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="border dark:border-gray-700 p-4 rounded-lg">
+              <h3 className="font-medium mb-3 flex items-center">
+                <FaChartBar className="mr-2 text-gray-600 dark:text-gray-400" /> Order Status History
+              </h3>
+              {order.statusHistory && order.statusHistory.length > 0 ? (
+                <ul className="space-y-2">
+                  {[...order.statusHistory].reverse().map((status, idx) => (
+                    <li key={idx} className="flex items-start">
+                      <div className="mt-1">
+                        <span className={`w-3 h-3 rounded-full inline-block ${
+                          status.status === 'delivered' ? 'bg-green-500' :
+                          status.status === 'cancelled' ? 'bg-red-500' :
+                          status.status === 'shipped' || status.status === 'shipping' ? 'bg-blue-500' :
+                          status.status === 'out_for_delivery' || status.status === 'driver_assigned' ? 'bg-indigo-500' :
+                          'bg-yellow-500'
+                        }`}></span>
+                      </div>
+                      <div className="ml-3">
+                        <p className="font-medium">
+                          {status.status.charAt(0).toUpperCase() + status.status.slice(1).replace('_', ' ')}
+                        </p>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">
+                          {typeof format === 'function'
+                            ? format(new Date(status.timestamp), 'PPP p')
+                            : formatDate(status.timestamp)}
+                        </p>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <div className="flex items-center space-x-2 text-gray-600 dark:text-gray-400">
+                  <span className="w-3 h-3 rounded-full inline-block bg-yellow-500"></span>
+                  <p className="font-medium">{order.status.charAt(0).toUpperCase() + order.status.slice(1).replace('_', ' ')}</p>
+                  <p className="text-sm">
+                    {typeof format === 'function'
+                      ? format(new Date(order.createdAt), 'PPP p')
+                      : formatDate(order.createdAt)}
+                  </p>
+                </div>
+              )}
+            </div>
             
-            <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg flex-1 min-w-[250px]">
-              <h3 className="font-medium mb-3 dark:text-white">Payment Information</h3>
-              <div className="space-y-2 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-gray-600 dark:text-gray-300">Payment Status:</span>
-                  <span className="font-medium dark:text-white">{order.payment_status || 'Not Available'}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600 dark:text-gray-300">Payment Method:</span>
-                  <span className="dark:text-white">{order.paymentMethod || 'Not Available'}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600 dark:text-gray-300">Payment ID:</span>
-                  <span className="dark:text-white">{order.paymentId || 'Not Available'}</span>
-                </div>
+            <div className="border dark:border-gray-700 p-4 rounded-lg">
+              <h3 className="font-medium mb-3 flex items-center">
+                <FaFileInvoiceDollar className="mr-2 text-gray-600 dark:text-gray-400" /> Payment Details
+              </h3>
+              <div className="space-y-2">
+                <p>
+                  <span className="text-gray-600 dark:text-gray-400">Payment Method:</span>{" "}
+                  <span className="font-medium dark:text-white">
+                    {order.paymentMethod || (order.payment_status === 'paid' ? 'Online Payment' : 'Cash on Delivery')}
+                  </span>
+                </p>
+                <p>
+                  <span className="text-gray-600 dark:text-gray-400">Payment Status:</span>{" "}
+                  <span className={`font-medium ${
+                    order.paymentStatus === 'paid' || order.payment_status === 'paid' 
+                    ? 'text-green-600 dark:text-green-400' 
+                    : 'text-amber-600 dark:text-amber-400'
+                  }`}>
+                    {(order.paymentStatus || order.payment_status || 'pending').toUpperCase()}
+                  </span>
+                </p>
+                {order.paymentDetails && order.paymentDetails.transactionId && (
+                  <p>
+                    <span className="text-gray-600 dark:text-gray-400">Transaction ID:</span>{" "}
+                    <span className="font-medium dark:text-white">{order.paymentDetails.transactionId}</span>
+                  </p>
+                )}
+                {order.paymentDetails && order.paymentDetails.paymentDate ? (
+                  <p>
+                    <span className="text-gray-600 dark:text-gray-400">Payment Date:</span>{" "}
+                    <span className="font-medium dark:text-white">
+                      {typeof format === 'function'
+                        ? format(new Date(order.paymentDetails.paymentDate), 'PPP')
+                        : formatDate(order.paymentDetails.paymentDate)}
+                    </span>
+                  </p>
+                ) : order.paymentStatus === 'paid' || order.payment_status === 'paid' ? (
+                  <p>
+                    <span className="text-gray-600 dark:text-gray-400">Payment Date:</span>{" "}
+                    <span className="font-medium dark:text-white">
+                      {typeof format === 'function'
+                        ? format(new Date(order.updatedAt || order.createdAt), 'PPP')
+                        : formatDate(order.updatedAt || order.createdAt)}
+                    </span>
+                  </p>
+                ) : null}
+                <p>
+                  <span className="text-gray-600 dark:text-gray-400">Total Amount:</span>{" "}
+                  <span className="font-medium dark:text-white">
+                    KSh {Number(order.totalAmt || order.totalPrice || 0).toLocaleString()}
+                  </span>
+                </p>
               </div>
             </div>
           </div>
+          
+          {/* Delivery Tracking Section - Enhanced with driver info */}
+          {isInDeliveryProcess && (
+            <div className="border dark:border-gray-700 p-4 rounded-lg bg-indigo-50 dark:bg-indigo-900/20">
+              <h3 className="font-medium mb-3 flex items-center text-indigo-900 dark:text-indigo-300">
+                <FaMapMarkerAlt className="mr-2" /> Delivery Tracking
+              </h3>
+              
+              {order.deliveryDetails ? (
+                <div className="space-y-4">
+                  {/* Driver Information */}
+                  <div className="bg-white dark:bg-gray-800 p-3 rounded-md border border-indigo-200 dark:border-indigo-800">
+                    <h4 className="font-medium flex items-center mb-2">
+                      <FaUserAlt className="mr-2 text-indigo-600 dark:text-indigo-400" /> Driver Information
+                    </h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      <p><span className="text-gray-600 dark:text-gray-400">Name:</span> {order.deliveryDetails.driver?.name || 'Not assigned yet'}</p>
+                      <p><span className="text-gray-600 dark:text-gray-400">Phone:</span> {order.deliveryDetails.driver?.phone || 'N/A'}</p>
+                      <p><span className="text-gray-600 dark:text-gray-400">Vehicle:</span> {order.deliveryDetails.driver?.vehicleType || 'N/A'}</p>
+                      <p><span className="text-gray-600 dark:text-gray-400">License:</span> {order.deliveryDetails.driver?.licenseNumber || 'N/A'}</p>
+                    </div>
+                  </div>
+                  
+                  {/* Location Information */}
+                  <div className="bg-white dark:bg-gray-800 p-3 rounded-md border border-indigo-200 dark:border-indigo-800">
+                    <h4 className="font-medium flex items-center mb-2">
+                      <FaMotorcycle className="mr-2 text-indigo-600 dark:text-indigo-400" /> Delivery Status
+                    </h4>
+                    <div className="space-y-2">
+                      <p>
+                        <span className="text-gray-600 dark:text-gray-400">Current Status:</span> 
+                        <span className="ml-2 px-2 py-1 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800 dark:bg-indigo-800 dark:text-indigo-200">
+                          {order.status.charAt(0).toUpperCase() + order.status.slice(1).replace('_', ' ')}
+                        </span>
+                      </p>
+                      
+                      {order.deliveryDetails.estimatedDeliveryTime && (
+                        <p>
+                          <span className="text-gray-600 dark:text-gray-400">Estimated Delivery:</span> 
+                          {typeof format === 'function'
+                            ? format(new Date(order.deliveryDetails.estimatedDeliveryTime), 'PPP p')
+                            : formatDate(order.deliveryDetails.estimatedDeliveryTime)}
+                        </p>
+                      )}
+                      
+                      {order.deliveryDetails.currentLocation && (
+                        <div>
+                          <p className="text-gray-600 dark:text-gray-400 mb-1">Current Location:</p>
+                          <div className="bg-indigo-50 dark:bg-indigo-900/30 p-2 rounded-md">
+                            {order.deliveryDetails.currentLocation.address || 
+                             `${order.deliveryDetails.currentLocation.coordinates[1]}, ${order.deliveryDetails.currentLocation.coordinates[0]}`}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  
+                  {/* Driver Notes */}
+                  {order.deliveryDetails.notes && (
+                    <div className="bg-white dark:bg-gray-800 p-3 rounded-md border border-indigo-200 dark:border-indigo-800">
+                      <h4 className="font-medium flex items-center mb-2">
+                        <FaInfoCircle className="mr-2 text-indigo-600 dark:text-indigo-400" /> Delivery Notes
+                      </h4>
+                      <p className="text-gray-700 dark:text-gray-300">{order.deliveryDetails.notes}</p>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <p className="text-gray-500 dark:text-gray-400">No delivery details available yet</p>
+              )}
+            </div>
+          )}
           
           {/* Customer Information */}
           <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
@@ -172,9 +410,21 @@ const OrderDetailModal = ({ order, onClose, onStatusChange }) => {
               </div>
               
               <div className="flex-1 min-w-[250px]">
-                <h4 className="text-sm font-medium mb-1 dark:text-white">Shipping Address</h4>
-                <div className="text-sm dark:text-gray-300">
-                  {order.shippingAddress ? (
+                <h4 className="text-sm font-medium mb-2 dark:text-white flex items-center">
+                  <FaMapMarkerAlt className="mr-2 text-gray-600 dark:text-gray-400" /> 
+                  {order.fulfillment_type === 'pickup' ? 'Pickup Location' : 'Shipping Address'}
+                </h4>
+                <div className="text-sm dark:text-gray-300 bg-white dark:bg-gray-750 p-3 rounded-md">
+                  {order.fulfillment_type === 'pickup' ? (
+                    <div>
+                      <p className="font-medium">{order.pickup_location}</p>
+                      {order.pickup_instructions && (
+                        <div className="mt-2 text-xs bg-gray-50 dark:bg-gray-800 p-2 rounded-md">
+                          <span className="font-medium">Instructions:</span> {order.pickup_instructions}
+                        </div>
+                      )}
+                    </div>
+                  ) : order.shippingAddress ? (
                     <div>
                       <p>{order.shippingAddress.address}</p>
                       <p>
@@ -198,8 +448,12 @@ const OrderDetailModal = ({ order, onClose, onStatusChange }) => {
                       </p>
                       <p>{order.delivery_address.country}</p>
                     </div>
+                  ) : order.deliveryAddress ? (
+                    <p>{order.deliveryAddress}</p>
                   ) : (
-                    <p className="text-gray-500 dark:text-gray-400">No shipping address available</p>
+                    <p className="italic text-gray-500 dark:text-gray-400">
+                      {order.status === 'cancelled' ? 'Order was cancelled' : 'Address to be confirmed'}
+                    </p>
                   )}
                 </div>
               </div>
@@ -431,6 +685,34 @@ const OrderStatistics = ({ orders }) => {
   const delivered = orders.filter(order => order.status === 'delivered').length;
   const cancelled = orders.filter(order => order.status === 'cancelled').length;
   
+  // Calculate fulfillment type statistics with pending vs completed breakdown
+  // Delivery orders (not yet delivered)
+  const pendingDeliveryOrders = orders.filter(order => 
+    (order.fulfillment_type === 'delivery' || order.deliveryMethod === 'delivery') &&
+    order.status !== 'delivered' && 
+    order.status !== 'cancelled'
+  ).length;
+  
+  // Delivery orders that have been delivered
+  const completedDeliveryOrders = orders.filter(order => 
+    (order.fulfillment_type === 'delivery' || order.deliveryMethod === 'delivery') &&
+    order.status === 'delivered'
+  ).length;
+  
+  // Pickup orders (not yet picked up)
+  const pendingPickupOrders = orders.filter(order => 
+    (order.fulfillment_type === 'pickup' || order.deliveryMethod === 'store-pickup') &&
+    order.status !== 'delivered' &&
+    order.status !== 'picked_up' &&
+    order.status !== 'cancelled'
+  ).length;
+  
+  // Pickup orders that have been picked up
+  const completedPickupOrders = orders.filter(order => 
+    (order.fulfillment_type === 'pickup' || order.deliveryMethod === 'store-pickup') &&
+    (order.status === 'delivered' || order.status === 'picked_up')
+  ).length;
+  
   // Calculate total revenue
   const totalRevenue = orders.reduce((sum, order) => {
     const amount = Number(order.totalAmt || order.totalPrice || 0);
@@ -445,6 +727,10 @@ const OrderStatistics = ({ orders }) => {
     { label: 'In Transit', value: inTransit, color: 'bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300' },
     { label: 'Delivered', value: delivered, color: 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300' },
     { label: 'Cancelled', value: cancelled, color: 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300' },
+    { label: 'Pending Delivery', value: pendingDeliveryOrders, color: 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300', icon: 'truck' },
+    { label: 'Delivered Orders', value: completedDeliveryOrders, color: 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300', icon: 'truck-check' },
+    { label: 'Pending Pickup', value: pendingPickupOrders, color: 'bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300', icon: 'store' },
+    { label: 'Completed Pickup', value: completedPickupOrders, color: 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300', icon: 'store-check' },
   ];
   
   return (
@@ -453,10 +739,26 @@ const OrderStatistics = ({ orders }) => {
         <FaChartBar className="mr-2" /> Order Statistics
       </h2>
       
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
         {statItems.map((item, index) => (
           <div key={index} className={`${item.color} rounded-lg p-4 shadow-sm`}>
-            <div className="text-3xl font-bold">{item.value}</div>
+            <div className="flex justify-between items-center mb-1">
+              <div className="text-3xl font-bold">{item.value}</div>
+              {item.icon === 'truck' && <FaTruck className="text-blue-600 dark:text-blue-400" size={20} />}
+              {item.icon === 'truck-check' && (
+                <div className="relative">
+                  <FaTruck className="text-green-600 dark:text-green-400" size={20} />
+                  <FaCheckCircle className="text-green-500 absolute -top-2 -right-2" size={12} />
+                </div>
+              )}
+              {item.icon === 'store' && <FaStore className="text-purple-600 dark:text-purple-400" size={20} />}
+              {item.icon === 'store-check' && (
+                <div className="relative">
+                  <FaStore className="text-green-600 dark:text-green-400" size={20} />
+                  <FaCheckCircle className="text-green-500 absolute -top-2 -right-2" size={12} />
+                </div>
+              )}
+            </div>
             <div className="text-sm">{item.label}</div>
           </div>
         ))}
@@ -483,6 +785,9 @@ const AllOrdersAdmin = () => {
   
   // Add new state for fulfillment filtering
   const [fulfillmentFilter, setFulfillmentFilter] = useState('all');
+  
+  // Add new state for view mode
+  const [viewMode, setViewMode] = useState('table'); // 'table' or 'grid'
   
   useEffect(() => {
     fetchAllOrders();
@@ -575,6 +880,13 @@ const AllOrdersAdmin = () => {
           ['driver_assigned', 'out_for_delivery', 'nearby'].includes(order.status) :
         order.status === activeTab;
       
+      // Then filter by fulfillment type if not "all"
+      const fulfillmentMatch = 
+        fulfillmentFilter === 'all' ? true :
+        fulfillmentFilter === 'pickup' ? 
+          (order.fulfillment_type === 'pickup' || order.deliveryMethod === 'store-pickup') :
+        (order.fulfillment_type === 'delivery' || order.deliveryMethod === 'delivery');
+      
       // Then filter by search term if provided
       const searchMatch = 
         !searchTerm ? true : (
@@ -587,394 +899,461 @@ const AllOrdersAdmin = () => {
         (order.paymentMethod?.toLowerCase() || '').includes(searchTerm.toLowerCase())
       );
       
-      return statusMatch && searchMatch;
+      return statusMatch && searchMatch && fulfillmentMatch;
     });
   };
   
+  // Get filtered orders and apply pagination
   const filteredOrders = getFilteredOrders();
-  
-  // Add pagination calculation
   const indexOfLastOrder = currentPage * ordersPerPage;
   const indexOfFirstOrder = indexOfLastOrder - ordersPerPage;
-  const currentOrders = filteredOrders.slice(indexOfFirstOrder, indexOfLastOrder);
+  const currentOrders = filteredOrders.slice(indexOfFirstOrder, ordersPerPage);
   const totalPages = Math.ceil(filteredOrders.length / ordersPerPage);
   
-  // Add pagination control functions
-  const goToPage = (pageNumber) => {
-    setCurrentPage(Math.max(1, Math.min(pageNumber, totalPages)));
-  };
-  
-  const nextPage = () => {
-    if (currentPage < totalPages) {
-      setCurrentPage(currentPage + 1);
-    }
-  };
-  
-  const prevPage = () => {
-    if (currentPage > 1) {
-      setCurrentPage(currentPage - 1);
-    }
-  };
-  
-  // Format status text for display
-  const formatStatus = (status) => {
-    if (!status) return 'Unknown'; // Handle undefined/null status values
-    return status.charAt(0).toUpperCase() + 
-           status.slice(1).replace(/_/g, ' ');
-  };
-
-  // Tab configuration
-  const tabs = [
-    { id: 'all', label: 'All Orders', icon: <FaShoppingBag className="mr-1" /> },
-    { id: 'pending', label: 'Pending', icon: <FaExclamationTriangle className="mr-1" /> },
-    { id: 'processing', label: 'Processing', icon: <FaSpinner className="mr-1" /> },
-    { id: 'shipped', label: 'Shipped', icon: <FaTruck className="mr-1" /> },
-    { id: 'in-transit', label: 'In Transit', icon: <FaMapMarkerAlt className="mr-1" /> },
-    { id: 'delivered', label: 'Delivered', icon: <FaCheckCircle className="mr-1" /> },
-    { id: 'cancelled', label: 'Cancelled', icon: <FaTimes className="mr-1" /> }
-  ];
-
-  // Now create the Pagination component
-  const Pagination = () => {
-    if (totalPages <= 1) return null;
-    
-    // Calculate page numbers to show
-    let pageNumbers = [];
-    const maxPagesToShow = 5;
-    
-    if (totalPages <= maxPagesToShow) {
-      // If few pages, show all
-      pageNumbers = Array.from({ length: totalPages }, (_, i) => i + 1);
-    } else {
-      // Always include first page, last page, current page, and pages around current
-      const leftBound = Math.max(1, currentPage - 1);
-      const rightBound = Math.min(totalPages, currentPage + 1);
-      
-      // Add page numbers with ellipsis
-      if (leftBound > 1) {
-        pageNumbers.push(1);
-        if (leftBound > 2) pageNumbers.push('...');
-      }
-      
-      // Add page numbers around current page
-      for (let i = leftBound; i <= rightBound; i++) {
-        pageNumbers.push(i);
-      }
-      
-      // Add last page with ellipsis
-      if (rightBound < totalPages) {
-        if (rightBound < totalPages - 1) pageNumbers.push('...');
-        pageNumbers.push(totalPages);
-      }
-    }
-    
+  const renderStatusBadge = (status) => {
+    const statusColor = getStatusColor(status);
     return (
-      <div className="flex items-center justify-between py-4">
-        <div className="flex-1 flex justify-between sm:hidden">
-          <button
-            onClick={prevPage}
-            disabled={currentPage === 1}
-            className={`relative inline-flex items-center px-4 py-2 text-sm font-medium rounded-md
-              ${currentPage === 1 
-                ? 'text-gray-400 bg-gray-100 dark:text-gray-500 dark:bg-gray-800 cursor-not-allowed' 
-                : 'text-gray-700 bg-white hover:bg-gray-50 dark:text-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600'}`}
-          >
-            Previous
-          </button>
-          <span className="text-sm text-gray-700 dark:text-gray-300">
-            Page {currentPage} of {totalPages}
-          </span>
-          <button
-            onClick={nextPage}
-            disabled={currentPage === totalPages}
-            className={`relative inline-flex items-center px-4 py-2 text-sm font-medium rounded-md
-              ${currentPage === totalPages 
-                ? 'text-gray-400 bg-gray-100 dark:text-gray-500 dark:bg-gray-800 cursor-not-allowed' 
-                : 'text-gray-700 bg-white hover:bg-gray-50 dark:text-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600'}`}
-          >
-            Next
-          </button>
-        </div>
-        <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
-          <div>
-            <p className="text-sm text-gray-700 dark:text-gray-300">
-              Showing <span className="font-medium">{indexOfFirstOrder + 1}</span> to{' '}
-              <span className="font-medium">
-                {Math.min(indexOfLastOrder, filteredOrders.length)}
-              </span>{' '}
-              of <span className="font-medium">{filteredOrders.length}</span> results
-            </p>
-          </div>
-          <div>
-            <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
-              <button
-                onClick={prevPage}
-                disabled={currentPage === 1}
-                className={`relative inline-flex items-center px-2 py-2 rounded-l-md border text-sm font-medium
-                  ${currentPage === 1 
-                    ? 'text-gray-400 bg-gray-100 dark:text-gray-500 dark:bg-gray-800 dark:border-gray-700 cursor-not-allowed' 
-                    : 'text-gray-500 bg-white hover:bg-gray-50 dark:text-gray-300 dark:bg-gray-700 dark:border-gray-600 dark:hover:bg-gray-600'}`}
-              >
-                <span className="sr-only">Previous</span>
-                <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                  <path fillRule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
-                </svg>
-              </button>
-              
-              {pageNumbers.map((page, index) => (
-                page === '...' ? (
-                  <span
-                    key={`ellipsis-${index}`}
-                    className="relative inline-flex items-center px-4 py-2 border text-sm font-medium text-gray-700 bg-white dark:text-gray-300 dark:bg-gray-700 dark:border-gray-600"
-                  >
-                    ...
-                  </span>
-                ) : (
-                  <button
-                    key={page}
-                    onClick={() => goToPage(page)}
-                    className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium
-                      ${currentPage === page 
-                        ? 'z-10 bg-primary-200 border-primary-200 text-white dark:bg-primary-300 dark:border-primary-300 dark:text-gray-900' 
-                        : 'bg-white text-gray-500 hover:bg-gray-50 dark:bg-gray-700 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-600'}`}
-                  >
-                    {page}
-                  </button>
-                )
-              ))}
-              
-              <button
-                onClick={nextPage}
-                disabled={currentPage === totalPages}
-                className={`relative inline-flex items-center px-2 py-2 rounded-r-md border text-sm font-medium
-                  ${currentPage === totalPages 
-                    ? 'text-gray-400 bg-gray-100 dark:text-gray-500 dark:bg-gray-800 dark:border-gray-700 cursor-not-allowed' 
-                    : 'text-gray-500 bg-white hover:bg-gray-50 dark:text-gray-300 dark:bg-gray-700 dark:border-gray-600 dark:hover:bg-gray-600'}`}
-              >
-                <span className="sr-only">Next</span>
-                <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                  <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
-                </svg>
-              </button>
-            </nav>
-          </div>
-        </div>
-      </div>
+      <span className={`px-2 py-1 rounded-full text-xs font-medium ${statusColor}`}>
+        {status ? status.charAt(0).toUpperCase() + status.slice(1).replace(/_/g, ' ') : 'Unknown'}
+      </span>
     );
   };
 
+  // Helper function to determine fulfillment type (pickup or delivery)
+  const getFulfillmentType = (order) => {
+    if (order.fulfillment_type === 'pickup' || order.deliveryMethod === 'store-pickup') {
+      return 'Pickup';
+    } else {
+      return 'Delivery';
+    }
+  };
+  
+  // Helper function to get style for fulfillment badges
+  const getFulfillmentBadgeStyle = (type) => {
+    if (type === 'Pickup') {
+      return 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300';
+    } else {
+      return 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300';
+    }
+  };
+  
   return (
-    <div className="container mx-auto p-4 dark:bg-gray-900">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold dark:text-white">Order Management Dashboard</h1>
-        <button 
-          onClick={() => setShowStatistics(!showStatistics)}
-          className="px-3 py-1 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-md text-sm hover:bg-gray-300 dark:hover:bg-gray-600 flex items-center"
-        >
-          <FaChartBar className="mr-1" />
-          {showStatistics ? 'Hide Statistics' : 'Show Statistics'}
-        </button>
-      </div>
+    <div className="p-4 md:p-6">
+      <h1 className="text-2xl font-bold mb-6 dark:text-white">Order Management</h1>
       
-      {/* Statistics Section */}
-      {showStatistics && <OrderStatistics orders={orders} />}
-      
-      {/* Tabs Navigation */}
-      <div className="flex flex-wrap border-b border-gray-200 dark:border-gray-700 mb-6 overflow-x-auto">
-        {tabs.map(tab => (
-          <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id)}
-            className={`py-2 px-4 text-sm font-medium flex items-center whitespace-nowrap ${
-              activeTab === tab.id
-              ? 'text-primary-200 dark:text-primary-300 border-b-2 border-primary-200 dark:border-primary-300'
-              : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
-            }`}
-          >
-            {tab.icon}
-            {tab.label}
-            <span className="ml-1 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-xs rounded-full px-2 py-0.5">
-              {tab.id === 'all' 
-               ? orders.length 
-               : tab.id === 'in-transit'
-                 ? orders.filter(o => ['driver_assigned', 'out_for_delivery', 'nearby'].includes(o.status)).length
-                 : orders.filter(o => o.status === tab.id).length
-              }
-            </span>
-          </button>
-        ))}
-      </div>
-      
-      {/* Search and Filters Row */}
-      <div className="mb-6 flex flex-col md:flex-row gap-4">
-        <div className="relative w-full">
-          <input
-            type="text"
-            placeholder="Search by name, email, order ID, payment method..."
-            className="pl-10 pr-4 py-2 border dark:border-gray-600 rounded-lg w-full dark:bg-gray-700 dark:text-white placeholder-gray-400 dark:placeholder-gray-500"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
-          <FaSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500" />
-          
-          {searchTerm && (
-            <button
-              className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-400"
-              onClick={() => setSearchTerm('')}
-            >
-              <FaTimes />
-            </button>
-          )}
-        </div>
-        
-        <div className="flex-shrink-0 w-full md:w-auto">
-          <div className="flex items-center gap-2">
-            <label htmlFor="perPage" className="text-sm text-gray-700 dark:text-gray-300 whitespace-nowrap">
-              Show:
-            </label>
-            <select
-              id="perPage"
-              className="border text-sm rounded-lg dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-              value={ordersPerPage}
-              onChange={(e) => {
-                setOrdersPerPage(Number(e.target.value));
-                setCurrentPage(1); // Reset to first page when changing items per page
-              }}
-            >
-              <option value={5}>5</option>
-              <option value={10}>10</option>
-              <option value={20}>20</option>
-              <option value={50}>50</option>
-              <option value={100}>100</option>
-            </select>
-          </div>
-        </div>
-      </div>
-      
-      {/* Orders Table */}
-      {loading ? (
-        <div className="flex justify-center items-center h-40">
-          <FaSpinner className="animate-spin text-primary-300 text-3xl" />
-        </div>
-      ) : filteredOrders.length === 0 ? (
-        <div className="text-center py-10 bg-gray-50 dark:bg-gray-800 rounded-lg">
-          <FaShoppingBag className="mx-auto text-gray-400 dark:text-gray-600 text-4xl mb-2" />
-          <p className="text-gray-500 dark:text-gray-400">No orders found</p>
-          <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">
-            {searchTerm ? 'Try adjusting your search' : 'There are no orders in this category yet'}
-          </p>
-        </div>
-      ) : (
+      {/* Statistics */}
+      {showStatistics && (
         <>
-          <div className="w-full overflow-x-auto lg:overflow-visible">
-            <table className="min-w-full bg-white dark:bg-gray-800 rounded-lg overflow-hidden shadow-sm table-auto">
-              <thead className="bg-gray-100 dark:bg-gray-700">
-                <tr>
-                  <th className="text-left py-3 px-2 md:px-4 uppercase font-semibold text-xs md:text-sm dark:text-gray-300 whitespace-nowrap">ID</th>
-                  <th className="text-left py-3 px-2 md:px-4 uppercase font-semibold text-xs md:text-sm dark:text-gray-300">Customer</th>
-                  <th className="text-left py-3 px-2 md:px-4 uppercase font-semibold text-xs md:text-sm dark:text-gray-300 hidden md:table-cell">Date</th>
-                  <th className="text-left py-3 px-2 md:px-4 uppercase font-semibold text-xs md:text-sm dark:text-gray-300 hidden md:table-cell">Payment</th>
-                  <th className="text-left py-3 px-2 md:px-4 uppercase font-semibold text-xs md:text-sm dark:text-gray-300">Amount</th>
-                  <th className="text-left py-3 px-2 md:px-4 uppercase font-semibold text-xs md:text-sm dark:text-gray-300">Status</th>
-                  <th className="text-left py-3 px-2 md:px-4 uppercase font-semibold text-xs md:text-sm dark:text-gray-300">Action</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-                {currentOrders.map(order => (
-                  <tr 
-                    key={order._id} 
-                    className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-150"
-                  >
-                    <td className="py-3 px-2 md:px-4 dark:text-white whitespace-nowrap text-xs md:text-sm group-hover:text-gray-900 dark:group-hover:text-white">
-                      <div className="flex items-center gap-1">
-                        <FaFileInvoiceDollar className="text-primary-200 dark:text-primary-300" />
-                        <span className="truncate max-w-[60px] md:max-w-[100px]">{order.orderId || order._id.substring(order._id.length - 8)}</span>
-                      </div>
-                    </td>
-                    <td className="py-3 px-2 md:px-4 text-xs md:text-sm">
-                      <div className="flex items-center gap-1">
-                        <FaUserAlt className="text-gray-500 dark:text-gray-400" />
-                        <div>
-                          <div className="font-medium dark:text-white truncate max-w-[80px] md:max-w-[150px]">
-                            {order.userId?.name || 'Unknown User'}
-                          </div>
-                          <div className="text-xs text-gray-500 dark:text-gray-400 truncate max-w-[80px] md:max-w-[150px]">
-                            {order.userId?.email || 'N/A'}
-                          </div>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="py-3 px-2 md:px-4 dark:text-gray-300 hidden md:table-cell text-xs md:text-sm">
-                      <div className="flex items-center gap-1">
-                        <FaCalendarAlt className="text-gray-500 dark:text-gray-400" />
-                        <span>
-                          {order.createdAt && (
-                            typeof format === 'function' ? 
-                              format(new Date(order.createdAt), 'P') : 
-                              formatDate(order.createdAt).split(',')[0]
-                          )}
-                        </span>
-                      </div>
-                    </td>
-                    <td className="py-3 px-2 md:px-4 hidden md:table-cell text-xs md:text-sm">
-                      <div className="flex flex-col">
-                        <span className={`text-sm dark:text-gray-300 ${
-                          order.payment_status === 'paid' ? 'text-green-600 dark:text-green-400' :
-                          order.payment_status === 'pending' ? 'text-yellow-600 dark:text-yellow-400' :
-                          'text-gray-600 dark:text-gray-400'
-                        }`}>
-                          {order.payment_status || 'N/A'}
-                        </span>
-                      </div>
-                    </td>
-                    <td className="py-3 px-2 md:px-4 font-medium dark:text-white text-xs md:text-sm whitespace-nowrap">
-                      KSh {Number(order.totalAmt || order.totalPrice || 0).toLocaleString()}
-                    </td>
-                    <td className="py-3 px-2 md:px-4 text-xs md:text-sm">
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(order.status)}`}>
-                        {formatStatus(order.status)}
-                      </span>
-                    </td>
-                    <td className="py-3 px-2 md:px-4 text-xs md:text-sm">
-                      <div className="flex flex-col md:flex-row gap-2">
-                        <button
-                          onClick={() => setSelectedOrder(order)}
-                          className="px-2 py-1 bg-primary-200 dark:bg-primary-300 text-white dark:text-gray-900 rounded-lg text-xs hover:bg-primary-100 dark:hover:bg-primary-200"
-                        >
-                          Details
-                        </button>
-                        {order.status !== 'delivered' && order.status !== 'cancelled' && (
-                          <select
-                            className="border dark:border-gray-600 p-1 rounded text-xs dark:bg-gray-700 dark:text-gray-300 w-full md:w-auto"
-                            value={order.status || ''}
-                            onChange={(e) => updateOrderStatus(order._id, e.target.value)}
-                          >
-                            <option value="pending">Pending</option>
-                            <option value="processing">Processing</option>
-                            <option value="shipped">Shipped</option>
-                            <option value="driver_assigned">Driver</option>
-                            <option value="delivered">Delivered</option>
-                            <option value="cancelled">Cancelled</option>
-                          </select>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <OrderStatistics orders={orders} />
+          <div className="mb-6 flex justify-end">
+            <button 
+              onClick={() => setShowStatistics(false)}
+              className="text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 flex items-center text-sm"
+            >
+              <FaTimes className="mr-1" /> Hide Statistics
+            </button>
           </div>
-          
-          {/* Add the Pagination component */}
-          <Pagination />
         </>
       )}
       
+      {!showStatistics && (
+        <div className="mb-6">
+          <button 
+            onClick={() => setShowStatistics(true)}
+            className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 flex items-center"
+          >
+            <FaChartBar className="mr-1" /> Show Statistics
+          </button>
+        </div>
+      )}
+      
+      {/* Order Filters, Search and View Toggle */}
+      <div className="mb-6 flex flex-col gap-4">
+        {/* Filter tabs */}
+        <div className="flex flex-wrap gap-2">
+          <button
+            className={`px-3 py-1.5 text-sm font-medium rounded-full 
+              ${activeTab === 'all' ? 
+                'bg-blue-600 text-white' : 
+                'bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white hover:bg-gray-300 dark:hover:bg-gray-600'}`}
+            onClick={() => setActiveTab('all')}
+          >
+            All Orders
+          </button>
+          <button
+            className={`px-3 py-1.5 text-sm font-medium rounded-full 
+              ${activeTab === 'pending' ? 
+                'bg-yellow-500 text-white' : 
+                'bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white hover:bg-gray-300 dark:hover:bg-gray-600'}`}
+            onClick={() => setActiveTab('pending')}
+          >
+            Pending
+          </button>
+          <button
+            className={`px-3 py-1.5 text-sm font-medium rounded-full 
+              ${activeTab === 'processing' ? 
+                'bg-blue-500 text-white' : 
+                'bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white hover:bg-gray-300 dark:hover:bg-gray-600'}`}
+            onClick={() => setActiveTab('processing')}
+          >
+            Processing
+          </button>
+          <button
+            className={`px-3 py-1.5 text-sm font-medium rounded-full 
+              ${activeTab === 'shipped' ? 
+                'bg-indigo-500 text-white' : 
+                'bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white hover:bg-gray-300 dark:hover:bg-gray-600'}`}
+            onClick={() => setActiveTab('shipped')}
+          >
+            Shipped
+          </button>
+          <button
+            className={`px-3 py-1.5 text-sm font-medium rounded-full 
+              ${activeTab === 'in-transit' ? 
+                'bg-purple-500 text-white' : 
+                'bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white hover:bg-gray-300 dark:hover:bg-gray-600'}`}
+            onClick={() => setActiveTab('in-transit')}
+          >
+            In Transit
+          </button>
+          <button
+            className={`px-3 py-1.5 text-sm font-medium rounded-full 
+              ${activeTab === 'delivered' ? 
+                'bg-green-500 text-white' : 
+                'bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white hover:bg-gray-300 dark:hover:bg-gray-600'}`}
+            onClick={() => setActiveTab('delivered')}
+          >
+            Delivered
+          </button>
+          <button
+            className={`px-3 py-1.5 text-sm font-medium rounded-full 
+              ${activeTab === 'cancelled' ? 
+                'bg-red-500 text-white' : 
+                'bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white hover:bg-gray-300 dark:hover:bg-gray-600'}`}
+            onClick={() => setActiveTab('cancelled')}
+          >
+            Cancelled
+          </button>
+        </div>
+        
+        {/* Search and Controls Row */}
+        <div className="flex flex-wrap items-center gap-2 justify-between">
+          {/* View Toggle */}
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setViewMode('table')}
+              className={`p-2 rounded-md ${
+                viewMode === 'table' 
+                  ? 'bg-blue-600 text-white' 
+                  : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-white'
+              }`}
+              aria-label="Table view"
+            >
+              <FaThList />
+            </button>
+            <button
+              onClick={() => setViewMode('grid')}
+              className={`p-2 rounded-md ${
+                viewMode === 'grid' 
+                  ? 'bg-blue-600 text-white' 
+                  : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-white'
+              }`}
+              aria-label="Grid view"
+            >
+              <FaThLarge />
+            </button>
+          </div>
+          
+          <div className="flex flex-wrap items-center gap-2">
+            {/* Fulfillment Filter Dropdown */}
+            <div className="relative">
+              <select
+                className="border border-gray-300 dark:border-gray-600 rounded-md p-2 pr-8 bg-white dark:bg-gray-700 text-gray-800 dark:text-white"
+                value={fulfillmentFilter}
+                onChange={(e) => setFulfillmentFilter(e.target.value)}
+              >
+                <option value="all">All Fulfillment</option>
+                <option value="delivery">Delivery Only</option>
+                <option value="pickup">Pickup Only</option>
+              </select>
+            </div>
+            
+            {/* Search Box */}
+            <div className="relative flex items-center">
+              <FaSearch className="absolute left-3 text-gray-400" />
+              <input
+                type="text"
+                placeholder="Search orders..."
+                className="pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+            </div>
+            
+            <button
+              onClick={fetchAllOrders}
+              className="ml-2 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md flex items-center"
+            >
+              <FaSpinner className={`mr-1 ${loading ? 'animate-spin' : 'hidden'}`} />
+              Refresh
+            </button>
+          </div>
+        </div>
+      </div>
+      
+      {/* Table View */}
+      {viewMode === 'table' && (
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+              <thead className="bg-gray-50 dark:bg-gray-900">
+                <tr>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Order</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Customer</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Date</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Status</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Total</th>
+                  <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Action</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+                {loading ? (
+                  <tr>
+                    <td colSpan="6" className="px-4 py-4 text-center text-gray-500 dark:text-gray-400">
+                      <FaSpinner className="animate-spin inline mr-2" /> Loading orders...
+                    </td>
+                  </tr>
+                ) : currentOrders.length === 0 ? (
+                  <tr>
+                    <td colSpan="6" className="px-4 py-4 text-center text-gray-500 dark:text-gray-400">
+                      No orders found
+                    </td>
+                  </tr>
+                ) : (
+                  currentOrders.map(order => (
+                    <tr key={order._id} className="hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer" onClick={() => setSelectedOrder(order)}>
+                      {/* Order ID column with type badge */}
+                      <td className="px-4 py-3">
+                        <div className="flex items-center">
+                          <span className={`w-2 h-2 rounded-full mr-2 ${
+                            getFulfillmentType(order) === 'Pickup' ? 'bg-purple-500' : 'bg-blue-500'
+                          }`}></span>
+                          <div>
+                            <div className="text-sm font-medium dark:text-white">{order.orderId || order._id?.substring(order._id.length - 8)}</div>
+                            <div className="text-xs text-gray-500 dark:text-gray-400">
+                              {getFulfillmentType(order)}
+                            </div>
+                          </div>
+                        </div>
+                      </td>
+                      
+                      {/* Customer column */}
+                      <td className="px-4 py-3">
+                        <div className="text-sm font-medium dark:text-white truncate max-w-[150px]">
+                          {order.userId?.name || 'N/A'}
+                        </div>
+                        <div className="text-xs text-gray-500 dark:text-gray-400 truncate max-w-[150px]">
+                          {order.userId?.email || 'No email'}
+                        </div>
+                      </td>
+                      
+                      {/* Date column - simplified */}
+                      <td className="px-4 py-3 whitespace-nowrap">
+                        <div className="text-sm dark:text-white">
+                          {format(new Date(order.createdAt), 'dd MMM yyyy')}
+                        </div>
+                        <div className="text-xs text-gray-500 dark:text-gray-400">
+                          {format(new Date(order.createdAt), 'HH:mm')}
+                        </div>
+                      </td>
+                      
+                      {/* Status column with badge */}
+                      <td className="px-4 py-3 whitespace-nowrap">
+                        {renderStatusBadge(order.status)}
+                        <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                          {(order.payment_status || order.paymentStatus || 'pending').toUpperCase()}
+                        </div>
+                      </td>
+                      
+                      {/* Amount column - clean and simple */}
+                      <td className="px-4 py-3 whitespace-nowrap text-right">
+                        <div className="text-sm font-medium dark:text-white">
+                          KSh {Number(order.totalAmt || order.totalPrice || 0).toLocaleString()}
+                        </div>
+                      </td>
+                      
+                      {/* Action column */}
+                      <td className="px-4 py-3 whitespace-nowrap text-center">
+                        <button 
+                          className="px-3 py-1 bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 rounded hover:bg-blue-200 dark:hover:bg-blue-800/60"
+                          onClick={(e) => { e.stopPropagation(); setSelectedOrder(order); }}
+                        >
+                          View
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+      
+      {/* Grid View */}
+      {viewMode === 'grid' && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          {loading ? (
+            <div className="col-span-full flex justify-center py-8">
+              <FaSpinner className="animate-spin text-2xl text-blue-600" />
+              <span className="ml-2 text-gray-600 dark:text-gray-300">Loading orders...</span>
+            </div>
+          ) : currentOrders.length === 0 ? (
+            <div className="col-span-full text-center py-8 text-gray-500 dark:text-gray-400">
+              No orders found
+            </div>
+          ) : (
+            currentOrders.map(order => (
+              <div 
+                key={order._id} 
+                className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden cursor-pointer hover:shadow-md transition-shadow"
+                onClick={() => setSelectedOrder(order)}
+              >
+                {/* Card Header with Status */}
+                <div className={`px-4 py-2 ${
+                  order.status === 'delivered' ? 'bg-green-100 dark:bg-green-900/30' :
+                  order.status === 'cancelled' ? 'bg-red-100 dark:bg-red-900/30' :
+                  order.status === 'shipped' ? 'bg-indigo-100 dark:bg-indigo-900/30' :
+                  order.status === 'driver_assigned' || order.status === 'out_for_delivery' || order.status === 'nearby' ? 
+                    'bg-purple-100 dark:bg-purple-900/30' :
+                  order.status === 'processing' ? 'bg-blue-100 dark:bg-blue-900/30' :
+                  'bg-yellow-100 dark:bg-yellow-900/30'
+                }`}>
+                  <div className="flex justify-between items-center">
+                    <div className="flex items-center">
+                      <span className={`w-2 h-2 rounded-full mr-2 ${
+                        getFulfillmentType(order) === 'Pickup' ? 'bg-purple-500' : 'bg-blue-500'
+                      }`}></span>
+                      <span className="text-sm font-medium dark:text-white">
+                        {getFulfillmentType(order)}
+                      </span>
+                    </div>
+                    {renderStatusBadge(order.status)}
+                  </div>
+                </div>
+                
+                {/* Card Body */}
+                <div className="p-4">
+                  {/* Order ID and Date */}
+                  <div className="flex justify-between items-start mb-3">
+                    <div>
+                      <div className="text-base font-medium dark:text-white">#{order.orderId || order._id?.substring(order._id.length - 8)}</div>
+                      <div className="text-xs text-gray-500 dark:text-gray-400">
+                        {format(new Date(order.createdAt), 'dd MMM yyyy')}
+                      </div>
+                    </div>
+                    <div className="text-base font-semibold text-green-600 dark:text-green-400">
+                      KSh {Number(order.totalAmt || order.totalPrice || 0).toLocaleString()}
+                    </div>
+                  </div>
+                  
+                  {/* Customer Info - With truncation for long names/emails */}
+                  <div className="mb-3">
+                    <div className="text-sm font-medium dark:text-white truncate" title={order.userId?.name || 'N/A'}>
+                      {order.userId?.name || 'N/A'}
+                    </div>
+                    <div className="text-xs text-gray-500 dark:text-gray-400 truncate" title={order.userId?.email || 'No email'}>
+                      {order.userId?.email || 'No email'}
+                    </div>
+                  </div>
+                  
+                  {/* Payment Status */}
+                  <div className="flex items-center text-xs text-gray-500 dark:text-gray-400 mb-3">
+                    <span className={`inline-block w-2 h-2 rounded-full mr-1 ${
+                      order.payment_status === 'paid' || order.paymentStatus === 'paid' ? 
+                      'bg-green-500' : 'bg-yellow-500'
+                    }`}></span>
+                    Payment: {(order.payment_status || order.paymentStatus || 'pending').toUpperCase()}
+                  </div>
+                </div>
+                
+                {/* Card Footer */}
+                <div className="border-t dark:border-gray-700 p-3 bg-gray-50 dark:bg-gray-750 flex justify-end">
+                  <button 
+                    className="px-3 py-1 bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 rounded hover:bg-blue-200 dark:hover:bg-blue-800/60 text-sm"
+                    onClick={(e) => { e.stopPropagation(); setSelectedOrder(order); }}
+                  >
+                    View Details
+                  </button>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      )}
+      
+      {/* Pagination */}
+      {filteredOrders.length > 0 && (
+        <div className="flex flex-col sm:flex-row justify-between items-center mt-6 gap-4">
+          <div className="text-sm text-gray-500 dark:text-gray-400">
+            Showing {indexOfFirstOrder + 1}-{Math.min(indexOfLastOrder, filteredOrders.length)} of {filteredOrders.length} orders
+          </div>
+          <div className="flex space-x-2">
+            <button
+              className="px-3 py-1 rounded bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 disabled:opacity-50"
+              disabled={currentPage === 1}
+              onClick={() => setCurrentPage(currentPage - 1)}
+            >
+              Previous
+            </button>
+            {[...Array(Math.min(5, totalPages)).keys()].map(index => {
+              // Show pagination numbers centered around current page
+              let pageNumber;
+              if (totalPages <= 5) {
+                pageNumber = index + 1;
+              } else if (currentPage <= 3) {
+                pageNumber = index + 1;
+              } else if (currentPage >= totalPages - 2) {
+                pageNumber = totalPages - 4 + index;
+              } else {
+                pageNumber = currentPage - 2 + index;
+              }
+              
+              if (pageNumber <= totalPages) {
+                return (
+                  <button
+                    key={pageNumber}
+                    className={`px-3 py-1 rounded ${
+                      pageNumber === currentPage ? 
+                        'bg-blue-600 text-white' : 
+                        'bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200'
+                    }`}
+                    onClick={() => setCurrentPage(pageNumber)}
+                  >
+                    {pageNumber}
+                  </button>
+                );
+              } else {
+                return null;
+              }
+            })}
+            <button
+              className="px-3 py-1 rounded bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 disabled:opacity-50"
+              disabled={currentPage === totalPages}
+              onClick={() => setCurrentPage(currentPage + 1)}
+            >
+              Next
+            </button>
+          </div>
+        </div>
+      )}
+      
+      {/* Order Detail Modal */}
       {selectedOrder && (
         <OrderDetailModal 
           order={selectedOrder} 
-          onClose={() => setSelectedOrder(null)}
-          onStatusChange={updateOrderStatus} 
+          onClose={() => setSelectedOrder(null)} 
+          onStatusChange={updateOrderStatus}
         />
       )}
     </div>

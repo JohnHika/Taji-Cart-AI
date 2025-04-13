@@ -64,9 +64,14 @@ const AdminDashboard = () => {
       <div className="mb-8">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-xl font-semibold">Active Campaigns</h2>
-          <Link to="/dashboard/admin-community-perks" className="text-primary-200 hover:text-primary-300 text-sm">
-            Manage Campaigns
-          </Link>
+          <div className="flex items-center gap-4">
+            <Link to="/dashboard/active-campaigns" className="text-primary-200 hover:text-primary-300 text-sm">
+              View Active Campaigns
+            </Link>
+            <Link to="/dashboard/admin-community-perks" className="text-primary-200 hover:text-primary-300 text-sm">
+              Manage Campaigns
+            </Link>
+          </div>
         </div>
         
         {loadingCampaigns ? (

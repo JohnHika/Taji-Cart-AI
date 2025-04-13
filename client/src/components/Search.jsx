@@ -1,8 +1,8 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState } from 'react';
+import { FaArrowLeft } from "react-icons/fa";
 import { IoSearch } from "react-icons/io5";
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { TypeAnimation } from 'react-type-animation';
-import { FaArrowLeft } from "react-icons/fa";
 import useMobile from '../hooks/useMobile';
 
 
@@ -11,8 +11,10 @@ const Search = () => {
     const location = useLocation()
     const [isSearchPage,setIsSearchPage] = useState(false)
     const [ isMobile ] = useMobile()
-    const params = useLocation()
-    const searchText = params.search.slice(3)
+    
+    // Fix search parameter parsing
+    const searchParams = new URLSearchParams(location.search);
+    const searchText = searchParams.get('q') || '';
 
     useEffect(()=>{
         const isSearch = location.pathname === "/search"
