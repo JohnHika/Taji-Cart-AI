@@ -7,11 +7,11 @@ const DeliveryManagement = () => {
   
   // Define tabs for the delivery management interface
   const tabs = [
-    { name: 'Pending Orders', path: '/staff/delivery/pending', icon: 'clock' },
-    { name: 'Dispatched', path: '/staff/delivery/dispatched', icon: 'truck' },
-    { name: 'Active Deliveries', path: '/staff/delivery/active', icon: 'route' },
-    { name: 'Completed', path: '/staff/delivery/completed', icon: 'check-circle' },
-    { name: 'Drivers', path: '/staff/delivery/drivers', icon: 'users' }
+    { name: 'Pending Orders', path: '/dashboard/staff/delivery/pending', icon: 'clock' },
+    { name: 'Dispatched', path: '/dashboard/staff/delivery/dispatched', icon: 'truck' },
+    { name: 'Active Deliveries', path: '/dashboard/staff/delivery/active', icon: 'route' },
+    { name: 'Completed', path: '/dashboard/staff/delivery/completed', icon: 'check-circle' },
+    { name: 'Drivers', path: '/dashboard/staff/delivery/drivers', icon: 'users' }
   ];
   
   // Render the appropriate icon based on the name

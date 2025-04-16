@@ -25,6 +25,7 @@
     "react-barcode": "^1.6.1",
     "react-dom": "^18.3.1",
     "react-easy-crop": "^5.4.1",
+    "react-error-boundary": "^5.0.0",
     "react-hook-form": "^7.53.0",
     "react-hot-toast": "^2.4.1",
     "react-icons": "^5.3.0",
@@ -35,6 +36,7 @@
     "react-router-dom": "^6.26.0",
     "react-toastify": "^11.0.5",
     "react-type-animation": "^3.2.0",
+    "recharts": "^2.15.2",
     "socket.io": "^4.8.1",
     "socket.io-client": "^4.8.1",
     "sweetalert2": "^11.14.0"

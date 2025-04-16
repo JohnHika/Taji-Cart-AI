@@ -8,6 +8,25 @@ import './index.css';
 import router from './route/index';
 import { store } from './store/store.js';
 
+// Verify DOM is ready before attempting to mount
+document.addEventListener('DOMContentLoaded', () => {
+  console.log('DOM content loaded, ready to render React');
+  const rootElement = document.getElementById('root');
+  
+  if (!rootElement) {
+    document.body.innerHTML = `
+      <div style="padding: 20px; font-family: sans-serif; color: red;">
+        <h1>Critical Error</h1>
+        <p>Unable to find root element to mount React application.</p>
+      </div>
+    `;
+    console.error('Critical: Root element #root not found in DOM');
+    return;
+  }
+
+  console.log('Found root element, proceeding with React initialization');
+});
+
 // Global error handler
 const originalConsoleError = console.error;
 console.error = function(...args) {

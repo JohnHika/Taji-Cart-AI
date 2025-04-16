@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
+import { ErrorBoundary } from 'react-error-boundary';
 import { Toaster } from 'react-hot-toast';
 import { useDispatch, useSelector } from 'react-redux';
 import { Outlet, useLocation } from 'react-router-dom';
@@ -16,7 +17,23 @@ import { setUserDetails } from './store/userSlice';
 import Axios from './utils/Axios';
 import fetchUserDetails from './utils/fetchUserDetails';
 
-// Import staff pages
+// Error fallback component
+function ErrorFallback({ error }) {
+  return (
+    <div className="p-5 text-center" role="alert">
+      <h2 className="text-lg font-bold text-red-600">Something went wrong:</h2>
+      <pre className="mt-2 p-3 bg-gray-100 rounded text-red-500 overflow-auto text-left">
+        {error.message}
+      </pre>
+      <button
+        className="mt-4 px-4 py-2 bg-blue-500 text-white rounded"
+        onClick={() => window.location.reload()}
+      >
+        Try reloading
+      </button>
+    </div>
+  );
+}
 
 // CartSynchronizer component
 const CartSynchronizer = () => {
@@ -243,19 +260,23 @@ function App() {
   }, [location.pathname, categories, location.state]);
 
   return (
-    <GlobalProvider> 
-      <Header/>
-      <CartSynchronizer />
-      <main className='min-h-[78vh]'>
-        {/* Add key to force remounting of child components when pathname changes */}
-        <Outlet key={location.pathname} />
-      </main>
-      <Footer/>
-      <Toaster/>
-      <ToastContainer position="top-right" autoClose={3000} />
-      {location.pathname !== '/checkout' && user?._id && <CartMobileLink/>}
-      <ChatbotAI />
-    </GlobalProvider>
+    <ErrorBoundary FallbackComponent={ErrorFallback}>
+      <GlobalProvider> 
+        <Header/>
+        <CartSynchronizer />
+        <main className='min-h-[78vh]'>
+          {/* Add suspense to catch lazy-loaded component errors */}
+          <Suspense fallback={<div className="p-5 text-center">Loading...</div>}>
+            <Outlet key={location.pathname} />
+          </Suspense>
+        </main>
+        <Footer/>
+        <Toaster/>
+        <ToastContainer position="top-right" autoClose={3000} />
+        {location.pathname !== '/checkout' && user?._id && <CartMobileLink/>}
+        <ChatbotAI />
+      </GlobalProvider>
+    </ErrorBoundary>
   );
 }
 

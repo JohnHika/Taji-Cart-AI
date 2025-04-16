@@ -34,7 +34,7 @@ const StaffRoutes = () => {
   return (
     <Routes>
       <Route 
-        path="/staff/dashboard" 
+        path="/dashboard/staff/dashboard" 
         element={
           <StaffRoute>
             <StaffDashboard />
@@ -44,7 +44,7 @@ const StaffRoutes = () => {
       
       {/* Delivery Management Routes */}
       <Route 
-        path="/staff/delivery" 
+        path="/dashboard/staff/delivery" 
         element={
           <StaffRoute>
             <DeliveryManagement />
@@ -60,7 +60,7 @@ const StaffRoutes = () => {
       </Route>
       
       {/* Redirect from staff root to dashboard */}
-      <Route path="/staff" element={<Navigate to="/staff/dashboard" replace />} />
+      <Route path="/dashboard/staff" element={<Navigate to="/dashboard/staff/dashboard" replace />} />
     </Routes>
   );
 };

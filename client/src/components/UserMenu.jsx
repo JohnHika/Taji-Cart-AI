@@ -18,7 +18,8 @@ import {
     FaTrophy,
     FaTruck,
     FaUpload,
-    FaUser
+    FaUser,
+    FaUserTie
 } from "react-icons/fa"
 import { HiOutlineExternalLink } from "react-icons/hi"
 import { useDispatch, useSelector } from 'react-redux'
@@ -107,6 +108,17 @@ const UserMenu = ({close}) => {
         >
           <FaUser className="mr-2 text-blue-500" /> My Profile
         </Link>
+
+        {/* Staff Dashboard link - positioned prominently if user is staff */}
+        {showStaffFunctions && (
+          <Link
+            onClick={handleClose}
+            to="/dashboard/staff"
+            className="px-2 hover:bg-orange-200 dark:hover:bg-orange-900/30 dark:hover:text-white py-1 flex items-center"
+          >
+            <FaUserTie className="mr-2 text-green-600" /> Staff Dashboard
+          </Link>
+        )}
 
         {/* Delivery specific menu items */}
         {isDelivery && (

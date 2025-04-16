@@ -5,6 +5,7 @@ import {
     FaBullhorn,
     FaCheck,
     FaClipboardList,
+    FaCog,
     FaCrown,
     FaGift,
     FaHistory,
@@ -18,7 +19,8 @@ import {
     FaTrophy,
     FaUpload,
     FaUser,
-    FaUsers
+    FaUsers,
+    FaUserTie
 } from 'react-icons/fa';
 import { HiOutlineExternalLink } from 'react-icons/hi';
 import { useDispatch, useSelector } from 'react-redux';
@@ -114,6 +116,15 @@ const AdminMenu = ({ close }) => {
           className={`px-2 hover:bg-orange-200 dark:hover:bg-orange-900/30 dark:hover:text-white py-1.5 flex items-center ${isActive('/dashboard/users-admin')}`}
         >
           <FaUsers className="mr-2 text-blue-600" /> User Management
+        </Link>
+        
+        {/* Staff Management - New section */}
+        <Link
+          onClick={handleClose}
+          to="/dashboard/staff/dashboard"
+          className={`px-2 hover:bg-orange-200 dark:hover:bg-orange-900/30 dark:hover:text-white py-1.5 flex items-center ${isActive('/dashboard/staff/dashboard')}`}
+        >
+          <FaUserTie className="mr-2 text-green-600" /> Staff Dashboard
         </Link>
         
         {/* Products & Categories Section */}
@@ -234,6 +245,15 @@ const AdminMenu = ({ close }) => {
           className={`px-2 hover:bg-orange-200 dark:hover:bg-orange-900/30 dark:hover:text-white py-1.5 flex items-center ${isActive('/dashboard/staff/completed-verifications')}`}
         >
           <FaHistory className="mr-2 text-purple-600" /> Verification History
+        </Link>
+        
+        {/* Delivery Management Section - New */}
+        <Link
+          onClick={handleClose}
+          to="/dashboard/staff/delivery"
+          className={`px-2 hover:bg-orange-200 dark:hover:bg-orange-900/30 dark:hover:text-white py-1.5 flex items-center ${isActive('/dashboard/staff/delivery')}`}
+        >
+          <FaCog className="mr-2 text-blue-600" /> Delivery Management
         </Link>
         
         <Divider className="my-3 dark:border-gray-700" />

@@ -1,11 +1,12 @@
 import React from 'react';
 import toast from 'react-hot-toast';
 import {
-    FaBoxOpen,
     FaBoxes,
+    FaBoxOpen,
     FaBullhorn,
     FaClipboardCheck,
     FaClipboardList,
+    FaCog,
     FaCrown,
     FaGift,
     FaHistory,
@@ -22,7 +23,8 @@ import {
     FaTruck,
     FaUpload,
     FaUser,
-    FaUsers
+    FaUsers,
+    FaUserTie
 } from 'react-icons/fa';
 import { useDispatch, useSelector } from 'react-redux';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
@@ -113,7 +115,7 @@ const DashboardSidebar = ({ userRole, isStaff }) => {
         <MenuItem 
           to="/dashboard/address" 
           icon={FaMapMarkerAlt} 
-          label="My Addresses"
+          label="My Addresses" 
           color="text-red-500"
         />
         
@@ -156,6 +158,13 @@ const DashboardSidebar = ({ userRole, isStaff }) => {
               icon={FaUsers} 
               label="User Management" 
               color="text-blue-600"
+            />
+            
+            <MenuItem 
+              to="/dashboard/staff/dashboard" 
+              icon={FaUserTie} 
+              label="Staff Dashboard" 
+              color="text-green-600"
             />
             
             <MenuItem 
@@ -205,6 +214,13 @@ const DashboardSidebar = ({ userRole, isStaff }) => {
               icon={FaStore} 
               label="Pickup Management" 
               color="text-cyan-500"
+            />
+            
+            <MenuItem 
+              to="/dashboard/staff/delivery" 
+              icon={FaCog} 
+              label="Delivery Management" 
+              color="text-blue-600"
             />
           </>
         )}

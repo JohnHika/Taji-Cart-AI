@@ -1,5 +1,7 @@
 import axios from 'axios';
 import React, { useEffect, useState } from 'react';
+import { toast } from 'react-hot-toast';
+import { FaCheck, FaSpinner } from 'react-icons/fa';
 import { useNavigate } from 'react-router-dom';
 
 const PendingDispatch = () => {
@@ -10,6 +12,7 @@ const PendingDispatch = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [sortBy, setSortBy] = useState('createdAt');
   const [sortDirection, setSortDirection] = useState('desc');
+  const [processing, setProcessing] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -19,6 +22,8 @@ const PendingDispatch = () => {
   const fetchPendingOrders = async () => {
     try {
       setLoading(true);
+      setError(null);
+      
       const token = localStorage.getItem('token');
       const response = await axios.get(
         `${import.meta.env.VITE_SERVER_URL}/api/delivery/pending-orders?sort=${sortBy}&direction=${sortDirection}`,
@@ -28,80 +33,13 @@ const PendingDispatch = () => {
       if (response.data.success) {
         setPendingOrders(response.data.data);
       } else {
-        setError("Failed to fetch pending orders");
+        setError(response.data.message || "Failed to fetch pending orders");
+        toast.error(response.data.message || "Failed to fetch pending orders");
       }
     } catch (error) {
       console.error("Error fetching pending orders:", error);
-      setError("An error occurred while fetching pending orders");
-      
-      // Mock data for development
-      setPendingOrders([
-        {
-          _id: '1',
-          orderId: 'ORD-001234',
-          customer: {
-            name: 'John Doe',
-            phone: '+254712345678'
-          },
-          deliveryAddress: {
-            street: '123 Kimathi Street',
-            city: 'Nairobi',
-            neighborhood: 'CBD',
-            landmark: 'Near National Archives'
-          },
-          items: [
-            { name: 'French Beans', quantity: 2 },
-            { name: 'Carrots', quantity: 1 }
-          ],
-          total: 1250,
-          createdAt: '2025-04-12T08:30:00Z',
-          paymentStatus: 'paid'
-        },
-        {
-          _id: '2',
-          orderId: 'ORD-001235',
-          customer: {
-            name: 'Jane Smith',
-            phone: '+254723456789'
-          },
-          deliveryAddress: {
-            street: '456 Ngong Road',
-            city: 'Nairobi',
-            neighborhood: 'Kilimani',
-            landmark: 'Near Prestige Plaza'
-          },
-          items: [
-            { name: 'Tomatoes', quantity: 3 },
-            { name: 'Onions', quantity: 2 },
-            { name: 'Potatoes', quantity: 5 }
-          ],
-          total: 1800,
-          createdAt: '2025-04-12T09:45:00Z',
-          paymentStatus: 'paid'
-        },
-        {
-          _id: '3',
-          orderId: 'ORD-001236',
-          customer: {
-            name: 'Michael Johnson',
-            phone: '+254734567890'
-          },
-          deliveryAddress: {
-            street: '789 Mombasa Road',
-            city: 'Nairobi',
-            neighborhood: 'Syokimau',
-            landmark: 'Near Gateway Mall'
-          },
-          items: [
-            { name: 'Bananas', quantity: 1 },
-            { name: 'Apples', quantity: 6 },
-            { name: 'Mangoes', quantity: 3 }
-          ],
-          total: 1550,
-          createdAt: '2025-04-12T10:15:00Z',
-          paymentStatus: 'paid'
-        }
-      ]);
+      setError(error.response?.data?.message || "An error occurred while fetching pending orders");
+      toast.error(error.response?.data?.message || "An error occurred while fetching pending orders");
     } finally {
       setLoading(false);
     }
@@ -125,53 +63,103 @@ const PendingDispatch = () => {
   };
 
   const handleSelectAll = () => {
-    if (selectedOrders.length === pendingOrders.length) {
+    if (selectedOrders.length === filteredOrders.length) {
       setSelectedOrders([]);
     } else {
-      setSelectedOrders(pendingOrders.map(order => order._id));
+      setSelectedOrders(filteredOrders.map(order => order._id));
+    }
+  };
+
+  const dispatchOrderById = async (orderId, notes = '') => {
+    try {
+      setProcessing(true);
+      const token = localStorage.getItem('token');
+      
+      const response = await axios.post(
+        `${import.meta.env.VITE_SERVER_URL}/api/delivery/dispatch`,
+        { 
+          orderId, 
+          notes
+        },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      
+      if (response.data.success) {
+        toast.success(`Order #${response.data.data.orderId} dispatched successfully`);
+        return true;
+      } else {
+        toast.error(response.data.message || "Failed to dispatch order");
+        return false;
+      }
+    } catch (error) {
+      console.error("Error dispatching order:", error);
+      toast.error(error.response?.data?.message || "An error occurred while dispatching the order");
+      return false;
+    } finally {
+      setProcessing(false);
+    }
+  };
+
+  const handleDispatchSingle = async (orderId) => {
+    const success = await dispatchOrderById(orderId);
+    if (success) {
+      // Remove the order from the list
+      setPendingOrders(prev => prev.filter(order => order._id !== orderId));
+      // Remove from selected orders if it was selected
+      setSelectedOrders(prev => prev.filter(id => id !== orderId));
     }
   };
 
   const handleDispatchSelected = async () => {
     if (selectedOrders.length === 0) {
-      alert('Please select at least one order to dispatch');
+      toast.error('Please select at least one order to dispatch');
       return;
     }
 
+    setProcessing(true);
+    let successCount = 0;
+    let failCount = 0;
+
     try {
-      const token = localStorage.getItem('token');
-      const response = await axios.post(
-        `${import.meta.env.VITE_SERVER_URL}/api/delivery/dispatch-orders`,
-        { orderIds: selectedOrders },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      
-      if (response.data.success) {
-        // Show success message and refresh the list
-        alert(`Successfully dispatched ${selectedOrders.length} orders`);
-        setSelectedOrders([]);
-        fetchPendingOrders();
-        
-        // Navigate to the dispatched orders section
-        navigate('/staff/delivery/dispatched');
-      } else {
-        setError("Failed to dispatch orders");
+      // Process each order sequentially 
+      for (const orderId of selectedOrders) {
+        const success = await dispatchOrderById(orderId);
+        if (success) {
+          successCount++;
+        } else {
+          failCount++;
+        }
       }
-    } catch (error) {
-      console.error("Error dispatching orders:", error);
-      alert("An error occurred while dispatching orders");
+
+      // Show summary toast
+      if (successCount > 0) {
+        toast.success(`Successfully dispatched ${successCount} orders`);
+      }
       
-      // For development purposes, simulate success
-      alert(`Successfully dispatched ${selectedOrders.length} orders (simulated)`);
+      if (failCount > 0) {
+        toast.error(`Failed to dispatch ${failCount} orders`);
+      }
+
+      // Refresh the list and clear selected orders
       setSelectedOrders([]);
       fetchPendingOrders();
+      
+      // If all were successful, navigate to dispatched orders view
+      if (failCount === 0 && successCount > 0) {
+        navigate('/staff/delivery/dispatched');
+      }
+    } catch (error) {
+      console.error("Error in batch dispatch:", error);
+      toast.error("An error occurred during batch dispatch");
+    } finally {
+      setProcessing(false);
     }
   };
 
   const filteredOrders = pendingOrders.filter(order => 
     order.orderId.toLowerCase().includes(searchTerm.toLowerCase()) ||
     order.customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    order.customer.phone.includes(searchTerm)
+    (order.customer.phone && order.customer.phone.includes(searchTerm))
   );
 
   const getSortIcon = (field) => {
@@ -200,7 +188,7 @@ const PendingDispatch = () => {
   return (
     <div>
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-xl font-semibold text-gray-900">Pending Orders</h1>
+        <h1 className="text-xl font-semibold text-gray-900">Pending Orders for Dispatch</h1>
         <div className="flex items-center space-x-3">
           <div className="relative">
             <input
@@ -218,23 +206,34 @@ const PendingDispatch = () => {
           </div>
           <button
             onClick={fetchPendingOrders}
-            className="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+            disabled={loading}
+            className="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
           >
-            <svg className="mr-2 -ml-1 h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-              <path fillRule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clipRule="evenodd" />
-            </svg>
+            {loading ? (
+              <FaSpinner className="mr-2 -ml-1 h-4 w-4 animate-spin" />
+            ) : (
+              <svg className="mr-2 -ml-1 h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clipRule="evenodd" />
+              </svg>
+            )}
             Refresh
           </button>
         </div>
       </div>
 
-      {loading ? (
+      {loading && !pendingOrders.length ? (
         <div className="flex justify-center items-center h-64">
           <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
         </div>
-      ) : error ? (
+      ) : error && !pendingOrders.length ? (
         <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-md">
           {error}
+          <button 
+            onClick={fetchPendingOrders}
+            className="ml-2 underline"
+          >
+            Try Again
+          </button>
         </div>
       ) : filteredOrders.length === 0 ? (
         <div className="bg-white shadow rounded-lg p-6 text-center">
@@ -262,14 +261,24 @@ const PendingDispatch = () => {
             </div>
             <button
               onClick={handleDispatchSelected}
-              disabled={selectedOrders.length === 0}
-              className={`px-4 py-2 rounded-md text-sm font-medium ${
-                selectedOrders.length > 0
+              disabled={selectedOrders.length === 0 || processing}
+              className={`px-4 py-2 rounded-md text-sm font-medium inline-flex items-center ${
+                selectedOrders.length > 0 && !processing
                   ? 'bg-blue-600 text-white hover:bg-blue-700'
                   : 'bg-gray-300 text-gray-500 cursor-not-allowed'
               }`}
             >
-              Dispatch Selected Orders
+              {processing ? (
+                <>
+                  <FaSpinner className="animate-spin mr-2" />
+                  Processing...
+                </>
+              ) : (
+                <>
+                  <FaCheck className="mr-2" />
+                  Dispatch Selected Orders
+                </>
+              )}
             </button>
           </div>
 
@@ -352,18 +361,18 @@ const PendingDispatch = () => {
                     </td>
                     <td className="px-4 py-4">
                       <div className="text-sm text-gray-900">{order.deliveryAddress.street}</div>
-                      <div className="text-sm text-gray-500">{order.deliveryAddress.city}, {order.deliveryAddress.neighborhood}</div>
+                      <div className="text-sm text-gray-500">{order.deliveryAddress.city || ''}{order.deliveryAddress.city && order.deliveryAddress.neighborhood ? ', ' : ''}{order.deliveryAddress.neighborhood || ''}</div>
                       {order.deliveryAddress.landmark && (
                         <div className="text-xs text-gray-500 italic">Near {order.deliveryAddress.landmark}</div>
                       )}
                     </td>
                     <td className="px-4 py-4">
-                      <div className="text-sm text-gray-900">{order.items.length} items</div>
+                      <div className="text-sm text-gray-900">{order.items?.length || 0} items</div>
                       <div className="text-xs text-gray-500">
-                        {order.items.slice(0, 2).map((item, index) => (
+                        {order.items && order.items.slice(0, 2).map((item, index) => (
                           <div key={index}>{item.quantity}x {item.name}</div>
                         ))}
-                        {order.items.length > 2 && <div>+{order.items.length - 2} more</div>}
+                        {order.items && order.items.length > 2 && <div>+{order.items.length - 2} more</div>}
                       </div>
                     </td>
                     <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
@@ -374,10 +383,13 @@ const PendingDispatch = () => {
                     </td>
                     <td className="px-4 py-4 whitespace-nowrap text-right text-sm font-medium">
                       <button 
-                        onClick={() => handleDispatchSelected([order._id])}
-                        className="text-blue-600 hover:text-blue-900 px-2 py-1 border border-blue-600 rounded-md text-xs"
+                        onClick={() => handleDispatchSingle(order._id)}
+                        disabled={processing}
+                        className={`text-white bg-blue-600 hover:bg-blue-700 px-2 py-1 rounded-md text-xs ${processing ? 'opacity-50 cursor-not-allowed' : ''}`}
                       >
-                        Dispatch
+                        {processing ? (
+                          <FaSpinner className="animate-spin inline-block" />
+                        ) : "Dispatch"}
                       </button>
                     </td>
                   </tr>

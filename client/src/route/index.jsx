@@ -196,59 +196,6 @@ const router = createBrowserRouter([
         )
       },
       
-      // NEW STAFF ROUTES - Direct access to staff dashboard and delivery management
-      {
-        path: 'staff',
-        element: (
-          <PrivateRoute requireStaff={true}>
-            <StaffDashboard />
-          </PrivateRoute>
-        )
-      },
-      {
-        path: 'staff/dashboard',
-        element: (
-          <PrivateRoute requireStaff={true}>
-            <StaffDashboard />
-          </PrivateRoute>
-        )
-      },
-      // Staff delivery management routes with tab-based navigation
-      {
-        path: 'staff/delivery',
-        element: (
-          <PrivateRoute requireStaff={true}>
-            <DeliveryManagement />
-          </PrivateRoute>
-        ),
-        children: [
-          {
-            index: true,
-            element: <PendingDispatch />
-          },
-          {
-            path: 'pending',
-            element: <PendingDispatch />
-          },
-          {
-            path: 'dispatched',
-            element: <DispatchedOrders />
-          },
-          {
-            path: 'active',
-            element: <div>Active Deliveries</div> // Placeholder for future implementation
-          },
-          {
-            path: 'completed',
-            element: <div>Completed Deliveries</div> // Placeholder for future implementation
-          },
-          {
-            path: 'drivers',
-            element: <DriversManagement />
-          }
-        ]
-      },
-      
       // Delivery routes with specialized layout
       {
         path: 'delivery',
@@ -256,7 +203,7 @@ const router = createBrowserRouter([
         children: [
           {
             path: 'dashboard',
-            element: <Dashboard />
+            element: <DeliveryDashboard />
           },
           {
             path: 'active',
@@ -276,7 +223,7 @@ const router = createBrowserRouter([
           }
         ]
       },
-      // Dashboard routes
+      // Dashboard routes - All under one unified dashboard structure
       {
         path: 'dashboard',
         element: (
@@ -289,6 +236,7 @@ const router = createBrowserRouter([
             path: 'profile',
             element: <UserProfile />
           },
+          
           // Admin routes
           {
             path: 'upload-product',
@@ -346,6 +294,7 @@ const router = createBrowserRouter([
               </PrivateRoute>
             )
           },
+          
           // User routes
           {
             path: 'myorders',
@@ -387,6 +336,7 @@ const router = createBrowserRouter([
               </PrivateRoute>
             )
           },
+          
           // Delivery specific routes
           {
             path: 'delivery/dashboard',
@@ -408,9 +358,18 @@ const router = createBrowserRouter([
             path: 'delivery/map',
             element: <DeliveryMap />
           },
-          // Staff specific routes
+          
+          // Staff specific routes - redirects for backward compatibility
           {
             path: 'staff',
+            element: (
+              <PrivateRoute requireStaff={true}>
+                <StaffDashboard />
+              </PrivateRoute>
+            )
+          },
+          {
+            path: 'staff/dashboard',
             element: (
               <PrivateRoute requireStaff={true}>
                 <StaffDashboard />
@@ -426,14 +385,6 @@ const router = createBrowserRouter([
             )
           },
           {
-            path: 'staff/completed-verifications',
-            element: (
-              <PrivateRoute requireStaff={true}>
-                <VerificationHistory />
-              </PrivateRoute>
-            )
-          },
-          {
             path: 'staff/verify-pickup',
             element: (
               <PrivateRoute requireStaff={true}>
@@ -442,10 +393,66 @@ const router = createBrowserRouter([
             )
           },
           {
+            path: 'staff/completed-verifications',
+            element: (
+              <PrivateRoute requireStaff={true}>
+                <VerificationHistory />
+              </PrivateRoute>
+            )
+          },
+          {
             path: 'staff/verification-success',
             element: (
               <PrivateRoute requireStaff={true}>
                 <VerificationSuccess />
+              </PrivateRoute>
+            )
+          },
+          {
+            path: 'staff/delivery',
+            element: (
+              <PrivateRoute requireStaff={true}>
+                <DeliveryManagement />
+              </PrivateRoute>
+            )
+          },
+          {
+            path: 'staff/delivery/pending',
+            element: (
+              <PrivateRoute requireStaff={true}>
+                <PendingDispatch />
+              </PrivateRoute>
+            )
+          },
+          {
+            path: 'staff/delivery/dispatched',
+            element: (
+              <PrivateRoute requireStaff={true}>
+                <DispatchedOrders />
+              </PrivateRoute>
+            )
+          },
+          {
+            path: 'staff/delivery/active',
+            element: (
+              <PrivateRoute requireStaff={true}>
+                <div>Active Deliveries</div>
+              </PrivateRoute>
+            )
+          },
+          {
+            path: 'staff/delivery/completed',
+            element: (
+              <PrivateRoute requireStaff={true}>
+                <div>Completed Deliveries</div>
+              </PrivateRoute>
+            )
+          },
+          {
+            path: 'staff/delivery/drivers',
+            element: (
+              <PrivateRoute requireStaff={true}>
+                <DriversManagement />
               </PrivateRoute>
             )
           }

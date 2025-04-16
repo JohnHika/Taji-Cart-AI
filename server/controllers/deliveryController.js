@@ -959,3 +959,264 @@ export const manuallyAssignDriver = async (req, res) => {
     });
   }
 };
+
+// Get dashboard statistics for staff
+export const getDashboardStats = async (req, res) => {
+  try {
+    // Get current date for filtering today's orders
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    // Count orders by status - Include all orders with delivery as fulfillment type
+    // that haven't been dispatched yet (pending, processing, confirmed)
+    const pendingOrders = await Order.countDocuments({
+      status: { $in: ['pending', 'processing', 'confirmed'] },
+      fulfillment_type: 'delivery'
+    });
+    
+    const dispatchedOrders = await Order.countDocuments({
+      status: 'dispatched',
+      fulfillment_type: 'delivery'
+    });
+    
+    const activeDeliveries = await Order.countDocuments({
+      status: { $in: ['driver_assigned', 'out_for_delivery', 'nearby'] },
+      fulfillment_type: 'delivery'
+    });
+    
+    const completedToday = await Order.countDocuments({
+      status: 'delivered',
+      fulfillment_type: 'delivery',
+      deliveredAt: { $gte: today }
+    });
+    
+    // Get driver availability stats
+    let DeliveryPersonnelModel;
+    let totalDrivers = 0;
+    let availableDrivers = 0;
+    
+    try {
+      DeliveryPersonnelModel = mongoose.model('DeliveryPersonnel');
+      totalDrivers = await DeliveryPersonnelModel.countDocuments({ isActive: true });
+      availableDrivers = await DeliveryPersonnelModel.countDocuments({ 
+        isActive: true,
+        isAvailable: true
+      });
+    } catch (err) {
+      console.log('Warning: DeliveryPersonnelModel not available or empty', err.message);
+    }
+    
+    // Get recent orders for delivery (last 5)
+    const recentOrders = await Order.find({
+      fulfillment_type: 'delivery',
+      status: { $in: ['confirmed', 'pending', 'processing', 'dispatched', 'driver_assigned', 'out_for_delivery', 'nearby', 'delivered'] }
+    })
+    .sort({ createdAt: -1 })
+    .limit(5)
+    .populate('userId', 'name email')
+    .populate('deliveryPersonnel')
+    .populate('delivery_address');
+    
+    // Format recent orders for display
+    const formattedRecentOrders = recentOrders.map(order => ({
+      _id: order._id,
+      orderId: order.orderId || order._id,
+      status: order.status,
+      customerName: order.userId?.name || 'Unknown Customer',
+      customerEmail: order.userId?.email || 'N/A',
+      deliveryAddress: order.delivery_address?.fullAddress || 'No address provided',
+      driverName: order.deliveryPersonnel?.name || 'Not assigned',
+      createdAt: order.createdAt,
+      total: order.totalAmt
+    }));
+    
+    // Get active drivers with their current locations
+    let activeDrivers = [];
+    try {
+      if (DeliveryPersonnelModel) {
+        activeDrivers = await DeliveryPersonnelModel.find({
+          isActive: true
+        })
+        .select('name currentLocation activeOrdersCount isAvailable userId')
+        .limit(10);
+      }
+    } catch (err) {
+      console.log('Warning: Could not fetch active drivers', err.message);
+    }
+    
+    // Get delivery performance metrics
+    const deliveryTimeStats = await getDeliveryPerformance();
+    
+    // Return combined dashboard stats
+    return res.status(200).json({
+      success: true,
+      data: {
+        counts: {
+          pendingOrders,
+          dispatchedOrders,
+          activeDeliveries,
+          completedToday,
+          availableDrivers,
+          totalDrivers
+        },
+        recentOrders: formattedRecentOrders,
+        activeDrivers,
+        deliveryPerformance: deliveryTimeStats,
+        lastUpdated: new Date()
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching dashboard stats:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Error retrieving dashboard statistics',
+      error: error.message
+    });
+  }
+};
+
+// Helper function to calculate delivery performance metrics
+const getDeliveryPerformance = async () => {
+  // Get the date for 7 days ago
+  const sevenDaysAgo = new Date();
+  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+  
+  // Get all completed deliveries in the last 7 days
+  const completedDeliveries = await Order.find({
+    status: 'delivered',
+    deliveredAt: { $gte: sevenDaysAgo }
+  }).select('createdAt deliveredAt');
+  
+  // Calculate average delivery time
+  let totalMinutes = 0;
+  let validDeliveries = 0;
+  
+  completedDeliveries.forEach(order => {
+    if (order.createdAt && order.deliveredAt) {
+      const deliveryTime = (order.deliveredAt - order.createdAt) / (1000 * 60); // in minutes
+      if (deliveryTime > 0) {
+        totalMinutes += deliveryTime;
+        validDeliveries++;
+      }
+    }
+  });
+  
+  const avgDeliveryTime = validDeliveries > 0 ? Math.round(totalMinutes / validDeliveries) : 0;
+  
+  // Calculate completed deliveries by day for the last 7 days
+  const dailyStats = [];
+  for (let i = 6; i >= 0; i--) {
+    const date = new Date();
+    date.setDate(date.getDate() - i);
+    date.setHours(0, 0, 0, 0);
+    
+    const nextDay = new Date(date);
+    nextDay.setDate(nextDay.getDate() + 1);
+    
+    const count = await Order.countDocuments({
+      status: 'delivered',
+      deliveredAt: {
+        $gte: date,
+        $lt: nextDay
+      }
+    });
+    
+    dailyStats.push({
+      date: date.toISOString().split('T')[0],
+      count
+    });
+  }
+  
+  return {
+    avgDeliveryTime,
+    deliveriesLast7Days: completedDeliveries.length,
+    dailyStats
+  };
+};
+
+// Get all orders pending for dispatch (for staff/admin)
+export const getPendingOrders = async (req, res) => {
+  try {
+    const { sort = 'createdAt', direction = 'desc' } = req.query;
+    
+    // Sorting configuration
+    const sortConfig = {};
+    sortConfig[sort] = direction === 'desc' ? -1 : 1;
+    
+    // Find all orders that are confirmed/pending/processing and haven't been dispatched
+    // Only include delivery orders
+    const pendingOrders = await Order.find({
+      status: { $in: ['pending', 'processing', 'confirmed'] },
+      fulfillment_type: 'delivery'
+    })
+    .populate('userId', 'name email phone')
+    .populate('delivery_address')
+    .sort(sortConfig)
+    .limit(100); // Limit for performance
+    
+    if (!pendingOrders || pendingOrders.length === 0) {
+      return res.status(200).json({
+        success: true,
+        message: 'No pending orders found',
+        data: []
+      });
+    }
+    
+    // Format the data for frontend display
+    const formattedOrders = pendingOrders.map(order => {
+      // Get delivery address details
+      let deliveryAddress = {
+        street: 'No address available',
+        city: '',
+        neighborhood: '',
+        landmark: ''
+      };
+      
+      if (order.delivery_address) {
+        deliveryAddress = {
+          street: order.delivery_address.street || order.delivery_address.address || 'Address not specified',
+          city: order.delivery_address.city || '',
+          neighborhood: order.delivery_address.neighborhood || order.delivery_address.area || '',
+          landmark: order.delivery_address.landmark || ''
+        };
+      }
+      
+      // Extract order items
+      const items = Array.isArray(order.items) ? order.items.map(item => ({
+        name: item.name || item.productName || (item.productId && item.productId.name) || 'Unknown Product',
+        quantity: item.quantity || 1
+      })) : [];
+      
+      // Create customer object
+      const customer = {
+        name: order.userId?.name || 'Unknown Customer',
+        phone: order.userId?.phone || order.userId?.mobile || 'No Contact',
+        email: order.userId?.email || 'No Email'
+      };
+      
+      return {
+        _id: order._id,
+        orderId: order.orderId || order._id.toString().slice(-6).toUpperCase(),
+        customer,
+        deliveryAddress,
+        items,
+        total: order.totalAmt || order.total || 0,
+        createdAt: order.createdAt,
+        status: order.status,
+        paymentStatus: order.payment_status || order.paymentStatus || 'unknown'
+      };
+    });
+    
+    return res.status(200).json({
+      success: true,
+      data: formattedOrders
+    });
+  } catch (error) {
+    console.error('Error fetching pending orders:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Error fetching pending orders',
+      error: error.message
+    });
+  }
+};
