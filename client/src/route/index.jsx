@@ -15,6 +15,7 @@ import CommunityPerksAdmin from '../pages/admin/CommunityPerksAdmin';
 import LoyaltyProgramAdmin from '../pages/admin/LoyaltyProgramAdmin';
 import UsersAdmin from '../pages/admin/UsersAdmin';
 import CategoryPage from '../pages/CategoryPage';
+import ChatInterface from '../pages/ChatInterface'; // Import the new ChatInterface component
 import Checkout from '../pages/CheckoutPage';
 import CommunityPerks from '../pages/CommunityPerks';
 import ActiveDeliveries from '../pages/delivery/ActiveDeliveries';
@@ -32,6 +33,8 @@ import ProductDisplayPage from '../pages/ProductDisplayPage';
 import ProductListPage from '../pages/ProductListPage';
 import Register from '../pages/Register';
 import SearchPage from '../pages/SearchPage'; // Add SearchPage import
+import SocialAuthSuccess from '../pages/SocialAuthSuccess'; // Import the SocialAuthSuccess component
+import SSOCallback from '../pages/SSOCallback';
 
 // Import new staff components
 import StaffDashboard from '../pages/staff/Dashboard';
@@ -119,6 +122,16 @@ const router = createBrowserRouter([
         path: 'register',
         element: <Register />
       },
+      // Add SSO Callback route for Clerk
+      {
+        path: 'sso-callback',
+        element: <SSOCallback />
+      },
+      // Add SocialAuthSuccess route
+      {
+        path: 'social-auth-success',
+        element: <SocialAuthSuccess />
+      },
       // Add search route
       {
         path: 'search',
@@ -167,6 +180,10 @@ const router = createBrowserRouter([
       },
       
       // Other app routes
+      {
+        path: 'chat',
+        element: <ChatInterface />
+      },
       {
         path: 'product',
         element: <ProductPage />

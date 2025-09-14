@@ -5,6 +5,7 @@ import { useDispatch } from 'react-redux';
 import { Link, useNavigate } from 'react-router-dom';
 import backgroundImg from '../assets/register.jpeg';
 import SummaryApi from '../common/SummaryApi';
+import SocialAuth from '../components/SocialAuth';
 import { fetchCartItems } from '../redux/slice/cartSlice';
 import { setUserDetails } from '../store/userSlice';
 import Axios from '../utils/Axios';
@@ -174,7 +175,10 @@ const Login = () => {
                     </button>
                 </form>
 
-                <p className="dark:text-gray-300 transition-colors duration-200">
+                {/* Add Social Authentication */}
+                <SocialAuth />
+
+                <p className="dark:text-gray-300 transition-colors duration-200 mt-4">
                     Don't have account? <Link to={"/register"} className='font-semibold text-green-700 dark:text-green-400 hover:text-green-800 dark:hover:text-green-300 transition-colors duration-200'>Register</Link>
                 </p>
             </div>

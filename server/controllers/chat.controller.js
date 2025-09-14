@@ -121,7 +121,11 @@ const getUserInfo = async (userId) => {
   
   try {
     const user = await User.findById(userId).select('name email orderHistory');
-    return user ? { name: user.name } : null;
+    return user ? { 
+      userId: user._id.toString(),
+      name: user.name,
+      email: user.email
+    } : null;
   } catch (error) {
     console.error('Error getting user info for chatbot:', error);
     return null;
@@ -282,6 +286,7 @@ export const processMessage = async (req, res) => {
       const reply = await generateResponse(message, {
         user: userInfo,
         sessionData: {
+          sessionId: sessionId,
           budget: chatSession.metadata.budget,
           lastProductViewed: chatSession.metadata.lastProductViewed,
           preferredCategory: chatSession.metadata.preferredCategory,
@@ -293,6 +298,7 @@ export const processMessage = async (req, res) => {
           availableCategories: chatSession.metadata.availableCategories,
           needsCategorySelection: chatSession.metadata.needsCategorySelection,
           pendingBudget: chatSession.metadata.pendingBudget,
+          recentProductList: chatSession.metadata.recentProductList || [],
           messages: chatSession.messages // Send full message history for context
         }
       });
@@ -576,6 +582,7 @@ export const processMessageStream = async (req, res) => {
       const reply = await generateResponse(message, {
         user: userInfo,
         sessionData: {
+          sessionId: sessionId,
           budget: chatSession.metadata.budget,
           lastProductViewed: chatSession.metadata.lastProductViewed,
           preferredCategory: chatSession.metadata.preferredCategory,
@@ -584,6 +591,10 @@ export const processMessageStream = async (req, res) => {
           previousUserQueries: chatSession.metadata.previousUserQueries,
           recentMessages: chatSession.metadata.recentMessages,
           input: message,
+          availableCategories: chatSession.metadata.availableCategories,
+          needsCategorySelection: chatSession.metadata.needsCategorySelection,
+          pendingBudget: chatSession.metadata.pendingBudget,
+          recentProductList: chatSession.metadata.recentProductList || [],
           messages: chatSession.messages // Send full message history for context
         }
       });
@@ -1052,4 +1063,68 @@ export const transcribeAudio = async (req, res) => {
       });
     }
   });
+};
+
+// Get chat history for a specific user
+export const getUserChatHistory = async (req, res) => {
+  try {
+    const { userId } = req.query;
+    
+    if (!userId) {
+      return res.status(400).json({
+        success: false,
+        message: 'User ID is required'
+      });
+    }
+    
+    // Create identifier based on userId or IP for guest users
+    const userIdentifier = userId !== 'guest' ? userId : req.ip || 'guest-user';
+    
+    // Get all chat sessions for this user, sorted by most recent first
+    const sessions = await ChatSession.find({
+      userIdentifier: userIdentifier
+    })
+    .sort({ lastActive: -1 })
+    .select('_id messages lastActive isActive createdAt metadata')
+    .limit(10); // Limit to recent 10 sessions
+    
+    // Format the response for easier consumption by the client
+    const formattedSessions = sessions.map(session => {
+      // Get the first and last message for preview
+      const firstMessage = session.messages.length > 0 ? session.messages[0] : null;
+      const lastMessage = session.messages.length > 0 ? session.messages[session.messages.length - 1] : null;
+      
+      return {
+        id: session._id,
+        isActive: session.isActive,
+        createdAt: session.createdAt,
+        lastActive: session.lastActive,
+        messageCount: session.messages.length,
+        firstMessage: firstMessage ? {
+          content: firstMessage.content,
+          role: firstMessage.role,
+          timestamp: firstMessage.timestamp
+        } : null,
+        lastMessage: lastMessage ? {
+          content: lastMessage.content,
+          role: lastMessage.role,
+          timestamp: lastMessage.timestamp
+        } : null,
+        // Add any useful metadata
+        budget: session.metadata?.budget || null,
+        preferredCategory: session.metadata?.preferredCategory || null
+      };
+    });
+    
+    return res.status(200).json({
+      success: true,
+      data: formattedSessions
+    });
+  } catch (error) {
+    console.error('Error fetching user chat history:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to fetch chat history'
+    });
+  }
 };

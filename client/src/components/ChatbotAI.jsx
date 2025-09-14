@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { FaCircle, FaDollarSign, FaMicrophone, FaPaperPlane, FaRobot, FaShoppingCart, FaSpinner, FaTimes, FaUser } from 'react-icons/fa';
+import { FaCircle, FaDollarSign, FaExpand, FaMicrophone, FaPaperPlane, FaRobot, FaShoppingCart, FaSpinner, FaTimes, FaUser } from 'react-icons/fa';
 import { useDispatch, useSelector } from 'react-redux';
+import { Link } from 'react-router-dom';
 import Axios from '../utils/Axios';
 import LoadingSpinner from './LoadingSpinner';
 
@@ -20,6 +21,11 @@ const ChatbotAI = () => {
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
   const user = useSelector(state => state.user);
+  
+  // Chat history state
+  const [chatHistory, setChatHistory] = useState([]);
+  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+  const [isHistoryLoading, setIsHistoryLoading] = useState(false);
 
   const [cart, setCart] = useState([]);
   const [isCheckoutRedirecting, setIsCheckoutRedirecting] = useState(false);
@@ -194,6 +200,74 @@ const ChatbotAI = () => {
       }
     };
   }, [retryTimeout]);
+
+  // Fetch user's chat history
+  const fetchUserChatHistory = async () => {
+    try {
+      setIsHistoryLoading(true);
+      const userId = user?._id || 'guest';
+      
+      const response = await Axios({
+        url: '/api/chat/user-history',
+        method: 'GET',
+        params: { userId }
+      });
+      
+      if (response.data && response.data.success) {
+        setChatHistory(response.data.data);
+      }
+    } catch (error) {
+      console.error('Error fetching chat history:', error);
+    } finally {
+      setIsHistoryLoading(false);
+    }
+  };
+
+  // Load a specific chat session
+  const loadChatSession = async (sessionId) => {
+    try {
+      setIsLoading(true);
+      const response = await Axios({
+        url: `/api/chat/sessions/${sessionId}`,
+        method: 'GET',
+      });
+      
+      if (response.data && response.data.success && response.data.data) {
+        const session = response.data.data;
+        
+        if (session.metadata) {
+          setSessionMetadata(session.metadata);
+        }
+        
+        const formattedMessages = [
+          { type: 'bot', text: 'Hello! I\'m your personal shopping assistant. How can I help you today? Feel free to tell me your budget, and I\'ll find the perfect products for you.' }
+        ];
+        
+        if (session.messages && session.messages.length > 0) {
+          session.messages.forEach(msg => {
+            formattedMessages.push({
+              type: msg.role === 'assistant' ? 'bot' : 'user',
+              text: msg.content
+            });
+          });
+          setMessages(formattedMessages);
+        }
+        
+        setSessionId(sessionId);
+        
+        // Store session ID in localStorage for persistence
+        const userKey = user?._id ? `chatSessionId_${user._id}` : 'chatSessionId_guest';
+        localStorage.setItem(userKey, sessionId);
+        
+        // Close history panel
+        setIsHistoryOpen(false);
+      }
+    } catch (error) {
+      console.error('Error loading chat session:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const fetchChatHistory = async (sid) => {
     try {
@@ -595,8 +669,56 @@ const ChatbotAI = () => {
     handleSendMessage(null, suggestion);
   };
 
+  // Helper function to format dates for chat history
+  const formatDate = (dateString) => {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    return new Intl.DateTimeFormat('en-US', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    }).format(date);
+  };
+
+  // Helper function to truncate text for preview
+  const truncateText = (text, maxLength) => {
+    if (!text) return '';
+    return text.length > maxLength ? `${text.substring(0, maxLength)}...` : text;
+  };
+
+  const handleNewChat = async () => {
+    // Reset UI state
+    setMessages([
+      { type: 'bot', text: 'Hello! I\'m your personal shopping assistant. How can I help you today? Feel free to tell me your budget, and I\'ll find the perfect products for you.' }
+    ]);
+    setSessionMetadata({ preferredCurrency: 'KES' });
+    setInputText('');
+    
+    // Close current session but don't delete it from backend
+    if (sessionId) {
+      try {
+        await Axios({
+          url: `/api/chat/sessions/${sessionId}/close`,
+          method: 'PATCH',
+        });
+      } catch (error) {
+        console.error('Error closing chat session:', error);
+      }
+    }
+    
+    // Clear session ID from localStorage to force a new session on next message
+    const userKey = user?._id ? `chatSessionId_${user._id}` : 'chatSessionId_guest';
+    localStorage.removeItem(userKey);
+    setSessionId(null);
+    
+    // Make sure chat is open
+    setIsOpen(true);
+  };
+
   return (
-    <div className="fixed bottom-24 right-5 z-50">
+    <div className="fixed bottom-12 right-5 z-50">
       <button
         onClick={handleToggleChat}
         className="bg-primary-200 dark:bg-primary-300 hover:bg-primary-300 dark:hover:bg-primary-400 text-white p-3 md:p-4 rounded-full shadow-lg flex items-center justify-center transition-all duration-300 w-12 h-12 md:w-auto md:h-auto"
@@ -612,6 +734,40 @@ const ChatbotAI = () => {
               <h3 className="font-medium text-sm md:text-base">Your Personal Shopping Assistant</h3>
             </div>
             <div className="flex items-center">
+              {/* Add New Chat button */}
+              <button 
+                onClick={handleNewChat}
+                className="text-white hover:text-gray-200 mr-3"
+                aria-label="Start new chat"
+                title="Start new chat"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
+                </svg>
+              </button>
+              {/* Add Chat History button */}
+              <button 
+                onClick={() => {
+                  fetchUserChatHistory();
+                  setIsHistoryOpen(!isHistoryOpen);
+                }}
+                className="text-white hover:text-gray-200 mr-3"
+                aria-label="View chat history"
+                title="View chat history"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
+                </svg>
+              </button>
+              {/* Add expand to full-page button */}
+              <Link 
+                to="/chat" 
+                className="text-white hover:text-gray-200 mr-3"
+                aria-label="Open full-page chat"
+                title="Open full-page chat"
+              >
+                <FaExpand size={16} />
+              </Link>
               <button 
                 onClick={handleClearChat}
                 className="text-white hover:text-gray-200 mr-3"
@@ -631,6 +787,78 @@ const ChatbotAI = () => {
               </button>
             </div>
           </div>
+          
+          {/* Chat History Panel */}
+          {isHistoryOpen && (
+            <div className="absolute inset-0 z-10 bg-white dark:bg-gray-800 overflow-hidden">
+              <div className="bg-primary-200 dark:bg-primary-300 text-white p-3 flex justify-between items-center">
+                <h3 className="font-medium text-sm md:text-base">Chat History</h3>
+                <button 
+                  onClick={() => setIsHistoryOpen(false)}
+                  className="text-white hover:text-gray-200"
+                  aria-label="Close history"
+                >
+                  <FaTimes />
+                </button>
+              </div>
+              
+              <div className="p-2 overflow-y-auto" style={{ maxHeight: 'calc(80vh - 60px)' }}>
+                {isHistoryLoading ? (
+                  <div className="flex justify-center items-center p-8">
+                    <LoadingSpinner size="small" />
+                  </div>
+                ) : chatHistory.length === 0 ? (
+                  <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+                    <p>No previous chat history found.</p>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {chatHistory.map(session => (
+                      <div 
+                        key={session.id}
+                        className={`p-3 rounded-lg border cursor-pointer transition-all duration-200 hover:bg-gray-100 dark:hover:bg-gray-700 ${
+                          session.isActive ? 
+                            'border-primary-200 dark:border-primary-300' : 
+                            'border-gray-200 dark:border-gray-700'
+                        }`}
+                        onClick={() => loadChatSession(session.id)}
+                      >
+                        <div className="flex justify-between items-start">
+                          <div className="font-medium text-sm">
+                            {session.preferredCategory || formatDate(session.createdAt)}
+                          </div>
+                          <div className={`text-xs px-2 py-0.5 rounded-full ${
+                            session.isActive ? 
+                              'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' : 
+                              'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'
+                          }`}>
+                            {session.isActive ? 'Active' : 'Closed'}
+                          </div>
+                        </div>
+                        
+                        <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                          {session.messageCount} messages · Last active: {formatDate(session.lastActive)}
+                        </div>
+                        
+                        {session.lastMessage && (
+                          <div className="mt-2 text-sm truncate">
+                            {session.lastMessage.role === 'user' ? 'You: ' : 'Bot: '}
+                            {truncateText(session.lastMessage.content, 60)}
+                          </div>
+                        )}
+                        
+                        {session.budget && (
+                          <div className="mt-1 text-xs bg-green-50 dark:bg-green-900/30 text-green-800 dark:text-green-200 px-2 py-0.5 rounded inline-block">
+                            Budget: {session.budget}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
           <div className="px-3 py-2 bg-green-50 dark:bg-green-900 text-green-800 dark:text-green-100 text-xs md:text-sm flex flex-wrap md:flex-nowrap items-center justify-between gap-2">
             <div className="flex items-center">
               <FaDollarSign className="mr-1" />

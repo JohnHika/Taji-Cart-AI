@@ -12,6 +12,12 @@ import {
   searchProducts
 } from './databaseQuery.js';
 
+import {
+  getConversationContext,
+  processIntents,
+  recognizeIntent
+} from './chatbotServices.js';
+
 /**
  * Find a response based on user input by matching keywords
  * @param {string} message - User input
@@ -19,34 +25,81 @@ import {
  * @returns {string} The chatbot response
  */
 export const generateResponse = async (message, context = {}) => {
-  // Convert message to lowercase for easier matching
-  const input = message.toLowerCase();
-  
   // Extract any available context
   const { user, sessionData = {} } = context;
+  
+  // Get existing conversation context if we have a session ID
+  const sessionId = sessionData.sessionId || 'default';
+  let conversationContext = getConversationContext(sessionId);
   
   // Set KES as default currency if not already set
   if (!sessionData.preferredCurrency) {
     sessionData.preferredCurrency = 'KES';
   }
   
-  // Check for currency preference
-  const usesKenyanShillings = input.includes('kenyan') || 
-                             input.includes('shilling') || 
-                             input.includes('kes') || 
-                             sessionData.preferredCurrency === 'KES';
-  
-  // If user mentions Kenyan Shillings, store this preference
-  if (usesKenyanShillings) {
-    sessionData.preferredCurrency = 'KES';
-  }
-  
-  // Greeting patterns
-  if (containsAny(input, ['hello', 'hi', 'hey', 'greetings', 'howdy'])) {
-    if (user && user.name) {
-      return `Hello ${user.name}! How can I help you with your shopping today? Feel free to ask me about products or even share your budget, and I'll find options that work for you.`;
+  try {
+    // Detect intents from the user message
+    const recognizedIntents = recognizeIntent(message);
+    
+    // Process intents and generate context-aware response
+    const response = await processIntents(
+      recognizedIntents,
+      sessionData,
+      sessionId,
+      user
+    );
+    
+    // Get updated context
+    conversationContext = getConversationContext(sessionId);
+    
+    // Update session data with context changes for persistence
+    if (conversationContext.checkoutRequested) {
+      sessionData.checkoutRequested = true;
     }
-    return "Hello there! Welcome to Taji Cart AI. I'm your personal shopping assistant. How can I help you today? If you have a specific budget in mind, I can recommend products that fit it perfectly.";
+    
+    if (conversationContext.cartUpdated) {
+      sessionData.cartUpdated = true;
+    }
+    
+    if (conversationContext.lastSelectedProduct) {
+      sessionData.lastProductViewed = conversationContext.lastSelectedProduct;
+    }
+    
+    if (conversationContext.userBudget) {
+      sessionData.budget = conversationContext.userBudget;
+    }
+    
+    if (conversationContext.productList) {
+      sessionData.recentProductList = conversationContext.productList;
+    }
+    
+    // Return the dynamic response
+    return response;
+  } catch (error) {
+    console.error('Error generating dynamic response:', error);
+    
+    // Fall back to the original logic if the dynamic approach fails
+    return fallbackResponseLogic(message, context);
+  }
+};
+
+/**
+ * Original response logic as fallback
+ * @param {string} message - User input
+ * @param {object} context - Context data
+ * @returns {string} - Fallback response
+ */
+async function fallbackResponseLogic(message, context) {
+  const input = message.toLowerCase();
+  const { sessionData = {} } = context;
+  
+  // Store original input for category detection in budget handling
+  sessionData.input = message;
+  
+  // NEW: First check if we can handle this with context-aware response
+  const contextResponse = await getContextAwareResponse(message, sessionData);
+  if (contextResponse) {
+    return contextResponse;
   }
   
   // Check if user was previously asked about product category with budget
@@ -221,24 +274,11 @@ export const generateResponse = async (message, context = {}) => {
   if (containsAny(input, ['tell me about', 'details', 'information', 'specs', 'description', 'the third product', 'third one', 'last one']) || 
       /^[1-3]$/.test(input.trim())) {
     let productName = extractProductName(input);
-    let productIndex = -1;
-    
-    // Direct numeric selection
-    if (/^[1-3]$/.test(input.trim())) {
-      productIndex = parseInt(input.trim()) - 1;
-    } 
-    // Check for references to products by position (first, second, third, etc.)
-    else if (input.includes('third') || input.includes('3rd') || input.includes('last one')) {
-      productIndex = 2; // 0-based index, so 2 is the third product
-    } else if (input.includes('second') || input.includes('2nd') || input.includes('middle one')) {
-      productIndex = 1;
-    } else if (input.includes('first') || input.includes('1st')) {
-      productIndex = 0;
-    }
+    let productIndex = extractProductIndex(input);
     
     // If we identified a product by index and have recent product list in context
-    if (productIndex >= 0 && sessionData.recentProductList && sessionData.recentProductList.length > productIndex) {
-      const product = await getProduct(sessionData.recentProductList[productIndex]);
+    if (productIndex !== null && sessionData.recentProductList && sessionData.recentProductList.length >= productIndex) {
+      const product = await getProduct(sessionData.recentProductList[productIndex - 1]);
       
       if (product) {
         // Create a concise product description
@@ -480,9 +520,9 @@ export const generateResponse = async (message, context = {}) => {
     return "No problem! What else would you like to shop for? You can tell me your budget or the type of product you're interested in.";
   }
 
-  // Default response
-  return "I'm your personal shopping assistant. Feel free to ask about specific products, share your budget, or let me know if you'd like recommendations. I can also add items to your cart directly from our chat - just let me know what you'd like to purchase!";
-};
+  // Default response with improved conversation starter
+  return "I'm your personal shopping assistant. I can help you find trending products, check your cart, provide personalized recommendations, or find items within your budget. What are you looking for today?";
+}
 
 /**
  * Format price based on currency preference
@@ -815,6 +855,42 @@ function extractProductName(input) {
 }
 
 /**
+ * Extract product index from user message
+ * @param {string} message - User input text
+ * @returns {number|null} - Extracted product index (1-based) or null
+ */
+function extractProductIndex(message) {
+  const input = message.toLowerCase();
+  
+  // Direct numeric selection
+  const directMatch = input.match(/^(\d+)$/);
+  if (directMatch && directMatch[1]) {
+    const idx = parseInt(directMatch[1]);
+    if (idx >= 1 && idx <= 10) return idx;
+  }
+  
+  // Match "first", "second", "third", "1st", "2nd", etc.
+  if (input.includes('first') || input.includes('1st')) return 1;
+  if (input.includes('second') || input.includes('2nd')) return 2;
+  if (input.includes('third') || input.includes('3rd')) return 3;
+  if (input.includes('fourth') || input.includes('4th')) return 4;
+  if (input.includes('fifth') || input.includes('5th')) return 5;
+  
+  // Match "the X one" patterns
+  const match = input.match(/the (\d+)(st|nd|rd|th)? one/);
+  if (match && match[1]) {
+    return parseInt(match[1]);
+  }
+  
+  // Various special cases
+  if (input.includes('last one') && input.includes('three')) return 3;
+  if (input.includes('last one') && input.includes('two')) return 2;
+  if (input.includes('last one')) return 3; // Default assuming 3 items
+  
+  return null;
+}
+
+/**
  * Get an appropriate stock status message based on stock level
  * @param {number} stockLevel - Current stock level
  * @returns {string} - Stock status message
@@ -833,4 +909,122 @@ function getStockStatusMessage(stockLevel) {
   } else {
     return `in stock (${stockLevel} available)`;
   }
+}
+
+/**
+ * Format follow-up suggestions based on context
+ * @param {Object} product - Product data
+ * @param {Object} sessionData - Session data
+ * @returns {string} - Formatted suggestions
+ */
+function formatFollowupSuggestions(product, sessionData) {
+  if (!product) return '';
+  
+  const suggestions = [];
+  
+  // Always include add to cart
+  suggestions.push('add this to cart');
+  
+  if (product.specs && Object.keys(product.specs).length > 2) {
+    suggestions.push('show detailed specifications');
+  }
+  
+  if (sessionData && sessionData.recentProductList && sessionData.recentProductList.length > 1) {
+    suggestions.push('compare with other products');
+  }
+  
+  const suggestionsText = suggestions.join(', ');
+  return `\n\nYou can ask me to ${suggestionsText}, or ask something else.`;
+}
+
+/**
+ * Get enhanced response based on user's vague query by checking memory
+ * @param {string} input - User's input message
+ * @param {Object} sessionData - Session data with memory
+ * @returns {Promise<string|null>} - Response or null if cannot handle
+ */
+async function getContextAwareResponse(input, sessionData) {
+  // Case 1: Vague product category mentions that should use stored budget
+  if (sessionData.budget) {
+    const categoryMap = {
+      'laptop': 'Laptops',
+      'gaming laptop': 'Laptops',
+      'graphics card': 'Graphics Cards',
+      'gpu': 'Graphics Cards',
+      'monitor': 'Monitors',
+      'pc': 'Gaming PCs',
+      'desktop': 'Gaming PCs',
+      'keyboard': 'Gaming Keyboards',
+      'peripheral': 'Peripherals'
+    };
+    
+    // Check if user mentioned any category after setting a budget
+    for (const [keyword, category] of Object.entries(categoryMap)) {
+      if (input.toLowerCase().includes(keyword)) {
+        console.log(`Detected category mention "${keyword}" with existing budget ${sessionData.budget}`);
+        return await getProductRecommendationsForBudget(
+          sessionData.budget,
+          category,
+          sessionData.preferredCurrency || 'KES',
+          sessionData
+        );
+      }
+    }
+  }
+  
+  // Case 2: "Tell me more" with no specific reference but we have a last viewed product
+  if (containsAny(input.toLowerCase(), ['tell me more', 'more info', 'more details', 'more about']) && 
+      !extractProductIndex(input) && sessionData.lastProductViewed) {
+    console.log(`Processing generic "tell me more" for product ${sessionData.lastProductViewed}`);
+    
+    const product = await getProduct(sessionData.lastProductViewed);
+    if (product) {
+      // Get reviews for added context
+      const reviews = await getProductReviews(product._id, 2);
+      
+      // Provide detailed information 
+      let detailedSpecs = '';
+      if (product.specs && Object.keys(product.specs).length > 0) {
+        detailedSpecs = '\n\nSpecifications:\n' + Object.entries(product.specs)
+          .map(([key, val]) => `• ${key}: ${val}`)
+          .join('\n');
+      }
+      
+      // Add review snippets if available
+      let reviewsText = '';
+      if (reviews && reviews.length > 0) {
+        reviewsText = '\n\nCustomer Reviews:\n' + reviews.map(r => 
+          `"${truncateText(r.comment, 100)}" - ${r.user?.name || 'Customer'} (${r.rating}/5)`
+        ).join('\n');
+      }
+      
+      const price = formatPrice(product.price, sessionData.preferredCurrency);
+      const followupSuggestions = formatFollowupSuggestions(product, sessionData);
+      
+      return `Here's more about the ${product.name}:\n\n` +
+        `Price: ${price}\n` +
+        `Brand: ${product.brand || 'Various'}\n` +
+        `${detailedSpecs}` +
+        `${reviewsText}` +
+        `${followupSuggestions}`;
+    }
+  }
+  
+  // Case 3: "Add this" or "buy" with no context, but we have last product
+  if (containsAny(input.toLowerCase(), ['add this', 'buy this', 'purchase this']) && 
+      sessionData.lastProductViewed) {
+    
+    // Check stock before confirming
+    const stockInfo = await checkProductStock(sessionData.lastProductViewed);
+    if (stockInfo.exists) {
+      if (stockInfo.inStock) {
+        return `Great choice! I've added the ${stockInfo.name} to your cart. Would you like to checkout now or continue shopping?`;
+      } else {
+        return `I'm sorry, the ${stockInfo.name} is currently out of stock. Would you like me to notify you when it's back in stock or suggest similar products?`;
+      }
+    }
+  }
+  
+  // No context match
+  return null;
 }

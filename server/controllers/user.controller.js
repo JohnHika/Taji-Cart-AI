@@ -1323,3 +1323,89 @@ export async function setStaffRoleController(req, res) {
         });
     }
 }
+
+// Handle Clerk Authentication
+export const clerkAuth = async (req, res) => {
+  try {
+    const { email, name, avatar, authType } = req.body;
+    
+    if (!email) {
+      return res.status(400).json({
+        success: false,
+        message: 'Email is required'
+      });
+    }
+
+    // Check if user exists
+    let user = await UserModel.findOne({ email });
+    
+    if (!user) {
+      // Create new user
+      user = new UserModel({
+        name,
+        email,
+        avatar,
+        verify_email: true, // Email is verified through Clerk
+        status: 'Active',
+        clerkId: req.body._id
+      });
+      
+      await user.save();
+      
+      // Create loyalty card for new user
+      try {
+        const loyaltyCard = new LoyaltyCard({
+          userId: user._id,
+          cardNumber: `TAJI${Date.now().toString().slice(-8)}${Math.floor(Math.random() * 1000)}`,
+          tier: 'Basic',
+          points: 100, // Welcome points
+          transactionHistory: [{
+            type: 'signup_bonus',
+            amount: 100,
+            description: 'Welcome bonus for signing up'
+          }]
+        });
+        await loyaltyCard.save();
+      } catch (loyaltyError) {
+        console.error('Error creating loyalty card:', loyaltyError);
+        // Continue with auth flow even if loyalty card creation fails
+      }
+    } else if (!user.clerkId) {
+      // Update existing user with Clerk ID
+      user.clerkId = req.body._id;
+      user.avatar = avatar || user.avatar;
+      await user.save();
+    }
+
+    // Generate JWT token
+    const token = jwt.sign(
+      { id: user._id, email: user.email, role: user.role },
+      process.env.JWT_SECRET,
+      { expiresIn: '7d' }
+    );
+
+    // Send response
+    return res.status(200).json({
+      success: true,
+      message: 'Authentication successful',
+      data: {
+        _id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        avatar: user.avatar,
+        verify_email: user.verify_email,
+        status: user.status,
+        createdAt: user.createdAt,
+        token
+      }
+    });
+  } catch (error) {
+    console.error('Clerk auth error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Server error during authentication',
+      error: error.message
+    });
+  }
+};

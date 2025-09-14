@@ -4,6 +4,7 @@ import { FaEnvelope, FaRegEye, FaRegEyeSlash, FaUser } from "react-icons/fa";
 import { Link, useNavigate } from 'react-router-dom';
 import backgroundImg from '../assets/register.jpeg';
 import SummaryApi from '../common/SummaryApi';
+import SocialAuth from '../components/SocialAuth';
 import Axios from '../utils/Axios';
 import AxiosToastError from '../utils/AxiosToastError';
 
@@ -288,7 +289,10 @@ const Register = () => {
                     </button>
                 </form>
 
-                <p className="dark:text-gray-300 transition-colors duration-200">
+                {/* Add Social Authentication */}
+                <SocialAuth />
+
+                <p className="dark:text-gray-300 transition-colors duration-200 mt-4">
                     Already have account? <Link to={"/login"} className='font-semibold text-green-700 dark:text-green-400 hover:text-green-800 dark:hover:text-green-300 transition-colors duration-200'>Login</Link>
                 </p>
             </div>

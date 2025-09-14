@@ -5,6 +5,7 @@ import express from 'express';
 import helmet from 'helmet';
 import http from 'http';
 import morgan from 'morgan';
+import mongoose from 'mongoose'; // Add mongoose import
 import connectDB from './config/connectDB.js';
 import { getUserLoyaltyCard } from './controllers/loyalty.controller.js';
 import { admin } from './middleware/Admin.js';
@@ -171,11 +172,62 @@ const server = http.createServer(app);
 // Initialize Socket.IO with the server
 initializeSocket(server);
 
-connectDB().then(() => {
-    server.listen(PORT, () => {
-        console.log(`Server running on port ${PORT}`);
-    });
-}).catch(error => {
-    console.error('Error connecting to the database:', error);
+// Connection state tracking
+let isServerRunning = false;
+let connectionCheckInterval;
+
+// Function to start the server
+async function startServer() {
+    try {
+        await connectDB();
+        
+        // Only start the server once
+        if (!isServerRunning) {
+            server.listen(PORT, () => {
+                console.log(`Server running on port ${PORT}`);
+                isServerRunning = true;
+            });
+            
+            // Set up a periodic connection check
+            connectionCheckInterval = setInterval(checkDatabaseConnection, 30000); // Check every 30 seconds
+        }
+    } catch (error) {
+        console.error('Failed to start server:', error);
+        console.log('Please check:');
+        console.log('1. Your network connection');
+        console.log('2. MongoDB Atlas cluster status');
+        console.log('3. IP whitelist in MongoDB Atlas');
+        console.log('4. VPN or firewall settings that might block connections');
+    }
+}
+
+// Function to periodically check database connection
+async function checkDatabaseConnection() {
+    try {
+        // Simple ping to verify connection is alive
+        if (mongoose.connection.readyState !== 1) {
+            console.log('⚠️ MongoDB connection lost. Attempting to reconnect...');
+            clearInterval(connectionCheckInterval);
+            await connectDB();
+            connectionCheckInterval = setInterval(checkDatabaseConnection, 30000);
+        }
+    } catch (error) {
+        console.error('Error in connection check:', error);
+    }
+}
+
+// Handle server errors
+server.on('error', (error) => {
+    console.error('Server error:', error);
+    if (error.code === 'EADDRINUSE') {
+        console.log(`Port ${PORT} is already in use. Trying again in 5 seconds...`);
+        setTimeout(() => {
+            server.close();
+            server.listen(PORT);
+        }, 5000);
+    }
 });
+
+// Start the server
+startServer();
 

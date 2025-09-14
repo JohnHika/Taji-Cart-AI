@@ -5,7 +5,13 @@
   "type": "module",
   "scripts": {
     "start": "node index.js",
-    "dev": "nodemon index.js"
+    "dev": "nodemon index.js",
+    "offline": "node scripts/start-offline.js",
+    "db:diagnose": "node scripts/mongoDiagnostics.js",
+    "db:whitelist": "node scripts/updateMongoIPWhitelist.js",
+    "recommendation-collect": "python ./recommendation/data_collector.py",
+    "recommendation-train": "python ./recommendation/train_model.py",
+    "recommendation-debug": "python -m recommendation.data_collector_debug"
   },
   "author": "",
   "license": "ISC",
@@ -34,6 +40,10 @@
     "multer": "^1.4.5-lts.1",
     "node-open-geocoder": "^4.0.1",
     "nodemon": "^3.1.4",
+    "passport": "^0.7.0",
+    "passport-google-oauth20": "^2.0.0",
+    "passport-jwt": "^4.0.1",
+    "passport-microsoft": "^2.1.0",
     "react-barcode": "^1.6.1",
     "react-qr-code": "^2.0.15",
     "react-toastify": "^11.0.5",
@@ -41,5 +51,9 @@
     "socket.io": "^4.8.1",
     "stripe": "^16.12.0",
     "wav": "^1.0.2"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2",
+    "mongodb-memory-server": "^10.1.4"
   }
 }

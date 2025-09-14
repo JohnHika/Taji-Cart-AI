@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom/client';
 import { Provider } from 'react-redux';
 import { RouterProvider } from 'react-router-dom';
 import 'react-toastify/dist/ReactToastify.css';
+import { ClerkAuthProvider } from './context/ClerkAuthContext';
 import { ThemeProvider } from './context/ThemeContext';
 import './index.css';
 import router from './route/index';
@@ -71,9 +72,11 @@ window.addEventListener('error', (event) => {
 try {
   ReactDOM.createRoot(document.getElementById('root')).render(
     <Provider store={store}>
-      <ThemeProvider>
-        <RouterProvider router={router} />
-      </ThemeProvider>
+      <ClerkAuthProvider>
+        <ThemeProvider>
+          <RouterProvider router={router} />
+        </ThemeProvider>
+      </ClerkAuthProvider>
     </Provider>
   );
   console.log('React rendered successfully');

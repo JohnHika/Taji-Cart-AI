@@ -4,6 +4,7 @@ import {
     getAllChatSessions,
     getChatSessionById,
     getPaginatedChatMessages,
+    getUserChatHistory,
     processMessage,
     processMessageStream,
     refreshChatCache,
@@ -18,6 +19,9 @@ router.post('/transcribe', transcribeAudio);
 // Chat message endpoints
 router.post('/message', processMessage);
 router.post('/message/stream', processMessageStream);
+
+// User chat history endpoint
+router.get('/user-history', getUserChatHistory);
 
 // Optional authentication for these routes
 router.post('/refresh-cache', refreshChatCache);

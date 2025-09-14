@@ -1467,22 +1467,31 @@ export const getPendingPickupsController = async (req, res) => {
 export const getVerificationHistoryController = async (req, res) => {
   try {
     // Find all orders that have been picked up and have verification records
+    // Using $or to handle different status formats and field names
     const verifiedPickups = await OrderModel.find({
-      deliveryMethod: 'store-pickup',
-      status: 'Picked Up',
+      $or: [
+        { fulfillment_type: 'pickup' },
+        { deliveryMethod: 'store-pickup' }
+      ],
+      $or: [
+        { status: 'picked_up' },
+        { status: 'Picked Up' }
+      ],
       'pickupVerification.verifiedAt': { $exists: true }
     }).populate('userId', 'name email mobile')
       .populate('pickupVerification.verifiedById', 'name email')
       .sort({ 'pickupVerification.verifiedAt': -1 });
     
+    console.log(`Found ${verifiedPickups.length} verified pickups in history`);
+    
     // Format response data
     const formattedHistory = verifiedPickups.map(order => ({
       _id: order._id,
-      orderNumber: order.orderNumber,
+      orderNumber: order.orderNumber || order.orderId,
       customerName: order.userId?.name || 'Unknown Customer',
       customerPhone: order.userId?.mobile,
-      totalAmount: order.totalAmt,
-      pickupCode: order.pickupCode,
+      totalAmount: order.totalAmt || order.totalAmount,
+      pickupCode: order.pickupCode || order.pickupVerificationCode,
       verifiedBy: order.pickupVerification?.verifiedBy || 'Unknown Staff',
       verifiedAt: order.pickupVerification?.verifiedAt
     }));

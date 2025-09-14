@@ -81,6 +81,47 @@ const userSchema = new mongoose.Schema({
     isStaff: {  // Added isStaff boolean flag for consistency
         type: Boolean,
         default: false
+    },
+    googleId: {
+        type: String,
+        sparse: true,  // Allow null values but enforce uniqueness when present
+    },
+    microsoftId: {
+        type: String,
+        sparse: true,  // Allow null values but enforce uniqueness when present
+    },
+    authType: {
+        type: String,
+        enum: ['local', 'google', 'microsoft'],
+        default: 'local'
+    },
+    lastLogin: {
+        type: Date,
+    },
+    delivery_assigned_areas: [{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'DeliveryArea'
+    }],
+    staff_branch: {
+        type: String,
+        default: ""
+    },
+    notification_preferences: {
+        email: {
+            type: Boolean,
+            default: true
+        },
+        push: {
+            type: Boolean,
+            default: true
+        },
+        sms: {
+            type: Boolean,
+            default: false
+        }
+    },
+    passwordLastChanged: {
+        type: Date
     }
 },{
     timestamps : true
