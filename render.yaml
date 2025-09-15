@@ -1,0 +1,84 @@
+# Render Blueprint for Taji-Cart-AI
+# Docs: https://render.com/docs/blueprint-spec
+
+services:
+  # Backend API (Express)
+  - name: taji-cart-server
+    type: web
+    runtime: node
+    plan: starter
+    region: oregon
+    rootDir: server
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /
+    autoDeployTrigger: commit
+    envVars:
+      # Non-secret config
+      - key: NODE_ENV
+        value: production
+      - key: NAWIRI_OFFLINE_MODE
+        value: "false"
+      # CORS: set after client deploy to the client URL (e.g., https://taji-cart-client.onrender.com)
+      - key: FRONTEND_URL
+        sync: false
+      # Backend public URL (used for webhooks/callbacks). If not set, code falls back to RENDER_EXTERNAL_URL.
+      - key: BACKEND_URL
+        sync: false
+      # Secrets (set these in the Render dashboard when creating the Blueprint)
+      - key: MONGODB_URI
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: SECRET_KEY_ACCESS_TOKEN
+        sync: false
+      - key: SECRET_KEY_REFRESH_TOKEN
+        sync: false
+      - key: STRIPE_SECRET_KEY
+        sync: false
+      - key: STRIPE_WEBHOOK_SECRET
+        sync: false
+      - key: RESEND_API
+        sync: false
+      - key: CLOUDINARY_CLOUD_NAME
+        sync: false
+      - key: CLOUDINARY_API_KEY
+        sync: false
+      - key: CLOUDINARY_API_SECRET_KEY
+        sync: false
+      - key: MPESA_CONSUMER_KEY
+        sync: false
+      - key: MPESA_CONSUMER_SECRET
+        sync: false
+      - key: MPESA_SHORTCODE
+        sync: false
+      - key: MPESA_PASSKEY
+        sync: false
+
+  # Frontend (Vite React) served as Static Site
+  - name: taji-cart-client
+    type: web
+    runtime: static
+    plan: starter
+    rootDir: client
+    buildCommand: npm install && npm run build
+    staticPublishPath: dist
+    routes:
+      # SPA fallback
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    envVars:
+      # Point these to the server's public URL after the first deploy
+      - key: VITE_SERVER_URL
+        sync: false
+      - key: VITE_BACKEND_URL
+        sync: false
+      - key: VITE_API_URL
+        value: /api
+      - key: VITE_CLERK_PUBLISHABLE_KEY
+        sync: false
+      - key: VITE_WEATHERAPI_KEY
+        sync: false
+      - key: VITE_STRIPE_PUBLIC_KEY
+        sync: false

@@ -37,6 +37,13 @@ export async function initiateSTKPush(request, response) {
     // Create a checkout request ID to link this transaction
     const checkoutRequestId = new mongoose.Types.ObjectId().toString();
     
+    // Determine public base URL for callback
+    // Prefer explicit BACKEND_URL; otherwise try Render-provided RENDER_EXTERNAL_URL; finally build from request
+    const hostHeader = request.headers['x-forwarded-host'] || request.headers.host;
+    const protocolHeader = (request.headers['x-forwarded-proto'] || 'https');
+    const fallbackBase = hostHeader ? `${protocolHeader}://${hostHeader}` : '';
+    const baseURL = process.env.BACKEND_URL || process.env.RENDER_EXTERNAL_URL || fallbackBase;
+
     // Prepare STK push request
     const requestData = {
       BusinessShortCode: process.env.MPESA_SHORTCODE,
@@ -47,7 +54,7 @@ export async function initiateSTKPush(request, response) {
       PartyA: formattedPhone,
       PartyB: process.env.MPESA_SHORTCODE,
       PhoneNumber: formattedPhone,
-      CallBackURL: `${process.env.BACKEND_URL}/api/mpesa/callback`,
+      CallBackURL: `${baseURL}/api/mpesa/callback`,
       AccountReference: `Nawiri Hair - Order #${checkoutRequestId}`,
       TransactionDesc: 'Payment for online purchase'
     };
