@@ -50,7 +50,7 @@ async function connectDB() {
     }
     
     // Check if offline mode is explicitly enabled
-    if (process.env.TAJI_OFFLINE_MODE === 'true') {
+    if (process.env.NAWIRI_OFFLINE_MODE === 'true') {
         console.log("🔌 OFFLINE MODE explicitly enabled via environment variable");
         try {
             console.log("Starting in-memory MongoDB database...");

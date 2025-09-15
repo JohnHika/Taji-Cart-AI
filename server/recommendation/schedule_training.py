@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """
-Scheduled Data Extraction and Model Training Script for TajiCart-AI
+Scheduled Data Extraction and Model Training Script for Nawiri Hair
 
 This script handles periodic data extraction and model training for the recommendation system.
 It can be run manually or scheduled using cron or Windows Task Scheduler.

@@ -67,7 +67,7 @@ passport.use(
           try {
             const loyaltyCard = new LoyaltyCard({
               userId: user._id,
-              cardNumber: `TAJI${Date.now().toString().slice(-8)}${Math.floor(Math.random() * 1000)}`,
+              cardNumber: `NAWIRI${Date.now().toString().slice(-8)}${Math.floor(Math.random() * 1000)}`,
               tier: 'Basic',
               points: 100, // Welcome points
               transactionHistory: [{

@@ -100,7 +100,7 @@ const LoyaltyQRVerify = () => {
             className="h-24 mx-auto mb-4"
             onError={(e) => {
               e.target.onerror = null;
-              e.target.src = "/assets/Brand_logo.png";
+              e.target.src = "/assets/hair-logo.png";
             }}
           />
           <h1 className="text-2xl font-bold text-gray-800 dark:text-white">{cardData.storeInfo.brandName}</h1>

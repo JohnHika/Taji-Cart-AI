@@ -48,7 +48,7 @@ export async function registerUserController(request,response){
 
         const verifyEmail = await sendEmail({
             sendTo : email,
-            subject : "Verify email from TAJI CART",
+            subject : "Verify email from NAWIRI HAIR",
             html : verifyEmailTemplate({
                 name,
                 url : VerifyEmailUrl
@@ -386,7 +386,7 @@ export async function forgotPasswordController(request,response) {
 
         await sendEmail({
             sendTo : email,
-            subject : "Forgot password from TAJI CART",
+            subject : "Forgot password from NAWIRI HAIR",
             html : forgotPasswordTemplate({
                 name : user.name,
                 otp : otp
@@ -779,14 +779,14 @@ export async function changePassword(request, response) {
         try {
             await sendEmail({
                 sendTo: user.email,
-                subject: "Password Changed - Taji Cart",
+                subject: "Password Changed - Nawiri Hair",
                 html: `
                     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 5px;">
                         <h2 style="color: #333;">Password Changed</h2>
                         <p>Hello ${user.name},</p>
                         <p>Your password was recently changed. If you made this change, you can ignore this email.</p>
                         <p>If you did not change your password, please contact us immediately.</p>
-                        <p>Thank you,<br>Taji Cart Team</p>
+                        <p>Thank you,<br>Nawiri Hair Team</p>
                     </div>
                 `
             });
@@ -834,8 +834,8 @@ export async function searchUsers(req, res) {
       });
     }
 
-    // Check if the search term is a loyalty card number (starts with TAJI)
-    if (term.startsWith('TAJI')) {
+    // Check if the search term is a loyalty card number (starts with NAWIRI)
+    if (term.startsWith('NAWIRI')) {
       // Search for the loyalty card first
       const LoyaltyCardModel = (await import('../models/loyaltycard.model.js')).default;
       const card = await LoyaltyCardModel.findOne({ cardNumber: term });
@@ -928,14 +928,14 @@ export async function updateUserRoleController(req, res) {
         try {
             await sendEmail({
                 sendTo: updatedUser.email,
-                subject: `Role Update - Taji Cart`,
+                subject: `Role Update - Nawiri Hair`,
                 html: `
                     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 5px;">
                         <h2 style="color: #333;">Account Role Updated</h2>
                         <p>Hello ${updatedUser.name},</p>
                         <p>Your account role has been updated. You are now ${updatedUser.isAdmin ? 'an admin' : 'a regular user'}.</p>
                         <p>If you have any questions, please contact support.</p>
-                        <p>Thank you,<br>Taji Cart Team</p>
+                        <p>Thank you,<br>Nawiri Hair Team</p>
                     </div>
                 `
             });
@@ -1014,7 +1014,7 @@ export async function blockUserController(req, res) {
         try {
             await sendEmail({
                 sendTo: user.email,
-                subject: `Account Suspended - Taji Cart`,
+                subject: `Account Suspended - Nawiri Hair`,
                 html: `
                     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 5px;">
                         <h2 style="color: #ff0000;">Account Suspended</h2>
@@ -1022,7 +1022,7 @@ export async function blockUserController(req, res) {
                         <p>Your account has been suspended ${suspensionEndDate ? 'until ' + suspensionEndDate.toDateString() : 'permanently'}.</p>
                         <p><strong>Reason:</strong> ${reason}</p>
                         <p>If you believe this is a mistake, please contact our support team.</p>
-                        <p>Thank you,<br>Taji Cart Team</p>
+                        <p>Thank you,<br>Nawiri Hair Team</p>
                     </div>
                 `
             });
@@ -1083,13 +1083,13 @@ export async function unblockUserController(req, res) {
         try {
             await sendEmail({
                 sendTo: user.email,
-                subject: `Account Reactivated - Taji Cart`,
+                subject: `Account Reactivated - Nawiri Hair`,
                 html: `
                     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 5px;">
                         <h2 style="color: #00aa00;">Account Reactivated</h2>
                         <p>Hello ${user.name},</p>
                         <p>Your account has been reactivated. You can now log in and use our services again.</p>
-                        <p>Thank you,<br>Taji Cart Team</p>
+                        <p>Thank you,<br>Nawiri Hair Team</p>
                     </div>
                 `
             });
@@ -1144,14 +1144,14 @@ export async function deleteUserController(req, res) {
         try {
             await sendEmail({
                 sendTo: user.email,
-                subject: `Account Deleted - Taji Cart`,
+                subject: `Account Deleted - Nawiri Hair`,
                 html: `
                     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 5px;">
                         <h2 style="color: #ff0000;">Account Deleted</h2>
                         <p>Hello ${user.name},</p>
                         <p>Your account has been deleted from our system.</p>
                         <p>If you believe this is a mistake or if you want to create a new account, please contact our support team.</p>
-                        <p>Thank you,<br>Taji Cart Team</p>
+                        <p>Thank you,<br>Nawiri Hair Team</p>
                     </div>
                 `
             });
@@ -1356,7 +1356,7 @@ export const clerkAuth = async (req, res) => {
       try {
         const loyaltyCard = new LoyaltyCard({
           userId: user._id,
-          cardNumber: `TAJI${Date.now().toString().slice(-8)}${Math.floor(Math.random() * 1000)}`,
+          cardNumber: `NAWIRI${Date.now().toString().slice(-8)}${Math.floor(Math.random() * 1000)}`,
           tier: 'Basic',
           points: 100, // Welcome points
           transactionHistory: [{

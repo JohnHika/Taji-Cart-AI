@@ -17,7 +17,7 @@ export async function startMemoryServer() {
     // Create an in-memory MongoDB server
     memoryServer = await MongoMemoryServer.create({
       instance: {
-        dbName: 'taji-cart',
+        dbName: 'nawiri',
         port: 27017
       }
     });

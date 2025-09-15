@@ -32,7 +32,7 @@ function colorLog(color, message) {
 
 async function main() {
   colorLog('blue', '========================================================');
-  colorLog('blue', '        Taji-Cart-AI Server - Offline Mode');
+  colorLog('blue', '        Nawiri Hair Server - Offline Mode');
   colorLog('blue', '========================================================');
   
   colorLog('yellow', '\n⚠️  Starting server in OFFLINE MODE');
@@ -40,11 +40,11 @@ async function main() {
   colorLog('yellow', '⚠️  All data will be lost when the server stops');
   
   // Export special environment variable to force offline mode
-  process.env.TAJI_OFFLINE_MODE = 'true';
+  process.env.NAWIRI_OFFLINE_MODE = 'true';
   
   try {
     // Start nodemon with environment variable
-    const child = exec('TAJI_OFFLINE_MODE=true nodemon index.js', { cwd: rootDir });
+    const child = exec('NAWIRI_OFFLINE_MODE=true nodemon index.js', { cwd: rootDir });
     
     // Forward stdout and stderr to console
     child.stdout.pipe(process.stdout);

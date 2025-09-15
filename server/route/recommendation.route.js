@@ -1,5 +1,5 @@
 /**
- * TajiCart-AI Recommendation Routes
+ * Nawiri Hair Recommendation Routes
  *
  * These routes handle recommendation-related API endpoints.
  */

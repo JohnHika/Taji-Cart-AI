@@ -524,7 +524,7 @@ const updateLoyaltyPoints = async (userId, orderAmount, orderId) => {
       
       loyaltyCard = new LoyaltyCardModel({
         userId,
-        cardNumber: `TAJI${Date.now().toString().slice(-8)}${Math.floor(Math.random() * 10000).toString().padStart(4, '0')}`,
+        cardNumber: `NAWIRI${Date.now().toString().slice(-8)}${Math.floor(Math.random() * 10000).toString().padStart(4, '0')}`,
         tier: isAdmin ? 'Platinum' : 'Basic',
         points: pointsToAward,
         isActive: true,

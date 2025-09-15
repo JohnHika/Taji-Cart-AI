@@ -1,5 +1,5 @@
 """
-Data Collector Module for TajiCart-AI Recommendation System
+Data Collector Module for Nawiri Hair Recommendation System
 
 This module handles data collection and preparation for the recommendation system.
 It provides functionality to fetch user-item interactions from MongoDB and transform

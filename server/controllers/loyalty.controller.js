@@ -7,7 +7,7 @@ import { createSecurityCode, verifySecurityCode } from '../utils/securityUtils.j
 
 // Generate a unique card number
 const generateCardNumber = () => {
-  const prefix = 'TAJI';
+  const prefix = 'NAWIRI';
   const timestamp = Date.now().toString().slice(-8);
   const random = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
   return `${prefix}${timestamp}${random}`;
@@ -510,8 +510,8 @@ export const validateLoyaltyCard = async (req, res) => {
         // Only include early access information if it's enabled or user is admin
         earlyAccess: earlyAccessInfo,
         storeInfo: {
-          logoUrl: '/assets/Brand_logo.png',
-          brandName: 'TajiCart AI'
+          logoUrl: '/assets/hair-logo.png',
+          brandName: 'Nawiri Hair'
         }
       },
       message: "Card validated successfully"
@@ -1197,7 +1197,7 @@ export const getLoyaltyCards = async (req, res) => {
     let filter = {};
     if (search) {
       // If search is a card number format, search exactly 
-      if (search.startsWith('TAJI')) {
+      if (search.startsWith('NAWIRI')) {
         filter.cardNumber = search;
       } else {
         // Otherwise search for user info by looking up users first
@@ -1446,7 +1446,7 @@ export const requestSecurityCode = async (req, res) => {
             </div>
             <p>This code will expire in 15 minutes.</p>
             <p>If you did not request this code, please contact the system administrator immediately.</p>
-            <p>Thank you,<br>Taji Cart Team</p>
+            <p>Thank you,<br>Nawiri Hair Team</p>
           </div>
         `
       });

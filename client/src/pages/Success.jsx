@@ -97,7 +97,7 @@ function Success() {
       </style>
       <div class="receipt-container">
         <div class="receipt-header">
-          <div class="receipt-logo">Taji Cart</div>
+          <div class="receipt-logo">Nawiri Hair</div>
           <div class="receipt-title">PAYMENT RECEIPT</div>
           <div>Order #${orderDetails.orderId || (orderDetails._id && orderDetails._id.substring(orderDetails._id.length - 8))}</div>
           <div>Date: ${formatDate(orderDetails.createdAt)}</div>

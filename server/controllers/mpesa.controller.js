@@ -48,7 +48,7 @@ export async function initiateSTKPush(request, response) {
       PartyB: process.env.MPESA_SHORTCODE,
       PhoneNumber: formattedPhone,
       CallBackURL: `${process.env.BACKEND_URL}/api/mpesa/callback`,
-      AccountReference: `Taji Cart - Order #${checkoutRequestId}`,
+      AccountReference: `Nawiri Hair - Order #${checkoutRequestId}`,
       TransactionDesc: 'Payment for online purchase'
     };
     

@@ -54,8 +54,8 @@ app.use(cors({
   origin: [
     process.env.FRONTEND_URL || 'http://localhost:5173', 
     'http://localhost:5174',
-    'https://www.tajicart.com', 
-    'https://admin.tajicart.com'
+    'https://www.nawirihair.com', 
+    'https://admin.nawirihair.com'
   ],
   credentials: true
 }));
@@ -121,7 +121,7 @@ app.use('/api/auth', authRoutes);
 
 // Default route
 app.get('/', (req, res) => {
-  res.send('Welcome to Taji Cart API!');
+  res.send('Welcome to Nawiri Hair API!');
 });
 
 // Not Found route

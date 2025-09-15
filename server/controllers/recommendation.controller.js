@@ -1,5 +1,5 @@
 /**
- * TajiCart-AI Recommendation Controller
+ * Nawiri Hair Recommendation Controller
  *
  * This controller handles recommendation-related operations and integrates
  * with the Python-based recommendation engine.

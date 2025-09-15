@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """
-Simple Data Collection Script for TajiCart-AI Recommendation System
+Simple Data Collection Script for Nawiri Hair Recommendation System
 
 This script collects data from MongoDB for the recommendation system
 without using the schedule package.

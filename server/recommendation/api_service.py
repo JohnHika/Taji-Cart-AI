@@ -1,8 +1,8 @@
 """
-API Service for TajiCart-AI Recommendation System
+API Service for Nawiri Hair Recommendation System
 
 This module provides API endpoints for recommendations, chat, and other
-related functionality for the TajiCart-AI system.
+related functionality for the Nawiri Hair system.
 """
 
 import hashlib

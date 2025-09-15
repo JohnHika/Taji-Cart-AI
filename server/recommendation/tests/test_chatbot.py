@@ -1,5 +1,5 @@
 """
-Test script for the TajiCart-AI chatbot functionality.
+Test script for the Nawiri Hair chatbot functionality.
 
 This script verifies that the chatbot can understand various intents
 and provide appropriate responses.
@@ -42,7 +42,7 @@ def test_chatbot():
     session_id = "test-session-123"
     user_id = "guest"  # Change this to a real user ID to test personalization
     
-    print("🧪 Testing Taji-Cart AI Shopping Assistant")
+    print("🧪 Testing Nawiri Hair Shopping Assistant")
     print("==========================================\n")
     
     for query in test_queries:

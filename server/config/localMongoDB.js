@@ -77,7 +77,7 @@ export async function startLocalMongoDB() {
  * @returns {string} MongoDB connection string
  */
 export function getLocalMongoDBUri() {
-    return 'mongodb://localhost:27017/taji-cart';
+    return 'mongodb://localhost:27017/nawiri';
 }
 
 /**
