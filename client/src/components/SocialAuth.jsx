@@ -1,13 +1,32 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { FaGoogle } from 'react-icons/fa';
+import { toast } from 'react-hot-toast';
 
 const SocialAuth = () => {
+  const [isLoading, setIsLoading] = useState(false);
   // Use import.meta.env for Vite environment variables instead of process.env
   const API_URL = import.meta.env.VITE_API_URL || '/api';
 
   // Function to handle Google login using Passport.js
-  const handleGoogleLogin = () => {
-    window.location.href = `${API_URL}/auth/google`;
+  const handleGoogleLogin = async () => {
+    setIsLoading(true);
+    try {
+      // First check if Google OAuth is available
+      const response = await fetch(`${API_URL}/auth/google`, { method: 'HEAD' });
+      
+      if (response.status === 503) {
+        toast.error('Google login is currently not available. Please use email login.');
+        setIsLoading(false);
+        return;
+      }
+      
+      // Redirect to Google OAuth
+      window.location.href = `${API_URL}/auth/google`;
+    } catch (error) {
+      console.error('Error checking Google OAuth availability:', error);
+      toast.error('Google login is currently not available. Please use email login.');
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -27,10 +46,11 @@ const SocialAuth = () => {
         {/* Google Sign-In with Passport.js */}
         <button
           onClick={handleGoogleLogin}
-          className="w-full inline-flex justify-center py-2.5 px-4 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-700 text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors"
+          disabled={isLoading}
+          className="w-full inline-flex justify-center py-2.5 px-4 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-700 text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <FaGoogle className="text-xl mr-2 text-red-500" />
-          <span>Google</span>
+          <span>{isLoading ? 'Connecting...' : 'Google'}</span>
         </button>
       </div>
     </div>
