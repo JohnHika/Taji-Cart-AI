@@ -1,16 +1,19 @@
 import dotenv from 'dotenv';
 import passport from 'passport';
+import { Strategy as GoogleStrategy } from 'passport-google-oauth20';
 import { ExtractJwt, Strategy as JwtStrategy } from 'passport-jwt';
-import { Strategy as MicrosoftStrategy } from 'passport-microsoft';
 import LoyaltyCard from '../models/loyaltycard.model.js';
 import UserModel from '../models/user.model.js';
 
 dotenv.config();
 
+// Debug: Check if JWT_SECRET is loaded
+console.log('JWT_SECRET in passport config:', process.env.JWT_SECRET);
+
 // JWT Strategy for authenticating API requests
 const jwtOptions = {
   jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
-  secretOrKey: process.env.JWT_SECRET
+  secretOrKey: process.env.JWT_SECRET || 'fallback-secret'
 };
 
 passport.use(
@@ -27,18 +30,14 @@ passport.use(
   })
 );
 
-// NOTE: Google OAuth has been replaced with Clerk authentication.
-// The Google OAuth strategy implementation has been removed.
-// See the client-side Clerk implementation for Google sign-in functionality.
-
-// Microsoft OAuth Strategy
+// Google OAuth Strategy
 passport.use(
-  new MicrosoftStrategy(
+  new GoogleStrategy(
     {
-      clientID: process.env.MICROSOFT_CLIENT_ID,
-      clientSecret: process.env.MICROSOFT_CLIENT_SECRET,
-      callbackURL: '/api/auth/microsoft/callback',
-      scope: ['user.read', 'openid', 'profile', 'email']
+      clientID: process.env.GOOGLE_CLIENT_ID,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+      callbackURL: '/api/auth/google/callback',
+      scope: ['profile', 'email']
     },
     async (accessToken, refreshToken, profile, done) => {
       try {
@@ -46,20 +45,20 @@ passport.use(
         let user = await UserModel.findOne({ email: profile.emails[0].value });
 
         if (user) {
-          // If user exists but was registered via email, update their Microsoft ID
-          if (!user.microsoftId) {
-            user.microsoftId = profile.id;
-            user.avatar = user.avatar || profile._json.avatar || null;
+          // If user exists but was registered via email, update their Google ID
+          if (!user.googleId) {
+            user.googleId = profile.id;
+            user.avatar = user.avatar || profile.photos[0]?.value || null;
             await user.save();
           }
         } else {
           // Create new user
           user = await new UserModel({
-            name: profile.displayName || profile._json.name,
+            name: profile.displayName || profile.name?.givenName + ' ' + profile.name?.familyName,
             email: profile.emails[0].value,
-            microsoftId: profile.id,
-            avatar: profile._json.avatar,
-            verify_email: true, // Auto-verify email for Microsoft sign-ups
+            googleId: profile.id,
+            avatar: profile.photos[0]?.value,
+            verify_email: true, // Auto-verify email for Google sign-ups
             status: 'Active'
           }).save();
 

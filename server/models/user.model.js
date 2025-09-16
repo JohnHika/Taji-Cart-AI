@@ -86,13 +86,9 @@ const userSchema = new mongoose.Schema({
         type: String,
         sparse: true,  // Allow null values but enforce uniqueness when present
     },
-    microsoftId: {
-        type: String,
-        sparse: true,  // Allow null values but enforce uniqueness when present
-    },
     authType: {
         type: String,
-        enum: ['local', 'google', 'microsoft'],
+        enum: ['local', 'google'],
         default: 'local'
     },
     lastLogin: {

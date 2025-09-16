@@ -43,7 +43,6 @@
     "passport": "^0.7.0",
     "passport-google-oauth20": "^2.0.0",
     "passport-jwt": "^4.0.1",
-    "passport-microsoft": "^2.1.0",
     "react-barcode": "^1.6.1",
     "react-qr-code": "^2.0.15",
     "react-toastify": "^11.0.5",

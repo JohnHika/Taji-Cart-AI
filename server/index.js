@@ -6,11 +6,14 @@ import helmet from 'helmet';
 import http from 'http';
 import morgan from 'morgan';
 import mongoose from 'mongoose'; // Add mongoose import
+import passport from 'passport';
 import connectDB from './config/connectDB.js';
+import './config/passport.js'; // Import passport configuration
 import { getUserLoyaltyCard } from './controllers/loyalty.controller.js';
 import { admin } from './middleware/Admin.js';
 import auth from './middleware/auth.js';
 import addressRouter from './route/address.route.js';
+import authRouter from './routes/auth.routes.js';
 import cartRouter from './route/cart.route.js';
 import categoryRouter from './route/category.route.js';
 import chatRoutes from './route/chat.route.js'; // Import chat routes from correct path
@@ -62,6 +65,9 @@ app.use(helmet({
     crossOriginResourcePolicy: false
 }));
 
+// Initialize Passport
+app.use(passport.initialize());
+
 // Ensure necessary directories exist
 ensureDirectoriesExist();
 
@@ -99,6 +105,7 @@ app.use((req, res, next) => {
 });
 
 app.use('/api/user', userRouter);
+app.use('/api/auth', authRouter);
 app.use("/api/category", categoryRouter);
 app.use("/api/file", uploadRouter);
 app.use("/api/subcategory", subCategoryRouter);
