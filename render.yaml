@@ -2,10 +2,9 @@
 # Docs: https://render.com/docs/blueprint-spec
 
 services:
-  - name: taji-cart-server
-    type: web
-    runtime: node
-    region: oregon
+  - type: web
+    name: taji-cart-server
+    env: node
     rootDir: server
     buildCommand: npm install
     startCommand: npm start
@@ -48,11 +47,11 @@ services:
       - key: MPESA_PASSKEY
         sync: false
 
-  - name: taji-cart-client
-  type: static_site
+  - type: static
+    name: taji-cart-client
     rootDir: client
     buildCommand: npm install && npm run build
-  publishPath: dist
+    staticPublishPath: dist
     routes:
       - type: rewrite
         source: /*
