@@ -1,7 +1,7 @@
 const verifyEmailTemplate = ({name,url})=>{
     return`
 <p>Dear ${name}</p>    
-<p>Thank you for registering TAJI CART.</p>   
+<p>Thank you for registering NAWIRI HAIR.</p>   
 <a href=${url} style="color:black;background:orange;margin-top:10px;padding:20px;display:block">
     Verify Email
 </a>

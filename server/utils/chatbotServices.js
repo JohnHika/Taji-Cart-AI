@@ -694,7 +694,7 @@ export const processIntents = async (intents, sessionData, sessionId, user) => {
         lastQuestionType: 'initial_greeting'
       });
       
-      return `${greeting} I'm your personal shopping assistant at Taji Cart. How can I help you today? You can ask about trending products, check your cart, or tell me your budget for personalized recommendations.`;
+      return `${greeting} I'm your personal shopping assistant at Nawiri Hair. How can I help you today? You can ask about trending products, check your cart, or tell me your budget for personalized recommendations.`;
     } catch (error) {
       console.error("Error generating personalized greeting:", error);
       return "Hello! I'm your personal shopping assistant. How can I help with your shopping today?";

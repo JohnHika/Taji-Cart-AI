@@ -3,7 +3,6 @@ import toast from 'react-hot-toast';
 import { FaEnvelope, FaRegEye, FaRegEyeSlash } from "react-icons/fa";
 import { useDispatch } from 'react-redux';
 import { Link, useNavigate } from 'react-router-dom';
-import backgroundImg from '../assets/register.jpeg';
 import SummaryApi from '../common/SummaryApi';
 import SocialAuth from '../components/SocialAuth';
 import { fetchCartItems } from '../redux/slice/cartSlice';
@@ -110,16 +109,10 @@ const Login = () => {
 
     return (
         <section 
-            className='w-full min-h-screen flex items-center justify-center py-8 px-2 transition-colors duration-200'
-            style={{ 
-                backgroundImage: `url(${backgroundImg})`,
-                backgroundSize: 'cover',
-                backgroundPosition: 'center',
-                backgroundRepeat: 'no-repeat'
-            }}
+            className='w-full min-h-screen flex items-center justify-center py-8 px-2 transition-colors duration-200 bg-gray-50 dark:bg-gray-900'
         >
-            <div className='bg-white/60 dark:bg-gray-900/80 backdrop-blur-md my-4 w-full max-w-lg mx-auto rounded p-7 shadow-lg transition-colors duration-200'>
-                <h1 className="text-2xl font-bold text-center mb-6 dark:text-white transition-colors duration-200">Login to TAJI CART</h1>
+            <div className='bg-white dark:bg-gray-800 my-4 w-full max-w-lg mx-auto rounded p-7 shadow-lg transition-colors duration-200'>
+                <h1 className="text-2xl font-bold text-center mb-6 dark:text-white transition-colors duration-200">Login to NAWIRI HAIR</h1>
                 
                 <form className='grid gap-4 py-4' onSubmit={handleSubmit}>
                     <div className='grid gap-1'>

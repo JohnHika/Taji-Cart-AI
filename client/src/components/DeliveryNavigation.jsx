@@ -68,7 +68,7 @@ const DeliveryNavigation = () => {
             <Link to="/delivery/dashboard" className="flex items-center">
               <img 
                 src={currentLogo} 
-                alt="Taji Cart Logo" 
+                alt="Nawiri Hair Logo" 
                 className="h-auto w-auto max-h-12 object-contain" 
                 style={{ maxWidth: '120px' }}
               />

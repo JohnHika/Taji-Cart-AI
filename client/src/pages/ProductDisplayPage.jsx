@@ -610,9 +610,9 @@ const ProductDisplayPage = () => {
         </div>
       </div>
 
-      {/* Why Shop From Taji Cart Section */}
+      {/* Why Shop From Nawiri Hair Section */}
       <div className="mt-12">
-        <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-6">Why shop from TAJI CART?</h2>
+        <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-6">Why shop from NAWIRI HAIR?</h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-4 flex flex-col sm:flex-row md:flex-col items-center">
             <img

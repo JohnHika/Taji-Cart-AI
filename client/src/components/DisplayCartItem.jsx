@@ -22,7 +22,7 @@ const DisplayCartItem = ({close}) => {
     
     // Pickup locations data
     const pickupLocations = [
-        { name: 'Main Store', address: 'Taji Cart HQ, 123 Main Street, Nairobi' },
+        { name: 'Main Store', address: 'Nawiri Hair HQ, 123 Main Street, Nairobi' },
         { name: 'Westlands Branch', address: '456 Westlands Road, Westlands, Nairobi' },
         { name: 'Mombasa Road Store', address: '789 Mombasa Road, Nairobi' }
     ];

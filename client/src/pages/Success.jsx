@@ -199,7 +199,7 @@ function Success() {
         </div>
         
         <div class="receipt-footer">
-          <p>Thank you for shopping with Taji Cart!</p>
+          <p>Thank you for shopping with Nawiri Hair!</p>
           <p>For questions or support, please contact our customer service.</p>
         </div>
       </div>
