@@ -4,9 +4,9 @@
  */
 
 import mongoose from 'mongoose';
-import { MongoMemoryServer } from 'mongodb-memory-server';
 
 let memoryServer = null;
+let MongoMemoryServer = null;
 
 /**
  * Start an in-memory MongoDB server
@@ -14,6 +14,17 @@ let memoryServer = null;
  */
 export async function startMemoryServer() {
   try {
+    // Only import mongodb-memory-server if we're in development
+    if (!MongoMemoryServer) {
+      try {
+        const mongoMemoryModule = await import('mongodb-memory-server');
+        MongoMemoryServer = mongoMemoryModule.MongoMemoryServer;
+      } catch (error) {
+        console.log('⚠️ mongodb-memory-server not available (production mode)');
+        throw new Error('Memory server not available in production');
+      }
+    }
+
     // Create an in-memory MongoDB server
     memoryServer = await MongoMemoryServer.create({
       instance: {

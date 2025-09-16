@@ -49,8 +49,8 @@ async function connectDB() {
         throw new Error("Please provide MONGODB_URI in the .env file");
     }
     
-    // Check if offline mode is explicitly enabled
-    if (process.env.NAWIRI_OFFLINE_MODE === 'true') {
+    // Check if offline mode is explicitly enabled (development only)
+    if (process.env.NAWIRI_OFFLINE_MODE === 'true' && process.env.NODE_ENV !== 'production') {
         console.log("🔌 OFFLINE MODE explicitly enabled via environment variable");
         try {
             console.log("Starting in-memory MongoDB database...");
@@ -65,7 +65,14 @@ async function connectDB() {
         }
     }
     
-    // Check network connectivity first
+    // Skip network check and memory MongoDB in production
+    if (process.env.NODE_ENV === 'production') {
+        console.log("🚀 Production mode: attempting direct MongoDB Atlas connection");
+        await connectToMongoDB();
+        return;
+    }
+    
+    // Check network connectivity first (development only)
     const networkAvailable = await memoryMongoDB.isNetworkAvailable();
     if (!networkAvailable) {
         console.log("⚠️ No network connectivity detected. Starting in OFFLINE MODE...");
@@ -144,9 +151,17 @@ async function connectDB() {
             console.log(`Retrying in ${retryDelay/1000} seconds...`);
             await new Promise(resolve => setTimeout(resolve, retryDelay));
             return connectDB(); // Retry recursively
-        } else {            console.log(`Failed to connect after ${MAX_CONNECTION_ATTEMPTS} attempts. Trying local MongoDB fallback...`);
+        } else {
+            console.log(`Failed to connect after ${MAX_CONNECTION_ATTEMPTS} attempts.`);
             
-            // Check network availability
+            // In production, fail hard without fallbacks
+            if (process.env.NODE_ENV === 'production') {
+                throw new Error(`Cannot connect to MongoDB Atlas after ${MAX_CONNECTION_ATTEMPTS} attempts. Check your MONGODB_URI and network connectivity.`);
+            }
+            
+            console.log("Trying local MongoDB fallback...");
+            
+            // Check network availability (development only)
             const networkAvailable = await memoryMongoDB.isNetworkAvailable();
             if (!networkAvailable) {
                 console.log("❌ No network connectivity detected. Operating in OFFLINE MODE.");
@@ -154,33 +169,32 @@ async function connectDB() {
             
             // Try to start and connect to a local MongoDB as a last resort
             try {
-                if (process.env.NODE_ENV !== 'production') {
-                    // Check if Docker is available
-                    const dockerAvailable = await localMongoDB.isDockerAvailable();
+                // Check if Docker is available
+                const dockerAvailable = await localMongoDB.isDockerAvailable();
+                
+                if (dockerAvailable && networkAvailable) {
+                    console.log("Docker is available. Attempting to start local MongoDB...");
                     
-                    if (dockerAvailable && networkAvailable) {
-                        console.log("Docker is available. Attempting to start local MongoDB...");
+                    // Try to start local MongoDB container
+                    try {
+                        const started = await localMongoDB.startLocalMongoDB();
                         
-                        // Try to start local MongoDB container
-                        try {
-                            const started = await localMongoDB.startLocalMongoDB();
-                            
-                            if (started) {
-                                // Connect to the local MongoDB
-                                await localMongoDB.connectToLocalMongoDB();
-                                usingLocalMongoDB = true;
-                                console.log("⚠️ Connected to LOCAL MongoDB for development. Data will not sync with production.");
-                                return;
-                            }
-                        } catch (dockerError) {
-                            console.log("Docker MongoDB failed:", dockerError.message);
-                        }
-                    } else if (!networkAvailable || !dockerAvailable) {
-                        // If no network or Docker failed, try in-memory MongoDB
-                        console.log("Attempting to start in-memory MongoDB...");
-                        try {
-                            await memoryMongoDB.connectToMemoryServer();
+                        if (started) {
+                            // Connect to the local MongoDB
+                            await localMongoDB.connectToLocalMongoDB();
                             usingLocalMongoDB = true;
+                            console.log("⚠️ Connected to LOCAL MongoDB for development. Data will not sync with production.");
+                            return;
+                        }
+                    } catch (dockerError) {
+                        console.log("Docker MongoDB failed:", dockerError.message);
+                    }
+                } else if (!networkAvailable || !dockerAvailable) {
+                    // If no network or Docker failed, try in-memory MongoDB
+                    console.log("Attempting to start in-memory MongoDB...");
+                    try {
+                        await memoryMongoDB.connectToMemoryServer();
+                        usingLocalMongoDB = true;
                             console.log("⚠️ Connected to IN-MEMORY MongoDB. All data will be lost when the server stops!");
                             console.log("⚠️ This is a FAILSAFE MODE for offline development only.");
                             return;
@@ -195,7 +209,8 @@ async function connectDB() {
                 console.log("Failed to set up local MongoDB fallback:", localError);
             }
             
-            throw new Error("Could not connect to MongoDB Atlas or local fallback. Please check your network and MongoDB configuration.");        }
+            throw new Error("Could not connect to MongoDB Atlas or local fallback. Please check your network and MongoDB configuration.");
+        }
     }
 }
 
