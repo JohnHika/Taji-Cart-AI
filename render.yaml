@@ -6,7 +6,7 @@ services:
   - name: taji-cart-server
     type: web
     runtime: node
-    plan: starter
+    plan: free
     region: oregon
     rootDir: server
     buildCommand: npm install
@@ -59,7 +59,7 @@ services:
   - name: taji-cart-client
     type: web
     runtime: static
-    plan: starter
+    plan: free
     rootDir: client
     buildCommand: npm install && npm run build
     staticPublishPath: dist
