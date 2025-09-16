@@ -68,8 +68,39 @@ async function connectDB() {
     // Skip network check and memory MongoDB in production
     if (process.env.NODE_ENV === 'production') {
         console.log("🚀 Production mode: attempting direct MongoDB Atlas connection");
-        await connectToMongoDB();
-        return;
+        
+        // Connection options
+        const connectionOptions = {
+            useNewUrlParser: true,
+            useUnifiedTopology: true,
+            serverSelectionTimeoutMS: 5000,
+            socketTimeoutMS: 45000,
+            family: 4
+        };
+
+        try {
+            // First try the direct connection string to avoid DNS issues
+            try {
+                const directURI = convertSrvToDirectConnect(process.env.MONGODB_URI);
+                console.log("Trying direct connection first...");
+                
+                await mongoose.connect(directURI, connectionOptions);
+                usingLocalMongoDB = false;
+                console.log("MongoDB connected successfully via direct connection");
+                return;
+            } catch (directError) {
+                console.log("Direct connection failed, trying SRV connection:", directError.message);
+                
+                // If direct connection fails, try the SRV format
+                await mongoose.connect(process.env.MONGODB_URI, connectionOptions);
+                usingLocalMongoDB = false;
+                console.log("MongoDB connected successfully via SRV connection");
+                return;
+            }
+        } catch (error) {
+            console.log("MongoDB Atlas connection error:", error.message);
+            throw new Error(`Cannot connect to MongoDB Atlas: ${error.message}. Check your MONGODB_URI and network connectivity.`);
+        }
     }
     
     // Check network connectivity first (development only)
