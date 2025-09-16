@@ -6,7 +6,6 @@ services:
   - name: taji-cart-server
     type: web
     runtime: node
-    plan: free
     region: oregon
     rootDir: server
     buildCommand: npm install
@@ -57,12 +56,10 @@ services:
 
   # Frontend (Vite React) served as Static Site
   - name: taji-cart-client
-    type: web
-    runtime: static
-    plan: free
+  type: static_site
     rootDir: client
     buildCommand: npm install && npm run build
-    staticPublishPath: dist
+  publishPath: dist
     routes:
       # SPA fallback
       - type: rewrite
