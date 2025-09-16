@@ -195,15 +195,14 @@ async function connectDB() {
                     try {
                         await memoryMongoDB.connectToMemoryServer();
                         usingLocalMongoDB = true;
-                            console.log("⚠️ Connected to IN-MEMORY MongoDB. All data will be lost when the server stops!");
-                            console.log("⚠️ This is a FAILSAFE MODE for offline development only.");
-                            return;
-                        } catch (memoryError) {
-                            console.log("In-memory MongoDB failed:", memoryError.message);
-                        }
-                    } else {
-                        console.log("Docker is not available. Cannot start local MongoDB.");
+                        console.log("⚠️ Connected to IN-MEMORY MongoDB. All data will be lost when the server stops!");
+                        console.log("⚠️ This is a FAILSAFE MODE for offline development only.");
+                        return;
+                    } catch (memoryError) {
+                        console.log("In-memory MongoDB failed:", memoryError.message);
                     }
+                } else {
+                    console.log("Docker is not available. Cannot start local MongoDB.");
                 }
             } catch (localError) {
                 console.log("Failed to set up local MongoDB fallback:", localError);
