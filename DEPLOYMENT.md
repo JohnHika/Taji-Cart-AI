@@ -36,7 +36,6 @@ Frontend (Static Site: `taji-cart-client`):
 - VITE_SERVER_URL (server public URL)
 - VITE_BACKEND_URL (server public URL)
 - VITE_API_URL (optional, defaults to /api)
-- VITE_CLERK_PUBLISHABLE_KEY
 - VITE_WEATHERAPI_KEY
 - VITE_STRIPE_PUBLIC_KEY
 

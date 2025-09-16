@@ -3,7 +3,6 @@ import { verifyPickupController } from '../controllers/order.controller.js';
 import {
     blockUserController,
     changePassword,
-    clerkAuth,
     deleteUserController,
     forgotPasswordController,
     getAllUsersController,
@@ -39,9 +38,6 @@ userRouter.put('/forgot-password', forgotPasswordController)
 userRouter.put('/verify-forgot-password-otp', verifyForgotPasswordOtp)
 userRouter.put('/reset-password', resetpassword)
 userRouter.post('/refresh-token', refreshToken)
-
-// Clerk Authentication route
-userRouter.post('/clerk-auth', clerkAuth)
 
 // Authenticated user routes
 userRouter.get('/user-details', auth, userDetails)

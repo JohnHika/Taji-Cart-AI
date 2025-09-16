@@ -34,7 +34,6 @@ import ProductListPage from '../pages/ProductListPage';
 import Register from '../pages/Register';
 import SearchPage from '../pages/SearchPage'; // Add SearchPage import
 import SocialAuthSuccess from '../pages/SocialAuthSuccess'; // Import the SocialAuthSuccess component
-import SSOCallback from '../pages/SSOCallback';
 
 // Import new staff components
 import StaffDashboard from '../pages/staff/Dashboard';
@@ -121,11 +120,6 @@ const router = createBrowserRouter([
       {
         path: 'register',
         element: <Register />
-      },
-      // Add SSO Callback route for Clerk
-      {
-        path: 'sso-callback',
-        element: <SSOCallback />
       },
       // Add SocialAuthSuccess route
       {

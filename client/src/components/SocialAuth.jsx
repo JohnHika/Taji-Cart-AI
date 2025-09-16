@@ -1,6 +1,5 @@
 import React from 'react';
 import { FaMicrosoft } from 'react-icons/fa';
-import GoogleSignIn from './GoogleSignIn';
 
 const SocialAuth = () => {
   // Use import.meta.env for Vite environment variables instead of process.env
@@ -24,10 +23,7 @@ const SocialAuth = () => {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
-        {/* Google Sign-In with Clerk */}
-        <GoogleSignIn buttonText="Google" />
-        
+      <div className="grid grid-cols-1 gap-3">
         {/* Microsoft Sign-In with Passport.js */}
         <button
           onClick={handleMicrosoftLogin}

@@ -63,8 +63,6 @@ services:
         sync: false
       - key: VITE_API_URL
         value: /api
-      - key: VITE_CLERK_PUBLISHABLE_KEY
-        sync: false
       - key: VITE_WEATHERAPI_KEY
         sync: false
       - key: VITE_STRIPE_PUBLIC_KEY
