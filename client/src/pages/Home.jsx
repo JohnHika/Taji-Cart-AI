@@ -65,7 +65,7 @@ const Home = () => {
         
         // Try using getAllSubCategory instead (checking endpoint naming differences)
         const endpoint = SummaryApi.getAllSubCategory || {
-          url: 'http://localhost:8080/api/subcategory/get',
+          url: `${import.meta.env.VITE_SERVER_URL || import.meta.env.VITE_BACKEND_URL || 'http://localhost:8080'}/api/subcategory/get`,
           method: 'get'
         };
         

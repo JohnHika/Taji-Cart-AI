@@ -3,7 +3,7 @@ import SummaryApi from '../common/SummaryApi';
 
 // Ensure your Axios instance is properly configured
 const instance = axios.create({
-  baseURL: 'http://localhost:8080', // Or your API base URL
+  baseURL: import.meta.env.VITE_SERVER_URL || import.meta.env.VITE_BACKEND_URL || 'http://localhost:8080',
   withCredentials: true,
   timeout: 15000,
   headers: {
