@@ -7,7 +7,7 @@ import { useGlobalContext } from '../provider/GlobalProvider'
 import Axios from '../utils/Axios'
 import Loading from './Loading'
 
-const AddToCartButton = ({ data, showText = true }) => {
+const AddToCartButton = ({ data, product: productProp, cartData, showText = true }) => {
     const { fetchCartItem, updateCartItem, deleteCartItem } = useGlobalContext()
     const [loading, setLoading] = useState(false)
     const [updateLoading, setUpdateLoading] = useState(false)
@@ -16,6 +16,9 @@ const AddToCartButton = ({ data, showText = true }) => {
     const [qty, setQty] = useState(0)
     const [cartItemDetails, setCartItemDetails] = useState()
     const user = useSelector(state => state.user);
+
+    // Normalize incoming product data from various callers
+    const product = data || productProp || cartData?.productId
 
     const handleAddToCart = async (e) => {
         e.preventDefault();
@@ -27,12 +30,18 @@ const AddToCartButton = ({ data, showText = true }) => {
             return;
         }
         
+        // Validate product
+        if (!product?._id) {
+            toast.error("Product information is missing");
+            return;
+        }
+
         // Check if product already exists in cart
         console.log("Cart items in Redux:", cartItem);
-        console.log("Current product ID:", data._id);
-        
+        console.log("Current product ID:", product._id);
+
         const matchingItems = cartItem.filter(item => 
-            item.productId?._id === data._id
+            item.productId?._id === product._id
         );
         console.log("Matching items:", matchingItems);
         
@@ -46,7 +55,7 @@ const AddToCartButton = ({ data, showText = true }) => {
             
             // Create the request payload
             const payload = {
-                productId: data._id,
+                productId: product._id,
                 quantity: 1
             };
             
@@ -92,13 +101,21 @@ const AddToCartButton = ({ data, showText = true }) => {
 
     // Check if item is in cart
     useEffect(() => {
-        const checkingItem = cartItem.some(item => item.productId?._id === data?._id)
+        const productId = product?._id
+        if (!productId) {
+            setIsAvailableCart(false)
+            setQty(0)
+            setCartItemDetails(undefined)
+            return
+        }
+
+        const checkingItem = cartItem.some(item => item.productId?._id === productId)
         setIsAvailableCart(checkingItem)
 
-        const product = cartItem.find(item => item.productId?._id === data?._id)
-        setQty(product?.quantity || 0)
-        setCartItemDetails(product)
-    }, [data, cartItem])
+        const found = cartItem.find(item => item.productId?._id === productId)
+        setQty(found?.quantity || 0)
+        setCartItemDetails(found)
+    }, [product, cartItem])
 
     const increaseQty = async(e) => {
         e.preventDefault()
@@ -201,10 +218,10 @@ const AddToCartButton = ({ data, showText = true }) => {
                 ) : (
                     <button 
                         onClick={handleAddToCart} 
-                        disabled={loading}
+                        disabled={loading || !product?._id}
                         className='bg-green-600 hover:bg-green-700 active:bg-green-800 text-white px-2 sm:px-3 lg:px-4 py-1.5 sm:py-2 rounded text-xs sm:text-sm font-medium w-full touch-manipulation transition-colors'
                     >
-                        {loading ? <Loading /> : "Add"}
+                        {loading ? <Loading /> : (showText ? "Add" : "+")}
                     </button>
                 )
             }
