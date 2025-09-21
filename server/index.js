@@ -53,11 +53,33 @@ dotenv.config();
 const PORT = process.env.PORT || 3001;
 
 const app = express();
+
+// Robust CORS configuration for production and dev
+const FRONTEND_URL = process.env.FRONTEND_URL;
+const allowedOrigins = [
+    'http://localhost:5173',
+    'http://localhost:5174',
+    'http://localhost:3000',
+    'https://nawiri-hair-client.onrender.com',
+    'https://www.nawirihair.com',
+    'https://admin.nawirihair.com',
+].filter(Boolean);
+
+if (FRONTEND_URL && !allowedOrigins.includes(FRONTEND_URL)) {
+    allowedOrigins.push(FRONTEND_URL);
+}
+
 app.use(cors({
     credentials: true,
-    origin: process.env.FRONTEND_URL || '*',
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
-    allowedHeaders: ['Content-Type', 'Authorization']
+    origin: (origin, callback) => {
+        // Allow same-origin requests or tools without origin
+        if (!origin) return callback(null, true);
+        if (allowedOrigins.includes(origin)) return callback(null, true);
+        return callback(new Error(`CORS: Origin ${origin} not allowed`));
+    },
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+    optionsSuccessStatus: 200
 }));
 app.use(express.json());
 app.use(cookieParser());

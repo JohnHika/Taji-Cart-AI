@@ -14,19 +14,28 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 5000;
 
+const allowedOriginsLegacy = [
+  'http://localhost:5173',
+  'http://localhost:5174',
+  'https://nawiri-hair-client.onrender.com',
+  process.env.FRONTEND_URL
+].filter(Boolean);
+
 app.use(cors({
-  origin: ["http://localhost:5173", "https://your-production-domain.com"], // Add any other origins you need
+  origin: (origin, callback) => {
+    if (!origin) return callback(null, true);
+    if (allowedOriginsLegacy.includes(origin)) return callback(null, true);
+    return callback(new Error(`CORS: Origin ${origin} not allowed`));
+  },
   credentials: true,
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
   allowedHeaders: [
     "Origin", 
-    "X-Requested-With", 
     "Content-Type", 
     "Accept", 
     "Authorization",
-    "Cache-Control", // Add this
-    "Pragma",        // Add this
-    "X-Requested-With" // Already included but mentioned for clarity
+    "Cache-Control",
+    "Pragma"
   ]
 }));
 

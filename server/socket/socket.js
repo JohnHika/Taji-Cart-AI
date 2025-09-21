@@ -8,7 +8,19 @@ let io;
 export const initializeSocket = (server) => {
     io = new Server(server, {
         cors: {
-            origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+            origin: (origin, callback) => {
+                const allowed = [
+                    'http://localhost:5173',
+                    'http://localhost:5174',
+                    'https://nawiri-hair-client.onrender.com',
+                    'https://www.nawirihair.com',
+                    'https://admin.nawirihair.com',
+                ];
+                const envOrigin = process.env.FRONTEND_URL;
+                if (envOrigin && !allowed.includes(envOrigin)) allowed.push(envOrigin);
+                if (!origin || allowed.includes(origin)) return callback(null, true);
+                return callback(new Error(`Socket CORS: Origin ${origin} not allowed`));
+            },
             methods: ["GET", "POST"],
             credentials: true
         }

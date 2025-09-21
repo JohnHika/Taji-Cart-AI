@@ -50,13 +50,24 @@ const limiter = rateLimit({
 app.use(limiter);
 
 // Middlewares
+const FRONTEND_URL_APP = process.env.FRONTEND_URL;
+const allowedOriginsApp = [
+  'http://localhost:5173',
+  'http://localhost:5174',
+  'http://localhost:3000',
+  'https://nawiri-hair-client.onrender.com',
+  'https://www.nawirihair.com', 
+  'https://admin.nawirihair.com'
+];
+if (FRONTEND_URL_APP && !allowedOriginsApp.includes(FRONTEND_URL_APP)) {
+  allowedOriginsApp.push(FRONTEND_URL_APP);
+}
 app.use(cors({
-  origin: [
-    process.env.FRONTEND_URL || 'http://localhost:5173', 
-    'http://localhost:5174',
-    'https://www.nawirihair.com', 
-    'https://admin.nawirihair.com'
-  ],
+  origin: (origin, callback) => {
+    if (!origin) return callback(null, true);
+    if (allowedOriginsApp.includes(origin)) return callback(null, true);
+    return callback(new Error(`CORS: Origin ${origin} not allowed`));
+  },
   credentials: true
 }));
 app.use(express.json());
