@@ -40,9 +40,14 @@ const staff = async (request, response, next) => {
             });
         }
 
-        // Set a isStaff flag on the request object for controllers to use
+        // Set appropriate flags on the request object for controllers to use
         request.isStaff = true;
         request.userRole = user.role;
+        
+        // If user is admin, also set isAdmin flag
+        if (isAdminUser) {
+            request.isAdmin = true;
+        }
         
         console.log(`Staff auth successful for user ${userId}`)
         next();

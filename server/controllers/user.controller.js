@@ -817,37 +817,148 @@ export async function changePassword(request, response) {
  */
 export async function searchUsers(req, res) {
   try {
-    // Ensure the request is coming from an admin (this is a backup check, middleware should handle this)
-    if (!req.isAdmin) {
+    // Allow both staff and admin access to search users
+    if (!req.isStaff && !req.isAdmin) {
       return res.status(403).json({
-        message: "Unauthorized access",
+        message: "Unauthorized access - Staff or Admin role required",
         success: false
       });
     }
 
-    const { term } = req.query;
+    const { q: term, role } = req.query;
     
-    if (!term || term.length < 2) {
-      return res.status(400).json({
-        message: "Search term must be at least 2 characters",
-        success: false
+    // If no search term provided, return all customers (with role filter)
+    if (!term || term.trim() === '') {
+      const searchQuery = {};
+      
+      // Add role filter if specified
+      if (role) {
+        if (role === 'user') {
+          searchQuery.role = { $ne: 'admin' }; // Find non-admin users
+        } else {
+          searchQuery.role = role;
+        }
+      } else {
+        // Default to non-admin users if no role specified
+        searchQuery.role = { $ne: 'admin' };
+      }
+
+      const users = await UserModel.find(searchQuery)
+        .select('_id name email mobile avatar role')
+        .sort({ name: 1 })
+        .limit(50); // Increased limit for all customers view
+
+      // Get loyalty cards for these users
+      const LoyaltyCardModel = (await import('../models/loyaltycard.model.js')).default;
+      const userIds = users.map(user => user._id);
+      const loyaltyCards = await LoyaltyCardModel.find({ userId: { $in: userIds } })
+        .select('userId cardNumber tier pointsEarned discountRate');
+
+      // Create a map for quick lookup
+      const loyaltyCardMap = {};
+      loyaltyCards.forEach(card => {
+        loyaltyCardMap[card.userId.toString()] = card;
+      });
+
+      // Attach loyalty card data to users
+      const usersWithLoyalty = users.map(user => ({
+        ...user.toObject(),
+        loyaltyCard: loyaltyCardMap[user._id.toString()] || null
+      }));
+
+      return res.status(200).json({
+        success: true,
+        data: usersWithLoyalty,
+        message: "All customers retrieved successfully"
       });
     }
 
-    // Check if the search term is a loyalty card number (starts with NAWIRI)
-    if (term.startsWith('NAWIRI')) {
+    // For search terms less than 2 characters, treat as short search
+    if (term.length < 2) {
+      // Allow single character searches but limit results
+      const searchQuery = {
+        $or: [
+          { name: { $regex: `^${term}`, $options: 'i' } }, // Names starting with the character
+          { email: { $regex: `^${term}`, $options: 'i' } }, // Emails starting with the character
+        ]
+      };
+
+      // Add role filter
+      if (role) {
+        if (role === 'user') {
+          searchQuery.role = { $ne: 'admin' };
+        } else {
+          searchQuery.role = role;
+        }
+      } else {
+        searchQuery.role = { $ne: 'admin' };
+      }
+
+      const users = await UserModel.find(searchQuery)
+        .select('_id name email mobile avatar role')
+        .sort({ name: 1 })
+        .limit(20);
+
+      // Get loyalty cards for these users
+      const LoyaltyCardModel = (await import('../models/loyaltycard.model.js')).default;
+      const userIds = users.map(user => user._id);
+      const loyaltyCards = await LoyaltyCardModel.find({ userId: { $in: userIds } })
+        .select('userId cardNumber tier pointsEarned discountRate');
+
+      // Create a map for quick lookup
+      const loyaltyCardMap = {};
+      loyaltyCards.forEach(card => {
+        loyaltyCardMap[card.userId.toString()] = card;
+      });
+
+      // Attach loyalty card data to users
+      const usersWithLoyalty = users.map(user => ({
+        ...user.toObject(),
+        loyaltyCard: loyaltyCardMap[user._id.toString()] || null
+      }));
+
+      return res.status(200).json({
+        success: true,
+        data: usersWithLoyalty,
+        message: "Customers found with short search"
+      });
+    }
+
+    // Check if the search term is a loyalty card number (starts with NAWIRI or legacy TAJ)
+    if (term.startsWith('NAWIRI') || term.startsWith('TAJ')) {
       // Search for the loyalty card first
       const LoyaltyCardModel = (await import('../models/loyaltycard.model.js')).default;
-      const card = await LoyaltyCardModel.findOne({ cardNumber: term });
+      
+      // Try to find the card with the exact number first
+      let card = await LoyaltyCardModel.findOne({ cardNumber: term });
+      
+      // If not found and it starts with TAJ, try converting to NAWIRI format
+      if (!card && term.startsWith('TAJ')) {
+        const nawiriCardNumber = term.replace('TAJ', 'NAWIRI');
+        card = await LoyaltyCardModel.findOne({ cardNumber: nawiriCardNumber });
+      }
+      
+      // If still not found and it starts with NAWIRI, try legacy TAJ format
+      if (!card && term.startsWith('NAWIRI')) {
+        const tajCardNumber = term.replace('NAWIRI', 'TAJ');
+        card = await LoyaltyCardModel.findOne({ cardNumber: tajCardNumber });
+      }
       
       if (card) {
         // Get the user details for this card
-        const user = await UserModel.findById(card.userId).select('_id name email mobile avatar');
+        const user = await UserModel.findById(card.userId)
+          .select('_id name email mobile avatar');
         
         if (user) {
+          // Attach loyalty card data to user
+          const userWithLoyalty = {
+            ...user.toObject(),
+            loyaltyCard: card
+          };
+
           return res.status(200).json({
             success: true,
-            data: [user],
+            data: [userWithLoyalty],
             message: "User found by loyalty card number"
           });
         }
@@ -855,22 +966,174 @@ export async function searchUsers(req, res) {
     }
     
     // Normal user search by name, email, or mobile
-    const users = await UserModel.find({
+    const searchQuery = {
       $or: [
         { name: { $regex: term, $options: 'i' } },
         { email: { $regex: term, $options: 'i' } },
         { mobile: { $regex: term, $options: 'i' } }
       ]
-    }).select('_id name email mobile avatar')
+    };
+
+    // Add role filter if specified
+    if (role) {
+      if (role === 'user') {
+        searchQuery.role = { $ne: 'admin' }; // Find non-admin users
+      } else {
+        searchQuery.role = role;
+      }
+    }
+
+    const users = await UserModel.find(searchQuery)
+    .select('_id name email mobile avatar role')
     .limit(10);
+    
+    // Get loyalty cards for these users
+    const LoyaltyCardModel = (await import('../models/loyaltycard.model.js')).default;
+    const userIds = users.map(user => user._id);
+    const loyaltyCards = await LoyaltyCardModel.find({ userId: { $in: userIds } })
+      .select('userId cardNumber tier pointsEarned discountRate');
+
+    // Create a map for quick lookup
+    const loyaltyCardMap = {};
+    loyaltyCards.forEach(card => {
+      loyaltyCardMap[card.userId.toString()] = card;
+    });
+
+    // Attach loyalty card data to users
+    const usersWithLoyalty = users.map(user => ({
+      ...user.toObject(),
+      loyaltyCard: loyaltyCardMap[user._id.toString()] || null
+    }));
     
     return res.status(200).json({
       success: true,
-      data: users,
+      data: usersWithLoyalty,
       message: "Users found successfully"
     });
   } catch (error) {
     console.error("Error in searchUsers:", error);
+    return res.status(500).json({
+      message: error.message || "Internal Server Error",
+      success: false
+    });
+  }
+}
+
+/**
+ * Get all customers for POS system (staff and admin only)
+ */
+export async function getAllCustomers(req, res) {
+  try {
+    // Allow both staff and admin access
+    if (!req.isStaff && !req.isAdmin) {
+      return res.status(403).json({
+        message: "Unauthorized access - Staff or Admin role required",
+        success: false
+      });
+    }
+
+    const { role = 'user' } = req.query;
+    
+    const searchQuery = {};
+    
+    // Add role filter
+    if (role === 'user') {
+      searchQuery.role = { $ne: 'admin' }; // Find non-admin users
+    } else {
+      searchQuery.role = role;
+    }
+
+    const users = await UserModel.find(searchQuery)
+      .select('_id name email mobile avatar role')
+      .populate('loyaltyCard', 'cardNumber tier pointsEarned')
+      .sort({ name: 1 })
+      .limit(100);
+
+    return res.status(200).json({
+      success: true,
+      data: users,
+      message: "All customers retrieved successfully",
+      count: users.length
+    });
+  } catch (error) {
+    console.error("Error in getAllCustomers:", error);
+    return res.status(500).json({
+      message: error.message || "Internal Server Error",
+      success: false
+    });
+  }
+}
+
+/**
+ * Scan loyalty card and get customer details (for POS system)
+ */
+export async function scanLoyaltyCard(req, res) {
+  try {
+    // Allow both staff and admin access
+    if (!req.isStaff && !req.isAdmin) {
+      return res.status(403).json({
+        message: "Unauthorized access - Staff or Admin role required",
+        success: false
+      });
+    }
+
+    const { cardNumber } = req.body;
+    
+    if (!cardNumber) {
+      return res.status(400).json({
+        message: "Card number is required",
+        success: false
+      });
+    }
+
+    // Import loyalty card model
+    const LoyaltyCardModel = (await import('../models/loyaltycard.model.js')).default;
+    
+    // Find the loyalty card with fallback for TAJ/NAWIRI conversion
+    let loyaltyCard = await LoyaltyCardModel.findOne({ cardNumber: cardNumber.trim() });
+    
+    // If not found, try converting between TAJ and NAWIRI formats
+    if (!loyaltyCard) {
+      if (cardNumber.startsWith('TAJ')) {
+        // Try converting TAJ to NAWIRI format
+        const nawiriCardNumber = cardNumber.replace('TAJ', 'NAWIRI');
+        loyaltyCard = await LoyaltyCardModel.findOne({ cardNumber: nawiriCardNumber });
+      } else if (cardNumber.startsWith('NAWIRI')) {
+        // Try converting NAWIRI to TAJ format (for legacy cards)
+        const tajCardNumber = cardNumber.replace('NAWIRI', 'TAJ');
+        loyaltyCard = await LoyaltyCardModel.findOne({ cardNumber: tajCardNumber });
+      }
+    }
+    
+    if (!loyaltyCard) {
+      return res.status(404).json({
+        message: "Loyalty card not found. Please check the card number.",
+        success: false
+      });
+    }
+
+    // Get the user details for this card
+    const user = await UserModel.findById(loyaltyCard.userId)
+      .select('_id name email mobile avatar role');
+
+    if (!user) {
+      return res.status(404).json({
+        message: "Customer not found for this loyalty card",
+        success: false
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        customer: user,
+        loyaltyCard: loyaltyCard,
+        message: `Welcome ${user.name}! ${loyaltyCard.tier} member with ${loyaltyCard.pointsEarned} points.`
+      },
+      message: "Loyalty card scanned successfully"
+    });
+  } catch (error) {
+    console.error("Error in scanLoyaltyCard:", error);
     return res.status(500).json({
       message: error.message || "Internal Server Error",
       success: false

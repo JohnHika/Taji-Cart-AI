@@ -718,7 +718,7 @@ const ChatbotAI = () => {
   };
 
   return (
-    <div className="fixed bottom-12 right-5 z-50">
+    <div className="fixed bottom-20 sm:bottom-24 lg:bottom-5 right-5 z-50">
       <button
         onClick={handleToggleChat}
         className="bg-primary-200 dark:bg-primary-300 hover:bg-primary-300 dark:hover:bg-primary-400 text-white p-3 md:p-4 rounded-full shadow-lg flex items-center justify-center transition-all duration-300 w-12 h-12 md:w-auto md:h-auto"

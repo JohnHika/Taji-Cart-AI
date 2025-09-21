@@ -1,6 +1,7 @@
 import axios from 'axios';
 import mongoose from 'mongoose';
 import { getAuthToken, MPESA_STK_URL } from '../config/mpesa.js';
+import MpesaPayment from '../models/mpesaPayment.model.js';
 import CartProductModel from "../models/cartproduct.model.js";
 import OrderModel from '../models/order.model.js';
 import UserModel from '../models/user.model.js';
@@ -104,7 +105,24 @@ export async function handleMpesaCallback(request, response) {
     const callbackData = request.body;
     
     // Check if the payment was successful
-    if (callbackData.Body.stkCallback.ResultCode === 0) {
+    const resultCode = callbackData.Body?.stkCallback?.ResultCode;
+    const checkoutId = callbackData.Body?.stkCallback?.CheckoutRequestID;
+    const resultDesc = callbackData.Body?.stkCallback?.ResultDesc;
+
+    // Update MpesaPayment status for POS
+    if (checkoutId) {
+      await MpesaPayment.findOneAndUpdate(
+        { checkoutRequestId: checkoutId },
+        {
+          status: resultCode === 0 ? 'success' : 'failed',
+          resultCode,
+          resultDesc,
+          rawCallback: callbackData
+        }
+      );
+    }
+
+    if (resultCode === 0) {
       // Find the pending order
       const pendingOrder = await OrderModel.findOne({ 
         checkoutRequestId: callbackData.Body.stkCallback.CheckoutRequestID 
@@ -117,7 +135,7 @@ export async function handleMpesaCallback(request, response) {
       
       // Update order status
       pendingOrder.payment_status = 'paid';
-      pendingOrder.paymentId = callbackData.Body.stkCallback.CheckoutRequestID;
+  pendingOrder.paymentId = checkoutId;
       await pendingOrder.save();
       
       // Clear cart after successful order
@@ -127,7 +145,7 @@ export async function handleMpesaCallback(request, response) {
       await CartProductModel.deleteMany({ userId: pendingOrder.userId });
     } else {
       // Payment failed - you might want to update the order status as failed
-      console.error('M-Pesa payment failed:', callbackData.Body.stkCallback.ResultDesc);
+      console.error('M-Pesa payment failed:', resultDesc);
     }
     
     // Always respond with success to M-Pesa
@@ -136,6 +154,21 @@ export async function handleMpesaCallback(request, response) {
   } catch (error) {
     console.error('M-Pesa Callback Error:', error);
     return response.status(200).json({ success: true }); // Always return success to M-Pesa
+  }
+}
+
+// Simple status endpoint for POS polling
+export async function getMpesaStatus(request, response) {
+  try {
+    const { checkoutRequestId } = request.query;
+    if (!checkoutRequestId) {
+      return response.status(400).json({ success: false, message: 'checkoutRequestId required' });
+    }
+    const doc = await MpesaPayment.findOne({ checkoutRequestId });
+    if (!doc) return response.json({ success: true, status: 'unknown' });
+    return response.json({ success: true, status: doc.status, resultCode: doc.resultCode, resultDesc: doc.resultDesc });
+  } catch (err) {
+    return response.status(500).json({ success: false, message: err.message });
   }
 }
 

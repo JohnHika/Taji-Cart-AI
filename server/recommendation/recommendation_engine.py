@@ -835,12 +835,12 @@ class RecommendationEngine:
             user = self.db_access.get_user_by_id(user_id)
             if user and 'name' in user:
                 return {
-                    'text': f"Hello {user['name']}! Welcome to Taji-Cart. How can I assist you today? "
+                    'text': f"Hello {user['name']}! Welcome to NAWIRI Hair. How can I assist you today? "
                            f"I can recommend products, check your cart, or help you find specific items."
                 }
         
         return {
-            'text': "Hello! Welcome to Taji-Cart. I'm your AI shopping assistant. "
+            'text': "Hello! Welcome to NAWIRI Hair. I'm your AI shopping assistant. "
                    "How can I help you today? I can show you trending products, "
                    "make recommendations, or help you find specific items."
         }

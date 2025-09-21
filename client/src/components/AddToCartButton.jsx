@@ -174,35 +174,35 @@ const AddToCartButton = ({ data, showText = true }) => {
     }
 
     return (
-        <div className='w-full max-w-[150px]'>
+        <div className='w-full min-w-[90px] max-w-[100px] sm:max-w-[120px] lg:max-w-[150px]'>
             {
                 isAvailableCart ? (
-                    <div className='flex w-full h-full'>
+                    <div className='flex w-full h-full bg-white dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-600 overflow-hidden'>
                         <button 
                             onClick={decreaseQty} 
                             disabled={updateLoading}
                             aria-label="Decrease quantity"
-                            className='bg-green-600 hover:bg-green-700 text-white flex-1 w-full p-1 rounded flex items-center justify-center'
+                            className='bg-green-600 hover:bg-green-700 active:bg-green-800 text-white flex-1 w-full p-1.5 sm:p-2 flex items-center justify-center text-xs sm:text-sm touch-manipulation transition-colors min-w-[24px]'
                         >
-                            {updateLoading ? <Loading /> : <FaMinus />}
+                            {updateLoading ? <Loading /> : <FaMinus className="text-xs" />}
                         </button>
 
-                        <p className='flex-1 w-full font-semibold px-1 flex items-center justify-center'>{qty}</p>
+                        <div className='flex-1 w-full font-semibold px-1 sm:px-2 flex items-center justify-center text-xs sm:text-sm bg-gray-100 dark:bg-gray-700 dark:text-white min-w-[28px] border-x border-gray-200 dark:border-gray-600'>{qty}</div>
 
                         <button 
                             onClick={increaseQty} 
                             disabled={updateLoading}
                             aria-label="Increase quantity"
-                            className='bg-green-600 hover:bg-green-700 text-white flex-1 w-full p-1 rounded flex items-center justify-center'
+                            className='bg-green-600 hover:bg-green-700 active:bg-green-800 text-white flex-1 w-full p-1.5 sm:p-2 flex items-center justify-center text-xs sm:text-sm touch-manipulation transition-colors min-w-[24px]'
                         >
-                            {updateLoading ? <Loading /> : <FaPlus />}
+                            {updateLoading ? <Loading /> : <FaPlus className="text-xs" />}
                         </button>
                     </div>
                 ) : (
                     <button 
                         onClick={handleAddToCart} 
                         disabled={loading}
-                        className='bg-green-600 hover:bg-green-700 text-white px-2 lg:px-4 py-1 rounded'
+                        className='bg-green-600 hover:bg-green-700 active:bg-green-800 text-white px-2 sm:px-3 lg:px-4 py-1.5 sm:py-2 rounded text-xs sm:text-sm font-medium w-full touch-manipulation transition-colors'
                     >
                         {loading ? <Loading /> : "Add"}
                     </button>

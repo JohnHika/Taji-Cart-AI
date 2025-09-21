@@ -6,6 +6,7 @@ import { Outlet, useLocation } from 'react-router-dom';
 import { ToastContainer, toast } from 'react-toastify';
 import './App.css';
 import SummaryApi from './common/SummaryApi';
+import BottomNavigation from './components/BottomNavigation';
 import CartMobileLink from './components/CartMobile';
 import ChatbotAI from './components/ChatbotAI';
 import Footer from './components/Footer';
@@ -116,7 +117,7 @@ function App() {
   const fetchLoyaltyDetails = async (userId) => {
     try {
       const response = await Axios({
-        url: `/api/loyalty/users/${userId}/loyalty-card`,
+        url: `/api/users/${userId}/loyalty-card`,
         method: 'GET'
       });
       
@@ -210,8 +211,9 @@ function App() {
 
   // Add a specific effect to handle dynamic routes
   useEffect(() => {
-    // Check if the current route is a category route
-    const isCategoryRoute = location.pathname.includes('-');
+    // Treat category routes as /:slug-:id and not other dashed paths (e.g., /staff-pos)
+    const isCategoryRoute = /^\/(category|categories|c)\/[^/]+-[a-f0-9]{8,}$/i.test(location.pathname) ||
+                            /^\/[a-z0-9-]+-[a-f0-9]{8,}$/i.test(location.pathname);
     if (isCategoryRoute) {
       console.log("App detected category route:", location.pathname);
       console.log("App has navigation state:", location.state);
@@ -226,9 +228,8 @@ function App() {
 
   // Add a special handler for direct URL navigation to category routes
   useEffect(() => {
-    // Check if we're on a category page (URL contains a dash which indicates category-id format)
-    const isCategoryRoute = location.pathname.match(/\/[^/]+-[a-f0-9]+/);
-    
+    // Check if we're on a category page strictly matching slug-id pattern
+    const isCategoryRoute = /\/[^/]+-[a-f0-9]{8,}$/.test(location.pathname);
     if (isCategoryRoute) {
       console.log("🚨 Direct navigation to category route detected:", location.pathname);
       
@@ -244,8 +245,7 @@ function App() {
         
         // Try to extract category/subcategory IDs from URL
         const pathParts = location.pathname.split('/').filter(Boolean);
-        if (pathParts.length > 0) {
-          const categoryPart = pathParts[0];
+        const categoryPart = pathParts[pathParts.length - 1] || '';
           const categoryMatch = categoryPart.match(/-([\da-f]+)$/);
           
           if (categoryMatch && categoryMatch[1]) {
@@ -254,7 +254,7 @@ function App() {
             
             // You might want to fetch specific data here or set state
           }
-        }
+        
       }
     }
   }, [location.pathname, categories, location.state]);
@@ -271,6 +271,7 @@ function App() {
           </Suspense>
         </main>
         <Footer/>
+        <BottomNavigation />
         <Toaster/>
         <ToastContainer position="top-right" autoClose={3000} />
         {location.pathname !== '/checkout' && user?._id && <CartMobileLink/>}

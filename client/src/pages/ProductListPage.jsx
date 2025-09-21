@@ -425,6 +425,17 @@ const ProductListPage = () => {
   console.log("ProductListPage rendering");
   logDebugInfo();
 
+  // Derive current category slug and id for building subcategory links
+  const derivedParams = (() => {
+    try {
+      const { categoryId } = parseParams();
+      const categorySlug = valideURLConvert(navigationState.categoryName || params.categoryName || 'category');
+      return { categoryId, categorySlug };
+    } catch {
+      return { categoryId: null, categorySlug: 'category' };
+    }
+  })();
+
   if (error) {
     return (
       <div className="min-h-[80vh] flex items-center justify-center p-5 dark:bg-gray-900">
@@ -458,16 +469,12 @@ const ProductListPage = () => {
                   DisplaySubCatory.map(s => (
                     <Link 
                       key={s._id}
-                      to={`/products/category/${params.categoryName || params.category}/${valideURLConvert(s.name)}-${s._id}`}
+                      to={`/${derivedParams.categorySlug}-${derivedParams.categoryId}/${valideURLConvert(s.name)}-${s._id}`}
                       className="group"
                     >
                       <div className='p-2 rounded flex justify-between items-center bg-gray-100 group-hover:bg-primary-200 dark:bg-gray-700 dark:group-hover:bg-primary-300 dark:text-white text-sm'>
                         <p>{s.name}</p>
-                        <p>
-                          {
-                            params.subcategoryName ? params.subcategoryName.includes(s._id) ? '✓' : '' : ''
-                          }
-                        </p>
+                        <p>{params.subcategoryName && params.subcategoryName.includes(s._id) ? '✓' : ''}</p>
                       </div>
                     </Link>
                   ))

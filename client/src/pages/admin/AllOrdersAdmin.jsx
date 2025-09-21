@@ -1,15 +1,20 @@
 import React, { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
 import {
+  FaBoxes,
+  FaCalculator,
+  FaCashRegister,
   FaChartBar,
   FaCheckCircle,
   FaExclamationTriangle,
   FaFileInvoiceDollar,
   FaInfoCircle,
   FaMapMarkerAlt,
+  FaMoneyBillWave,
   FaMotorcycle,
   FaPaperPlane,
   FaSearch,
+  FaShoppingCart,
   FaSpinner,
   FaStore,
   FaThLarge,
@@ -672,6 +677,41 @@ const OrderDetailModal = ({ order, onClose, onStatusChange }) => {
 
 // Statistics component for the dashboard
 const OrderStatistics = ({ orders }) => {
+  const [posStats, setPosStats] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  // Fetch POS statistics
+  useEffect(() => {
+    const fetchPosStats = async () => {
+      try {
+        const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8080';
+        const token = sessionStorage.getItem('accesstoken') || localStorage.getItem('accesstoken') || localStorage.getItem('token') || sessionStorage.getItem('token');
+        const response = await fetch(`${backendUrl}/api/pos/admin/statistics`, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+          },
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          setPosStats(data.data);
+        } else {
+          console.log('POS statistics not available or unauthorized');
+          setPosStats(null);
+        }
+      } catch (error) {
+        console.log('Error fetching POS statistics:', error);
+        setPosStats(null);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchPosStats();
+  }, []);
+
   // Calculate order statistics
   const total = orders.length;
   const pending = orders.filter(order => order.status === 'pending').length;
@@ -684,6 +724,7 @@ const OrderStatistics = ({ orders }) => {
   ).length;
   const delivered = orders.filter(order => order.status === 'delivered').length;
   const cancelled = orders.filter(order => order.status === 'cancelled').length;
+  const posOrders = orders.filter(order => order.status === 'POS').length;
   
   // Calculate fulfillment type statistics with pending vs completed breakdown
   // Delivery orders (not yet delivered)
@@ -713,12 +754,16 @@ const OrderStatistics = ({ orders }) => {
     (order.status === 'delivered' || order.status === 'picked_up')
   ).length;
   
-  // Calculate total revenue
-  const totalRevenue = orders.reduce((sum, order) => {
+  // Calculate online orders revenue
+  const onlineRevenue = orders.reduce((sum, order) => {
     const amount = Number(order.totalAmt || order.totalPrice || 0);
     return sum + (order.status !== 'cancelled' ? amount : 0);
   }, 0);
-  
+
+  // Calculate combined revenue
+  const posRevenue = posStats?.summary?.totalRevenue || 0;
+  const totalRevenue = onlineRevenue + posRevenue;
+
   const statItems = [
     { label: 'Total Orders', value: total, color: 'bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-white' },
     { label: 'Pending', value: pending, color: 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300' },
@@ -727,18 +772,62 @@ const OrderStatistics = ({ orders }) => {
     { label: 'In Transit', value: inTransit, color: 'bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300' },
     { label: 'Delivered', value: delivered, color: 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300' },
     { label: 'Cancelled', value: cancelled, color: 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300' },
+    { label: 'POS Sales', value: posOrders, color: 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-800 dark:text-indigo-300', icon: 'pos' },
     { label: 'Pending Delivery', value: pendingDeliveryOrders, color: 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300', icon: 'truck' },
     { label: 'Delivered Orders', value: completedDeliveryOrders, color: 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300', icon: 'truck-check' },
     { label: 'Pending Pickup', value: pendingPickupOrders, color: 'bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300', icon: 'store' },
     { label: 'Completed Pickup', value: completedPickupOrders, color: 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300', icon: 'store-check' },
   ];
+
+  // POS Statistics if available
+  const posStatItems = posStats ? [
+    { label: 'POS Sales', value: posStats.summary.totalSales, color: 'bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300', icon: 'pos' },
+    { label: 'Items Sold', value: posStats.summary.totalItemsSold, color: 'bg-cyan-100 dark:bg-cyan-900/30 text-cyan-800 dark:text-cyan-300', icon: 'items' },
+    { label: 'Avg Order Value', value: `KSh ${Math.round(posStats.summary.averageOrderValue || 0).toLocaleString()}`, color: 'bg-teal-100 dark:bg-teal-900/30 text-teal-800 dark:text-teal-300', icon: 'avg' },
+  ] : [];
   
   return (
     <div className="mb-6">
       <h2 className="text-xl font-semibold mb-4 dark:text-white flex items-center">
-        <FaChartBar className="mr-2" /> Order Statistics
+        <FaChartBar className="mr-2" /> Financial Management Dashboard
       </h2>
       
+      {/* Revenue Summary */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+        <div className="bg-emerald-100 dark:bg-emerald-900/30 text-emerald-800 dark:text-emerald-300 rounded-lg p-6 shadow-sm">
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="text-3xl font-bold">KSh {totalRevenue.toLocaleString()}</div>
+              <div className="text-sm">Total Revenue</div>
+            </div>
+            <FaMoneyBillWave className="text-emerald-600 dark:text-emerald-400" size={32} />
+          </div>
+        </div>
+        
+        <div className="bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 rounded-lg p-6 shadow-sm">
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="text-3xl font-bold">KSh {onlineRevenue.toLocaleString()}</div>
+              <div className="text-sm">Online Orders</div>
+            </div>
+            <FaShoppingCart className="text-blue-600 dark:text-blue-400" size={32} />
+          </div>
+        </div>
+        
+        <div className="bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300 rounded-lg p-6 shadow-sm">
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="text-3xl font-bold">
+                {loading ? '...' : `KSh ${posRevenue.toLocaleString()}`}
+              </div>
+              <div className="text-sm">POS Sales</div>
+            </div>
+            <FaCashRegister className="text-purple-600 dark:text-purple-400" size={32} />
+          </div>
+        </div>
+      </div>
+
+      {/* Order Statistics */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
         {statItems.map((item, index) => (
           <div key={index} className={`${item.color} rounded-lg p-4 shadow-sm`}>
@@ -758,14 +847,24 @@ const OrderStatistics = ({ orders }) => {
                   <FaCheckCircle className="text-green-500 absolute -top-2 -right-2" size={12} />
                 </div>
               )}
+              {item.icon === 'pos' && <FaCashRegister className="text-indigo-600 dark:text-indigo-400" size={20} />}
             </div>
             <div className="text-sm">{item.label}</div>
           </div>
         ))}
-        <div className="bg-emerald-100 dark:bg-emerald-900/30 text-emerald-800 dark:text-emerald-300 rounded-lg p-4 shadow-sm">
-          <div className="text-3xl font-bold">KSh {totalRevenue.toLocaleString()}</div>
-          <div className="text-sm">Total Revenue</div>
-        </div>
+        
+        {/* POS Statistics */}
+        {posStatItems.map((item, index) => (
+          <div key={`pos-${index}`} className={`${item.color} rounded-lg p-4 shadow-sm`}>
+            <div className="flex justify-between items-center mb-1">
+              <div className="text-3xl font-bold">{item.value}</div>
+              {item.icon === 'pos' && <FaCashRegister className="text-purple-600 dark:text-purple-400" size={20} />}
+              {item.icon === 'items' && <FaBoxes className="text-cyan-600 dark:text-cyan-400" size={20} />}
+              {item.icon === 'avg' && <FaCalculator className="text-teal-600 dark:text-teal-400" size={20} />}
+            </div>
+            <div className="text-sm">{item.label}</div>
+          </div>
+        ))}
       </div>
     </div>
   );
@@ -791,6 +890,7 @@ const AllOrdersAdmin = () => {
   
   useEffect(() => {
     fetchAllOrders();
+    fetchPOSSales();
   }, []);
   
   const fetchAllOrders = async () => {
@@ -811,6 +911,61 @@ const AllOrdersAdmin = () => {
       toast.error('Failed to load orders');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchPOSSales = async () => {
+    try {
+      const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8080';
+      const token = sessionStorage.getItem('accesstoken') || localStorage.getItem('accesstoken') || localStorage.getItem('token') || sessionStorage.getItem('token');
+      const response = await fetch(`${backendUrl}/api/pos/admin/sales?includeItems=true`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success && data.data) {
+          // Transform POS sales to order-like format
+          const posSales = data.data.map(sale => ({
+            _id: sale._id,
+            orderId: sale.saleNumber || `POS-${sale._id.slice(-8)}`,
+            status: 'POS',
+            paymentStatus: 'paid',
+            totalAmt: sale.total,
+            saleDate: sale.saleDate,
+            createdAt: sale.saleDate,
+            customer: {
+              name: sale.customer?.name || sale.customerName || 'Walk-in Customer',
+              email: sale.customer?.email || 'N/A',
+              phone: sale.customer?.phone || sale.customerPhone || 'N/A'
+            },
+            products: sale.items.map(item => ({
+              product: {
+                title: item.name,
+                image: item.image || '/default-product.png'
+              },
+              quantity: item.quantity,
+              price: item.price,
+              total: item.total
+            })),
+            paymentMethod: sale.paymentMethod,
+            cashier: sale.cashierName,
+            isPOSSale: true,
+            source: 'POS'
+          }));
+
+          // Add POS sales to orders
+          setOrders(prevOrders => [...prevOrders, ...posSales]);
+        }
+      } else {
+        console.log('POS sales not available or unauthorized');
+      }
+    } catch (error) {
+      console.log('Error fetching POS sales:', error);
     }
   };
   
@@ -865,6 +1020,8 @@ const AllOrdersAdmin = () => {
         return 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300';
       case 'cancelled':
         return 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300';
+      case 'POS':
+        return 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-300';
       default:
         return 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300';
     }
@@ -878,10 +1035,14 @@ const AllOrdersAdmin = () => {
         activeTab === 'all' ? true :
         activeTab === 'in-transit' ? 
           ['driver_assigned', 'out_for_delivery', 'nearby'].includes(order.status) :
+        activeTab === 'POS' ? order.status === 'POS' :
         order.status === activeTab;
       
       // Then filter by fulfillment type if not "all"
+      // POS orders don't have fulfillment types, so exclude them from fulfillment filtering
+      // POS orders are always included regardless of delivery/pickup filter
       const fulfillmentMatch = 
+        order.isPOSSale ? true :
         fulfillmentFilter === 'all' ? true :
         fulfillmentFilter === 'pickup' ? 
           (order.fulfillment_type === 'pickup' || order.deliveryMethod === 'store-pickup') :
@@ -890,13 +1051,16 @@ const AllOrdersAdmin = () => {
       // Then filter by search term if provided
       const searchMatch = 
         !searchTerm ? true : (
-        // Check all relevant fields for matches, including userId name and email
+        // Check all relevant fields for matches, including customer info from POS sales
         (order.userId?.name?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
         (order.userId?.email?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+        (order.customer?.name?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+        (order.customer?.email?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
         (order.orderId?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
         (order._id?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
         (order.payment_status?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
-        (order.paymentMethod?.toLowerCase() || '').includes(searchTerm.toLowerCase())
+        (order.paymentMethod?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+        (order.cashier?.toLowerCase() || '').includes(searchTerm.toLowerCase())
       );
       
       return statusMatch && searchMatch && fulfillmentMatch;
@@ -907,7 +1071,7 @@ const AllOrdersAdmin = () => {
   const filteredOrders = getFilteredOrders();
   const indexOfLastOrder = currentPage * ordersPerPage;
   const indexOfFirstOrder = indexOfLastOrder - ordersPerPage;
-  const currentOrders = filteredOrders.slice(indexOfFirstOrder, ordersPerPage);
+  const currentOrders = filteredOrders.slice(indexOfFirstOrder, indexOfLastOrder);
   const totalPages = Math.ceil(filteredOrders.length / ordersPerPage);
   
   const renderStatusBadge = (status) => {
@@ -921,7 +1085,9 @@ const AllOrdersAdmin = () => {
 
   // Helper function to determine fulfillment type (pickup or delivery)
   const getFulfillmentType = (order) => {
-    if (order.fulfillment_type === 'pickup' || order.deliveryMethod === 'store-pickup') {
+    if (order.isPOSSale || order.status === 'POS') {
+      return 'POS';
+    } else if (order.fulfillment_type === 'pickup' || order.deliveryMethod === 'store-pickup') {
       return 'Pickup';
     } else {
       return 'Delivery';
@@ -976,7 +1142,7 @@ const AllOrdersAdmin = () => {
               ${activeTab === 'all' ? 
                 'bg-blue-600 text-white' : 
                 'bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white hover:bg-gray-300 dark:hover:bg-gray-600'}`}
-            onClick={() => setActiveTab('all')}
+            onClick={() => { setActiveTab('all'); setCurrentPage(1); }}
           >
             All Orders
           </button>
@@ -985,7 +1151,7 @@ const AllOrdersAdmin = () => {
               ${activeTab === 'pending' ? 
                 'bg-yellow-500 text-white' : 
                 'bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white hover:bg-gray-300 dark:hover:bg-gray-600'}`}
-            onClick={() => setActiveTab('pending')}
+            onClick={() => { setActiveTab('pending'); setCurrentPage(1); }}
           >
             Pending
           </button>
@@ -994,7 +1160,7 @@ const AllOrdersAdmin = () => {
               ${activeTab === 'processing' ? 
                 'bg-blue-500 text-white' : 
                 'bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white hover:bg-gray-300 dark:hover:bg-gray-600'}`}
-            onClick={() => setActiveTab('processing')}
+            onClick={() => { setActiveTab('processing'); setCurrentPage(1); }}
           >
             Processing
           </button>
@@ -1003,7 +1169,7 @@ const AllOrdersAdmin = () => {
               ${activeTab === 'shipped' ? 
                 'bg-indigo-500 text-white' : 
                 'bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white hover:bg-gray-300 dark:hover:bg-gray-600'}`}
-            onClick={() => setActiveTab('shipped')}
+            onClick={() => { setActiveTab('shipped'); setCurrentPage(1); }}
           >
             Shipped
           </button>
@@ -1012,7 +1178,7 @@ const AllOrdersAdmin = () => {
               ${activeTab === 'in-transit' ? 
                 'bg-purple-500 text-white' : 
                 'bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white hover:bg-gray-300 dark:hover:bg-gray-600'}`}
-            onClick={() => setActiveTab('in-transit')}
+            onClick={() => { setActiveTab('in-transit'); setCurrentPage(1); }}
           >
             In Transit
           </button>
@@ -1021,7 +1187,7 @@ const AllOrdersAdmin = () => {
               ${activeTab === 'delivered' ? 
                 'bg-green-500 text-white' : 
                 'bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white hover:bg-gray-300 dark:hover:bg-gray-600'}`}
-            onClick={() => setActiveTab('delivered')}
+            onClick={() => { setActiveTab('delivered'); setCurrentPage(1); }}
           >
             Delivered
           </button>
@@ -1030,9 +1196,18 @@ const AllOrdersAdmin = () => {
               ${activeTab === 'cancelled' ? 
                 'bg-red-500 text-white' : 
                 'bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white hover:bg-gray-300 dark:hover:bg-gray-600'}`}
-            onClick={() => setActiveTab('cancelled')}
+            onClick={() => { setActiveTab('cancelled'); setCurrentPage(1); }}
           >
             Cancelled
+          </button>
+          <button
+            className={`px-3 py-1.5 text-sm font-medium rounded-full 
+              ${activeTab === 'POS' ? 
+                'bg-indigo-600 text-white' : 
+                'bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white hover:bg-gray-300 dark:hover:bg-gray-600'}`}
+            onClick={() => { setActiveTab('POS'); setCurrentPage(1); }}
+          >
+            POS Sales
           </button>
         </div>
         
@@ -1070,7 +1245,7 @@ const AllOrdersAdmin = () => {
               <select
                 className="border border-gray-300 dark:border-gray-600 rounded-md p-2 pr-8 bg-white dark:bg-gray-700 text-gray-800 dark:text-white"
                 value={fulfillmentFilter}
-                onChange={(e) => setFulfillmentFilter(e.target.value)}
+                onChange={(e) => { setFulfillmentFilter(e.target.value); setCurrentPage(1); }}
               >
                 <option value="all">All Fulfillment</option>
                 <option value="delivery">Delivery Only</option>
@@ -1086,12 +1261,12 @@ const AllOrdersAdmin = () => {
                 placeholder="Search orders..."
                 className="pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
               />
             </div>
             
             <button
-              onClick={fetchAllOrders}
+              onClick={() => { fetchAllOrders(); fetchPOSSales(); }}
               className="ml-2 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md flex items-center"
             >
               <FaSpinner className={`mr-1 ${loading ? 'animate-spin' : 'hidden'}`} />
@@ -1136,12 +1311,14 @@ const AllOrdersAdmin = () => {
                       <td className="px-4 py-3">
                         <div className="flex items-center">
                           <span className={`w-2 h-2 rounded-full mr-2 ${
-                            getFulfillmentType(order) === 'Pickup' ? 'bg-purple-500' : 'bg-blue-500'
+                            getFulfillmentType(order) === 'Pickup' ? 'bg-purple-500' : 
+                            getFulfillmentType(order) === 'POS' ? 'bg-indigo-500' : 'bg-blue-500'
                           }`}></span>
                           <div>
                             <div className="text-sm font-medium dark:text-white">{order.orderId || order._id?.substring(order._id.length - 8)}</div>
                             <div className="text-xs text-gray-500 dark:text-gray-400">
                               {getFulfillmentType(order)}
+                              {order.cashier && <span className="ml-1">• {order.cashier}</span>}
                             </div>
                           </div>
                         </div>
@@ -1150,20 +1327,20 @@ const AllOrdersAdmin = () => {
                       {/* Customer column */}
                       <td className="px-4 py-3">
                         <div className="text-sm font-medium dark:text-white truncate max-w-[150px]">
-                          {order.userId?.name || 'N/A'}
+                          {order.customer?.name || order.userId?.name || 'N/A'}
                         </div>
                         <div className="text-xs text-gray-500 dark:text-gray-400 truncate max-w-[150px]">
-                          {order.userId?.email || 'No email'}
+                          {order.customer?.email || order.userId?.email || 'No email'}
                         </div>
                       </td>
                       
                       {/* Date column - simplified */}
                       <td className="px-4 py-3 whitespace-nowrap">
                         <div className="text-sm dark:text-white">
-                          {format(new Date(order.createdAt), 'dd MMM yyyy')}
+                          {format(new Date(order.saleDate || order.createdAt), 'dd MMM yyyy')}
                         </div>
                         <div className="text-xs text-gray-500 dark:text-gray-400">
-                          {format(new Date(order.createdAt), 'HH:mm')}
+                          {format(new Date(order.saleDate || order.createdAt), 'HH:mm')}
                         </div>
                       </td>
                       
@@ -1224,6 +1401,7 @@ const AllOrdersAdmin = () => {
                   order.status === 'delivered' ? 'bg-green-100 dark:bg-green-900/30' :
                   order.status === 'cancelled' ? 'bg-red-100 dark:bg-red-900/30' :
                   order.status === 'shipped' ? 'bg-indigo-100 dark:bg-indigo-900/30' :
+                  order.status === 'POS' ? 'bg-indigo-100 dark:bg-indigo-900/30' :
                   order.status === 'driver_assigned' || order.status === 'out_for_delivery' || order.status === 'nearby' ? 
                     'bg-purple-100 dark:bg-purple-900/30' :
                   order.status === 'processing' ? 'bg-blue-100 dark:bg-blue-900/30' :
@@ -1232,10 +1410,12 @@ const AllOrdersAdmin = () => {
                   <div className="flex justify-between items-center">
                     <div className="flex items-center">
                       <span className={`w-2 h-2 rounded-full mr-2 ${
-                        getFulfillmentType(order) === 'Pickup' ? 'bg-purple-500' : 'bg-blue-500'
+                        getFulfillmentType(order) === 'Pickup' ? 'bg-purple-500' : 
+                        getFulfillmentType(order) === 'POS' ? 'bg-indigo-500' : 'bg-blue-500'
                       }`}></span>
                       <span className="text-sm font-medium dark:text-white">
                         {getFulfillmentType(order)}
+                        {order.cashier && <span className="ml-1 text-xs">• {order.cashier}</span>}
                       </span>
                     </div>
                     {renderStatusBadge(order.status)}
@@ -1249,7 +1429,7 @@ const AllOrdersAdmin = () => {
                     <div>
                       <div className="text-base font-medium dark:text-white">#{order.orderId || order._id?.substring(order._id.length - 8)}</div>
                       <div className="text-xs text-gray-500 dark:text-gray-400">
-                        {format(new Date(order.createdAt), 'dd MMM yyyy')}
+                        {format(new Date(order.saleDate || order.createdAt), 'dd MMM yyyy')}
                       </div>
                     </div>
                     <div className="text-base font-semibold text-green-600 dark:text-green-400">
@@ -1259,11 +1439,11 @@ const AllOrdersAdmin = () => {
                   
                   {/* Customer Info - With truncation for long names/emails */}
                   <div className="mb-3">
-                    <div className="text-sm font-medium dark:text-white truncate" title={order.userId?.name || 'N/A'}>
-                      {order.userId?.name || 'N/A'}
+                    <div className="text-sm font-medium dark:text-white truncate" title={order.customer?.name || order.userId?.name || 'N/A'}>
+                      {order.customer?.name || order.userId?.name || 'N/A'}
                     </div>
-                    <div className="text-xs text-gray-500 dark:text-gray-400 truncate" title={order.userId?.email || 'No email'}>
-                      {order.userId?.email || 'No email'}
+                    <div className="text-xs text-gray-500 dark:text-gray-400 truncate" title={order.customer?.email || order.userId?.email || 'No email'}>
+                      {order.customer?.email || order.userId?.email || 'No email'}
                     </div>
                   </div>
                   

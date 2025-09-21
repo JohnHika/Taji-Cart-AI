@@ -247,6 +247,35 @@ const SummaryApi = {
     getVerificationHistory: {
         url: `${baseURL}/api/order/staff/verification-history`,
         method: 'GET'
+    },
+    // POS Endpoints
+    createSale: {
+        url: `${baseURL}/api/pos/sale`,
+        method: 'POST'
+    },
+    getSales: {
+        url: `${baseURL}/api/pos/sales`,
+        method: 'GET'
+    },
+    getDailySummary: {
+        url: `${baseURL}/api/pos/summary/daily`,
+        method: 'GET'
+    },
+    getPOSAnalytics: {
+        url: `${baseURL}/api/pos/analytics`,
+        method: 'GET'
+    },
+    voidSale: {
+        url: `${baseURL}/api/pos/sale`,
+        method: 'PUT'
+    },
+    searchUsers: {
+        url: `${baseURL}/api/user/search`,
+        method: 'GET'
+    },
+    posMpesaSTK: {
+        url: `${baseURL}/api/pos/mpesa/stk-push`,
+        method: 'POST'
     }
 };
 

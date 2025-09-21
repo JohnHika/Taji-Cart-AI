@@ -16,8 +16,33 @@ module.exports = {
           200: '#3aae35',
         },
       },
+      screens: {
+        'xs': '475px',
+      },
+      spacing: {
+        'safe-top': 'env(safe-area-inset-top)',
+        'safe-bottom': 'env(safe-area-inset-bottom)',
+        'safe-left': 'env(safe-area-inset-left)',
+        'safe-right': 'env(safe-area-inset-right)',
+      },
     },
   },
-  plugins: [],
+  plugins: [
+    function({ addUtilities }) {
+      const newUtilities = {
+        '.scrollbar-hide': {
+          '-ms-overflow-style': 'none',
+          'scrollbar-width': 'none',
+          '&::-webkit-scrollbar': {
+            display: 'none'
+          }
+        },
+        '.touch-manipulation': {
+          'touch-action': 'manipulation'
+        }
+      }
+      addUtilities(newUtilities)
+    }
+  ],
 }
 

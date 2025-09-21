@@ -216,43 +216,45 @@ const Home = () => {
 
   return (
    <section className='bg-white dark:bg-gray-900 transition-colors'>
-      <div className='container mx-auto'>
-          <div className={`w-full h-full min-h-48 bg-blue-100 dark:bg-blue-900 rounded ${!banner && "animate-pulse my-2" } `}>
+      {/* Hero Banner Section */}
+      <div className='container mx-auto px-2 sm:px-4'>
+          <div className={`w-full h-auto min-h-[200px] sm:min-h-[250px] lg:min-h-[300px] bg-blue-100 dark:bg-blue-900 rounded-lg overflow-hidden ${!banner && "animate-pulse my-2" } `}>
               <img
                 src={banner}
-                className='w-full h-full hidden lg:block'
+                className='w-full h-full object-cover hidden lg:block'
                 alt='banner' 
               />
               <img
                 src={bannerMobile}
-                className='w-full h-full lg:hidden'
+                className='w-full h-full object-cover lg:hidden'
                 alt='banner' 
               />
           </div>
       </div>
       
-      <div className='container mx-auto px-4 my-6'>
-        <div className='flex items-center justify-between mb-4'>
-          <h2 className='text-2xl font-semibold text-gray-800 dark:text-gray-200'>Categories</h2>
+      {/* Categories Section */}
+      <div className='container mx-auto px-2 sm:px-4 my-4 sm:my-6'>
+        <div className='flex items-center justify-between mb-3 sm:mb-4'>
+          <h2 className='text-lg sm:text-xl lg:text-2xl font-semibold text-gray-800 dark:text-gray-200'>Categories</h2>
           
-          <Link to="/categories" className='text-primary-200 hover:underline text-sm font-medium'>
+          <Link to="/categories" className='text-primary-200 hover:underline text-xs sm:text-sm font-medium'>
             View All
           </Link>
         </div>
         
         <div className='relative'>
-          <div className='flex overflow-x-auto pb-4 scrollbar-hide space-x-4 
-              scroll-smooth snap-x snap-mandatory lg:flex-wrap lg:justify-center lg:space-x-0 lg:gap-4'>
+          <div className='flex overflow-x-auto pb-3 sm:pb-4 scrollbar-hide space-x-2 sm:space-x-4 
+              scroll-smooth snap-x snap-mandatory lg:flex-wrap lg:justify-start lg:space-x-0 lg:gap-3 xl:gap-4'>
             {
               loadingCategory ? (
                 new Array(12).fill(null).map((c, index) => (
                   <div 
                     key={index+"loadingcategory"} 
-                    className='bg-white dark:bg-gray-800 rounded-lg p-4 shadow animate-pulse flex flex-col items-center 
-                        flex-shrink-0 snap-start w-[120px] sm:w-[140px] lg:snap-align-none'
+                    className='bg-white dark:bg-gray-800 rounded-lg p-2 sm:p-3 lg:p-4 shadow animate-pulse flex flex-col items-center 
+                        flex-shrink-0 snap-start w-[90px] sm:w-[110px] md:w-[120px] lg:w-[140px] xl:w-[150px] lg:snap-align-none'
                   >
                     <div className='bg-blue-100 dark:bg-blue-900 w-full aspect-square rounded-md'></div>
-                    <div className='bg-blue-100 dark:bg-blue-900 h-4 w-3/4 mt-3 rounded'></div>
+                    <div className='bg-blue-100 dark:bg-blue-900 h-3 sm:h-4 w-3/4 mt-2 sm:mt-3 rounded'></div>
                   </div>
                 ))
               ) : (
@@ -260,13 +262,13 @@ const Home = () => {
                   <div 
                     key={cat._id+"displayCategory"} 
                     className='group bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 
-                        shadow-md hover:shadow-lg rounded-lg p-4 transition-all duration-200 cursor-pointer 
-                        flex-shrink-0 snap-start w-[120px] sm:w-[140px] md:w-[140px] lg:snap-align-none
-                        flex flex-col items-center'
+                        shadow-sm hover:shadow-md rounded-lg p-2 sm:p-3 lg:p-4 transition-all duration-200 cursor-pointer 
+                        flex-shrink-0 snap-start w-[90px] sm:w-[110px] md:w-[120px] lg:w-[140px] xl:w-[150px] lg:snap-align-none
+                        flex flex-col items-center active:scale-95 touch-manipulation'
                     onClick={() => handleRedirectProductListpage(cat._id, cat.name)}
                   >
                     <div className='w-full aspect-square flex items-center justify-center overflow-hidden 
-                          rounded-md bg-gray-50 dark:bg-gray-900 p-2 mb-2'>
+                          rounded-md bg-gray-50 dark:bg-gray-900 p-1 sm:p-2 mb-1 sm:mb-2'>
                       <img 
                         src={cat.image}
                         alt={cat.name}
@@ -277,8 +279,8 @@ const Home = () => {
                         }}
                       />
                     </div>
-                    <span className='text-center text-sm font-medium text-gray-700 dark:text-gray-300 
-                          group-hover:text-primary-200 transition-colors truncate w-full'>
+                    <span className='text-center text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 
+                          group-hover:text-primary-200 transition-colors truncate w-full leading-tight'>
                       {cat.name}
                     </span>
                   </div>
@@ -287,45 +289,50 @@ const Home = () => {
             }
           </div>
           
-          <div className='absolute top-0 right-0 bottom-0 w-12 bg-gradient-to-l from-white dark:from-gray-900 to-transparent 
+          {/* Gradient overlays for mobile scroll indication */}
+          <div className='absolute top-0 right-0 bottom-0 w-6 sm:w-8 lg:w-12 bg-gradient-to-l from-white dark:from-gray-900 to-transparent 
               pointer-events-none lg:hidden'></div>
-          <div className='absolute top-0 left-0 bottom-0 w-12 bg-gradient-to-r from-white dark:from-gray-900 to-transparent 
+          <div className='absolute top-0 left-0 bottom-0 w-6 sm:w-8 lg:w-12 bg-gradient-to-r from-white dark:from-gray-900 to-transparent 
               pointer-events-none lg:hidden'></div>
         </div>
       </div>
 
-      <section className="container mx-auto px-4 py-6">
-        <div className="mb-2">
-          <h2 className="text-xl font-bold flex items-center">
-            <FaUsers className="mr-2 text-primary-200" /> 
+      {/* Community Challenges Section */}
+      <section className="container mx-auto px-2 sm:px-4 py-4 sm:py-6">
+        <div className="mb-3 sm:mb-4">
+          <h2 className="text-lg sm:text-xl font-bold flex items-center">
+            <FaUsers className="mr-2 text-primary-200 text-base sm:text-lg" /> 
             Community Challenges
           </h2>
-          <p className="text-sm text-gray-600 dark:text-gray-400">Join other shoppers to unlock exclusive rewards!</p>
+          <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mt-1">Join other shoppers to unlock exclusive rewards!</p>
         </div>
         
         <UserActiveCampaigns />
         
         {loadingCampaign ? (
-          <div className="h-40 bg-gray-100 dark:bg-gray-800 animate-pulse rounded-lg"></div>
+          <div className="h-32 sm:h-40 bg-gray-100 dark:bg-gray-800 animate-pulse rounded-lg"></div>
         ) : featuredCampaign ? (
           <CommunityCampaignProgress campaign={featuredCampaign} />
         ) : (
-          <div className="p-4 border rounded-lg bg-gray-50 dark:bg-gray-800 dark:border-gray-700 text-center">
-            <p className="text-gray-600 dark:text-gray-400">No active community campaigns at the moment.</p>
-            <p className="text-sm text-gray-500 dark:text-gray-500 mt-1">Check back soon for new challenges!</p>
+          <div className="p-3 sm:p-4 border rounded-lg bg-gray-50 dark:bg-gray-800 dark:border-gray-700 text-center">
+            <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400">No active community campaigns at the moment.</p>
+            <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-500 mt-1">Check back soon for new challenges!</p>
           </div>
         )}
       </section>
 
-      {
-        categoryData?.map((c) => (
-          <CategoryWiseProductDisplay 
-            key={c?._id+"CategorywiseProduct"} 
-            id={c?._id} 
-            name={c?.name}
-          />
-        ))
-      }
+      {/* Category-wise Product Sections */}
+      <div className='px-2 sm:px-4'>
+        {
+          categoryData?.map((c) => (
+            <CategoryWiseProductDisplay 
+              key={c?._id+"CategorywiseProduct"} 
+              id={c?._id} 
+              name={c?.name}
+            />
+          ))
+        }
+      </div>
    </section>
   )
 }

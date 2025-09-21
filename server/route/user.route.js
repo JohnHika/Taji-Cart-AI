@@ -5,12 +5,14 @@ import {
     changePassword,
     deleteUserController,
     forgotPasswordController,
+    getAllCustomers,
     getAllUsersController,
     loginController,
     logoutController,
     refreshToken,
     registerUserController,
     resetpassword,
+    scanLoyaltyCard,
     searchUsers,
     setDeliveryRoleController,
     setStaffRoleController,
@@ -25,6 +27,7 @@ import {
 import { admin } from '../middleware/Admin.js';
 import auth from '../middleware/auth.js';
 import { delivery } from '../middleware/Delivery.js';
+import staff from '../middleware/Staff.js';
 import upload from '../middleware/multer.js';
 
 const userRouter = Router()
@@ -60,5 +63,8 @@ userRouter.get('/delivery/profile', auth, delivery, userDetails)
 
 // Staff routes
 userRouter.post('/staff/verify-pickup', auth, verifyPickupController);
+userRouter.get('/search', auth, staff, searchUsers); // General search route for staff
+userRouter.get('/customers', auth, staff, getAllCustomers); // Get all customers for POS
+userRouter.post('/scan-loyalty-card', auth, staff, scanLoyaltyCard); // Scan loyalty card for POS
 
 export default userRouter

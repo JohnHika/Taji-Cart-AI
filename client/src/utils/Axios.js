@@ -13,8 +13,11 @@ const instance = axios.create({
 });
 
 // Add an interceptor to include the token in every request
-axios.interceptors.request.use(config => {
-  const token = sessionStorage.getItem('token');
+instance.interceptors.request.use(config => {
+  const token = sessionStorage.getItem('accesstoken') || 
+                localStorage.getItem('accesstoken') || 
+                sessionStorage.getItem('token') || 
+                localStorage.getItem('token');
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
@@ -72,7 +75,7 @@ const refreshToken = async () => {
     }
     
     console.log('Attempting to refresh access token...');
-    const response = await axios({
+    const response = await instance({
       ...SummaryApi.refreshToken,
       data: { refreshToken }
     });

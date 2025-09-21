@@ -27,6 +27,7 @@ import subCategoryRouter from './route/subCategory.route.js';
 import trackingRouter from './route/tracking.route.js'; // Add this import
 import uploadRouter from './route/upload.router.js';
 import userRouter from './route/user.route.js';
+import posRouter from './routes/pos.js'; // Add POS routes import
 import { initializeSocket } from './socket/socket.js';
 import { ensureDirectoriesExist } from './utils/setupDirectories.js';
 
@@ -49,7 +50,7 @@ import { searchUsers } from './controllers/user.controller.js';
 dotenv.config();
 
 // Define PORT at the top level so it's available throughout the file
-const PORT = process.env.PORT || 8080;
+const PORT = process.env.PORT || 3001;
 
 const app = express();
 app.use(cors({
@@ -120,6 +121,7 @@ app.use('/api/chat', chatRoutes); // Only use one chat routes
 app.use('/api/loyalty', loyaltyRouter); // Adjusted to consistent path structure
 app.use('/api', campaignRouter); // Register the community campaign routes
 app.use('/api/tracking', trackingRouter); // Add this line with your other routes
+app.use('/api/pos', posRouter); // Add POS routes
 
 // Import delivery routes using ES module syntax
 import deliveryRoutes from './route/delivery.route.js';

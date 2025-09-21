@@ -25,12 +25,12 @@ const auth = async(request, response, next) => {
             try {
                 const user = await UserModel.findById(decode._id);
                 if (user) {
+                    // Attach full user for downstream middleware/controllers expecting req.user
+                    request.user = user;
                     request.userRole = user.role || 'user';
                     request.isAdmin = user.isAdmin === true || user.role === 'admin';
-                    
                     // Ensure both conditions are checked for delivery status
                     request.isDelivery = user.isDelivery === true || user.role === 'delivery';
-                    
                     // Log for debugging
                     console.log(`User ${user._id} auth check: role=${user.role}, isAdmin=${request.isAdmin}, isDelivery=${request.isDelivery}`);
                 }

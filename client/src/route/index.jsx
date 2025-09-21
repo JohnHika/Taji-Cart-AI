@@ -2,6 +2,7 @@ import React, { useEffect } from 'react';
 import { createBrowserRouter } from 'react-router-dom';
 import App from '../App';
 import CategoryFallbackErrorPage from '../components/CategoryFallbackErrorPage';
+import CategorySmartFallback from '../components/CategorySmartFallback';
 import MpesaPaymentStatus from '../components/MpesaPaymentStatus';
 import PrivateRoute from '../components/PrivateRoute';
 import Dashboard from '../layouts/Dashboard';
@@ -34,6 +35,9 @@ import ProductListPage from '../pages/ProductListPage';
 import Register from '../pages/Register';
 import SearchPage from '../pages/SearchPage'; // Add SearchPage import
 import SocialAuthSuccess from '../pages/SocialAuthSuccess'; // Import the SocialAuthSuccess component
+import StaffPOS from '../pages/StaffPOS'; // Import POS component
+import POSDashboard from '../pages/POSDashboard'; // Import POS Dashboard component
+import POSSales from '../pages/POSSales';
 
 // Import new staff components
 import StaffDashboard from '../pages/staff/Dashboard';
@@ -51,6 +55,8 @@ import SubCategoryPage from '../pages/SubCategoryPage';
 import Success from '../pages/Success';
 import UploadProduct from '../pages/UploadProduct';
 import UserProfile from '../pages/UserProfile';
+import UserMenuMobile from '../pages/UserMenuMobile';
+import CartMobile from '../pages/CartMobile';
 
 // Add this debugging code near the top of your router configuration
 console.log("==== ROUTER CONFIGURATION ====");
@@ -152,6 +158,16 @@ const router = createBrowserRouter([
         element: <CategoryPage />
       },
       
+      // Staff POS route - must be before category catch-all routes
+      {
+        path: 'staff-pos',
+        element: (
+          <PrivateRoute requireStaff={true}>
+            <StaffPOS />
+          </PrivateRoute>
+        )
+      },
+      
       // Core category routes - With proper flexibility for IDs
       {
         path: 'product-category/:categoryId',
@@ -167,16 +183,53 @@ const router = createBrowserRouter([
         path: ':categoryName-:categoryId/:subcategoryName-:subcategoryId',
         element: <RouteDebugger component={ProductListPage} routeName="Category with subcategory" />
       },
-      // Generic pattern for any hyphenated path with an ID at the end
+      // Generic pattern for category routes with ObjectId-like IDs at the end (24 chars hex)
+      // This should only match actual category slugs, not app routes like staff-pos
       {
-        path: '*-:id',
+        path: ':slug-:id',
         element: <RouteDebugger component={ProductListPage} routeName="Generic category route" />,
+        loader: ({ params }) => {
+          // Only match if the ID looks like a MongoDB ObjectId (24 character hex string)
+          // and the slug doesn't contain reserved words
+          const reservedWords = ['staff', 'admin', 'dashboard', 'pos', 'api', 'auth', 'login', 'register'];
+          const containsReserved = reservedWords.some(word => params.slug?.toLowerCase().includes(word));
+          
+          if (!/^[a-f0-9]{24}$/i.test(params.id) || containsReserved) {
+            throw new Response("Not Found", { status: 404 });
+          }
+          return null;
+        }
       },
       
       // Other app routes
       {
         path: 'chat',
         element: <ChatInterface />
+      },
+      
+      // Mobile-specific routes
+      {
+        path: 'mobile/cart',
+        element: <CartMobile />
+      },
+      {
+        path: 'mobile/profile',
+        element: (
+          <PrivateRoute>
+            <UserMenuMobile />
+          </PrivateRoute>
+        )
+      },
+      {
+        path: 'wishlist',
+        element: (
+          <PrivateRoute>
+            <div className="p-4 text-center">
+              <h1 className="text-xl font-bold">Wishlist</h1>
+              <p className="text-gray-600 mt-2">Your wishlist is coming soon!</p>
+            </div>
+          </PrivateRoute>
+        )
       },
       {
         path: 'product',
@@ -420,6 +473,30 @@ const router = createBrowserRouter([
             )
           },
           {
+            path: 'staff-pos',
+            element: (
+              <PrivateRoute requireStaff={true}>
+                <StaffPOS />
+              </PrivateRoute>
+            )
+          },
+          {
+            path: 'pos-dashboard',
+            element: (
+              <PrivateRoute requireStaff={true}>
+                <POSDashboard />
+              </PrivateRoute>
+            )
+          },
+          {
+            path: 'pos-sales',
+            element: (
+              <PrivateRoute requireStaff={true}>
+                <POSSales />
+              </PrivateRoute>
+            )
+          },
+          {
             path: 'staff/delivery',
             element: (
               <PrivateRoute requireStaff={true}>
@@ -488,7 +565,7 @@ const router = createBrowserRouter([
       // Improved catch-all route
       {
         path: '*',
-        element: <CategoryFallbackErrorPage />
+        element: <CategorySmartFallback />
       }
     ]
   }

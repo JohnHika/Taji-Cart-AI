@@ -2,7 +2,7 @@ import React from 'react'
 import { FaWhatsapp } from "react-icons/fa";
 import { FaFacebook } from "react-icons/fa";
 import { FaInstagram } from "react-icons/fa";
-import { FaLinkedin } from "react-icons/fa";
+import { FaTiktok } from "react-icons/fa6";
 
 const Footer = () => {
   return (
@@ -11,14 +11,14 @@ const Footer = () => {
             <p>© All Rights Reserved 2025.</p>
 
             <div className='flex items-center gap-4 justify-center text-2xl'>
-                <a href='' className='hover:text-primary-100'>
+                <a href='' className='hover:text-primary-100' aria-label='WhatsApp'>
                     <FaWhatsapp />
                 </a>
-                <a href='' className='hover:text-primary-100'>
+                <a href='https://www.instagram.com/nawiri_hairke/' target='_blank' rel='noopener noreferrer' className='hover:text-primary-100' aria-label='Instagram'>
                     <FaInstagram/>
                 </a>
-                <a href='' className='hover:text-primary-100'>
-                    <FaLinkedin/>
+                <a href='https://www.tiktok.com/discover/nawiri-hair-kenya?is_from_webapp=1&sender_device=pc' target='_blank' rel='noopener noreferrer' className='hover:text-primary-100' aria-label='TikTok'>
+                    <FaTiktok/>
                 </a>
             </div>
         </div>

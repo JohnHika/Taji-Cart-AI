@@ -1,7 +1,7 @@
 import axios from 'axios';
 import React, { useCallback, useEffect, useState } from 'react';
 import { BiTargetLock } from 'react-icons/bi';
-import { FaBoxOpen, FaCalendarCheck, FaCheck, FaClock, FaMapMarkerAlt, FaRedo, FaTruck, FaUserCircle } from 'react-icons/fa';
+import { FaBoxOpen, FaCalculator, FaCalendarCheck, FaCheck, FaClock, FaMapMarkerAlt, FaRedo, FaShoppingCart, FaTruck, FaUserCircle } from 'react-icons/fa';
 import { HiOutlineStatusOnline } from 'react-icons/hi';
 import { useSelector } from 'react-redux';
 import { Link } from 'react-router-dom';
@@ -280,6 +280,37 @@ const Dashboard = () => {
                   </div>
                   <div className="text-xs text-green-700 dark:text-green-300 mt-4">
                     <span className="font-medium">Performance:</span> {dashboardData.deliveryPerformance.avgDeliveryTime} min avg delivery time
+                  </div>
+                </Link>
+
+                {/* POS System Cards */}
+                <Link to="/dashboard/staff-pos" className="bg-indigo-50 dark:bg-indigo-900/20 rounded-lg shadow hover:shadow-lg transition-shadow border border-indigo-100 dark:border-indigo-800 p-5">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <p className="text-sm font-medium text-indigo-800 dark:text-indigo-300">Point of Sale</p>
+                      <p className="text-lg font-bold text-indigo-900 dark:text-indigo-100">Open POS</p>
+                    </div>
+                    <div className="bg-indigo-100 dark:bg-indigo-800 p-3 rounded-full">
+                      <FaShoppingCart className="text-indigo-500 dark:text-indigo-300 w-6 h-6" />
+                    </div>
+                  </div>
+                  <div className="text-xs text-indigo-700 dark:text-indigo-300 mt-4">
+                    <span className="font-medium">Action:</span> Process in-store sales
+                  </div>
+                </Link>
+
+                <Link to="/dashboard/pos-dashboard" className="bg-orange-50 dark:bg-orange-900/20 rounded-lg shadow hover:shadow-lg transition-shadow border border-orange-100 dark:border-orange-800 p-5">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <p className="text-sm font-medium text-orange-800 dark:text-orange-300">Sales Analytics</p>
+                      <p className="text-lg font-bold text-orange-900 dark:text-orange-100">Dashboard</p>
+                    </div>
+                    <div className="bg-orange-100 dark:bg-orange-800 p-3 rounded-full">
+                      <FaCalculator className="text-orange-500 dark:text-orange-300 w-6 h-6" />
+                    </div>
+                  </div>
+                  <div className="text-xs text-orange-700 dark:text-orange-300 mt-4">
+                    <span className="font-medium">View:</span> Sales reports & analytics
                   </div>
                 </Link>
               </>

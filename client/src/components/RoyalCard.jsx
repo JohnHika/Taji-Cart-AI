@@ -75,7 +75,7 @@ const RoyalCard = () => {
         console.log("API Success=false, creating fallback card data");
         // Create placeholder data when API fails
         setCardData({
-          cardNumber: `TAJI${user._id ? user._id.substring(0, 8) : Date.now()}`,
+          cardNumber: `NAWIRI${user._id ? user._id.substring(0, 8) : Date.now()}`,
           tier: isAdmin ? 'Platinum' : 'Basic',
           points: isAdmin ? 5000 : 0,
           createdAt: new Date(),
@@ -88,7 +88,7 @@ const RoyalCard = () => {
       
       // Fallback data
       setCardData({
-        cardNumber: `TAJI${user._id ? user._id.substring(0, 8) : Date.now()}`,
+        cardNumber: `NAWIRI${user._id ? user._id.substring(0, 8) : Date.now()}`,
         tier: isAdmin ? 'Platinum' : 'Basic',
         points: isAdmin ? 5000 : 0,
         createdAt: new Date(),
@@ -448,23 +448,24 @@ const RoyalCard = () => {
   
   // Render the loyalty card with updated early access indicator
   return (
-    <div className="relative flex flex-col items-center w-full max-w-md mx-auto">
+    <div className="relative flex flex-col items-center w-full max-w-sm mx-auto px-2 sm:max-w-md sm:px-0">
       {/* Card container with the tier-specific background */}
       <div 
         className={`w-full rounded-xl overflow-hidden shadow-2xl relative ${tierBackground}`}
+        style={{ minHeight: 'auto' }}
       >
         {/* Add early access status indicator */}
         <EarlyAccessIndicator />
         
         {/* Rest of your card component */}
-        <div className="relative p-4 pt-8"> {/* Added pt-8 to give space for the indicator */}
+        <div className="relative p-3 pt-6 sm:p-4 sm:pt-8"> {/* Reduced padding on mobile */}
           <div className="absolute top-2 right-2 flex space-x-1 z-10">
             <button 
               onClick={() => setViewMode('barcode')}
               className={`p-1 rounded-full ${viewMode === 'barcode' ? 'bg-white text-gray-700' : 'bg-black/20 text-white'}`}
               title="Show Barcode"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 sm:h-5 sm:w-5" viewBox="0 0 20 20" fill="currentColor">
                 <path fillRule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clipRule="evenodd" />
               </svg>
             </button>
@@ -473,32 +474,32 @@ const RoyalCard = () => {
               className={`p-1 rounded-full ${viewMode === 'qrcode' ? 'bg-white text-gray-700' : 'bg-black/20 text-white'}`}
               title="Show QR Code"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 sm:h-5 sm:w-5" viewBox="0 0 20 20" fill="currentColor">
                 <path fillRule="evenodd" d="M3 4a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1H4a1 1 0 01-1-1V4zm1 2v1h2V6H4zm5-2a1 1 0 00-1 1v4a1 1 0 001 1h4a1 1 0 001-1V4a1 1 0 00-1-1h-4zm1 2v1h2V6h-2zm-7 5a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1H4a1 1 0 01-1-1v-4zm1 2v1h2v-1H4zm5-2a1 1 0 00-1 1v4a1 1 0 001 1h4a1 1 0 001-1v-4a1 1 0 00-1-1h-4zm1 2v1h2v-1h-2z" />
               </svg>
             </button>
           </div>
           
-          <div className="flex items-center mb-4">
-            <FaCrown className="text-yellow-300 mr-2 text-xl" />
-            <h2 className="text-white text-lg font-semibold">Taji Royal Card</h2>
+          <div className="flex items-center mb-3 sm:mb-4">
+            <FaCrown className="text-yellow-300 mr-2 text-lg sm:text-xl" />
+            <h2 className="text-white text-base sm:text-lg font-semibold">NAWIRI Royal Card</h2>
           </div>
           
-          <div className="text-white text-sm mb-1">Member Name:</div>
-          <div className="text-white font-medium mb-4">{user.name || 'Valued Customer'}</div>
+          <div className="text-white text-xs sm:text-sm mb-1">Member Name:</div>
+          <div className="text-white font-medium mb-3 sm:mb-4 text-sm sm:text-base">{user.name || 'Valued Customer'}</div>
           
-          <div className="text-white text-sm mb-1">Membership Level:</div>
-          <div className="flex items-center mb-4">
+          <div className="text-white text-xs sm:text-sm mb-1">Membership Level:</div>
+          <div className="flex items-center mb-3 sm:mb-4">
             <span className={`${
               cardData.tier === 'Basic' ? 'bg-gray-300 text-gray-800' :
               cardData.tier === 'Bronze' ? 'bg-amber-300 text-amber-900' :
               cardData.tier === 'Silver' ? 'bg-gray-300 text-gray-800' :
               cardData.tier === 'Gold' ? 'bg-yellow-300 text-amber-900' :
               'bg-blue-200 text-blue-800'
-            } px-2 py-0.5 rounded-full font-medium`}>
+            } px-2 py-0.5 rounded-full font-medium text-xs sm:text-sm`}>
               {cardData.tier}
             </span>
-            <span className="ml-2 text-white text-sm">
+            <span className="ml-2 text-white text-xs sm:text-sm">
               {formatNumber(cardData.points)} points
             </span>
           </div>
@@ -508,13 +509,13 @@ const RoyalCard = () => {
           </div>
         </div>
         
-        <div className="bg-white p-4 flex justify-center items-center">
+        <div className="bg-white p-2 sm:p-4 flex justify-center items-center">
           {viewMode === 'barcode' ? (
-            <div className="overflow-hidden">
+            <div className="overflow-hidden max-w-full">
               <Barcode 
                 value={cardData.cardNumber} 
-                width={1.5}
-                height={50}
+                width={1.2}
+                height={40}
                 format="CODE128"
                 displayValue={true}
                 background="#FFFFFF"
@@ -526,35 +527,35 @@ const RoyalCard = () => {
                   '#2563EB'
                 }
                 margin={0}
-                fontSize={12}
+                fontSize={10}
               />
             </div>
           ) : (
             <QRCode 
               value={`${hostname}/verify/${cardData.cardNumber}`}
-              size={120}
+              size={100}
               level="H"
             />
           )}
         </div>
         
-        <div className={`${secondaryBackground} p-3`}>
-          <div className="grid grid-cols-3 gap-2 text-center text-xs">
-            <div className={`${buttonBackground} p-2 rounded`}>
-              <FaPercent className="mx-auto text-white mb-1" />
-              <span className="text-white">{discountPercentage} Off</span>
+        <div className={`${secondaryBackground} p-2 sm:p-3`}>
+          <div className="grid grid-cols-3 gap-1 sm:gap-2 text-center text-xs">
+            <div className={`${buttonBackground} p-1.5 sm:p-2 rounded`}>
+              <FaPercent className="mx-auto text-white mb-1 text-xs" />
+              <span className="text-white text-xs">{discountPercentage} Off</span>
             </div>
-            <div className={`${buttonBackground} p-2 rounded`}>
-              <FaGift className="mx-auto text-white mb-1" />
-              <span className="text-white">
+            <div className={`${buttonBackground} p-1.5 sm:p-2 rounded`}>
+              <FaGift className="mx-auto text-white mb-1 text-xs" />
+              <span className="text-white text-xs">
                 {cardData.tier === 'Basic' ? 'Join Now' : 'Free Gifts'}
               </span>
             </div>
-            <div className={`${buttonBackground} p-2 rounded`}>
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mx-auto text-white mb-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <div className={`${buttonBackground} p-1.5 sm:p-2 rounded`}>
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 sm:h-4 sm:w-4 mx-auto text-white mb-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
-              <span className="text-white">
+              <span className="text-white text-xs">
                 {cardData.tier === 'Basic' ? 'Earn Points' : 'Early Access'}
               </span>
             </div>
@@ -564,8 +565,8 @@ const RoyalCard = () => {
       
       {/* Next tier information for non-Platinum users */}
       {cardData.tier !== 'Platinum' && (
-        <div className="mt-4 p-3 bg-white dark:bg-gray-800 rounded-lg shadow-md text-sm">
-          <h3 className="font-medium text-gray-700 dark:text-gray-300">Next Tier: {getNextTierName()}</h3>
+        <div className="mt-3 sm:mt-4 p-3 bg-white dark:bg-gray-800 rounded-lg shadow-md text-sm w-full">
+          <h3 className="font-medium text-gray-700 dark:text-gray-300 text-sm">Next Tier: {getNextTierName()}</h3>
           
           {/* Enhanced progress visualization */}
           <div className="mt-3 mb-1 flex items-center justify-between">
@@ -668,8 +669,8 @@ const RoyalCard = () => {
       )}
 
       {/* Tier Rankings Table */}
-      <div className="mt-4 bg-white dark:bg-gray-800 rounded-lg shadow-md p-3 text-sm">
-        <h3 className="font-medium text-gray-700 dark:text-white mb-2">Royal Card Ranks</h3>
+      <div className="mt-3 sm:mt-4 bg-white dark:bg-gray-800 rounded-lg shadow-md p-2 sm:p-3 text-sm w-full">
+        <h3 className="font-medium text-gray-700 dark:text-white mb-2 text-sm">Royal Card Ranks</h3>
         
         {/* Early Access Notice - Show when enabled */}
         {thresholdsLoaded && isEarlyAccessEnabled() && (
@@ -683,16 +684,16 @@ const RoyalCard = () => {
           </div>
         )}
         
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto -mx-2 sm:mx-0">
           <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
             <thead>
               <tr className="bg-gray-50 dark:bg-gray-700">
-                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Rank</th>
-                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Discount</th>
-                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Required Points</th>
+                <th className="px-2 sm:px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Rank</th>
+                <th className="px-2 sm:px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Discount</th>
+                <th className="px-2 sm:px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Required Points</th>
                 {/* Only show early access column if it's enabled or user is admin */}
                 {thresholdsLoaded && (isEarlyAccessEnabled() || isAdmin) && (
-                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                  <th className="px-2 sm:px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                     {isEarlyAccessEnabled() ? "Early Access" : "Previous Early Access"}
                   </th>
                 )}
@@ -700,36 +701,36 @@ const RoyalCard = () => {
             </thead>
             <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
               <tr className={cardData.tier === 'Basic' ? 'bg-gray-50 dark:bg-gray-700' : ''}>
-                <td className="px-3 py-2 whitespace-nowrap">
+                <td className="px-2 sm:px-3 py-2 whitespace-nowrap">
                   <div className="flex items-center">
-                    <div className="h-4 w-4 rounded-full bg-gray-400 mr-2"></div>
-                    <span className="font-medium dark:text-white">Basic</span>
+                    <div className="h-3 w-3 sm:h-4 sm:w-4 rounded-full bg-gray-400 mr-1 sm:mr-2"></div>
+                    <span className="font-medium dark:text-white text-xs sm:text-sm">Basic</span>
                   </div>
                 </td>
-                <td className="px-3 py-2 whitespace-nowrap dark:text-gray-300">0%</td>
-                <td className="px-3 py-2 whitespace-nowrap dark:text-gray-300">0</td>
+                <td className="px-2 sm:px-3 py-2 whitespace-nowrap dark:text-gray-300 text-xs sm:text-sm">0%</td>
+                <td className="px-2 sm:px-3 py-2 whitespace-nowrap dark:text-gray-300 text-xs sm:text-sm">0</td>
                 {thresholdsLoaded && (isEarlyAccessEnabled() || isAdmin) && (
-                  <td className="px-3 py-2 whitespace-nowrap dark:text-gray-300">-</td>
+                  <td className="px-2 sm:px-3 py-2 whitespace-nowrap dark:text-gray-300 text-xs sm:text-sm">-</td>
                 )}
               </tr>
               <tr className={cardData.tier === 'Bronze' ? 'bg-gray-50 dark:bg-gray-700' : ''}>
-                <td className="px-3 py-2 whitespace-nowrap">
+                <td className="px-2 sm:px-3 py-2 whitespace-nowrap">
                   <div className="flex items-center">
-                    <div className="h-4 w-4 rounded-full bg-amber-700 mr-2"></div>
-                    <span className="font-medium dark:text-white">Bronze</span>
+                    <div className="h-3 w-3 sm:h-4 sm:w-4 rounded-full bg-amber-700 mr-1 sm:mr-2"></div>
+                    <span className="font-medium dark:text-white text-xs sm:text-sm">Bronze</span>
                   </div>
                 </td>
-                <td className="px-3 py-2 whitespace-nowrap dark:text-gray-300">2%</td>
-                <td className="px-3 py-2 whitespace-nowrap dark:text-gray-300">
+                <td className="px-2 sm:px-3 py-2 whitespace-nowrap dark:text-gray-300 text-xs sm:text-sm">2%</td>
+                <td className="px-2 sm:px-3 py-2 whitespace-nowrap dark:text-gray-300 text-xs sm:text-sm">
                   {formatNumber(getBronzeThreshold())}
                 </td>
                 {thresholdsLoaded && (isEarlyAccessEnabled() || isAdmin) && (
-                  <td className="px-3 py-2 whitespace-nowrap dark:text-gray-300">
+                  <td className="px-2 sm:px-3 py-2 whitespace-nowrap dark:text-gray-300 text-xs sm:text-sm">
                     {formatNumber(getEarlyBronzeThreshold())} pts
                     {isEarlyAccessEnabled() && 
                      cardData.points >= getEarlyBronzeThreshold() && 
                      cardData.points < getBronzeThreshold() && (
-                      <span className="ml-2 text-xs bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 px-2 py-0.5 rounded-full">
+                      <span className="ml-1 sm:ml-2 text-xs bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 px-1 sm:px-2 py-0.5 rounded-full">
                         Active
                       </span>
                     )}
@@ -737,23 +738,23 @@ const RoyalCard = () => {
                 )}
               </tr>
               <tr className={cardData.tier === 'Silver' ? 'bg-gray-50 dark:bg-gray-700' : ''}>
-                <td className="px-3 py-2 whitespace-nowrap">
+                <td className="px-2 sm:px-3 py-2 whitespace-nowrap">
                   <div className="flex items-center">
-                    <div className="h-4 w-4 rounded-full bg-gray-300 mr-2"></div>
-                    <span className="font-medium dark:text-white">Silver</span>
+                    <div className="h-3 w-3 sm:h-4 sm:w-4 rounded-full bg-gray-300 mr-1 sm:mr-2"></div>
+                    <span className="font-medium dark:text-white text-xs sm:text-sm">Silver</span>
                   </div>
                 </td>
-                <td className="px-3 py-2 whitespace-nowrap dark:text-gray-300">3%</td>
-                <td className="px-3 py-2 whitespace-nowrap dark:text-gray-300">
+                <td className="px-2 sm:px-3 py-2 whitespace-nowrap dark:text-gray-300 text-xs sm:text-sm">3%</td>
+                <td className="px-2 sm:px-3 py-2 whitespace-nowrap dark:text-gray-300 text-xs sm:text-sm">
                   {formatNumber(getSilverThreshold())}
                 </td>
                 {thresholdsLoaded && (isEarlyAccessEnabled() || isAdmin) && (
-                  <td className="px-3 py-2 whitespace-nowrap dark:text-gray-300">
+                  <td className="px-2 sm:px-3 py-2 whitespace-nowrap dark:text-gray-300 text-xs sm:text-sm">
                     {formatNumber(getEarlySilverThreshold())} pts
                     {isEarlyAccessEnabled() && 
                      cardData.points >= getEarlySilverThreshold() && 
                      cardData.points < getSilverThreshold() && (
-                      <span className="ml-2 text-xs bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 px-2 py-0.5 rounded-full">
+                      <span className="ml-1 sm:ml-2 text-xs bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 px-1 sm:px-2 py-0.5 rounded-full">
                         Active
                       </span>
                     )}
@@ -761,23 +762,23 @@ const RoyalCard = () => {
                 )}
               </tr>
               <tr className={cardData.tier === 'Gold' ? 'bg-gray-50 dark:bg-gray-700' : ''}>
-                <td className="px-3 py-2 whitespace-nowrap">
+                <td className="px-2 sm:px-3 py-2 whitespace-nowrap">
                   <div className="flex items-center">
-                    <div className="h-4 w-4 rounded-full bg-yellow-500 mr-2"></div>
-                    <span className="font-medium dark:text-white">Gold</span>
+                    <div className="h-3 w-3 sm:h-4 sm:w-4 rounded-full bg-yellow-500 mr-1 sm:mr-2"></div>
+                    <span className="font-medium dark:text-white text-xs sm:text-sm">Gold</span>
                   </div>
                 </td>
-                <td className="px-3 py-2 whitespace-nowrap dark:text-gray-300">5%</td>
-                <td className="px-3 py-2 whitespace-nowrap dark:text-gray-300">
+                <td className="px-2 sm:px-3 py-2 whitespace-nowrap dark:text-gray-300 text-xs sm:text-sm">5%</td>
+                <td className="px-2 sm:px-3 py-2 whitespace-nowrap dark:text-gray-300 text-xs sm:text-sm">
                   {formatNumber(getGoldThreshold())}
                 </td>
                 {thresholdsLoaded && (isEarlyAccessEnabled() || isAdmin) && (
-                  <td className="px-3 py-2 whitespace-nowrap dark:text-gray-300">
+                  <td className="px-2 sm:px-3 py-2 whitespace-nowrap dark:text-gray-300 text-xs sm:text-sm">
                     {formatNumber(getEarlyGoldThreshold())} pts
                     {isEarlyAccessEnabled() && 
                      cardData.points >= getEarlyGoldThreshold() && 
                      cardData.points < getGoldThreshold() && (
-                      <span className="ml-2 text-xs bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 px-2 py-0.5 rounded-full">
+                      <span className="ml-1 sm:ml-2 text-xs bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 px-1 sm:px-2 py-0.5 rounded-full">
                         Active
                       </span>
                     )}
@@ -785,18 +786,18 @@ const RoyalCard = () => {
                 )}
               </tr>
               <tr className={cardData.tier === 'Platinum' ? 'bg-gray-50 dark:bg-gray-700 font-bold' : 'font-semibold'}>
-                <td className="px-3 py-2 whitespace-nowrap">
+                <td className="px-2 sm:px-3 py-2 whitespace-nowrap">
                   <div className="flex items-center">
-                    <div className="h-4 w-4 rounded-full bg-blue-500 mr-2"></div>
-                    <span className="dark:text-white">Platinum</span>
+                    <div className="h-3 w-3 sm:h-4 sm:w-4 rounded-full bg-blue-500 mr-1 sm:mr-2"></div>
+                    <span className="dark:text-white text-xs sm:text-sm">Platinum</span>
                     {cardData.tier === 'Platinum' && 
                      cardData.points < getPlatinumThreshold() && 
                      !isAdmin && (
-                      <span className="ml-2 text-xs px-2 py-0.5 bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-300 rounded-full">Special</span>
+                      <span className="ml-1 sm:ml-2 text-xs px-1 sm:px-2 py-0.5 bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-300 rounded-full">Special</span>
                     )}
                   </div>
                 </td>
-                <td className="px-3 py-2 whitespace-nowrap dark:text-gray-300">7%</td>
+                <td className="px-2 sm:px-3 py-2 whitespace-nowrap dark:text-gray-300 text-xs sm:text-sm">7%</td>
                 <td className="px-3 py-2 whitespace-nowrap dark:text-gray-300">
                   <span className="text-blue-600 dark:text-blue-400">
                     {formatNumber(getPlatinumThreshold())}
@@ -971,25 +972,25 @@ const RoyalCard = () => {
       )}
 
       {/* Mobile wallet integration buttons */}
-      <div className="mt-4 flex justify-center space-x-2">
+      <div className="mt-3 sm:mt-4 flex justify-center space-x-2 w-full">
         <button
           onClick={() => window.alert('Feature coming soon!')}
-          className="flex items-center gap-1 bg-black text-white px-3 py-1.5 rounded-lg text-xs"
+          className="flex items-center gap-1 bg-black text-white px-2 sm:px-3 py-1.5 rounded-lg text-xs flex-1 max-w-[120px] justify-center"
         >
-          <svg viewBox="0 0 24 24" className="h-4 w-4" fill="currentColor">
+          <svg viewBox="0 0 24 24" className="h-3 w-3 sm:h-4 sm:w-4" fill="currentColor">
             <path d="M17.6 13.2c0-2.1 1.7-3 1.8-3.1-1-1.4-2.5-1.6-3-1.6-1.3-.1-2.5.7-3.1.7-.7 0-1.7-.7-2.8-.7-1.4 0-2.8.8-3.5 2.1-1.5 2.6-.4 6.4 1.1 8.5.7 1 1.5 2.2 2.6 2.1 1-.1 1.4-.7 2.7-.7 1.2 0 1.6.7 2.7.7 1.1 0 1.8-1 2.5-2 .8-1.1 1.1-2.2 1.1-2.3-.1 0-2.1-.8-2.1-3"></path>
             <path d="M16.1 6.5c.6-.7 1-1.8.9-2.8-.8 0-1.8.6-2.4 1.3-.5.6-.9 1.7-.8 2.7.9.1 1.8-.5 2.3-1.2z"></path>
           </svg>
-          Add to Wallet
+          <span className="hidden sm:inline">Add to</span> Wallet
         </button>
         <button
           onClick={() => window.print()}
-          className="flex items-center gap-1 bg-gray-200 text-gray-800 px-3 py-1.5 rounded-lg text-xs"
+          className="flex items-center gap-1 bg-gray-200 text-gray-800 px-2 sm:px-3 py-1.5 rounded-lg text-xs flex-1 max-w-[120px] justify-center"
         >
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 sm:h-4 sm:w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
           </svg>
-          Print Card
+          Print <span className="hidden sm:inline">Card</span>
         </button>
       </div>
 

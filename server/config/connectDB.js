@@ -73,9 +73,14 @@ async function connectDB() {
         const connectionOptions = {
             useNewUrlParser: true,
             useUnifiedTopology: true,
-            serverSelectionTimeoutMS: 5000,
+            serverSelectionTimeoutMS: 3000, // Reduced for faster connection
             socketTimeoutMS: 45000,
-            family: 4
+            family: 4,
+            maxPoolSize: 10,
+            minPoolSize: 2,
+            maxIdleTimeMS: 30000,
+            connectTimeoutMS: 5000, // Reduced for faster connection
+            bufferCommands: false
         };
 
         try {
@@ -122,13 +127,16 @@ async function connectDB() {
     }
 
     const connectionOptions = {
-        serverSelectionTimeoutMS: 10000,
+        serverSelectionTimeoutMS: 5000, // Reduced from 10000
         socketTimeoutMS: 45000,
         family: 4,
         retryWrites: true,
         maxIdleTimeMS: 30000,
-        connectTimeoutMS: 30000,
+        connectTimeoutMS: 10000, // Reduced from 30000
         heartbeatFrequencyMS: 10000,
+        maxPoolSize: 10,
+        minPoolSize: 2,
+        bufferCommands: false
     };try {
         connectionAttempts++;
         console.log(`MongoDB connection attempt ${connectionAttempts}/${MAX_CONNECTION_ATTEMPTS}`);

@@ -22,7 +22,7 @@ const RoyalCardMobilePass = ({ cardData }) => {
         responseType: 'blob'
       });
       
-      saveAs(new Blob([response.data]), 'TajiRoyalCard.pkpass');
+      saveAs(new Blob([response.data]), 'NAWIRIRoyalCard.pkpass');
     } catch (error) {
       console.error('Error generating Apple Wallet pass:', error);
       alert('Failed to generate Apple Wallet pass. Please try again later.');

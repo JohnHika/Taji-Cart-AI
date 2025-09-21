@@ -55,7 +55,11 @@ const Header = () => {
             return;
         }
 
-        navigate("/user");
+        navigate("/mobile/profile");
+    };
+
+    const handleMobileCart = () => {
+        navigate("/mobile/cart");
     };
 
     return (
@@ -83,10 +87,20 @@ const Header = () => {
 
                         {/* Login, theme toggle, and my cart */}
                         <div className='flex items-center gap-2 md:gap-4'>
-                            {/* User icons display in only mobile version */}
-                            <button className='text-neutral-600 dark:text-gray-200 lg:hidden' onClick={handleMobileUser}>
-                                <FaRegCircleUser size={26} />
-                            </button>
+                            {/* Mobile user and cart icons - only on mobile */}
+                            <div className='flex items-center gap-3 lg:hidden'>
+                                <button className='text-neutral-600 dark:text-gray-200 relative' onClick={handleMobileCart}>
+                                    <BsCart4 size={26} />
+                                    {totalQty > 0 && (
+                                        <span className='absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs'>
+                                            {totalQty}
+                                        </span>
+                                    )}
+                                </button>
+                                <button className='text-neutral-600 dark:text-gray-200' onClick={handleMobileUser}>
+                                    <FaRegCircleUser size={26} />
+                                </button>
+                            </div>
 
                             {/* Theme toggle button - visible on all screens */}
                             <ThemeToggle className="mx-2" />
