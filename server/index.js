@@ -23,6 +23,8 @@ import mpesaRouter from './route/mpesa.route.js';
 import orderRouter from './route/order.route.js';
 import productRouter from './route/product.route.js';
 import stripeRouter from './route/stripe.route.js';
+import pesapalRouter from './route/pesapal.route.js';
+import { initiatePayment as pesapalInitiate } from './controllers/pesapal.controller.js';
 import subCategoryRouter from './route/subCategory.route.js';
 import trackingRouter from './route/tracking.route.js'; // Add this import
 import uploadRouter from './route/upload.router.js';
@@ -129,14 +131,21 @@ app.use((req, res, next) => {
 
 app.use('/api/user', userRouter);
 app.use('/api/auth', authRouter);
+// Alias to support legacy or direct calls without the /api prefix
+app.use('/auth', authRouter);
 app.use("/api/category", categoryRouter);
 app.use("/api/file", uploadRouter);
 app.use("/api/subcategory", subCategoryRouter);
 app.use("/api/product", productRouter);
+// Also mount at plural path to support existing client calls
+app.use('/api/products', productRouter);
 app.use("/api/cart", cartRouter);
 app.use("/api/address", addressRouter);
 app.use('/api/order', orderRouter);
 app.use('/api/stripe', stripeRouter);
+app.use('/api/pesapal', pesapalRouter);
+// Alias for client: direct init endpoint (auth-protected)
+app.post('/api/init-pesapal', auth, pesapalInitiate);
 app.use('/api/mpesa', mpesaRouter);
 app.use('/api/upload', uploadRouter);
 app.use('/api/chat', chatRoutes); // Only use one chat routes

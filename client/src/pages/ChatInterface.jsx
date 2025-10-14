@@ -116,7 +116,9 @@ const ChatInterface = () => {
         }
       ];
       
-      // If there's an active session, get its history
+            const entry = sessionMetadata.recentProductList[index];
+            const id = typeof entry === 'string' ? entry : entry?._id;
+            if (id) await addToCartFromChat(id);
       if (currentSessionId) {
         try {
           const response = await Axios({
@@ -382,6 +384,38 @@ const ChatInterface = () => {
     }
   };
 
+  const ProductStrip = ({ items }) => {
+    if (!items || items.length === 0) return null;
+    return (
+      <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
+        {items.slice(0, 3).map((p, i) => {
+          const name = typeof p === 'string' ? `Product ${i+1}` : p.name;
+          const id = typeof p === 'string' ? p : p?._id;
+          const price = typeof p === 'string' ? null : p?.price;
+          const image = typeof p === 'string' ? null : p?.image;
+          return (
+            <div key={id || i} className="flex items-center gap-3 p-3 border rounded-lg bg-white">
+              {image ? (
+                <img src={image} alt={name} className="w-16 h-16 object-cover rounded" />
+              ) : (
+                <div className="w-16 h-16 bg-gray-200 rounded" />
+              )}
+              <div className="flex-1">
+                <div className="text-sm font-medium line-clamp-2">{name}</div>
+                {price != null && <div className="text-xs text-gray-600">KES {Number(price).toLocaleString()}</div>}
+              </div>
+              {id && (
+                <button onClick={() => addToCartFromChat(id)} className="px-3 py-1 text-xs bg-emerald-600 text-white rounded">
+                  Add
+                </button>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    );
+  };
+
   // Handle sending a message
   const handleSendMessage = async (e, retryText = null, isRetry = false) => {
     if (e) e.preventDefault();
@@ -489,6 +523,7 @@ const ChatInterface = () => {
       const response = await Axios({
         url: '/api/chat/message',
         method: 'POST',
+        timeout: 45000,
         data: {
           message: textToSend,
           userId: user?._id || 'guest',
@@ -725,6 +760,7 @@ const ChatInterface = () => {
       const response = await Axios({
         url: '/api/chat/transcribe',
         method: 'POST',
+        timeout: 60000,
         data: formData,
         headers: {
           'Content-Type': 'multipart/form-data'

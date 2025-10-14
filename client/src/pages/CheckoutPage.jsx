@@ -309,6 +309,72 @@ const CheckoutPage = ({ isCutView = false, onClose = null }) => {
     setShowMpesaForm(false);
   }
 
+  // Add PesaPal button state and handler
+  const [isPesapalLoading, setIsPesapalLoading] = useState(false);
+
+  const handlePesapalPayment = async () => {
+    if (!validateAddress()) return;
+    try {
+      setIsPesapalLoading(true);
+      // Create a local order id
+      const orderId = `ORD-${Date.now()}-${Math.floor(Math.random()*1000)}`;
+      const token = localStorage.getItem('accesstoken') || localStorage.getItem('token');
+
+      const baseUrl = import.meta.env.VITE_API_URL || '';
+      const res = await Axios({
+        url: `${baseUrl}/api/pesapal/initiate`,
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+        data: {
+          orderId,
+          amount: finalPrice,
+          currency: 'KES',
+          description: `Nawiri Hair checkout ${orderId}`,
+          customer: {
+            email: user?.email,
+            firstName: user?.name?.split(' ')[0] || 'Customer',
+            lastName: user?.name?.split(' ').slice(1).join(' ') || 'User',
+            phone: user?.mobile,
+            countryCode: 'KE'
+          }
+        }
+      });
+
+      const { data } = res;
+      if (data?.success && data.redirect_url) {
+        // Open popup to Pesapal redirect_url
+        const width = 480, height = 720;
+        const left = window.screenX + (window.innerWidth - width) / 2;
+        const top = window.screenY + (window.innerHeight - height) / 2;
+        const popup = window.open(data.redirect_url, 'pesapalPopup', `width=${width},height=${height},left=${left},top=${top}`);
+
+        // Poll the popup location for callback completion (best-effort)
+        const poll = setInterval(() => {
+          try {
+            if (popup && popup.closed) {
+              clearInterval(poll);
+              // After close, navigate to success page and let it fetch latest order
+              navigate('/success', { state: { orderId, paymentMethod: 'PesaPal', amount: finalPrice } });
+            }
+          } catch (_) {
+            // Cross-origin while on Pesapal - ignore
+          }
+        }, 800);
+      } else {
+        throw new Error('Failed to start Pesapal payment');
+      }
+    } catch (err) {
+      console.error('Pesapal init error:', err.response?.data || err.message);
+      const raw = err.response?.data;
+      const detail = raw?.details || raw?.message || err.message || 'Failed to initiate PesaPal';
+      // Special-case Invalid IPN messaging from backend
+      const guidance = /invalid\s*ipn/i.test(detail) ? ' — Please register your IPN in the Pesapal dashboard and set PESAPAL_NOTIFICATION_ID.' : '';
+      toast.error(`PesaPal Payment Error: ${detail}${guidance}`);
+    } finally {
+      setIsPesapalLoading(false);
+    }
+  };
+
   // Handle fulfillment method selection
   const handleFulfillmentSelect = (data) => {
     setFulfillmentMethod(data.fulfillment_type);
@@ -584,6 +650,17 @@ const CheckoutPage = ({ isCutView = false, onClose = null }) => {
                 disabled={!isPaymentEnabled}
               >
                 Cash on Delivery {!isPaymentEnabled && '(Select Address First)'}
+              </button>
+              <button 
+                className={`w-full py-2 px-4 rounded text-white font-semibold transition-colors duration-200 ${
+                  isPaymentEnabled 
+                    ? 'bg-red-600 hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-600' 
+                    : 'bg-gray-400 dark:bg-gray-600 cursor-not-allowed'
+                }`}
+                onClick={handlePesapalPayment}
+                disabled={!isPaymentEnabled}
+              >
+                {isPesapalLoading ? 'Processing...' : 'Pay with PesaPal'} {!isPaymentEnabled && '(Select Address First)'}
               </button>
             </div>
           </div>
@@ -880,6 +957,18 @@ const CheckoutPage = ({ isCutView = false, onClose = null }) => {
             >
               Cash on {fulfillmentMethod === 'delivery' ? 'Delivery' : 'Pickup'} 
               {fulfillmentMethod === 'delivery' && !isPaymentEnabled && '(Select Address First)'}
+            </button>
+
+            <button 
+              className={`py-2 px-4 rounded text-white font-semibold transition-colors duration-200 ${
+                isPaymentEnabled 
+                  ? 'bg-red-600 hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-600' 
+                  : 'bg-gray-400 dark:bg-gray-600 cursor-not-allowed'
+              }`}
+              onClick={handlePesapalPayment}
+              disabled={!isPaymentEnabled}
+            >
+              {isPesapalLoading ? 'Processing...' : 'Pay with PesaPal'} {!isPaymentEnabled && '(Select Address First)'}
             </button>
           </div>
         </div>

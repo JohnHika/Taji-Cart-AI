@@ -222,30 +222,47 @@ export const checkProductStock = async (productId) => {
  */
 export const searchProducts = async (searchQuery, limit = 10) => {
   try {
-    // Split the search query into keywords
-    const keywords = searchQuery.split(' ')
-      .filter(word => word.length > 2)
-      .map(word => new RegExp(word, 'i'));
-    
-    // If no valid keywords, return empty array
-    if (keywords.length === 0) {
-      return [];
+    const raw = String(searchQuery || '').trim();
+    if (!raw) return [];
+
+    // Try text index search first (preferred & fast)
+    // Falls back to regex if text index not available or yields no results
+    let products = [];
+    try {
+      const textQuery = { $text: { $search: raw } };
+      products = await Product.find(textQuery)
+        .populate('category', 'name')
+        .limit(limit);
+    } catch (e) {
+      // Ignore and fallback to regex search below
     }
-    
-    // Create a query to search in name, description, and tags
-    const query = {
-      $or: [
-        { name: { $in: keywords.map(k => ({ $regex: k })) } },
-        { description: { $in: keywords.map(k => ({ $regex: k })) } },
-        { tags: { $in: keywords.map(k => ({ $regex: k })) } }
-      ]
-    };
-    
+
+    if (products.length === 0) {
+      // Safe regex-based search across name and description
+      // Build AND of keywords, each keyword ORs across fields
+      const keywords = raw
+        .split(/\s+/)
+        .filter(w => w.length > 2)
+        .map(w => w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')); // escape regex
+
+      if (keywords.length === 0) return [];
+
+      const regexConds = keywords.map(word => ({
+        $or: [
+          { name: { $regex: word, $options: 'i' } },
+          { description: { $regex: word, $options: 'i' } }
+        ]
+      }));
+
+      const fallbackQuery = { $and: regexConds };
+
+      products = await Product.find(fallbackQuery)
+        .populate('category', 'name')
+        .limit(limit);
+    }
+
     // Execute the search
-    const products = await Product.find(query)
-      .populate('category', 'name')
-      .limit(limit);
-      
+    
     return products;
   } catch (error) {
     console.error('Database search error:', error);

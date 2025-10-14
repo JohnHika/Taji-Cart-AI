@@ -546,3 +546,39 @@ export const rateProduct = async (req, res) => {
     });
   }
 };
+
+export const getProductByIdController = async (request, response) => {
+    try {
+        const { id } = request.params;
+        if (!id) {
+            return response.status(400).json({ success: false, message: 'Product ID is required' });
+        }
+
+        const product = await ProductModel.findById(id);
+        if (!product) {
+            return response.status(404).json({ success: false, message: 'Product not found' });
+        }
+
+        if (product && product.ratings && product.ratings.length > 0) {
+            const totalRatings = product.ratings.length;
+            const ratingSum = product.ratings.reduce((sum, item) => sum + (item.rating || 0), 0);
+            product._doc.averageRating = totalRatings > 0 ? (ratingSum / totalRatings) : 0;
+            product._doc.totalRatings = totalRatings;
+
+            if (request.userId) {
+                const userRating = product.ratings.find(r => r.userId.toString() === request.userId);
+                if (userRating) {
+                    product._doc.userRating = userRating.rating;
+                }
+            }
+        } else {
+            product._doc.averageRating = 0;
+            product._doc.totalRatings = 0;
+        }
+
+        return response.status(200).json({ success: true, data: product });
+    } catch (error) {
+        console.error('Error in getProductByIdController:', error);
+        return response.status(500).json({ success: false, message: 'Internal server error' });
+    }
+};

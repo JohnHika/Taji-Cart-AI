@@ -7,6 +7,7 @@ import ChatSession from '../models/chat.model.js';
 import Product from '../models/product.model.js';
 import User from '../models/user.model.js';
 import { generateResponse } from '../utils/localChatbot.js';
+import { ragAnswer } from '../utils/rag/pipeline.js';
 // Remove Deepgram import and add Whisper
 import { transcribeAudioWithWhisper } from '../utils/whisperTranscription.js';
 // Import ffmpeg packages
@@ -282,8 +283,33 @@ export const processMessage = async (req, res) => {
     chatSession.lastActive = new Date();
     
     try {
-      // Use our local chatbot service with enhanced context - now with async/await
-      const reply = await generateResponse(message, {
+      let reply;
+      if (process.env.RAG_ENABLED === 'true') {
+        try {
+          const rag = await ragAnswer(message, chatSession.metadata || {});
+          reply = rag?.text;
+          if (rag?.hits?.length) {
+            // Include compact product info for the UI
+            const ids = rag.hits.map(h => String(h.product)).filter(Boolean);
+            const prods = await Product.find({ _id: { $in: ids } })
+              .select('name price image stock')
+              .lean();
+            const compact = prods.map(p => ({
+              _id: String(p._id),
+              name: p.name,
+              price: p.price,
+              image: Array.isArray(p.image) && p.image.length ? p.image[0] : p.image,
+              stock: p.stock
+            }));
+            chatSession.metadata.recentProductList = compact;
+          }
+        } catch (e) {
+          console.warn('RAG failed, falling back:', e.message);
+        }
+      }
+      if (!reply) {
+        // Use our local chatbot service with enhanced context - now with async/await
+        reply = await generateResponse(message, {
         user: userInfo,
         sessionData: {
           sessionId: sessionId,
@@ -302,6 +328,7 @@ export const processMessage = async (req, res) => {
           messages: chatSession.messages // Send full message history for context
         }
       });
+      }
       
       // Store the last bot message for future context
       chatSession.metadata.lastBotMessage = reply;

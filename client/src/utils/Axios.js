@@ -5,7 +5,7 @@ import SummaryApi from '../common/SummaryApi';
 const instance = axios.create({
   baseURL: import.meta.env.VITE_SERVER_URL || import.meta.env.VITE_BACKEND_URL || 'http://localhost:8080',
   withCredentials: true,
-  timeout: 15000,
+  timeout: 30000,
   headers: {
     'Content-Type': 'application/json',
     // Don't add Cache-Control here as a default header

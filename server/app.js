@@ -37,18 +37,6 @@ const app = express();
 // Database connection
 connectDB();
 
-// Apply rate limiting to prevent abuse
-const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 200, // limit each IP to 200 requests per window (15 min)
-  standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
-  legacyHeaders: false, // Disable the `X-RateLimit-*` headers
-  message: 'Too many requests, please try again later'
-});
-
-// Apply rate limiter to all requests
-app.use(limiter);
-
 // Middlewares
 const FRONTEND_URL_APP = process.env.FRONTEND_URL;
 const allowedOriginsApp = [
@@ -62,6 +50,7 @@ const allowedOriginsApp = [
 if (FRONTEND_URL_APP && !allowedOriginsApp.includes(FRONTEND_URL_APP)) {
   allowedOriginsApp.push(FRONTEND_URL_APP);
 }
+// Ensure CORS runs before any potential early responses (like rate limiter)
 app.use(cors({
   origin: (origin, callback) => {
     if (!origin) return callback(null, true);
@@ -70,6 +59,18 @@ app.use(cors({
   },
   credentials: true
 }));
+// Handle preflight quickly
+app.options('*', cors());
+
+// Apply rate limiting to prevent abuse (after CORS to include headers on errors)
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 200,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: 'Too many requests, please try again later'
+});
+app.use(limiter);
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());

@@ -16,33 +16,61 @@ const SocialAuthSuccess = () => {
       try {
         // Get token and user details from URL parameters
         const params = new URLSearchParams(location.search);
-        const token = params.get('token');
+        const token = params.get('token') || params.get('accessToken');
+        const refreshToken = params.get('refreshToken');
         const userData = params.get('userData');
-        
-        if (!token || !userData) {
-          toast.error('Authentication failed. Missing authentication data.');
+
+        if (!token) {
+          toast.error('Authentication failed. Missing token.');
           navigate('/login');
           return;
         }
-        
-        // Save token to session storage
+
+        // Save tokens to session storage
         sessionStorage.setItem('accesstoken', token);
-        
-        // Parse and store user details
-        try {
-          const userObject = JSON.parse(decodeURIComponent(userData));
-          dispatch(setUserDetails(userObject));
-          
-          // Fetch cart items after successful authentication
-          dispatch(fetchCartItems());
-          
-          toast.success('Successfully logged in with social account!');
-          navigate('/');
-        } catch (parseError) {
-          console.error('Error parsing user data:', parseError);
-          toast.error('Authentication error: Invalid user data format');
-          navigate('/login');
+        if (refreshToken) {
+          sessionStorage.setItem('refreshToken', refreshToken);
         }
+
+        // Build user object from either JSON userData or individual params
+        let userObject = null;
+        if (userData) {
+          try {
+            userObject = JSON.parse(decodeURIComponent(userData));
+          } catch (parseError) {
+            console.error('Error parsing user data:', parseError);
+          }
+        }
+
+        if (!userObject) {
+          // Fallback to constructing user data from query params
+          const _id = params.get('userId');
+          const name = params.get('name');
+          const email = params.get('email');
+          const loyaltyPoints = Number(params.get('loyaltyPoints') || 0);
+          const loyaltyClass = params.get('loyaltyClass') || 'Basic';
+
+          userObject = {
+            _id,
+            name,
+            email,
+            isAuthenticated: true,
+            role: 'user',
+            loyalty: {
+              points: loyaltyPoints,
+              class: loyaltyClass
+            }
+          };
+        }
+
+        // Store user in Redux
+        dispatch(setUserDetails(userObject));
+
+        // Fetch cart items after successful authentication
+        dispatch(fetchCartItems());
+
+        toast.success('Successfully logged in with social account!');
+        navigate('/');
       } catch (error) {
         console.error('Social authentication error:', error);
         toast.error('Authentication failed. Please try again.');

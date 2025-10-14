@@ -393,6 +393,38 @@ const ChatbotAI = () => {
     }
   };
 
+  const ProductStrip = ({ items }) => {
+    if (!items || items.length === 0) return null;
+    return (
+      <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
+        {items.slice(0, 3).map((p, i) => {
+          const name = typeof p === 'string' ? `Product ${i+1}` : p.name;
+          const id = typeof p === 'string' ? p : p?._id;
+          const price = typeof p === 'string' ? null : p?.price;
+          const image = typeof p === 'string' ? null : p?.image;
+          return (
+            <div key={id || i} className="flex items-center gap-3 p-3 border rounded-lg bg-white">
+              {image ? (
+                <img src={image} alt={name} className="w-16 h-16 object-cover rounded" />
+              ) : (
+                <div className="w-16 h-16 bg-gray-200 rounded" />
+              )}
+              <div className="flex-1">
+                <div className="text-sm font-medium line-clamp-2">{name}</div>
+                {price != null && <div className="text-xs text-gray-600">KES {Number(price).toLocaleString()}</div>}
+              </div>
+              {id && (
+                <button onClick={() => addToCartFromChat(id)} className="px-3 py-1 text-xs bg-emerald-600 text-white rounded">
+                  Add
+                </button>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    );
+  };
+
   const handleSendMessage = async (e, retryText = null, isRetry = false) => {
     if (e) e.preventDefault();
     const textToSend = retryText || inputText;
@@ -451,7 +483,9 @@ const ChatbotAI = () => {
         else if (indexText === 'third' || indexText === '3rd' || indexText === 'last') index = 2;
         if (index >= 0 && index < sessionMetadata.recentProductList.length) {
           if (isAddToCartRequest) {
-            await addToCartFromChat(sessionMetadata.recentProductList[index]);
+            const entry = sessionMetadata.recentProductList[index];
+            const id = typeof entry === 'string' ? entry : entry?._id;
+            if (id) await addToCartFromChat(id);
             setSessionMetadata(prev => ({
               ...prev,
               cartActionHandled: true

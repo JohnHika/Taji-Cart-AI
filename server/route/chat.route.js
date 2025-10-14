@@ -10,6 +10,7 @@ import {
     refreshChatCache,
     transcribeAudio
 } from '../controllers/chat.controller.js';
+import { ragAskHandler, ragReindexHandler } from '../routes_extras/rag.handlers.js';
 
 const router = express.Router();
 
@@ -19,6 +20,9 @@ router.post('/transcribe', transcribeAudio);
 // Chat message endpoints
 router.post('/message', processMessage);
 router.post('/message/stream', processMessageStream);
+// RAG endpoints (protected by env flag)
+router.post('/rag/reindex', ragReindexHandler);
+router.post('/rag/ask', ragAskHandler);
 
 // User chat history endpoint
 router.get('/user-history', getUserChatHistory);

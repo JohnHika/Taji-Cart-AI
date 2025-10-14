@@ -54,34 +54,19 @@ const generateToken = (user) => {
 
 // Google OAuth routes - Only register if credentials are available
 if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
+  // Availability probe for clients using HEAD
+  router.head('/google', (req, res) => res.sendStatus(200));
   router.get('/google', passport.authenticate('google', { scope: ['profile', 'email'] }));
 
   router.get(
     '/google/callback',
     passport.authenticate('google', { failureRedirect: '/login', session: false }),
-    (req, res) => {
-      // Create JWT token
-      const token = generateToken(req.user);
-      
-      // Create a sanitized version of the user object for the frontend
-      const userData = {
-        _id: req.user._id,
-        name: req.user.name,
-        email: req.user.email,
-        mobile: req.user.mobile || '',
-        avatar: req.user.avatar || '',
-        isAuthenticated: true,
-        role: req.user.role || 'user',
-      };
-      
-      // Redirect to the frontend with token and user data
-      res.redirect(
-        `${process.env.FRONTEND_URL || 'http://localhost:5173'}/social-auth-success?token=${token}&userData=${encodeURIComponent(JSON.stringify(userData))}`
-      );
-    }
+    // Use the unified success handler that generates tokens with the correct secrets
+    handleSocialAuthSuccess
   );
 } else {
-  // Fallback route when Google OAuth is not configured
+  // Fallback routes when Google OAuth is not configured
+  router.head('/google', (req, res) => res.sendStatus(503));
   router.get('/google', (req, res) => {
     res.status(503).json({
       error: true,

@@ -4,15 +4,18 @@ import { toast } from 'react-hot-toast';
 
 const SocialAuth = () => {
   const [isLoading, setIsLoading] = useState(false);
-  // Use import.meta.env for Vite environment variables instead of process.env
-  const API_URL = import.meta.env.VITE_API_URL || '/api';
+  // Build a proper API base: if VITE_API_URL doesn't include '/api', append it
+  const RAW_API_URL = import.meta.env.VITE_API_URL || '';
+  const API_URL = RAW_API_URL
+    ? (RAW_API_URL.endsWith('/api') ? RAW_API_URL : `${RAW_API_URL.replace(/\/$/, '')}/api`)
+    : '/api';
 
   // Function to handle Google login using Passport.js
   const handleGoogleLogin = async () => {
     setIsLoading(true);
     try {
       // First check if Google OAuth is available
-      const response = await fetch(`${API_URL}/auth/google`, { method: 'HEAD' });
+  const response = await fetch(`${API_URL}/auth/google`, { method: 'HEAD' });
       
       if (response.status === 503) {
         toast.error('Google login is currently not available. Please use email login.');
@@ -21,7 +24,7 @@ const SocialAuth = () => {
       }
       
       // Redirect to Google OAuth
-      window.location.href = `${API_URL}/auth/google`;
+  window.location.href = `${API_URL}/auth/google`;
     } catch (error) {
       console.error('Error checking Google OAuth availability:', error);
       toast.error('Google login is currently not available. Please use email login.');
