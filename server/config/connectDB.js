@@ -67,187 +67,84 @@ async function connectDB() {
     
     // Skip network check and memory MongoDB in production
     if (process.env.NODE_ENV === 'production') {
-        console.log("🚀 Production mode: attempting direct MongoDB Atlas connection");
+        console.log("🚀 Production mode: attempting MongoDB Atlas connection");
         
-        // Connection options
+        // Optimized connection options for faster startup
         const connectionOptions = {
             useNewUrlParser: true,
             useUnifiedTopology: true,
-            serverSelectionTimeoutMS: 3000, // Reduced for faster connection
-            socketTimeoutMS: 45000,
+            serverSelectionTimeoutMS: 2000, // Fast timeout
+            socketTimeoutMS: 30000,
             family: 4,
-            maxPoolSize: 10,
-            minPoolSize: 2,
-            maxIdleTimeMS: 30000,
-            connectTimeoutMS: 5000, // Reduced for faster connection
+            maxPoolSize: 5, // Reduced pool size
+            minPoolSize: 1,
+            maxIdleTimeMS: 10000,
+            connectTimeoutMS: 2000, // Very fast connection timeout
             bufferCommands: false
         };
 
         try {
-            // First try the direct connection string to avoid DNS issues
-            try {
-                const directURI = convertSrvToDirectConnect(process.env.MONGODB_URI);
-                console.log("Trying direct connection first...");
-                
-                await mongoose.connect(directURI, connectionOptions);
-                usingLocalMongoDB = false;
-                console.log("MongoDB connected successfully via direct connection");
-                return;
-            } catch (directError) {
-                console.log("Direct connection failed, trying SRV connection:", directError.message);
-                
-                // If direct connection fails, try the SRV format
-                await mongoose.connect(process.env.MONGODB_URI, connectionOptions);
-                usingLocalMongoDB = false;
-                console.log("MongoDB connected successfully via SRV connection");
-                return;
-            }
+            // Directly try SRV connection (faster than trying direct first)
+            await mongoose.connect(process.env.MONGODB_URI, connectionOptions);
+            usingLocalMongoDB = false;
+            console.log("✅ MongoDB connected");
+            return;
         } catch (error) {
             console.log("MongoDB Atlas connection error:", error.message);
             throw new Error(`Cannot connect to MongoDB Atlas: ${error.message}. Check your MONGODB_URI and network connectivity.`);
         }
     }
     
-    // Check network connectivity first (development only)
-    const networkAvailable = await memoryMongoDB.isNetworkAvailable();
-    if (!networkAvailable) {
-        console.log("⚠️ No network connectivity detected. Starting in OFFLINE MODE...");
-        // Go straight to in-memory database when no network
-        try {
-            console.log("Attempting to start in-memory MongoDB...");
-            await memoryMongoDB.connectToMemoryServer();
-            usingLocalMongoDB = true;
-            console.log("✅ Connected to IN-MEMORY MongoDB. All data will be lost when the server stops!");
-            console.log("⚠️ This is a FAILSAFE MODE for offline development only.");
-            return;
-        } catch (memoryError) {
-            console.log("In-memory MongoDB failed:", memoryError.message);
-            throw new Error("Could not start offline MongoDB. Cannot continue without a database.");
-        }
-    }
-
+    // Optimized connection options for faster startup
     const connectionOptions = {
-        serverSelectionTimeoutMS: 5000, // Reduced from 10000
-        socketTimeoutMS: 45000,
+        serverSelectionTimeoutMS: 2000, // Fast timeout
+        socketTimeoutMS: 30000,
         family: 4,
         retryWrites: true,
-        maxIdleTimeMS: 30000,
-        connectTimeoutMS: 10000, // Reduced from 30000
+        maxIdleTimeMS: 10000,
+        connectTimeoutMS: 2000, // Fast connection timeout
         heartbeatFrequencyMS: 10000,
-        maxPoolSize: 10,
-        minPoolSize: 2,
+        maxPoolSize: 5, // Reduced pool size
+        minPoolSize: 1,
         bufferCommands: false
-    };try {
+    };
+
+    try {
         connectionAttempts++;
         console.log(`MongoDB connection attempt ${connectionAttempts}/${MAX_CONNECTION_ATTEMPTS}`);
         
-        // Run diagnostics first if it's not the first connection attempt
-        if (connectionAttempts > 1) {
-            console.log("Running MongoDB connection diagnostics...");
-            try {
-                const diagnostics = await diagnoseMongoDB(process.env.MONGODB_URI);
-                console.log("Diagnostics results:");
-                console.log("- Network connectivity:", diagnostics.networkConnectivity);
-                
-                // Check if any hosts are resolvable
-                const hostResolution = Object.values(diagnostics.hostnameCheck);
-                const anyResolvable = hostResolution.some(h => h.resolvable);
-                console.log("- DNS resolution:", anyResolvable ? "Partial or complete" : "Failed");
-                
-                if (!anyResolvable) {
-                    console.log("❌ No MongoDB hosts could be resolved. This is likely a DNS or network issue.");
-                    console.log("   Possible causes: VPN interference, DNS issues, or network firewall");
-                }
-            } catch (diagError) {
-                console.log("Diagnostics failed:", diagError.message);
-            }
-        }
-        
-        // First try the direct connection string to avoid DNS issues
-        try {
-            const directURI = convertSrvToDirectConnect(process.env.MONGODB_URI);
-            console.log("Trying direct connection first...");
-            
-            await mongoose.connect(directURI, connectionOptions);
-            usingLocalMongoDB = false;
-            console.log("MongoDB connected successfully via direct connection");
-            return;
-        } catch (directError) {
-            console.log("Direct connection failed, trying SRV connection:", directError.message);
-            
-            // If direct connection fails, try the SRV format
-            await mongoose.connect(process.env.MONGODB_URI, connectionOptions);
-            usingLocalMongoDB = false;
-            console.log("MongoDB connected successfully via SRV connection");
-            return;
-        }
+        // Try SRV connection directly (fastest method)
+        await mongoose.connect(process.env.MONGODB_URI, connectionOptions);
+        usingLocalMongoDB = false;
+        console.log("✅ MongoDB connected");
+        return;
     } catch (error) {
-        console.log("MongoDB Atlas connection error:", error.message);
+        console.log("MongoDB connection error:", error.message);
         
         if (connectionAttempts < MAX_CONNECTION_ATTEMPTS) {
-            // Wait before retrying (exponential backoff)
-            const retryDelay = Math.min(1000 * Math.pow(2, connectionAttempts), 30000);
-            console.log(`Retrying in ${retryDelay/1000} seconds...`);
-            await new Promise(resolve => setTimeout(resolve, retryDelay));
+            // Fast retry with minimal delay
+            console.log(`Retrying immediately (attempt ${connectionAttempts + 1}/${MAX_CONNECTION_ATTEMPTS})...`);
+            await new Promise(resolve => setTimeout(resolve, 500)); // Only 500ms delay
             return connectDB(); // Retry recursively
         } else {
-            console.log(`Failed to connect after ${MAX_CONNECTION_ATTEMPTS} attempts.`);
+            console.log(`⚠️ Failed to connect after ${MAX_CONNECTION_ATTEMPTS} attempts.`);
             
             // In production, fail hard without fallbacks
             if (process.env.NODE_ENV === 'production') {
                 throw new Error(`Cannot connect to MongoDB Atlas after ${MAX_CONNECTION_ATTEMPTS} attempts. Check your MONGODB_URI and network connectivity.`);
             }
             
-            console.log("Trying local MongoDB fallback...");
-            
-            // Check network availability (development only)
-            const networkAvailable = await memoryMongoDB.isNetworkAvailable();
-            if (!networkAvailable) {
-                console.log("❌ No network connectivity detected. Operating in OFFLINE MODE.");
-            }
-            
-            // Try to start and connect to a local MongoDB as a last resort
+            // Development: Try in-memory MongoDB as quick fallback
+            console.log("Trying in-memory MongoDB fallback...");
             try {
-                // Check if Docker is available
-                const dockerAvailable = await localMongoDB.isDockerAvailable();
-                
-                if (dockerAvailable && networkAvailable) {
-                    console.log("Docker is available. Attempting to start local MongoDB...");
-                    
-                    // Try to start local MongoDB container
-                    try {
-                        const started = await localMongoDB.startLocalMongoDB();
-                        
-                        if (started) {
-                            // Connect to the local MongoDB
-                            await localMongoDB.connectToLocalMongoDB();
-                            usingLocalMongoDB = true;
-                            console.log("⚠️ Connected to LOCAL MongoDB for development. Data will not sync with production.");
-                            return;
-                        }
-                    } catch (dockerError) {
-                        console.log("Docker MongoDB failed:", dockerError.message);
-                    }
-                } else if (!networkAvailable || !dockerAvailable) {
-                    // If no network or Docker failed, try in-memory MongoDB
-                    console.log("Attempting to start in-memory MongoDB...");
-                    try {
-                        await memoryMongoDB.connectToMemoryServer();
-                        usingLocalMongoDB = true;
-                        console.log("⚠️ Connected to IN-MEMORY MongoDB. All data will be lost when the server stops!");
-                        console.log("⚠️ This is a FAILSAFE MODE for offline development only.");
-                        return;
-                    } catch (memoryError) {
-                        console.log("In-memory MongoDB failed:", memoryError.message);
-                    }
-                } else {
-                    console.log("Docker is not available. Cannot start local MongoDB.");
-                }
-            } catch (localError) {
-                console.log("Failed to set up local MongoDB fallback:", localError);
+                await memoryMongoDB.connectToMemoryServer();
+                usingLocalMongoDB = true;
+                console.log("⚠️ Connected to IN-MEMORY MongoDB. All data will be lost when the server stops!");
+                return;
+            } catch (memoryError) {
+                console.log("In-memory MongoDB failed:", memoryError.message);
+                throw new Error("Could not connect to MongoDB Atlas or memory fallback. Please check your network and MongoDB configuration.");
             }
-            
-            throw new Error("Could not connect to MongoDB Atlas or local fallback. Please check your network and MongoDB configuration.");
         }
     }
 }

@@ -96,15 +96,19 @@ app.use(passport.initialize());
 // Ensure necessary directories exist
 ensureDirectoriesExist();
 
-// Performance monitoring middleware
-app.use((req, res, next) => {
-    const start = Date.now();
-    res.on('finish', () => {
-        const duration = Date.now() - start;
-        console.log(`${req.method} ${req.url} ${res.statusCode} ${duration}ms`);
+// Simplified request logging - only in development
+if (process.env.NODE_ENV !== 'production') {
+    app.use((req, res, next) => {
+        const start = Date.now();
+        res.on('finish', () => {
+            const duration = Date.now() - start;
+            if (duration > 1000) { // Only log slow requests
+                console.log(`⚠️ SLOW: ${req.method} ${req.url} ${res.statusCode} ${duration}ms`);
+            }
+        });
+        next();
     });
-    next();
-});
+}
 
 // Add this middleware to inspect incoming requests with files
 app.use((req, res, next) => {
@@ -124,10 +128,7 @@ app.get("/", (request, response) => {
     });
 });
 
-app.use((req, res, next) => {
-    console.log(`${req.method} ${req.url}`);
-    next();
-});
+// Route registration - all routes defined below
 
 app.use('/api/user', userRouter);
 app.use('/api/auth', authRouter);
@@ -224,20 +225,16 @@ async function startServer() {
         // Only start the server once
         if (!isServerRunning) {
             server.listen(PORT, () => {
-                console.log(`Server running on port ${PORT}`);
+                console.log(`✅ Server running on port ${PORT}`);
                 isServerRunning = true;
             });
             
-            // Set up a periodic connection check
-            connectionCheckInterval = setInterval(checkDatabaseConnection, 30000); // Check every 30 seconds
+            // Set up a periodic connection check (less frequent)
+            connectionCheckInterval = setInterval(checkDatabaseConnection, 60000); // Check every 60 seconds
         }
     } catch (error) {
-        console.error('Failed to start server:', error);
-        console.log('Please check:');
-        console.log('1. Your network connection');
-        console.log('2. MongoDB Atlas cluster status');
-        console.log('3. IP whitelist in MongoDB Atlas');
-        console.log('4. VPN or firewall settings that might block connections');
+        console.error('❌ Failed to start server:', error.message);
+        process.exit(1); // Exit on startup failure
     }
 }
 
@@ -246,13 +243,13 @@ async function checkDatabaseConnection() {
     try {
         // Simple ping to verify connection is alive
         if (mongoose.connection.readyState !== 1) {
-            console.log('⚠️ MongoDB connection lost. Attempting to reconnect...');
+            console.log('⚠️ MongoDB connection lost. Reconnecting...');
             clearInterval(connectionCheckInterval);
             await connectDB();
-            connectionCheckInterval = setInterval(checkDatabaseConnection, 30000);
+            connectionCheckInterval = setInterval(checkDatabaseConnection, 60000);
         }
     } catch (error) {
-        console.error('Error in connection check:', error);
+        console.error('❌ Connection check error:', error.message);
     }
 }
 
