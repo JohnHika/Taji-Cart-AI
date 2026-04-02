@@ -2,7 +2,7 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import React, { useEffect, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
-import { FaBoxOpen, FaBullseye, FaCalendarCheck, FaChartLine, FaCheck, FaCloud, FaCloudRain, FaCloudSun, FaCompressAlt, FaExchangeAlt, FaExpandAlt, FaList, FaLocationArrow, FaMapMarkerAlt, FaRoute, FaSpinner, FaStar, FaStopwatch, FaSun, FaThermometerHalf, FaTrafficLight, FaTruck, FaUserAlt, FaWind } from 'react-icons/fa';
+import { FaBoxOpen, FaBullseye, FaCalendarCheck, FaChartLine, FaCheck, FaCloud, FaCloudRain, FaCloudSun, FaCompressAlt, FaExchangeAlt, FaExpandAlt, FaList, FaLocationArrow, FaMapMarkerAlt, FaRoute, FaSpinner, FaStar, FaStopwatch, FaSun, FaThermometerHalf, FaTimes, FaTrafficLight, FaTruck, FaUserAlt, FaWind } from 'react-icons/fa';
 import { MapContainer, Marker, Polyline, Popup, TileLayer, useMap, ZoomControl } from 'react-leaflet';
 import Axios from '../../utils/Axios';
 import AxiosToastError from '../../utils/AxiosToastError';
@@ -683,19 +683,19 @@ const DeliveryMap = () => {
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh]">
-        <FaSpinner className="animate-spin text-4xl text-primary-200 mb-4" />
-        <p className="text-lg text-gray-700 dark:text-gray-300">Loading map view...</p>
+        <FaSpinner className="animate-spin text-4xl text-plum-500 mb-4" />
+        <p className="text-lg text-charcoal dark:text-white/70">Loading map view...</p>
       </div>
     );
   }
   
   if (error) {
     return (
-      <div className="bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 p-4 rounded-lg">
+      <div className="bg-blush-100 dark:bg-blush-500/10 text-blush-500 dark:text-blush-300 p-4 rounded-card border border-blush-200 dark:border-blush-500/20">
         <p>{error}</p>
-        <button 
+        <button
           onClick={() => window.location.reload()}
-          className="mt-2 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
+          className="mt-3 px-4 py-2 bg-plum-700 hover:bg-plum-800 text-white rounded-pill text-sm transition-colors"
         >
           Try Again
         </button>
@@ -707,41 +707,41 @@ const DeliveryMap = () => {
     <div>
       <div className="flex flex-wrap justify-between items-center mb-6">
         <div>
-          <h1 className="text-2xl font-bold dark:text-white mb-1">Delivery Map</h1>
+          <h1 className="font-display text-2xl italic text-plum-900 dark:text-white mb-1">Delivery Map</h1>
           
           {/* Weather widget */}
           {weatherData && (
-            <div className="flex items-center text-sm text-gray-600 dark:text-gray-300">
+            <div className="flex items-center text-sm text-brown-400 dark:text-white/50 bg-blush-50 dark:bg-dm-card rounded-pill px-3 py-1 mt-1">
               {getWeatherIcon(weatherData.current.condition)}
               <span className="ml-1">{weatherData.current.condition.text}</span>
-              <FaThermometerHalf className="ml-3 mr-1" />
+              <FaThermometerHalf className="ml-3 mr-1 text-gold-500" />
               <span>{Math.round(weatherData.current.temp_c)}°C</span>
-              <FaWind className="ml-3 mr-1" />
+              <FaWind className="ml-3 mr-1 text-plum-400" />
               <span>{Math.round(weatherData.current.wind_kph)} km/h</span>
             </div>
           )}
         </div>
         
-        <div className="flex flex-wrap space-x-0 sm:space-x-2 space-y-2 sm:space-y-0">
+        <div className="flex flex-wrap gap-2">
           <button
             onClick={() => {
               setShowPerformance(true);
               fetchPerformanceData();
             }}
-            className="bg-indigo-500 text-white px-4 py-2 rounded hover:bg-indigo-600 flex items-center"
+            className="bg-plum-700 hover:bg-plum-800 text-white px-4 py-2 rounded-pill flex items-center gap-2 transition-colors text-sm"
           >
-            <FaChartLine className="mr-2" />
+            <FaChartLine size={13} />
             Performance
           </button>
           <button
             onClick={updateCurrentLocation}
             disabled={updatingLocation}
-            className="bg-primary-200 text-white px-4 py-2 rounded hover:bg-primary-300 flex items-center disabled:opacity-50"
+            className="bg-gold-500 hover:bg-gold-400 text-charcoal font-medium px-4 py-2 rounded-pill flex items-center gap-2 disabled:opacity-50 transition-colors text-sm press"
           >
             {updatingLocation ? (
-              <FaSpinner className="animate-spin mr-2" />
+              <FaSpinner className="animate-spin" size={13} />
             ) : (
-              <FaMapMarkerAlt className="mr-2" />
+              <FaMapMarkerAlt size={13} />
             )}
             Update Location
           </button>
@@ -750,74 +750,72 @@ const DeliveryMap = () => {
       
       {/* Performance Metrics Modal */}
       {showPerformance && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-lg w-full">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-xl font-bold dark:text-white">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="bg-ivory dark:bg-dm-card rounded-card shadow-hover p-6 max-w-lg w-full animate-scale-in">
+            <div className="flex justify-between items-center mb-5">
+              <h3 className="font-display text-xl italic text-plum-900 dark:text-white">
                 Delivery Performance
               </h3>
-              <button 
+              <button
                 onClick={() => setShowPerformance(false)}
-                className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                className="text-brown-300 hover:text-charcoal dark:text-white/40 dark:hover:text-white transition-colors"
               >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
-                </svg>
+                <FaTimes />
               </button>
             </div>
             
             {loadingPerformance ? (
               <div className="flex justify-center py-8">
-                <FaSpinner className="animate-spin text-3xl text-primary-200" />
+                <FaSpinner className="animate-spin text-3xl text-plum-500" />
               </div>
             ) : performanceData ? (
               <div className="grid grid-cols-2 gap-4">
-                <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg text-center">
-                  <FaTruck className="mx-auto text-blue-500 dark:text-blue-400 text-xl mb-2" />
-                  <p className="text-sm text-gray-500 dark:text-gray-400">Pending</p>
-                  <p className="text-2xl font-bold text-gray-800 dark:text-white">{performanceData.pendingDeliveries || 0}</p>
+                <div className="p-4 bg-plum-50 dark:bg-plum-900/20 rounded-card text-center border border-plum-100 dark:border-plum-800/30">
+                  <FaTruck className="mx-auto text-plum-500 text-xl mb-2" />
+                  <p className="text-xs text-brown-400 dark:text-white/50">Pending</p>
+                  <p className="text-2xl font-bold text-charcoal dark:text-white">{performanceData.pendingDeliveries || 0}</p>
                 </div>
                 
-                <div className="p-4 bg-green-50 dark:bg-green-900/20 rounded-lg text-center">
-                  <FaBoxOpen className="mx-auto text-green-500 dark:text-green-400 text-xl mb-2" />
-                  <p className="text-sm text-gray-500 dark:text-gray-400">Today's</p>
-                  <p className="text-2xl font-bold text-gray-800 dark:text-white">{performanceData.todayDeliveries || 0}</p>
+                <div className="p-4 bg-blush-50 dark:bg-blush-500/5 rounded-card text-center border border-blush-100 dark:border-blush-500/10">
+                  <FaBoxOpen className="mx-auto text-blush-500 text-xl mb-2" />
+                  <p className="text-xs text-brown-400 dark:text-white/50">Today's</p>
+                  <p className="text-2xl font-bold text-charcoal dark:text-white">{performanceData.todayDeliveries || 0}</p>
                 </div>
                 
-                <div className="p-4 bg-purple-50 dark:bg-purple-900/20 rounded-lg text-center">
-                  <FaStopwatch className="mx-auto text-purple-500 dark:text-purple-400 text-xl mb-2" />
-                  <p className="text-sm text-gray-500 dark:text-gray-400">Total</p>
-                  <p className="text-2xl font-bold text-gray-800 dark:text-white">{performanceData.totalDeliveries || 0}</p>
+                <div className="p-4 bg-brown-50 dark:bg-dm-card-2 rounded-card text-center border border-brown-100 dark:border-dm-border">
+                  <FaStopwatch className="mx-auto text-brown-400 dark:text-brown-300 text-xl mb-2" />
+                  <p className="text-xs text-brown-400 dark:text-white/50">Total</p>
+                  <p className="text-2xl font-bold text-charcoal dark:text-white">{performanceData.totalDeliveries || 0}</p>
                 </div>
                 
-                <div className="p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg text-center">
-                  <FaStar className="mx-auto text-yellow-500 dark:text-yellow-400 text-xl mb-2" />
-                  <p className="text-sm text-gray-500 dark:text-gray-400">Rating</p>
-                  <p className="text-2xl font-bold text-gray-800 dark:text-white">{performanceData.averageRating || 'N/A'}</p>
+                <div className="p-4 bg-gold-50 dark:bg-gold-900/10 rounded-card text-center border border-gold-100 dark:border-gold-800/20">
+                  <FaStar className="mx-auto text-gold-500 text-xl mb-2" />
+                  <p className="text-xs text-brown-400 dark:text-white/50">Rating</p>
+                  <p className="text-2xl font-bold text-charcoal dark:text-white">{performanceData.averageRating || 'N/A'}</p>
                 </div>
                 
                 {performanceData.avgDeliveryTime && (
-                  <div className="col-span-2 p-4 bg-indigo-50 dark:bg-indigo-900/20 rounded-lg">
-                    <p className="text-sm text-gray-500 dark:text-gray-400">Average Delivery Time</p>
-                    <p className="text-xl font-bold text-gray-800 dark:text-white">{performanceData.avgDeliveryTime} minutes</p>
-                    <div className="h-2 bg-gray-200 rounded-full mt-2">
-                      <div 
-                        className="h-2 bg-indigo-500 rounded-full" 
+                  <div className="col-span-2 p-4 bg-plum-50 dark:bg-plum-900/20 rounded-card border border-plum-100 dark:border-plum-800/30">
+                    <p className="text-sm text-brown-400 dark:text-white/50">Average Delivery Time</p>
+                    <p className="text-xl font-bold text-charcoal dark:text-white">{performanceData.avgDeliveryTime} min</p>
+                    <div className="h-1.5 bg-brown-100 dark:bg-dm-border rounded-full mt-2">
+                      <div
+                        className="h-1.5 bg-gradient-to-r from-plum-400 to-plum-700 rounded-full"
                         style={{ width: `${Math.min(100, (performanceData.avgDeliveryTime / 60) * 100)}%` }}
                       ></div>
                     </div>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 text-right">Target: 60 minutes</p>
+                    <p className="text-xs text-brown-300 dark:text-white/30 mt-1 text-right">Target: 60 min</p>
                   </div>
                 )}
               </div>
             ) : (
-              <p className="text-center dark:text-gray-300 py-8">No performance data available</p>
+              <p className="text-center text-brown-400 dark:text-white/40 py-8">No performance data available</p>
             )}
             
             <div className="mt-6 text-center">
               <button
                 onClick={() => setShowPerformance(false)}
-                className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-white rounded hover:bg-gray-300 dark:hover:bg-gray-600"
+                className="px-5 py-2 bg-plum-50 dark:bg-dm-card-2 text-plum-700 dark:text-white/70 rounded-pill hover:bg-plum-100 transition-colors text-sm"
               >
                 Close
               </button>
@@ -828,40 +826,37 @@ const DeliveryMap = () => {
       
       {/* Order details modal */}
       {showOrderDetails && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="bg-ivory dark:bg-dm-card rounded-card shadow-hover p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto animate-scale-in">
             <div className="flex justify-between items-center mb-4">
-              <h3 className="text-xl font-bold dark:text-white">
+              <h3 className="font-display text-xl italic text-plum-900 dark:text-white">
                 Order #{selectedOrderDetails?.orderId}
               </h3>
-              <button 
+              <button
                 onClick={() => setShowOrderDetails(false)}
-                className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                className="text-brown-300 hover:text-charcoal dark:text-white/40 dark:hover:text-white transition-colors"
               >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
-                </svg>
+                <FaTimes />
               </button>
             </div>
             
             {loadingOrderDetails ? (
               <div className="flex justify-center py-8">
-                <FaSpinner className="animate-spin text-3xl text-primary-200" />
+                <FaSpinner className="animate-spin text-3xl text-plum-500" />
               </div>
             ) : (
               <>
                 {/* Customer details */}
-                <div className="mb-4 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                  <h4 className="font-medium mb-2 dark:text-white">Customer Information</h4>
-                  <p className="dark:text-gray-300"><span className="font-medium">Name:</span> {selectedOrderDetails?.customer?.name}</p>
-                  <p className="dark:text-gray-300"><span className="font-medium">Phone:</span> {selectedOrderDetails?.customer?.phone}</p>
-                  <p className="dark:text-gray-300"><span className="font-medium">Address:</span> {selectedOrderDetails?.deliveryAddress}</p>
+                <div className="mb-4 p-4 bg-blush-50 dark:bg-dm-card-2 rounded-card border border-blush-100 dark:border-dm-border">
+                  <h4 className="font-semibold mb-2 text-charcoal dark:text-white">Customer Information</h4>
+                  <p className="text-charcoal dark:text-white/70 text-sm"><span className="font-medium">Name:</span> {selectedOrderDetails?.customer?.name}</p>
+                  <p className="text-charcoal dark:text-white/70 text-sm"><span className="font-medium">Phone:</span> {selectedOrderDetails?.customer?.phone}</p>
+                  <p className="text-charcoal dark:text-white/70 text-sm"><span className="font-medium">Address:</span> {selectedOrderDetails?.deliveryAddress}</p>
                   
-                  {/* Delivery notes if available */}
                   {selectedOrderDetails?.deliveryNotes && (
-                    <div className="mt-2 p-2 bg-yellow-50 dark:bg-yellow-900/30 rounded border border-yellow-200 dark:border-yellow-800">
-                      <p className="font-medium text-yellow-800 dark:text-yellow-200">Delivery Notes:</p>
-                      <p className="text-yellow-700 dark:text-yellow-300">{selectedOrderDetails.deliveryNotes}</p>
+                    <div className="mt-2 p-2 bg-gold-50 dark:bg-gold-900/20 rounded-card border border-gold-200 dark:border-gold-800/30">
+                      <p className="font-medium text-gold-700 dark:text-gold-300 text-sm">Delivery Notes:</p>
+                      <p className="text-gold-600 dark:text-gold-400 text-sm">{selectedOrderDetails.deliveryNotes}</p>
                     </div>
                   )}
                 </div>
@@ -887,42 +882,42 @@ const DeliveryMap = () => {
                 </div>
                 
                 {/* Order summary */}
-                <div className="border-t dark:border-gray-700 pt-4 mt-4">
-                  <div className="flex justify-between">
-                    <span className="dark:text-gray-300">Order Total:</span>
-                    <span className="font-medium dark:text-white">KSh {selectedOrderDetails?.total?.toFixed(2)}</span>
+                <div className="border-t border-brown-100 dark:border-dm-border pt-4 mt-4">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-brown-400 dark:text-white/50">Order Total:</span>
+                    <span className="font-price font-semibold text-gold-600 dark:text-gold-400">KSh {selectedOrderDetails?.total?.toFixed(2)}</span>
                   </div>
-                  <div className="flex justify-between mt-2">
-                    <span className="dark:text-gray-300">Payment Method:</span>
-                    <span className="font-medium dark:text-white">{selectedOrderDetails?.paymentMethod || 'Cash on Delivery'}</span>
+                  <div className="flex justify-between mt-2 text-sm">
+                    <span className="text-brown-400 dark:text-white/50">Payment:</span>
+                    <span className="font-medium text-charcoal dark:text-white">{selectedOrderDetails?.paymentMethod || 'Cash on Delivery'}</span>
                   </div>
                 </div>
                 
-                <div className="flex justify-end mt-6">
+                <div className="flex justify-end gap-2 mt-6">
                   <button
                     onClick={() => setShowOrderDetails(false)}
-                    className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-white rounded hover:bg-gray-300 dark:hover:bg-gray-600 mr-2"
+                    className="px-4 py-2 bg-blush-50 dark:bg-dm-card-2 text-charcoal dark:text-white/70 rounded-pill hover:bg-blush-100 transition-colors text-sm"
                   >
                     Close
                   </button>
                   {selectedDelivery?.status === 'out_for_delivery' && (
-                    <button 
+                    <button
                       onClick={() => {
                         handleStatusUpdate(selectedDelivery._id, 'nearby');
                         setShowOrderDetails(false);
                       }}
-                      className="px-4 py-2 bg-yellow-500 text-white rounded hover:bg-yellow-600"
+                      className="px-4 py-2 bg-gold-500 hover:bg-gold-400 text-charcoal rounded-pill text-sm font-medium press transition-colors"
                     >
                       Mark Nearby
                     </button>
                   )}
                   {selectedDelivery?.status === 'nearby' && (
-                    <button 
+                    <button
                       onClick={() => {
                         handleStatusUpdate(selectedDelivery._id, 'delivered');
                         setShowOrderDetails(false);
                       }}
-                      className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600"
+                      className="px-4 py-2 bg-plum-700 hover:bg-plum-800 text-white rounded-pill text-sm font-medium press transition-colors"
                     >
                       Mark Delivered
                     </button>
@@ -936,33 +931,31 @@ const DeliveryMap = () => {
       
       {/* Route optimizer modal */}
       {showOptimizeModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-lg w-full max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="bg-ivory dark:bg-dm-card rounded-card shadow-hover p-6 max-w-lg w-full max-h-[90vh] overflow-y-auto animate-scale-in">
             <div className="flex justify-between items-center mb-4">
-              <h3 className="text-xl font-bold dark:text-white">
+              <h3 className="font-display text-xl italic text-plum-900 dark:text-white">
                 Optimize Delivery Route
               </h3>
-              <button 
+              <button
                 onClick={() => setShowOptimizeModal(false)}
-                className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                className="text-brown-300 hover:text-charcoal dark:text-white/40 dark:hover:text-white transition-colors"
               >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
-                </svg>
+                <FaTimes />
               </button>
             </div>
             
-            <p className="mb-4 dark:text-gray-300">
-              Select the deliveries you want to include in your optimized route:
+            <p className="mb-4 text-sm text-brown-400 dark:text-white/50">
+              Select the deliveries to include in your optimized route:
             </p>
             
-            <div className="mb-4 max-h-[40vh] overflow-y-auto">
+            <div className="mb-4 max-h-[40vh] overflow-y-auto scrollbar-hide space-y-1">
               {activeDeliveries.length === 0 ? (
-                <p className="text-gray-500 dark:text-gray-400">No active deliveries to optimize.</p>
+                <p className="text-brown-300 dark:text-white/30 text-sm">No active deliveries to optimize.</p>
               ) : (
-                <div className="divide-y dark:divide-gray-700">
+                <div className="divide-y divide-brown-100 dark:divide-dm-border">
                   {activeDeliveries.map(delivery => (
-                    <div 
+                    <div
                       key={delivery._id}
                       className="py-2 flex items-center"
                     >
@@ -971,23 +964,23 @@ const DeliveryMap = () => {
                         id={`delivery-${delivery._id}`}
                         checked={selectedDeliveries.some(selected => selected._id === delivery._id)}
                         onChange={() => toggleDeliverySelection(delivery)}
-                        className="mr-3 h-4 w-4 text-primary-200 focus:ring-primary-200 border-gray-300 rounded"
+                        className="mr-3 h-4 w-4 accent-plum-600 rounded border-brown-200"
                       />
-                      <label 
+                      <label
                         htmlFor={`delivery-${delivery._id}`}
                         className="flex-1 flex items-center cursor-pointer"
                       >
                         <div className="flex-1">
-                          <p className="font-medium dark:text-white">Order #{delivery.orderId}</p>
-                          <p className="text-sm text-gray-600 dark:text-gray-400">
+                          <p className="font-medium text-charcoal dark:text-white text-sm">Order #{delivery.orderId}</p>
+                          <p className="text-xs text-brown-400 dark:text-white/40">
                             {delivery.customer.name} • {delivery.deliveryAddress.substring(0, 30)}
                             {delivery.deliveryAddress.length > 30 ? '...' : ''}
                           </p>
                         </div>
-                        <span className={`ml-2 px-2 py-0.5 rounded-full text-xs ${
-                          delivery.status === 'out_for_delivery' 
-                            ? 'bg-yellow-200 text-yellow-800' 
-                            : 'bg-blue-200 text-blue-800'
+                        <span className={`ml-2 px-2 py-0.5 rounded-pill text-xs font-medium ${
+                          delivery.status === 'out_for_delivery'
+                            ? 'bg-gold-100 dark:bg-gold-900/20 text-gold-700 dark:text-gold-300'
+                            : 'bg-plum-100 dark:bg-plum-900/20 text-plum-700 dark:text-plum-200'
                         }`}>
                           {delivery.status === 'out_for_delivery' ? 'On Route' : 'Assigned'}
                         </span>
@@ -998,18 +991,18 @@ const DeliveryMap = () => {
               )}
             </div>
             
-            <div className="flex flex-wrap justify-between">
+            <div className="flex flex-wrap justify-between gap-2">
               <button
                 onClick={clearSelectedDeliveries}
-                className="px-3 py-1.5 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-white rounded hover:bg-gray-300 dark:hover:bg-gray-600 mb-2 sm:mb-0"
+                className="px-3 py-1.5 bg-blush-50 dark:bg-dm-card-2 text-charcoal dark:text-white/70 rounded-pill hover:bg-blush-100 transition-colors text-sm"
               >
-                Clear Selection
+                Clear
               </button>
               
-              <div className="space-x-2">
+              <div className="flex gap-2">
                 <button
                   onClick={() => setShowOptimizeModal(false)}
-                  className="px-3 py-1.5 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-white rounded hover:bg-gray-300 dark:hover:bg-gray-600"
+                  className="px-3 py-1.5 bg-blush-50 dark:bg-dm-card-2 text-charcoal dark:text-white/70 rounded-pill hover:bg-blush-100 transition-colors text-sm"
                 >
                   Cancel
                 </button>
@@ -1017,18 +1010,12 @@ const DeliveryMap = () => {
                 <button
                   onClick={optimizeMultiStopRoute}
                   disabled={selectedDeliveries.length < 2 || isOptimizing}
-                  className="px-3 py-1.5 bg-primary-200 text-white rounded hover:bg-primary-300 disabled:opacity-50 flex items-center"
+                  className="px-3 py-1.5 bg-plum-700 hover:bg-plum-800 text-white rounded-pill disabled:opacity-50 flex items-center gap-2 transition-colors text-sm press"
                 >
                   {isOptimizing ? (
-                    <>
-                      <FaSpinner className="animate-spin mr-2" />
-                      Optimizing...
-                    </>
+                    <><FaSpinner className="animate-spin" size={12} /> Optimizing...</>
                   ) : (
-                    <>
-                      <FaExchangeAlt className="mr-2" />
-                      Optimize Route
-                    </>
+                    <><FaExchangeAlt size={12} /> Optimize</>
                   )}
                 </button>
               </div>
@@ -1038,99 +1025,99 @@ const DeliveryMap = () => {
       )}
       
       {/* Map controls */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg p-2 mb-2 flex flex-wrap justify-between items-center">
+      <div className="bg-white dark:bg-dm-card rounded-card shadow-card p-2 mb-2 flex flex-wrap justify-between items-center">
         <div className="flex flex-wrap gap-2 mb-2 sm:mb-0">
           <select
             value={selectedTileLayer}
             onChange={(e) => setSelectedTileLayer(e.target.value)}
-            className="bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded px-2 py-1 text-sm"
+            className="bg-white dark:bg-dm-card border border-blush-200 dark:border-dm-border rounded-pill px-3 py-1 text-sm text-charcoal dark:text-white outline-none"
           >
             {Object.keys(tileLayers).map(key => (
               <option key={key} value={key}>{tileLayers[key].name}</option>
             ))}
           </select>
           
-          <button 
+          <button
             onClick={centerOnCurrentLocation}
-            className="bg-blue-500 text-white rounded px-2 py-1 text-sm flex items-center hover:bg-blue-600"
+            className="bg-plum-100 dark:bg-plum-900/30 text-plum-700 dark:text-plum-200 rounded-pill px-2.5 py-1 text-xs flex items-center gap-1 hover:bg-plum-200 transition-colors"
           >
-            <FaLocationArrow className="mr-1" /> Center
+            <FaLocationArrow size={10} /> Center
           </button>
           
-          <button 
+          <button
             onClick={toggleTrafficLayer}
-            className={`rounded px-2 py-1 text-sm flex items-center ${
-              trafficLayer 
-                ? 'bg-red-500 text-white hover:bg-red-600' 
-                : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-600'
+            className={`rounded-pill px-2.5 py-1 text-xs flex items-center gap-1 transition-colors ${
+              trafficLayer
+                ? 'bg-blush-500 text-white'
+                : 'bg-blush-50 dark:bg-dm-card text-charcoal dark:text-white/70 hover:bg-blush-100'
             }`}
           >
-            <FaTrafficLight className="mr-1" /> 
-            {trafficLayer ? 'Hide Traffic' : 'Show Traffic'}
+            <FaTrafficLight size={10} />
+            {trafficLayer ? 'Hide Traffic' : 'Traffic'}
           </button>
           
           <button
             onClick={toggleWeatherMode}
-            className={`rounded px-2 py-1 text-sm flex items-center ${
-              weatherMode 
-                ? 'bg-cyan-500 text-white hover:bg-cyan-600' 
-                : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-600'
+            className={`rounded-pill px-2.5 py-1 text-xs flex items-center gap-1 transition-colors ${
+              weatherMode
+                ? 'bg-plum-700 text-white'
+                : 'bg-blush-50 dark:bg-dm-card text-charcoal dark:text-white/70 hover:bg-blush-100'
             }`}
           >
-            <FaCloud className="mr-1" /> 
-            {weatherMode ? 'Exit Weather Mode' : 'Check Weather'}
+            <FaCloud size={10} />
+            {weatherMode ? 'Exit Weather' : 'Weather'}
           </button>
           
           <button
             onClick={() => setShowOptimizeModal(true)}
-            className="bg-purple-500 text-white rounded px-2 py-1 text-sm flex items-center hover:bg-purple-600"
+            className="bg-plum-700 hover:bg-plum-800 text-white rounded-pill px-2.5 py-1 text-xs flex items-center gap-1 transition-colors"
           >
-            <FaRoute className="mr-1" /> Optimize
+            <FaRoute size={10} /> Optimize
             {selectedDeliveries.length > 0 && (
-              <span className="ml-1 bg-white text-purple-600 rounded-full h-5 w-5 flex items-center justify-center text-xs font-bold">
+              <span className="ml-0.5 bg-gold-500 text-charcoal rounded-full h-4 w-4 flex items-center justify-center text-[10px] font-bold">
                 {selectedDeliveries.length}
               </span>
             )}
           </button>
           
           {loadingWeather ? (
-            <div className="bg-gray-100 dark:bg-gray-700 rounded px-2 py-1 text-sm flex items-center">
-              <FaSpinner className="animate-spin mr-1" /> Loading weather...
+            <div className="bg-blush-50 dark:bg-dm-card rounded-pill px-2.5 py-1 text-xs flex items-center gap-1 text-brown-400 dark:text-white/40">
+              <FaSpinner className="animate-spin" size={10} /> Weather...
             </div>
           ) : weatherData ? (
-            <div className="bg-gray-100 dark:bg-gray-700 rounded px-2 py-1 text-sm flex items-center">
+            <div className="bg-blush-50 dark:bg-dm-card rounded-pill px-2.5 py-1 text-xs flex items-center gap-1 text-charcoal dark:text-white/70">
               {getWeatherIcon(weatherData.current.condition)}
-              <span className="ml-1">{Math.round(weatherData.current.temp_c)}°C</span>
+              <span>{Math.round(weatherData.current.temp_c)}°C</span>
             </div>
           ) : null}
         </div>
         
-        <div className="flex items-center">
+        <div className="flex items-center gap-2">
           {selectedDelivery && currentLocation && (
             <button
               onClick={() => getDetailedDirections(currentLocation, selectedDelivery.coordinates)}
               disabled={isRouteFetching}
-              className="mr-2 bg-green-500 text-white rounded px-2 py-1 text-sm flex items-center hover:bg-green-600 disabled:opacity-50"
+              className="bg-plum-50 dark:bg-plum-900/30 text-plum-700 dark:text-plum-200 rounded-pill px-2.5 py-1 text-xs flex items-center gap-1 hover:bg-plum-100 disabled:opacity-50 transition-colors"
             >
-              {isRouteFetching ? <FaSpinner className="animate-spin mr-1" /> : <FaRoute className="mr-1" />}
+              {isRouteFetching ? <FaSpinner className="animate-spin" size={10} /> : <FaRoute size={10} />}
               Route
             </button>
           )}
           
           <button
             onClick={toggleFullscreen}
-            className="bg-gray-500 text-white rounded px-2 py-1 text-sm flex items-center hover:bg-gray-600"
+            className="bg-brown-50 dark:bg-dm-card text-charcoal dark:text-white/70 rounded-pill px-2.5 py-1 text-xs flex items-center gap-1 hover:bg-brown-100 transition-colors"
           >
-            {isFullscreen ? <FaCompressAlt className="mr-1" /> : <FaExpandAlt className="mr-1" />}
+            {isFullscreen ? <FaCompressAlt size={10} /> : <FaExpandAlt size={10} />}
             {isFullscreen ? 'Exit' : 'Fullscreen'}
           </button>
         </div>
       </div>
       
       {/* Map container with sidebar layout */}
-      <div 
-        ref={mapContainerRef} 
-        className={`bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden flex flex-col ${isFullscreen ? '' : 'md:flex-row'}`}
+      <div
+        ref={mapContainerRef}
+        className={`bg-white dark:bg-dm-card rounded-card shadow-card overflow-hidden flex flex-col ${isFullscreen ? '' : 'md:flex-row'}`}
       >
         {/* Map */}
         <div 
@@ -1193,9 +1180,9 @@ const DeliveryMap = () => {
                           <p>{delivery.deliveryNotes}</p>
                         </div>
                       )}
-                      <button 
+                      <button
                         onClick={() => handleDeliverySelect(delivery)}
-                        className="mt-2 bg-primary-200 text-white px-2 py-1 rounded text-xs w-full"
+                        className="mt-2 bg-gold-500 hover:bg-gold-400 text-charcoal font-semibold px-2 py-1 rounded-pill text-xs w-full transition-colors"
                       >
                         Navigate Here
                       </button>
@@ -1256,27 +1243,25 @@ const DeliveryMap = () => {
         
         {/* Active deliveries sidebar - hide in fullscreen mode */}
         {!isFullscreen && (
-          <div className="p-4 border-t md:border-t-0 md:border-l border-gray-200 dark:border-gray-700 md:w-80 lg:w-96">
+          <div className="p-4 border-t md:border-t-0 md:border-l border-brown-100 dark:border-dm-border md:w-80 lg:w-96">
             {selectedDeliveries.length > 0 && (
-              <div className="mb-4 p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
+              <div className="mb-4 p-3 bg-plum-50 dark:bg-plum-900/20 rounded-card border border-plum-100 dark:border-plum-800/30">
                 <div className="flex justify-between items-center mb-2">
-                  <h3 className="font-medium text-green-800 dark:text-green-200">
-                    <FaList className="inline mr-1" /> Optimized Route ({selectedDeliveries.length} stops)
+                  <h3 className="font-semibold text-plum-800 dark:text-plum-200 text-sm">
+                    <FaList className="inline mr-1.5" /> Optimized Route ({selectedDeliveries.length} stops)
                   </h3>
                   <button
                     onClick={clearSelectedDeliveries}
-                    className="text-green-700 dark:text-green-300 hover:text-green-900 dark:hover:text-green-100"
+                    className="text-brown-300 hover:text-charcoal dark:text-white/40 dark:hover:text-white transition-colors"
                   >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
-                    </svg>
+                    <FaTimes size={13} />
                   </button>
                 </div>
                 
-                <ol className="list-decimal list-inside text-sm text-green-800 dark:text-green-200 pl-2">
+                <ol className="list-decimal list-inside text-xs text-plum-700 dark:text-plum-200 pl-2 space-y-1">
                   {selectedDeliveries.map((delivery, index) => (
-                    <li key={delivery._id} className="mb-1">
-                      {delivery.customer.name} • Order #{delivery.orderId}
+                    <li key={delivery._id}>
+                      {delivery.customer.name} • #{delivery.orderId}
                     </li>
                   ))}
                 </ol>
@@ -1285,126 +1270,119 @@ const DeliveryMap = () => {
                   <button
                     onClick={optimizeMultiStopRoute}
                     disabled={isOptimizing}
-                    className="bg-green-600 text-white px-2 py-1 rounded text-xs hover:bg-green-700 disabled:opacity-50"
+                    className="bg-plum-700 hover:bg-plum-800 text-white px-3 py-1 rounded-pill text-xs flex items-center gap-1 ml-auto transition-colors disabled:opacity-50 press"
                   >
                     {isOptimizing ? (
-                      <>
-                        <FaSpinner className="inline animate-spin mr-1" />
-                        Optimizing...
-                      </>
+                      <><FaSpinner className="animate-spin" size={10} /> Optimizing...</>
                     ) : (
-                      <>
-                        <FaBullseye className="inline mr-1" />
-                        Re-optimize
-                      </>
+                      <><FaBullseye size={10} /> Re-optimize</>
                     )}
                   </button>
                 </div>
               </div>
             )}
             
-            <h2 className="font-semibold mb-2 dark:text-white">
-              Active Deliveries ({activeDeliveries.length})
+            <h2 className="font-semibold text-charcoal dark:text-white text-sm mb-3">
+              Active Deliveries <span className="text-brown-400 dark:text-white/40 font-normal">({activeDeliveries.length})</span>
             </h2>
             
             {activeDeliveries.length === 0 ? (
-              <p className="text-gray-500 dark:text-gray-400">No active deliveries at the moment.</p>
+              <p className="text-brown-300 dark:text-white/30 text-sm">No active deliveries at the moment.</p>
             ) : (
-              <div className="grid gap-2 max-h-[50vh] md:max-h-[65vh] overflow-y-auto pr-1">
+              <div className="grid gap-2 max-h-[50vh] md:max-h-[65vh] overflow-y-auto pr-1 scrollbar-hide">
                 {activeDeliveries.map(delivery => (
-                  <div 
-                    key={delivery._id} 
-                    className={`p-3 rounded border ${
+                  <div
+                    key={delivery._id}
+                    className={`p-3 rounded-card border cursor-pointer hover-lift transition-all relative ${
                       delivery._id === selectedDelivery?._id
-                        ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800'
-                        : delivery.status === 'out_for_delivery' 
-                        ? 'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-800' 
-                        : 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800'
-                    } cursor-pointer hover:shadow-md transition-shadow relative`}
+                        ? 'bg-plum-50 dark:bg-plum-900/20 border-plum-300 dark:border-plum-700'
+                        : delivery.status === 'out_for_delivery'
+                        ? 'bg-gold-50 dark:bg-gold-900/10 border-gold-200 dark:border-gold-800/30'
+                        : 'bg-white dark:bg-dm-card border-brown-100 dark:border-dm-border'
+                    }`}
                     onClick={() => handleDeliverySelect(delivery)}
                   >
                     {/* Multi-stop selection checkbox */}
-                    <div 
-                      className="absolute right-1 top-1 z-10"
+                    <div
+                      className="absolute right-2 top-2 z-10"
                       onClick={(e) => {
                         e.stopPropagation();
                         toggleDeliverySelection(delivery);
                       }}
                     >
-                      <div className={`w-5 h-5 rounded border flex items-center justify-center ${
+                      <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors ${
                         selectedDeliveries.some(selected => selected._id === delivery._id)
-                          ? 'bg-primary-200 border-primary-300 text-white'
-                          : 'bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-500'
+                          ? 'bg-plum-700 border-plum-700 text-white'
+                          : 'bg-white dark:bg-dm-card border-brown-200 dark:border-dm-border'
                       }`}>
                         {selectedDeliveries.some(selected => selected._id === delivery._id) && (
-                          <FaCheck className="text-xs" />
+                          <FaCheck size={8} />
                         )}
                       </div>
                     </div>
                     
-                    {/* Rest of the delivery card remains unchanged */}
-                    <div className="flex justify-between items-center">
-                      <p className="font-medium dark:text-white">{delivery.orderId}</p>
-                      <span className={`px-2 py-0.5 rounded-full text-xs ${
-                        delivery.status === 'out_for_delivery' 
-                          ? 'bg-yellow-200 text-yellow-800' 
-                          : 'bg-blue-200 text-blue-800'
+                    <div className="flex justify-between items-center pr-6">
+                      <p className="font-semibold text-sm text-charcoal dark:text-white">{delivery.orderId}</p>
+                      <span className={`px-2 py-0.5 rounded-pill text-xs font-medium ${
+                        delivery.status === 'out_for_delivery'
+                          ? 'bg-gold-100 dark:bg-gold-900/20 text-gold-700 dark:text-gold-300'
+                          : 'bg-plum-100 dark:bg-plum-900/20 text-plum-700 dark:text-plum-200'
                       }`}>
                         {delivery.status === 'out_for_delivery' ? 'On Route' : 'Assigned'}
                       </span>
                     </div>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">
-                      <FaUserAlt className="inline mr-1 text-xs" /> {delivery.customer.name}
+                    <p className="text-xs text-brown-400 dark:text-white/50 mt-0.5">
+                      <FaUserAlt className="inline mr-1" size={9} /> {delivery.customer.name}
                     </p>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">
-                      <FaMapMarkerAlt className="inline mr-1 text-xs" /> {delivery.deliveryAddress}
+                    <p className="text-xs text-brown-400 dark:text-white/50 truncate">
+                      <FaMapMarkerAlt className="inline mr-1" size={9} /> {delivery.deliveryAddress}
                     </p>
-                    <div className="mt-3 flex justify-between">
-                      <div className="flex gap-2">
+                    <div className="mt-2 flex justify-between">
+                      <div className="flex gap-1.5">
                         <a
                           href={`https://maps.google.com/?q=${delivery.deliveryAddress}`}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 px-2 py-1 rounded text-xs flex items-center"
+                          className="bg-blush-50 dark:bg-dm-card-2 hover:bg-blush-100 text-charcoal dark:text-white/60 px-2 py-0.5 rounded-pill text-xs flex items-center gap-1"
                           onClick={(e) => e.stopPropagation()}
                         >
-                          <FaMapMarkerAlt className="mr-1" />
-                          Google Maps
+                          <FaMapMarkerAlt size={9} />
+                          Maps
                         </a>
                         {currentLocation && delivery.coordinates && (
                           <button
-                            className="bg-blue-100 dark:bg-blue-900/30 hover:bg-blue-200 dark:hover:bg-blue-900/50 text-blue-700 dark:text-blue-300 px-2 py-1 rounded text-xs flex items-center"
+                            className="bg-plum-50 dark:bg-plum-900/20 hover:bg-plum-100 text-plum-700 dark:text-plum-300 px-2 py-0.5 rounded-pill text-xs flex items-center gap-1"
                             onClick={(e) => {
                               e.stopPropagation();
                               getDetailedDirections(currentLocation, delivery.coordinates);
                             }}
                           >
-                            <FaRoute className="mr-1" />
+                            <FaRoute size={9} />
                             Route
                           </button>
                         )}
                       </div>
                       
                       {delivery.status === 'driver_assigned' && (
-                        <button 
-                          className="bg-primary-100 hover:bg-primary-200 text-white px-2 py-1 rounded text-xs flex items-center"
+                        <button
+                          className="bg-gold-500 hover:bg-gold-400 text-charcoal font-medium px-2 py-0.5 rounded-pill text-xs flex items-center gap-1 transition-colors press"
                           onClick={(e) => {
                             e.stopPropagation();
                             handleStatusUpdate(delivery._id, 'out_for_delivery');
                           }}
                         >
-                          <FaTruck className="mr-1" /> Start
+                          <FaTruck size={9} /> Start
                         </button>
                       )}
                       {delivery.status === 'out_for_delivery' && (
-                        <button 
-                          className="bg-green-500 hover:bg-green-600 text-white px-2 py-1 rounded text-xs flex items-center"
+                        <button
+                          className="bg-plum-700 hover:bg-plum-800 text-white px-2 py-0.5 rounded-pill text-xs flex items-center gap-1 transition-colors press"
                           onClick={(e) => {
                             e.stopPropagation();
                             handleStatusUpdate(delivery._id, 'delivered');
                           }}
                         >
-                          <FaCalendarCheck className="mr-1" /> Complete
+                          <FaCalendarCheck size={9} /> Done
                         </button>
                       )}
                     </div>
@@ -1418,67 +1396,65 @@ const DeliveryMap = () => {
       
       {/* Weather info modal for clicked locations */}
       {showLocationWeather && locationWeatherData && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="bg-ivory dark:bg-dm-card rounded-card shadow-hover p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto animate-scale-in">
             <div className="flex justify-between items-center mb-4">
-              <h3 className="text-xl font-bold dark:text-white">
-                Weather in {locationWeatherData.location.name}, {locationWeatherData.location.region}
+              <h3 className="font-display text-xl italic text-plum-900 dark:text-white">
+                {locationWeatherData.location.name}, {locationWeatherData.location.region}
               </h3>
-              <button 
+              <button
                 onClick={() => setShowLocationWeather(false)}
-                className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                className="text-brown-300 hover:text-charcoal dark:text-white/40 dark:hover:text-white transition-colors"
               >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
-                </svg>
+                <FaTimes />
               </button>
             </div>
             
             {/* Current weather */}
-            <div className="flex flex-col md:flex-row items-center md:items-start mb-6 p-4 bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/30 dark:to-blue-800/20 rounded-lg">
+            <div className="flex flex-col md:flex-row items-center md:items-start mb-6 p-4 bg-gradient-to-br from-plum-50 to-blush-50 dark:from-plum-900/20 dark:to-dm-card-2 rounded-card border border-plum-100 dark:border-plum-800/30">
               <div className="flex flex-col items-center mb-4 md:mb-0 md:mr-8">
                 {locationWeatherData.current.condition.icon && (
-                  <img 
-                    src={locationWeatherData.current.condition.icon.replace('64x64', '128x128')} 
-                    alt={locationWeatherData.current.condition.text} 
+                  <img
+                    src={locationWeatherData.current.condition.icon.replace('64x64', '128x128')}
+                    alt={locationWeatherData.current.condition.text}
                     className="w-24 h-24 mb-2"
                   />
                 )}
-                <p className="text-3xl font-bold dark:text-white">{Math.round(locationWeatherData.current.temp_c)}°C</p>
-                <p className="text-gray-700 dark:text-gray-300">{locationWeatherData.current.condition.text}</p>
+                <p className="font-price text-3xl font-bold text-charcoal dark:text-white">{Math.round(locationWeatherData.current.temp_c)}°C</p>
+                <p className="text-brown-400 dark:text-white/50 text-sm">{locationWeatherData.current.condition.text}</p>
               </div>
               
               <div className="w-full md:flex-1 grid grid-cols-2 gap-3">
-                <div className="bg-white/50 dark:bg-gray-800/50 p-2 rounded-md">
-                  <div className="flex items-center text-gray-700 dark:text-gray-300 mb-1">
-                    <FaThermometerHalf className="mr-1" />
+                <div className="bg-white/70 dark:bg-dm-card/70 p-2 rounded-card border border-brown-100 dark:border-dm-border">
+                  <div className="flex items-center text-brown-400 dark:text-white/50 mb-1 text-xs">
+                    <FaThermometerHalf className="mr-1 text-gold-500" />
                     <span>Feels Like</span>
                   </div>
-                  <p className="font-medium text-lg dark:text-white">{Math.round(locationWeatherData.current.feelslike_c)}°C</p>
+                  <p className="font-semibold text-charcoal dark:text-white">{Math.round(locationWeatherData.current.feelslike_c)}°C</p>
                 </div>
                 
-                <div className="bg-white/50 dark:bg-gray-800/50 p-2 rounded-md">
-                  <div className="flex items-center text-gray-700 dark:text-gray-300 mb-1">
-                    <FaWind className="mr-1" />
+                <div className="bg-white/70 dark:bg-dm-card/70 p-2 rounded-card border border-brown-100 dark:border-dm-border">
+                  <div className="flex items-center text-brown-400 dark:text-white/50 mb-1 text-xs">
+                    <FaWind className="mr-1 text-plum-400" />
                     <span>Wind</span>
                   </div>
-                  <p className="font-medium text-lg dark:text-white">
+                  <p className="font-semibold text-charcoal dark:text-white">
                     {Math.round(locationWeatherData.current.wind_kph)} km/h
                   </p>
                 </div>
                 
-                <div className="bg-white/50 dark:bg-gray-800/50 p-2 rounded-md">
-                  <div className="flex items-center text-gray-700 dark:text-gray-300 mb-1">
+                <div className="bg-white/70 dark:bg-dm-card/70 p-2 rounded-card border border-brown-100 dark:border-dm-border">
+                  <div className="flex items-center text-brown-400 dark:text-white/50 mb-1 text-xs">
                     <span>Humidity</span>
                   </div>
-                  <p className="font-medium text-lg dark:text-white">{locationWeatherData.current.humidity}%</p>
+                  <p className="font-semibold text-charcoal dark:text-white">{locationWeatherData.current.humidity}%</p>
                 </div>
                 
-                <div className="bg-white/50 dark:bg-gray-800/50 p-2 rounded-md">
-                  <div className="flex items-center text-gray-700 dark:text-gray-300 mb-1">
+                <div className="bg-white/70 dark:bg-dm-card/70 p-2 rounded-card border border-brown-100 dark:border-dm-border">
+                  <div className="flex items-center text-brown-400 dark:text-white/50 mb-1 text-xs">
                     <span>Visibility</span>
                   </div>
-                  <p className="font-medium text-lg dark:text-white">{locationWeatherData.current.vis_km} km</p>
+                  <p className="font-semibold text-charcoal dark:text-white">{locationWeatherData.current.vis_km} km</p>
                 </div>
               </div>
             </div>
@@ -1486,38 +1462,38 @@ const DeliveryMap = () => {
             {/* Forecast */}
             {locationWeatherData.forecast && (
               <div className="mb-6">
-                <h4 className="font-medium text-lg mb-3 dark:text-white">3-Day Forecast</h4>
+                <h4 className="font-semibold text-charcoal dark:text-white mb-3">3-Day Forecast</h4>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   {locationWeatherData.forecast.forecastday.map((day, index) => (
-                    <div key={index} className="bg-gray-50 dark:bg-gray-700/50 p-3 rounded-md">
-                      <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">
+                    <div key={index} className="bg-blush-50 dark:bg-dm-card-2 p-3 rounded-card border border-blush-100 dark:border-dm-border">
+                      <p className="text-xs text-brown-400 dark:text-white/40 mb-2">
                         {new Date(day.date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
                       </p>
                       
                       <div className="flex items-center mb-2">
                         {day.day.condition.icon && (
-                          <img 
-                            src={day.day.condition.icon} 
-                            alt={day.day.condition.text} 
-                            className="w-12 h-12 mr-2"
+                          <img
+                            src={day.day.condition.icon}
+                            alt={day.day.condition.text}
+                            className="w-10 h-10 mr-2"
                           />
                         )}
                         <div>
-                          <p className="font-medium dark:text-white">{day.day.condition.text}</p>
-                          <p className="text-gray-700 dark:text-gray-300">
+                          <p className="font-medium text-charcoal dark:text-white text-sm">{day.day.condition.text}</p>
+                          <p className="text-xs text-brown-400 dark:text-white/50">
                             {Math.round(day.day.maxtemp_c)}° / {Math.round(day.day.mintemp_c)}°
                           </p>
                         </div>
                       </div>
                       
-                      <div className="text-sm grid grid-cols-2 gap-2">
+                      <div className="text-xs grid grid-cols-2 gap-2">
                         <div>
-                          <p className="text-gray-500 dark:text-gray-400">Chance of Rain</p>
-                          <p className="dark:text-white">{day.day.daily_chance_of_rain}%</p>
+                          <p className="text-brown-300 dark:text-white/30">Rain</p>
+                          <p className="text-charcoal dark:text-white font-medium">{day.day.daily_chance_of_rain}%</p>
                         </div>
                         <div>
-                          <p className="text-gray-500 dark:text-gray-400">Wind</p>
-                          <p className="dark:text-white">{Math.round(day.day.maxwind_kph)} km/h</p>
+                          <p className="text-brown-300 dark:text-white/30">Wind</p>
+                          <p className="text-charcoal dark:text-white font-medium">{Math.round(day.day.maxwind_kph)} km/h</p>
                         </div>
                       </div>
                     </div>
@@ -1529,14 +1505,14 @@ const DeliveryMap = () => {
             {/* Weather alerts if any */}
             {locationWeatherData.alerts && locationWeatherData.alerts.alert && locationWeatherData.alerts.alert.length > 0 && (
               <div className="mb-6">
-                <h4 className="font-medium text-lg mb-3 text-red-600 dark:text-red-400">Weather Alerts</h4>
-                <div className="max-h-40 overflow-y-auto">
+                <h4 className="font-semibold text-blush-500 dark:text-blush-400 mb-3">Weather Alerts</h4>
+                <div className="max-h-40 overflow-y-auto space-y-2">
                   {locationWeatherData.alerts.alert.map((alert, index) => (
-                    <div key={index} className="bg-red-50 dark:bg-red-900/30 p-3 rounded-md mb-2 border-l-4 border-red-600">
-                      <p className="font-medium text-red-700 dark:text-red-300">{alert.headline || 'Weather Alert'}</p>
-                      <p className="text-sm text-red-600 dark:text-red-400 mb-1">{alert.event}</p>
-                      <p className="text-xs text-gray-600 dark:text-gray-400">
-                        {new Date(alert.effective).toLocaleString()} - {new Date(alert.expires).toLocaleString()}
+                    <div key={index} className="bg-blush-50 dark:bg-blush-500/10 p-3 rounded-card border-l-4 border-blush-500">
+                      <p className="font-semibold text-blush-500 dark:text-blush-300 text-sm">{alert.headline || 'Weather Alert'}</p>
+                      <p className="text-xs text-blush-500 dark:text-blush-400 mb-1">{alert.event}</p>
+                      <p className="text-xs text-brown-400 dark:text-white/40">
+                        {new Date(alert.effective).toLocaleString()} — {new Date(alert.expires).toLocaleString()}
                       </p>
                     </div>
                   ))}
@@ -1544,30 +1520,29 @@ const DeliveryMap = () => {
               </div>
             )}
             
-            <div className="border-t dark:border-gray-700 pt-4 mt-4 flex flex-wrap justify-between items-center">
-              <p className="text-xs text-gray-500 dark:text-gray-400">
-                Last updated: {new Date(locationWeatherData.current.last_updated).toLocaleString()}
+            <div className="border-t border-brown-100 dark:border-dm-border pt-4 mt-4 flex flex-wrap justify-between items-center gap-2">
+              <p className="text-xs text-brown-300 dark:text-white/30">
+                Updated: {new Date(locationWeatherData.current.last_updated).toLocaleString()}
               </p>
               
-              <div className="flex gap-2 mt-2 sm:mt-0">
+              <div className="flex gap-2">
                 <button
                   onClick={() => setShowLocationWeather(false)}
-                  className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-white rounded hover:bg-gray-300 dark:hover:bg-gray-600"
+                  className="px-4 py-2 bg-blush-50 dark:bg-dm-card-2 text-charcoal dark:text-white/70 rounded-pill hover:bg-blush-100 transition-colors text-sm"
                 >
                   Close
                 </button>
                 <button
                   onClick={() => {
-                    // Option to get directions to this location
                     if (currentLocation && clickedLocation) {
                       getDetailedDirections(currentLocation, clickedLocation);
                       setShowLocationWeather(false);
                     }
                   }}
-                  className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 flex items-center"
+                  className="px-4 py-2 bg-plum-700 hover:bg-plum-800 text-white rounded-pill flex items-center gap-2 disabled:opacity-50 transition-colors text-sm press"
                   disabled={!currentLocation || !clickedLocation}
                 >
-                  <FaRoute className="mr-2" />
+                  <FaRoute size={12} />
                   Get Directions
                 </button>
               </div>

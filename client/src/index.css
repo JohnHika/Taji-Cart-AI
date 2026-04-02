@@ -1,128 +1,298 @@
+/* ─── Font Imports ───────────────────────────────────────────────────── */
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500;1,600&family=DM+Sans:wght@300;400;500;600;700&family=Montserrat:wght@500;600;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-@import url('https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap');
+/* ─── CSS Custom Properties ──────────────────────────────────────────── */
+:root {
+  /* Brand */
+  --color-plum-900: #2D0B24;
+  --color-plum-700: #4B1E3E;
+  --color-plum-500: #7B3D6E;
+  --color-plum-100: #F5E6F0;
+  /* Accent */
+  --color-gold-500: #C9943A;
+  --color-gold-300: #E8C478;
+  --color-gold-100: #FDF5E4;
+  /* Blush */
+  --color-blush-400: #E8A0B0;
+  --color-blush-100: #FBF0F3;
+  /* Page surfaces */
+  --color-ivory:    #FAF8F5;
+  --color-charcoal: #1A0F14;
+  --color-brown-400: #8B5E52;
+  --color-brown-100: #F0E8E5;
+  /* Transitions */
+  --transition-default: 200ms ease;
+}
 
-/* Base styles */
+.dark {
+  --color-page-bg:   #0E080C;
+  --color-card-bg:   #1C1018;
+  --color-border:    #3A2030;
+  --color-text-body: #F5ECF0;
+}
+
+/* ─── Base Styles ────────────────────────────────────────────────────── */
 @layer base {
   html {
     scroll-behavior: smooth;
-    /* Prevent horizontal scrolling */
     overflow-x: hidden;
-  }
-  
-  body {
-    @apply bg-gray-50 text-gray-900 dark:bg-gray-900 dark:text-gray-100 transition-colors duration-200;
-    font-family: "Poppins", sans-serif;
-    font-weight: 400;
-    font-style: normal;
-    /* Improve text rendering on mobile */
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
-    /* Prevent zoom on input focus on iOS */
     font-size: 16px;
   }
-  
-  /* Better touch targets for mobile */
+
+  body {
+    @apply bg-ivory text-charcoal dark:bg-dm-surface dark:text-white transition-colors duration-200;
+    font-family: 'DM Sans', system-ui, sans-serif;
+    font-weight: 400;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  h1, h2, h3, h4 {
+    font-family: 'DM Sans', system-ui, sans-serif;
+    font-weight: 600;
+    @apply text-charcoal dark:text-white;
+  }
+
+  .font-display {
+    font-family: 'Cormorant Garamond', Georgia, serif;
+  }
+
+  .font-price {
+    font-family: 'Montserrat', system-ui, sans-serif;
+    font-weight: 600;
+  }
+
   button, input, textarea, select {
     touch-action: manipulation;
   }
+
+  /* Focus rings using gold */
+  :focus-visible {
+    outline: 2px solid var(--color-gold-500);
+    outline-offset: 2px;
+  }
 }
 
-/* Mobile-optimized utilities */
+/* ─── Keyframe Animations ────────────────────────────────────────────── */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes slideInLeft {
+  from { opacity: 0; transform: translateX(-24px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes shimmer {
+  from { background-position: -200% 0; }
+  to   { background-position:  200% 0; }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50%       { transform: translateY(-6px); }
+}
+
+@keyframes scaleIn {
+  from { opacity: 0; transform: scale(0.95); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ─── Utility Classes ────────────────────────────────────────────────── */
 @layer utilities {
+  /* Animation helpers */
+  .animate-fade-up        { animation: fadeUp 0.5s ease both; }
+  .animate-fade-up-delay  { animation: fadeUp 0.5s ease 0.15s both; }
+  .animate-fade-up-delay2 { animation: fadeUp 0.5s ease 0.3s both; }
+  .animate-fade-in        { animation: fadeIn 0.4s ease both; }
+  .animate-slide-in-left  { animation: slideInLeft 0.4s ease both; }
+  .animate-shimmer        { animation: shimmer 1.6s linear infinite; }
+  .animate-float          { animation: float 3s ease-in-out infinite; }
+  .animate-scale-in       { animation: scaleIn 0.3s ease both; }
+  .animate-slide-down     { animation: slideDown 0.25s ease both; }
+
+  /* Hover & interaction utilities */
+  .hover-lift {
+    transition: transform 0.25s ease, box-shadow 0.25s ease;
+  }
+  .hover-lift:hover {
+    transform:  translateY(-4px);
+    box-shadow: 0 8px 32px rgba(75,30,62,0.14);
+  }
+
+  .press {
+    transition: transform 0.1s ease;
+  }
+  .press:active {
+    transform: scale(0.96);
+  }
+
+  /* Glass morphism */
+  .glass {
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    background-color: rgba(250,248,245,0.85);
+    border: 1px solid rgba(240,232,229,0.6);
+  }
+  .glass-dark {
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    background-color: rgba(28,16,24,0.85);
+    border: 1px solid rgba(58,32,48,0.6);
+  }
+
+  /* Gradient text */
+  .text-gradient {
+    background: linear-gradient(135deg, #C9943A 0%, #4B1E3E 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+  }
+
+  /* Shimmer loading skeleton */
+  .bg-shimmer {
+    background: linear-gradient(90deg, #F0E8E5 25%, #FAF8F5 50%, #F0E8E5 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.6s linear infinite;
+  }
+  .dark .bg-shimmer {
+    background: linear-gradient(90deg, #251520 25%, #1C1018 50%, #251520 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.6s linear infinite;
+  }
+
+  /* Scrollbar utilities */
   .scrollbar-hide {
     -ms-overflow-style: none;
     scrollbar-width: none;
   }
-  
   .scrollbar-hide::-webkit-scrollbar {
     display: none;
   }
-  
-  .touch-manipulation {
-    touch-action: manipulation;
-  }
-  
-  /* Text clamping utilities */
+
+  /* Clamping */
   .line-clamp-2 {
     display: -webkit-box;
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
     overflow: hidden;
   }
-  
-  /* Mobile-friendly container padding */
+  .line-clamp-3 {
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  /* Touch */
+  .touch-manipulation {
+    touch-action: manipulation;
+  }
+
+  /* Responsive container */
   .container-mobile {
     @apply mx-auto px-2 sm:px-4 lg:px-6 xl:px-8;
   }
-  
-  /* Responsive safe area padding for devices with notches */
-  .safe-area-top {
-    padding-top: env(safe-area-inset-top);
-  }
-  
-  .safe-area-bottom {
-    padding-bottom: env(safe-area-inset-bottom);
-  }
-  
-  .safe-area-left {
-    padding-left: env(safe-area-inset-left);
-  }
-  
-  .safe-area-right {
-    padding-right: env(safe-area-inset-right);
-  }
+
+  /* Safe area padding */
+  .safe-area-top    { padding-top:    env(safe-area-inset-top); }
+  .safe-area-bottom { padding-bottom: env(safe-area-inset-bottom); }
+  .safe-area-left   { padding-left:   env(safe-area-inset-left); }
+  .safe-area-right  { padding-right:  env(safe-area-inset-right); }
 }
 
-.scrollbar-none::-webkit-scrollbar{
-    display: none;
+/* ─── Custom Scrollbar ───────────────────────────────────────────────── */
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
 }
 
-.scrollbarCustom::-webkit-scrollbar{
-    width: 10px;
-    @apply bg-slate-100
+.scrollbarCustom::-webkit-scrollbar {
+  width: 8px;
+  background: var(--color-ivory);
 }
-.scrollbarCustom::-webkit-scrollbar-thumb{
-    @apply bg-blue-100 rounded-full
+.scrollbarCustom::-webkit-scrollbar-thumb {
+  background: var(--color-plum-500);
+  border-radius: 9999px;
+}
+.scrollbarCustom::-webkit-scrollbar-track {
+  background: var(--color-brown-100);
+  border-radius: 9999px;
 }
 
-/* Dark mode styles */
+/* ─── Table Dark Mode ────────────────────────────────────────────────── */
 .dark .custom-table th {
-  @apply bg-gray-700 text-white;
+  @apply bg-dm-card-2 text-white;
 }
-
 .dark .custom-table td {
-  @apply border-gray-700;
+  @apply border-dm-border;
 }
-
 .dark .custom-table tbody tr:hover {
-  @apply bg-gray-800;
+  @apply bg-dm-card-2;
 }
 
-/* Mobile-specific optimizations */
+/* ─── Toast Overrides ────────────────────────────────────────────────── */
+.toast-nawiri {
+  background:    var(--color-plum-900) !important;
+  color:         #FAF8F5 !important;
+  border-radius: 0.75rem !important;
+  font-family:   'DM Sans', sans-serif !important;
+  font-size:     0.875rem !important;
+}
+
+/* ─── Mobile Bottom Nav Spacing ──────────────────────────────────────── */
 @media (max-width: 640px) {
-  /* Improve tap targets */
   button {
     min-height: 44px;
     min-width: 44px;
   }
-  
-  /* Better spacing for small screens */
+
   .grid-cols-auto-fit-mobile {
     grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
   }
-  
-  /* Add bottom padding for bottom navigation */
+
   main {
-    padding-bottom: 70px;
+    padding-bottom: 80px;
   }
 }
 
 @media (min-width: 1024px) {
-  /* Remove bottom padding on desktop */
   main {
     padding-bottom: 0 !important;
   }
+}
+
+/* ─── Image Zoom Utility ─────────────────────────────────────────────── */
+.img-zoom-wrapper {
+  overflow: hidden;
+}
+.img-zoom-wrapper img {
+  transition: transform 0.5s ease;
+}
+.img-zoom-wrapper:hover img {
+  transform: scale(1.05);
+}
+
+/* ─── Section Divider ────────────────────────────────────────────────── */
+.section-divider {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, #F0E8E5 40%, #F0E8E5 60%, transparent);
+}
+.dark .section-divider {
+  background: linear-gradient(90deg, transparent, #3A2030 40%, #3A2030 60%, transparent);
 }

@@ -191,37 +191,39 @@ const AddToCartButton = ({ data, product: productProp, cartData, showText = true
     }
 
     return (
-        <div className='w-full min-w-[90px] max-w-[100px] sm:max-w-[120px] lg:max-w-[150px]'>
+        <div className='w-full'>
             {
                 isAvailableCart ? (
-                    <div className='flex w-full h-full bg-white dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-600 overflow-hidden'>
-                        <button 
-                            onClick={decreaseQty} 
+                    <div className='flex w-full h-8 rounded-pill border border-plum-200 dark:border-plum-700 overflow-hidden'>
+                        <button
+                            onClick={decreaseQty}
                             disabled={updateLoading}
                             aria-label="Decrease quantity"
-                            className='bg-green-600 hover:bg-green-700 active:bg-green-800 text-white flex-1 w-full p-1.5 sm:p-2 flex items-center justify-center text-xs sm:text-sm touch-manipulation transition-colors min-w-[24px]'
+                            className='bg-plum-700 hover:bg-plum-600 text-white flex-none w-8 flex items-center justify-center touch-manipulation transition-colors'
                         >
-                            {updateLoading ? <Loading /> : <FaMinus className="text-xs" />}
+                            {updateLoading ? <Loading /> : <FaMinus size={10} />}
                         </button>
 
-                        <div className='flex-1 w-full font-semibold px-1 sm:px-2 flex items-center justify-center text-xs sm:text-sm bg-gray-100 dark:bg-gray-700 dark:text-white min-w-[28px] border-x border-gray-200 dark:border-gray-600'>{qty}</div>
+                        <div className='flex-1 font-semibold font-price flex items-center justify-center text-xs bg-plum-50 dark:bg-plum-900/30 text-plum-700 dark:text-plum-200 border-x border-plum-200 dark:border-plum-700'>
+                            {qty}
+                        </div>
 
-                        <button 
-                            onClick={increaseQty} 
+                        <button
+                            onClick={increaseQty}
                             disabled={updateLoading}
                             aria-label="Increase quantity"
-                            className='bg-green-600 hover:bg-green-700 active:bg-green-800 text-white flex-1 w-full p-1.5 sm:p-2 flex items-center justify-center text-xs sm:text-sm touch-manipulation transition-colors min-w-[24px]'
+                            className='bg-plum-700 hover:bg-plum-600 text-white flex-none w-8 flex items-center justify-center touch-manipulation transition-colors'
                         >
-                            {updateLoading ? <Loading /> : <FaPlus className="text-xs" />}
+                            {updateLoading ? <Loading /> : <FaPlus size={10} />}
                         </button>
                     </div>
                 ) : (
-                    <button 
-                        onClick={handleAddToCart} 
+                    <button
+                        onClick={handleAddToCart}
                         disabled={loading || !product?._id}
-                        className='bg-green-600 hover:bg-green-700 active:bg-green-800 text-white px-2 sm:px-3 lg:px-4 py-1.5 sm:py-2 rounded text-xs sm:text-sm font-medium w-full touch-manipulation transition-colors'
+                        className='bg-gold-500 hover:bg-gold-400 disabled:bg-brown-100 disabled:text-brown-300 text-charcoal font-semibold text-xs py-2 rounded-pill w-full touch-manipulation transition-colors press shadow-sm'
                     >
-                        {loading ? <Loading /> : (showText ? "Add" : "+")}
+                        {loading ? <Loading /> : (showText ? 'Add to Cart' : '+')}
                     </button>
                 )
             }

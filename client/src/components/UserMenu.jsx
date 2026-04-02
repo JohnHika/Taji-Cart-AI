@@ -1,27 +1,11 @@
 import React from 'react'
 import toast from 'react-hot-toast'
 import {
-    FaBoxes,
-    FaBoxOpen,
-    FaBullhorn,
-    FaClipboardCheck,
-    FaGift,
-    FaHistory,
-    FaLayerGroup,
-    FaListAlt,
-    FaMapMarkedAlt,
-    FaMapMarkerAlt,
-    FaQrcode,
-    FaShoppingBag,
-    FaSignOutAlt,
-    FaTachometerAlt,
-    FaTrophy,
-    FaTruck,
-    FaUpload,
-    FaUser,
-    FaUserTie
+    FaBoxes, FaBoxOpen, FaBullhorn, FaClipboardCheck, FaGift,
+    FaHistory, FaLayerGroup, FaListAlt, FaMapMarkedAlt, FaMapMarkerAlt,
+    FaQrcode, FaShoppingBag, FaSignOutAlt, FaTachometerAlt, FaTrophy,
+    FaTruck, FaUpload, FaUser, FaUserTie
 } from "react-icons/fa"
-import { HiOutlineExternalLink } from "react-icons/hi"
 import { useDispatch, useSelector } from 'react-redux'
 import { Link, useNavigate } from 'react-router-dom'
 import SummaryApi from '../common/SummaryApi'
@@ -30,267 +14,125 @@ import Axios from '../utils/Axios'
 import AxiosToastError from '../utils/AxiosToastError'
 import isadmin from '../utils/isAdmin'
 import isStaff from '../utils/isStaff'
-import Divider from './Divider'
 
-const UserMenu = ({close}) => {
-   const user = useSelector((state)=> state.user)
-   const dispatch = useDispatch()
-   const navigate = useNavigate()
-   const isAdmin = isadmin(user.role)
-   const isDelivery = user.role === 'delivery'
-   const isUserStaff = isStaff(user)
-   
-   // Only show staff functions if the user is staff but NOT admin
-   const showStaffFunctions = isUserStaff && !isAdmin
+const UserMenu = ({ close }) => {
+  const user = useSelector(state => state.user)
+  const dispatch = useDispatch()
+  const navigate = useNavigate()
+  const isAdmin = isadmin(user.role)
+  const isDelivery = user.role === 'delivery'
+  const isUserStaff = isStaff(user)
+  const showStaffFunctions = isUserStaff && !isAdmin
 
-   const handleLogout = async()=>{
-        try {
-          const response = await Axios({
-             ...SummaryApi.logout
-          })
-          console.log("logout",response)
-          if(response.data.success){
-            if(close){
-              close()
-            }
-            dispatch(logout())
-            localStorage.clear()
-            toast.success(response.data.message)
-            navigate("/")
-          }
-        } catch (error) {
-          console.log(error)
-          AxiosToastError(error)
-        }
-   }
-
-   const handleClose = ()=>{
-      if(close){
-        close()
+  const handleLogout = async () => {
+    try {
+      const response = await Axios({ ...SummaryApi.logout })
+      if (response.data.success) {
+        if (close) close()
+        dispatch(logout())
+        localStorage.clear()
+        toast.success(response.data.message)
+        navigate("/")
       }
-   }
+    } catch (error) {
+      AxiosToastError(error)
+    }
+  }
+
+  const handleClose = () => { if (close) close() }
+
+  const itemClass = "flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm text-charcoal dark:text-white/80 hover:bg-plum-50 dark:hover:bg-plum-900/30 hover:text-plum-700 dark:hover:text-plum-200 transition-colors"
+  const sectionLabel = "text-xs font-semibold uppercase tracking-widest text-brown-300 dark:text-white/30 px-3 py-1 mt-2"
+
   return (
-    <div className="dark:bg-gray-800 dark:text-gray-200">
-      <div className="font-semibold dark:text-white">My Account</div>
-      <div className="text-sm flex items-center gap-2">
-        <span className="max-w-52 text-ellipsis line-clamp-1">
-          {user.name || user.mobile}{" "}
-          <span className="text-medium text-red-600 dark:text-red-400">
-            {user.role === "admin" ? "(admin)" : ""}
-          </span>
-          {isDelivery && (
-            <span className="text-medium text-blue-600 dark:text-blue-400">
-              (delivery)
-            </span>
-          )}
-          {showStaffFunctions && (
-            <span className="text-medium text-green-600 dark:text-green-400">
-              (staff)
-            </span>
-          )}
-        </span>
-        <Link
-          onClick={handleClose}
-          to={"/dashboard/profile"}
-          className="hover:text-primary-200 dark:hover:text-primary-300"
-        >
-          <HiOutlineExternalLink size={15} />
-        </Link>
+    <div className="min-w-[220px]">
+      {/* User info */}
+      <div className="px-3 py-2 mb-2">
+        <div className="flex items-center gap-2.5">
+          <div className="w-8 h-8 rounded-pill bg-plum-100 dark:bg-plum-900/40 text-plum-700 dark:text-plum-200 flex items-center justify-center text-xs font-bold flex-shrink-0">
+            {(user.name || 'U')[0].toUpperCase()}
+          </div>
+          <div className="min-w-0">
+            <p className="text-sm font-semibold text-charcoal dark:text-white truncate">{user.name || user.mobile}</p>
+            {isAdmin && <span className="text-xs bg-gold-100 dark:bg-gold-600/20 text-gold-600 dark:text-gold-300 px-1.5 py-0.5 rounded font-medium">Admin</span>}
+            {isDelivery && <span className="text-xs bg-plum-100 dark:bg-plum-900/40 text-plum-700 dark:text-plum-200 px-1.5 py-0.5 rounded font-medium">Delivery</span>}
+            {showStaffFunctions && <span className="text-xs bg-blush-100 dark:bg-blush-400/20 text-blush-500 dark:text-blush-300 px-1.5 py-0.5 rounded font-medium">Staff</span>}
+          </div>
+        </div>
       </div>
-      
-      <Divider />
-      
-      <div className="text-sm grid gap-1">
-        <Link
-          onClick={handleClose}
-          to={"/dashboard/profile"}
-          className="px-2 hover:bg-orange-200 dark:hover:bg-orange-900/30 dark:hover:text-white py-1 flex items-center"
-        >
-          <FaUser className="mr-2 text-blue-500" /> My Profile
+
+      <div className="h-px bg-brown-100 dark:bg-dm-border mb-1" />
+
+      <div className="flex flex-col gap-0.5">
+        <Link onClick={handleClose} to="/dashboard/profile" className={itemClass}>
+          <FaUser size={13} className="text-plum-400 flex-shrink-0" /> My Profile
         </Link>
 
-        {/* Staff Dashboard link - positioned prominently if user is staff */}
         {showStaffFunctions && (
-          <Link
-            onClick={handleClose}
-            to="/dashboard/staff"
-            className="px-2 hover:bg-orange-200 dark:hover:bg-orange-900/30 dark:hover:text-white py-1 flex items-center"
-          >
-            <FaUserTie className="mr-2 text-green-600" /> Staff Dashboard
+          <Link onClick={handleClose} to="/dashboard/staff" className={itemClass}>
+            <FaUserTie size={13} className="text-plum-400 flex-shrink-0" /> Staff Dashboard
           </Link>
         )}
 
-        {/* Delivery specific menu items */}
         {isDelivery && (
           <>
-            <Divider />
-            <div className="font-semibold dark:text-white px-2 pt-1">Delivery Options</div>
-            
-            <Link
-              onClick={handleClose}
-              to="/dashboard/delivery/dashboard"
-              className="px-2 hover:bg-orange-200 dark:hover:bg-orange-900/30 dark:hover:text-white py-1 flex items-center"
-            >
-              <FaTachometerAlt className="mr-2 text-green-500" /> Delivery Dashboard
+            <div className={sectionLabel}>Delivery</div>
+            <Link onClick={handleClose} to="/dashboard/delivery/dashboard" className={itemClass}>
+              <FaTachometerAlt size={13} className="text-plum-400 flex-shrink-0" /> Delivery Dashboard
             </Link>
-            
-            <Link
-              onClick={handleClose}
-              to="/dashboard/delivery/active"
-              className="px-2 hover:bg-orange-200 dark:hover:bg-orange-900/30 dark:hover:text-white py-1 flex items-center"
-            >
-              <FaTruck className="mr-2 text-yellow-500" /> Active Deliveries
+            <Link onClick={handleClose} to="/dashboard/delivery/active" className={itemClass}>
+              <FaTruck size={13} className="text-plum-400 flex-shrink-0" /> Active Deliveries
             </Link>
-            
-            <Link
-              onClick={handleClose}
-              to="/dashboard/delivery/completed"
-              className="px-2 hover:bg-orange-200 dark:hover:bg-orange-900/30 dark:hover:text-white py-1 flex items-center"
-            >
-              <FaBoxOpen className="mr-2 text-indigo-500" /> Completed Deliveries
+            <Link onClick={handleClose} to="/dashboard/delivery/completed" className={itemClass}>
+              <FaBoxOpen size={13} className="text-plum-400 flex-shrink-0" /> Completed Deliveries
             </Link>
-            
-            <Link
-              onClick={handleClose}
-              to="/dashboard/delivery/history"
-              className="px-2 hover:bg-orange-200 dark:hover:bg-orange-900/30 dark:hover:text-white py-1 flex items-center"
-            >
-              <FaHistory className="mr-2 text-amber-500" /> Delivery History
+            <Link onClick={handleClose} to="/dashboard/delivery/history" className={itemClass}>
+              <FaHistory size={13} className="text-plum-400 flex-shrink-0" /> Delivery History
             </Link>
-            
-            <Link
-              onClick={handleClose}
-              to="/dashboard/delivery/map"
-              className="px-2 hover:bg-orange-200 dark:hover:bg-orange-900/30 dark:hover:text-white py-1 flex items-center"
-            >
-              <FaMapMarkedAlt className="mr-2 text-red-500" /> Map View
+            <Link onClick={handleClose} to="/dashboard/delivery/map" className={itemClass}>
+              <FaMapMarkedAlt size={13} className="text-plum-400 flex-shrink-0" /> Map View
             </Link>
-            <Divider />
+            <div className="h-px bg-brown-100 dark:bg-dm-border my-1" />
           </>
         )}
 
-        {/* Admin specific menu items */}
         {isAdmin && (
-          <Link
-            onClick={handleClose}
-            to={"/dashboard/category"}
-            className="px-2 hover:bg-orange-200 dark:hover:bg-orange-900/30 dark:hover:text-white py-1 flex items-center"
-          >
-            <FaListAlt className="mr-2 text-blue-500" /> Category
-          </Link>
+          <>
+            <Link onClick={handleClose} to="/dashboard/category" className={itemClass}><FaListAlt size={13} className="text-plum-400 flex-shrink-0" /> Category</Link>
+            <Link onClick={handleClose} to="/dashboard/subcategory" className={itemClass}><FaLayerGroup size={13} className="text-plum-400 flex-shrink-0" /> Sub Category</Link>
+            <Link onClick={handleClose} to="/dashboard/upload-product" className={itemClass}><FaUpload size={13} className="text-plum-400 flex-shrink-0" /> Upload Product</Link>
+            <Link onClick={handleClose} to="/dashboard/product" className={itemClass}><FaBoxOpen size={13} className="text-plum-400 flex-shrink-0" /> Product</Link>
+            <Link onClick={handleClose} to="/dashboard/admin-community-perks" className={itemClass}><FaGift size={13} className="text-plum-400 flex-shrink-0" /> Manage Perks</Link>
+          </>
         )}
 
-        {isAdmin && (
-          <Link
-            onClick={handleClose}
-            to={"/dashboard/subcategory"}
-            className="px-2 hover:bg-orange-200 dark:hover:bg-orange-900/30 dark:hover:text-white py-1 flex items-center"
-          >
-            <FaLayerGroup className="mr-2 text-green-500" /> Sub Category
-          </Link>
-        )}
-
-        {isAdmin && (
-          <Link
-            onClick={handleClose}
-            to={"/dashboard/upload-product"}
-            className="px-2 hover:bg-orange-200 dark:hover:bg-orange-900/30 dark:hover:text-white py-1 flex items-center"
-          >
-            <FaUpload className="mr-2 text-purple-500" /> Upload Product
-          </Link>
-        )}
-
-        {isAdmin && (
-          <Link
-            onClick={handleClose}
-            to={"/dashboard/product"}
-            className="px-2 hover:bg-orange-200 dark:hover:bg-orange-900/30 dark:hover:text-white py-1 flex items-center"
-          >
-            <FaBoxOpen className="mr-2 text-yellow-500" /> Product
-          </Link>
-        )}
-
-        {isAdmin && (
-          <Link
-            onClick={handleClose}
-            to={"/dashboard/admin-community-perks"}
-            className="px-2 hover:bg-orange-200 dark:hover:bg-orange-900/30 dark:hover:text-white py-1 flex items-center"
-          >
-            <FaGift className="mr-2 text-orange-500" /> Manage Community Perks
-          </Link>
-        )}
-
-        <Link
-          onClick={handleClose}
-          to={"/dashboard/community-perks"}
-          className="px-2 hover:bg-orange-200 dark:hover:bg-orange-900/30 dark:hover:text-white py-1 flex items-center"
-        >
-          <FaTrophy className="mr-2 text-amber-500" /> Community Perks
+        <Link onClick={handleClose} to="/dashboard/community-perks" className={itemClass}>
+          <FaTrophy size={13} className="text-gold-500 flex-shrink-0" /> Community Perks
+        </Link>
+        <Link onClick={handleClose} to="/dashboard/active-campaigns" className={itemClass}>
+          <FaBullhorn size={13} className="text-plum-400 flex-shrink-0" /> Active Campaigns
+          <span className="ml-auto w-1.5 h-1.5 rounded-full bg-green-500 flex-shrink-0" />
+        </Link>
+        <Link onClick={handleClose} to="/dashboard/myorders" className={itemClass}>
+          <FaShoppingBag size={13} className="text-plum-400 flex-shrink-0" /> My Orders
+        </Link>
+        <Link onClick={handleClose} to="/dashboard/address" className={itemClass}>
+          <FaMapMarkerAlt size={13} className="text-plum-400 flex-shrink-0" /> My Addresses
         </Link>
 
-        <Link
-          onClick={handleClose}
-          to={"/dashboard/active-campaigns"}
-          className="px-2 hover:bg-orange-200 dark:hover:bg-orange-900/30 dark:hover:text-white py-1 flex items-center relative"
-        >
-          <FaBullhorn className="mr-2 text-green-500" /> Active Campaigns
-          <span className="absolute right-2 top-1/2 -translate-y-1/2 h-2 w-2 bg-green-500 rounded-full"></span>
-        </Link>
-
-        <Link
-          onClick={handleClose}
-          to={"/dashboard/myorders"}
-          className="px-2 hover:bg-orange-200 dark:hover:bg-orange-900/30 dark:hover:text-white py-1 flex items-center"
-        >
-          <FaShoppingBag className="mr-2 text-indigo-500" /> My Orders
-        </Link>
-
-        <Link
-          onClick={handleClose}
-          to={"/dashboard/address"}
-          className="px-2 hover:bg-orange-200 dark:hover:bg-orange-900/30 dark:hover:text-white py-1 flex items-center"
-        >
-          <FaMapMarkerAlt className="mr-2 text-red-500" /> Save Address
-        </Link>
-
-        {/* Staff specific menu items - only show if user is staff but not admin */}
         {showStaffFunctions && (
           <>
-            <Divider />
-            <div className="font-semibold dark:text-white px-2 pt-1">Staff Functions</div>
-            
-            <Link
-              onClick={handleClose}
-              to="/dashboard/staff/verify-pickup"
-              className="px-2 hover:bg-orange-200 dark:hover:bg-orange-900/30 dark:hover:text-white py-1 flex items-center"
-            >
-              <FaQrcode className="mr-2 text-green-500" /> Verify Pickup
-            </Link>
-            
-            <Link
-              onClick={handleClose}
-              to="/dashboard/staff/pending-pickups"
-              className="px-2 hover:bg-orange-200 dark:hover:bg-orange-900/30 dark:hover:text-white py-1 flex items-center"
-            >
-              <FaBoxes className="mr-2 text-orange-500" /> Pending Pickups
-            </Link>
-            
-            <Link
-              onClick={handleClose}
-              to="/dashboard/staff/completed-verifications"
-              className="px-2 hover:bg-orange-200 dark:hover:bg-orange-900/30 dark:hover:text-white py-1 flex items-center"
-            >
-              <FaClipboardCheck className="mr-2 text-blue-500" /> Verification History
-            </Link>
-            <Divider />
+            <div className="h-px bg-brown-100 dark:bg-dm-border my-1" />
+            <div className={sectionLabel}>Staff Functions</div>
+            <Link onClick={handleClose} to="/dashboard/staff/verify-pickup" className={itemClass}><FaQrcode size={13} className="text-plum-400 flex-shrink-0" /> Verify Pickup</Link>
+            <Link onClick={handleClose} to="/dashboard/staff/pending-pickups" className={itemClass}><FaBoxes size={13} className="text-plum-400 flex-shrink-0" /> Pending Pickups</Link>
+            <Link onClick={handleClose} to="/dashboard/staff/completed-verifications" className={itemClass}><FaClipboardCheck size={13} className="text-plum-400 flex-shrink-0" /> Verification History</Link>
           </>
         )}
 
-        <button
-          onClick={handleLogout}
-          className="text-left px-2 hover:bg-orange-200 dark:hover:bg-orange-900/30 dark:hover:text-white py-1 flex items-center"
-        >
-          <FaSignOutAlt className="mr-2 text-gray-500" /> Log Out
+        <div className="h-px bg-brown-100 dark:bg-dm-border my-1" />
+        <button onClick={handleLogout} className={`${itemClass} w-full text-left`}>
+          <FaSignOutAlt size={13} className="text-brown-300 flex-shrink-0" /> Log Out
         </button>
       </div>
     </div>

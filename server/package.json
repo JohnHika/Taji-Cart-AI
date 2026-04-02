@@ -11,7 +11,8 @@
     "db:whitelist": "node scripts/updateMongoIPWhitelist.js",
     "recommendation-collect": "python ./recommendation/data_collector.py",
     "recommendation-train": "python ./recommendation/train_model.py",
-    "recommendation-debug": "python -m recommendation.data_collector_debug"
+    "recommendation-debug": "python -m recommendation.data_collector_debug",
+    "seed:hair": "node seed/hairSeedData.js"
   },
   "author": "",
   "license": "ISC",

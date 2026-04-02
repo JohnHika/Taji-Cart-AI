@@ -1,4 +1,12 @@
-export const baseURL = import.meta.env.VITE_SERVER_URL || import.meta.env.VITE_BACKEND_URL || 'http://localhost:8080';
+const configuredBaseURL = import.meta.env.VITE_SERVER_URL || import.meta.env.VITE_BACKEND_URL;
+const localBaseURL = import.meta.env.VITE_LOCAL_BACKEND_URL || 'http://localhost:5000';
+const isLocalBrowser =
+  typeof window !== 'undefined' &&
+  ['localhost', '127.0.0.1'].includes(window.location.hostname);
+
+export const baseURL = (import.meta.env.DEV && isLocalBrowser)
+  ? localBaseURL
+  : (configuredBaseURL || localBaseURL);
 
 // Define SummaryApi first before trying to use it
 const SummaryApi = {

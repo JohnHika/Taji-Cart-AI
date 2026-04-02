@@ -1,9 +1,17 @@
 import axios from 'axios';
 import SummaryApi from '../common/SummaryApi';
 
+const configuredBaseURL = import.meta.env.VITE_SERVER_URL || import.meta.env.VITE_BACKEND_URL;
+const localBaseURL = import.meta.env.VITE_LOCAL_BACKEND_URL || 'http://localhost:5000';
+const isLocalBrowser =
+  typeof window !== 'undefined' &&
+  ['localhost', '127.0.0.1'].includes(window.location.hostname);
+
 // Ensure your Axios instance is properly configured
 const instance = axios.create({
-  baseURL: import.meta.env.VITE_SERVER_URL || import.meta.env.VITE_BACKEND_URL || 'http://localhost:8080',
+  baseURL: (import.meta.env.DEV && isLocalBrowser)
+    ? localBaseURL
+    : (configuredBaseURL || localBaseURL),
   withCredentials: true,
   timeout: 30000,
   headers: {

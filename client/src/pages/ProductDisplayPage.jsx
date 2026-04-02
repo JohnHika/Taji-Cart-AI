@@ -1,43 +1,57 @@
 import React, { useEffect, useRef, useState } from 'react'
-import { FaAngleLeft, FaAngleRight } from "react-icons/fa6"
+import { FaAngleLeft, FaAngleRight, FaStar, FaShieldAlt, FaTruck, FaTags } from "react-icons/fa"
+import { FiShoppingBag, FiHeart } from 'react-icons/fi'
 import { useSelector } from 'react-redux'
-import { useNavigate, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import { toast } from 'react-toastify'
 import image2 from '../assets/Best_Prices_Offers.png'
 import image1 from '../assets/minute_delivery.png'
 import image3 from '../assets/Wide_Assortment.png'
 import SummaryApi from '../common/SummaryApi'
 import AddToCartButton from '../components/AddToCartButton'
-import Divider from '../components/Divider'
 import StarRating from '../components/StarRating'
 import Axios from '../utils/Axios'
 import AxiosToastError from '../utils/AxiosToastError'
 import { DisplayPriceInShillings } from '../utils/DisplayPriceInShillings'
 import { pricewithDiscount } from '../utils/PriceWithDiscount'
 
+const TABS = ['Description', 'Details', 'Reviews'];
+
+const StockBadge = ({ stock }) => {
+  if (stock === 0) return (
+    <span className="inline-flex items-center gap-1.5 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 text-xs font-semibold px-3 py-1.5 rounded-pill">
+      <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" /> Out of Stock
+    </span>
+  );
+  if (stock < 5) return (
+    <span className="inline-flex items-center gap-1.5 bg-gold-100 dark:bg-gold-600/20 text-gold-600 dark:text-gold-300 text-xs font-semibold px-3 py-1.5 rounded-pill">
+      <span className="w-1.5 h-1.5 rounded-full bg-gold-500 animate-pulse" /> Only {stock} left
+    </span>
+  );
+  return (
+    <span className="inline-flex items-center gap-1.5 bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-300 text-xs font-semibold px-3 py-1.5 rounded-pill">
+      <span className="w-1.5 h-1.5 rounded-full bg-green-500" /> In Stock
+    </span>
+  );
+};
+
 const ProductDisplayPage = () => {
   const params = useParams();
   const navigate = useNavigate();
-
-  // Fix product ID extraction from URL
   const productParam = params.productId || '';
   const productId = productParam.split('-').pop();
-  
-  const [data, setData] = useState({
-    name: "",
-    image: []
-  });
+
+  const [data, setData] = useState({ name: "", image: [] });
   const [image, setImage] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [activeTab, setActiveTab] = useState('Description');
   const imageContainer = useRef();
 
-  // Get user for admin check and rating
   const user = useSelector(state => state.user);
   const userIsAdmin = user?.role === 'admin';
   const isLoggedIn = !!user?._id;
 
-  // Rating state
   const [ratingData, setRatingData] = useState([]);
   const [userRating, setUserRating] = useState(0);
   const [ratingSubmitting, setRatingSubmitting] = useState(false);
@@ -46,46 +60,23 @@ const ProductDisplayPage = () => {
   const [ratingCount, setRatingCount] = useState(0);
 
   const handleRate = async (star) => {
-    if (!isLoggedIn) {
-      toast.info("Please login to rate this product");
-      return;
-    }
-    
+    if (!isLoggedIn) { toast.info("Please login to rate this product"); return; }
     try {
       setRatingSubmitting(true);
-      
-      // Use SummaryApi for consistent API endpoint management
       const response = await Axios({
-        ...SummaryApi.rateProduct, // Use the endpoint from SummaryApi
-        data: {
-          productId,
-          rating: star,
-          userId: user._id
-        }
+        ...SummaryApi.rateProduct,
+        data: { productId, rating: star, userId: user._id }
       });
-      
       if (response.data.success) {
         toast.success("Thank you for your rating!");
         setUserRating(star);
-        // Refresh product details to get updated ratings
         fetchProductDetails();
       } else {
         toast.error(response.data.message || "Failed to submit rating");
       }
     } catch (error) {
-      console.error("Error submitting rating:", error);
-      // For debugging, log more information about the error
-      if (error.response) {
-        console.error(`Response status: ${error.response.status}`);
-        console.error(`Response data:`, error.response.data);
-        console.error(`Request URL: ${error.response.config.url}`);
-        console.error(`Request method: ${error.response.config.method}`);
-      }
-      
-      // Show a more specific error message for 404 errors
-      if (error.response && error.response.status === 404) {
-        toast.error("Rating service is currently unavailable. Our team has been notified.");
-        console.error("Rating endpoint not found. Please verify the API route in SummaryApi.js matches your server route.");
+      if (error.response?.status === 404) {
+        toast.error("Rating service temporarily unavailable.");
       } else {
         AxiosToastError(error);
       }
@@ -98,558 +89,347 @@ const ProductDisplayPage = () => {
     try {
       setLoading(true);
       setError(null);
-
-      if (!productId) {
-        setError('Product ID not found in URL');
-        return;
-      }
-
-      const response = await Axios({
-        ...SummaryApi.getProductDetails,
-        data: {
-          productId: productId
-        }
-      });
-
+      if (!productId) { setError('Product ID not found in URL'); return; }
+      const response = await Axios({ ...SummaryApi.getProductDetails, data: { productId } });
       const { data: responseData } = response;
-
       if (responseData.success) {
         setData(responseData.data);
-        
-        // Set rating data from product response
-        if (responseData.data.ratings && Array.isArray(responseData.data.ratings)) {
-          setRatingData(responseData.data.ratings);
-          
-          // Calculate total ratings and average
-          const totalRatings = responseData.data.ratings.length;
-          setRatingCount(totalRatings);
-          
-          if (totalRatings > 0) {
-            const ratingSum = responseData.data.ratings.reduce((sum, item) => sum + (item.rating || 0), 0);
-            const avgRating = ratingSum / totalRatings;
-            setAverageRating(avgRating);
-          }
-          
-          // Extract user information from ratings
-          if (responseData.data.ratingUsers && Array.isArray(responseData.data.ratingUsers)) {
-            setRatingUsers(responseData.data.ratingUsers);
-          }
-        } else {
-          // Initialize empty arrays if no ratings exist
-          setRatingData([]);
-          setRatingCount(0);
-          setAverageRating(0);
-          setRatingUsers([]);
+        const ratings = responseData.data.ratings || [];
+        setRatingData(ratings);
+        setRatingCount(ratings.length);
+        if (ratings.length > 0) {
+          setAverageRating(ratings.reduce((s, i) => s + (i.rating || 0), 0) / ratings.length);
         }
-        
-        // Set user's previous rating if available
-        if (isLoggedIn && responseData.data.userRating) {
-          setUserRating(responseData.data.userRating);
-        }
-        
-        if (!responseData.data || !responseData.data.name) {
-          setError('Invalid product data received');
-        }
+        if (responseData.data.ratingUsers) setRatingUsers(responseData.data.ratingUsers);
+        if (isLoggedIn && responseData.data.userRating) setUserRating(responseData.data.userRating);
       } else {
-        setError(responseData.message || 'Failed to load product details');
+        setError(responseData.message || 'Failed to load product');
       }
     } catch (error) {
-      console.error('Error fetching product details:', error);
       AxiosToastError(error);
-      setError('An error occurred while loading the product. Please try again.');
+      setError('An error occurred while loading the product.');
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    if (productId) {
-      fetchProductDetails();
-    } else {
-      setError('Invalid product URL');
-    }
+    if (productId) fetchProductDetails();
+    else setError('Invalid product URL');
   }, [productId]);
 
-  const handleScrollRight = () => {
-    if (imageContainer.current) {
-      imageContainer.current.scrollLeft += 100;
-    }
-  };
-  
-  const handleScrollLeft = () => {
-    if (imageContainer.current) {
-      imageContainer.current.scrollLeft -= 100;
-    }
-  };
-
-  // Function to format the rating percentage
-  const getRatingPercentage = (rating) => {
-    return Math.round((rating / 5) * 100);
-  };
-
-  // Show loading state
   if (loading) {
     return (
-      <div className="min-h-[80vh] flex items-center justify-center dark:bg-gray-900">
-        <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-orange-500"></div>
-      </div>
-    );
-  }
-
-  // Show error state
-  if (error) {
-    return (
-      <div className="min-h-[80vh] flex flex-col items-center justify-center p-5 dark:bg-gray-900">
-        <div className="max-w-md w-full p-6 bg-white rounded-lg shadow-lg dark:bg-gray-800">
-          <h1 className="text-2xl font-bold text-red-600 mb-4 dark:text-red-400">
-            Product Not Found
-          </h1>
-          <p className="text-gray-700 mb-5 dark:text-gray-300">{error}</p>
-          <div className="flex justify-center">
-            <button 
-              onClick={() => navigate('/')}
-              className="px-4 py-2 bg-orange-500 text-white rounded-md hover:bg-orange-600"
-            >
-              Return to Home
-            </button>
-          </div>
+      <div className="min-h-[80vh] flex items-center justify-center bg-ivory dark:bg-dm-surface">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-12 h-12 rounded-full border-2 border-plum-700 border-t-transparent animate-spin" />
+          <p className="text-sm text-brown-400 font-display italic">Loading product...</p>
         </div>
       </div>
     );
   }
 
-  // No images available
-  if (!data.image || data.image.length === 0) {
-    data.image = ['https://via.placeholder.com/400?text=No+Image+Available'];
+  if (error) {
+    return (
+      <div className="min-h-[80vh] flex items-center justify-center p-5 bg-ivory dark:bg-dm-surface">
+        <div className="max-w-sm w-full bg-white dark:bg-dm-card rounded-card shadow-card p-7 text-center">
+          <div className="w-14 h-14 rounded-full bg-blush-100 dark:bg-blush-500/20 flex items-center justify-center mx-auto mb-4">
+            <FaShieldAlt size={24} className="text-blush-500" />
+          </div>
+          <h1 className="text-xl font-semibold text-charcoal dark:text-white mb-2">Product Not Found</h1>
+          <p className="text-sm text-brown-400 mb-5">{error}</p>
+          <button
+            onClick={() => navigate('/')}
+            className="bg-plum-700 hover:bg-plum-600 text-white font-semibold px-6 py-2.5 rounded-pill text-sm transition-colors press"
+          >
+            Return to Home
+          </button>
+        </div>
+      </div>
+    );
   }
 
+  if (!data.image || data.image.length === 0) {
+    data.image = ['https://via.placeholder.com/400?text=No+Image'];
+  }
+
+  const discountedPrice = pricewithDiscount(data.price, data.discount);
+  const hasDiscount = data.discount > 0;
+
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 dark:bg-gray-900">
-      {/* Product Overview Section */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* Left Column - Product Images */}
-        <div className="flex flex-col">
-          {/* Main Product Image */}
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm overflow-hidden mb-4 aspect-square">
-            <img
-              src={data.image[image]}
-              alt={data.name}
-              className="w-full h-full object-contain"
-              onError={(e) => {
-                e.target.onerror = null;
-                e.target.src = 'https://via.placeholder.com/400?text=No+Image';
-              }}
-            />
-          </div>
-          
-          {/* Image Navigation Dots (Mobile & Desktop) */}
-          {data.image.length > 1 && (
-            <div className="flex items-center justify-center gap-2 my-2">
-              {data.image.map((_, index) => (
-                <button
-                  key={`dot-${index}`}
-                  onClick={() => setImage(index)}
-                  aria-label={`View image ${index + 1}`}
-                  className={`w-3 h-3 lg:w-4 lg:h-4 rounded-full transition-colors duration-200 ${
-                    index === image 
-                      ? "bg-orange-500" 
-                      : "bg-gray-300 dark:bg-gray-600 hover:bg-orange-300 dark:hover:bg-orange-700"
-                  }`}
-                ></button>
-              ))}
-            </div>
+    <div className="bg-ivory dark:bg-dm-surface min-h-screen">
+      <div className="max-w-7xl mx-auto px-3 sm:px-5 lg:px-8 py-6 sm:py-8">
+
+        {/* Breadcrumb */}
+        <nav className="flex items-center gap-2 text-xs text-brown-400 dark:text-white/40 mb-5">
+          <Link to="/" className="hover:text-plum-700 transition-colors">Home</Link>
+          <span>/</span>
+          {data.category?.[0]?.name && (
+            <>
+              <span className="hover:text-plum-700 transition-colors cursor-pointer">
+                {data.category[0].name}
+              </span>
+              <span>/</span>
+            </>
           )}
-          
-          {/* Image Thumbnails with Scroll (Desktop & Tablet) */}
-          {data.image.length > 1 && (
-            <div className="relative mt-2 hidden sm:block">
-              <div className="absolute inset-y-0 left-0 flex items-center">
-                <button 
-                  onClick={handleScrollLeft}
-                  className="bg-white dark:bg-gray-700 shadow-md rounded-full p-2 z-10 hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors duration-200"
-                  aria-label="Scroll thumbnails left"
+          <span className="text-charcoal dark:text-white/70 line-clamp-1">{data.name}</span>
+        </nav>
+
+        {/* Main grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-10">
+
+          {/* ── Left: Image Gallery ──────────────────────────────────── */}
+          <div className="flex flex-col gap-3">
+            {/* Main image */}
+            <div className="relative bg-white dark:bg-dm-card rounded-card border border-brown-100 dark:border-dm-border shadow-card overflow-hidden">
+              <div className="aspect-square">
+                <img
+                  src={data.image[image]}
+                  alt={data.name}
+                  className="w-full h-full object-contain p-4 transition-opacity duration-300"
+                  onError={(e) => { e.target.src = 'https://via.placeholder.com/400?text=No+Image'; }}
+                />
+              </div>
+              {hasDiscount && (
+                <div className="absolute top-3 left-3 bg-gold-500 text-charcoal text-xs font-bold font-price px-2.5 py-1 rounded-pill shadow-sm">
+                  {data.discount}% OFF
+                </div>
+              )}
+            </div>
+
+            {/* Dots (mobile) */}
+            {data.image.length > 1 && (
+              <div className="flex items-center justify-center gap-2 sm:hidden">
+                {data.image.map((_, i) => (
+                  <button
+                    key={i}
+                    onClick={() => setImage(i)}
+                    className={`w-2 h-2 rounded-full transition-all duration-200 ${i === image ? 'bg-plum-700 w-3' : 'bg-brown-200 dark:bg-dm-border'}`}
+                  />
+                ))}
+              </div>
+            )}
+
+            {/* Thumbnail strip (desktop) */}
+            {data.image.length > 1 && (
+              <div className="relative hidden sm:flex items-center gap-2">
+                <button
+                  onClick={() => imageContainer.current?.scrollBy({ left: -100, behavior: 'smooth' })}
+                  className="flex-shrink-0 w-7 h-7 bg-white dark:bg-dm-card border border-brown-100 dark:border-dm-border rounded-full flex items-center justify-center shadow-sm hover:shadow-card text-plum-700 dark:text-plum-200 transition-all"
                 >
-                  <FaAngleLeft className="text-gray-700 dark:text-gray-200" />
+                  <FaAngleLeft size={12} />
+                </button>
+                <div ref={imageContainer} className="flex gap-2 overflow-x-auto scrollbar-hide scroll-smooth flex-1">
+                  {data.image.map((img, i) => (
+                    <button
+                      key={i}
+                      onClick={() => setImage(i)}
+                      className={`flex-shrink-0 w-16 h-16 rounded-lg border-2 overflow-hidden transition-all duration-200 ${i === image ? 'border-plum-700 shadow-plum' : 'border-brown-100 dark:border-dm-border hover:border-plum-300'}`}
+                    >
+                      <img src={img} alt={`thumb ${i + 1}`} className="w-full h-full object-contain" onError={(e) => { e.target.src = 'https://via.placeholder.com/100'; }} />
+                    </button>
+                  ))}
+                </div>
+                <button
+                  onClick={() => imageContainer.current?.scrollBy({ left: 100, behavior: 'smooth' })}
+                  className="flex-shrink-0 w-7 h-7 bg-white dark:bg-dm-card border border-brown-100 dark:border-dm-border rounded-full flex items-center justify-center shadow-sm hover:shadow-card text-plum-700 dark:text-plum-200 transition-all"
+                >
+                  <FaAngleRight size={12} />
                 </button>
               </div>
-              
-              <div 
-                ref={imageContainer} 
-                className="flex gap-3 overflow-x-auto px-8 py-2 scrollbar-hide snap-x scroll-smooth"
-              >
-                {data.image.map((img, index) => (
+            )}
+          </div>
+
+          {/* ── Right: Product Info ──────────────────────────────────── */}
+          <div className="flex flex-col gap-4">
+            {/* Category chip */}
+            {data.category?.[0]?.name && (
+              <span className="text-xs w-fit bg-plum-100 dark:bg-plum-900/40 text-plum-700 dark:text-plum-200 px-3 py-1 rounded-pill font-medium">
+                {data.category[0].name}
+              </span>
+            )}
+
+            {/* Product name */}
+            <h1 className="font-display text-2xl sm:text-3xl font-semibold text-charcoal dark:text-white leading-snug">
+              {data.name}
+            </h1>
+
+            {/* Unit */}
+            {data.unit && (
+              <p className="text-sm text-brown-400 dark:text-white/50">
+                {typeof data.unit === 'string' ? data.unit : data.unit[0]?.name || ''}
+              </p>
+            )}
+
+            {/* Rating summary */}
+            {ratingCount > 0 && (
+              <div className="flex items-center gap-2">
+                <div className="flex items-center gap-0.5">
+                  {[1,2,3,4,5].map(s => (
+                    <FaStar key={s} size={14} className={s <= Math.round(averageRating) ? 'text-gold-500' : 'text-brown-200 dark:text-dm-border'} />
+                  ))}
+                </div>
+                <span className="text-sm font-semibold text-charcoal dark:text-white">{averageRating.toFixed(1)}</span>
+                <span className="text-xs text-brown-400 dark:text-white/40">({ratingCount} reviews)</span>
+              </div>
+            )}
+
+            {/* Price */}
+            <div className="flex items-baseline gap-3 flex-wrap">
+              <span className="text-2xl sm:text-3xl font-bold font-price text-gold-600 dark:text-gold-300">
+                {DisplayPriceInShillings(discountedPrice)}
+              </span>
+              {hasDiscount && (
+                <span className="text-sm text-brown-300 dark:text-white/30 line-through font-price">
+                  {DisplayPriceInShillings(data.price)}
+                </span>
+              )}
+            </div>
+
+            {/* Stock */}
+            <StockBadge stock={data.stock} />
+
+            {/* Admin inventory alert */}
+            {data.stock < 5 && data.stock > 0 && userIsAdmin && (
+              <div className="bg-gold-100 dark:bg-gold-600/10 border border-gold-300 dark:border-gold-600/30 rounded-card p-3 text-xs text-gold-700 dark:text-gold-300">
+                <strong>Inventory Alert:</strong> Only {data.stock} units remaining. Consider restocking.
+              </div>
+            )}
+
+            {/* Add to cart / OOS */}
+            <div className="flex flex-col sm:flex-row gap-3 mt-1">
+              {data.stock > 0 ? (
+                <>
+                  <div className="flex-1">
+                    <AddToCartButton data={data} />
+                  </div>
+                  <button className="flex items-center justify-center gap-2 border border-plum-200 dark:border-plum-700 text-plum-700 dark:text-plum-200 hover:bg-plum-50 dark:hover:bg-plum-900/30 rounded-pill py-2.5 px-5 text-sm font-semibold transition-colors flex-shrink-0">
+                    <FiHeart size={16} /> Wishlist
+                  </button>
+                </>
+              ) : (
+                <div className="w-full text-center py-3 bg-brown-100 dark:bg-dm-card-2 text-brown-400 dark:text-white/30 rounded-pill text-sm font-semibold">
+                  Out of Stock
+                </div>
+              )}
+            </div>
+
+            {/* Why shop strip */}
+            <div className="grid grid-cols-3 gap-2 bg-plum-100 dark:bg-plum-900/20 rounded-card p-3 mt-1">
+              {[
+                { icon: FaTruck, label: 'Fast Delivery' },
+                { icon: FaTags, label: 'Best Price' },
+                { icon: FaShieldAlt, label: 'Authentic' },
+              ].map(({ icon: Icon, label }) => (
+                <div key={label} className="flex flex-col items-center gap-1 text-center">
+                  <Icon size={16} className="text-plum-700 dark:text-plum-300" />
+                  <span className="text-xs text-charcoal dark:text-white/70 font-medium">{label}</span>
+                </div>
+              ))}
+            </div>
+
+            {/* Tabs: Description / Details / Reviews */}
+            <div className="mt-2">
+              <div className="flex border-b border-brown-100 dark:border-dm-border">
+                {TABS.map(tab => (
                   <button
-                    key={`thumb-${index}`}
-                    onClick={() => setImage(index)}
-                    className={`flex-shrink-0 w-20 h-20 border-2 rounded-md transition-all duration-200 ${
-                      index === image 
-                        ? "border-orange-500 shadow-md" 
-                        : "border-transparent hover:border-orange-300"
+                    key={tab}
+                    onClick={() => setActiveTab(tab)}
+                    className={`px-4 py-2.5 text-sm font-medium transition-all duration-200 ${
+                      activeTab === tab
+                        ? 'text-plum-700 dark:text-plum-200 border-b-2 border-plum-700 dark:border-plum-400 -mb-px'
+                        : 'text-brown-400 dark:text-white/40 hover:text-plum-500 dark:hover:text-plum-300'
                     }`}
                   >
-                    <img
-                      src={img}
-                      alt={`${data.name || 'Product'} thumbnail ${index+1}`}
-                      className="w-full h-full object-contain rounded-md"
-                      onError={(e) => {
-                        e.target.onerror = null;
-                        e.target.src = 'https://via.placeholder.com/100?text=No+Image';
-                      }}
-                    />
+                    {tab}
                   </button>
                 ))}
               </div>
-              
-              <div className="absolute inset-y-0 right-0 flex items-center">
-                <button 
-                  onClick={handleScrollRight}
-                  className="bg-white dark:bg-gray-700 shadow-md rounded-full p-2 z-10 hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors duration-200"
-                  aria-label="Scroll thumbnails right"
-                >
-                  <FaAngleRight className="text-gray-700 dark:text-gray-200" />
-                </button>
-              </div>
-            </div>
-          )}
 
-          {/* Product details for mobile screens */}
-          <div className="mt-6 lg:hidden">
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{data.name}</h1>
-            
-            {/* Price Display */}
-            <div className="mt-4">
-              <div className="flex items-center gap-2">
-                <span className="text-xl font-semibold text-green-600 dark:text-green-400">
-                  {DisplayPriceInShillings(pricewithDiscount(data.price, data.discount))}
-                </span>
-                
-                {data.discount > 0 && (
-                  <>
-                    <span className="text-sm text-gray-500 line-through dark:text-gray-400">
-                      {DisplayPriceInShillings(data.price)}
-                    </span>
-                    <span className="text-sm font-medium text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/30 px-2 py-0.5 rounded-full">
-                      {data.discount}% OFF
-                    </span>
-                  </>
+              <div className="py-4 text-sm text-charcoal dark:text-white/80 leading-relaxed">
+                {activeTab === 'Description' && (
+                  <p>{data.description || 'No description available for this product.'}</p>
                 )}
-              </div>
-            </div>
-            
-            {/* Stock Status */}
-            <div className="mt-4">
-              <div className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
-                data.stock === 0 
-                  ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300' 
-                  : data.stock < 5 
-                    ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300' 
-                    : 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300'
-              }`}>
-                <span className={`w-2 h-2 rounded-full mr-2 ${
-                  data.stock === 0 
-                    ? 'bg-red-500 animate-pulse' 
-                    : data.stock < 5 
-                      ? 'bg-orange-500 animate-pulse' 
-                      : 'bg-green-500'
-                }`}></span>
-                {data.stock === 0 
-                  ? 'Out of Stock' 
-                  : data.stock < 5 
-                    ? `Low Stock: ${data.stock} left` 
-                    : `In Stock: ${data.stock}`
-                }
-              </div>
-            </div>
-            
-            {/* Add to Cart Button */}
-            {data.stock > 0 && (
-              <div className="mt-4">
-                <AddToCartButton data={data} />
-              </div>
-            )}
-            
-            {/* User Rating Section (Mobile) */}
-            <div className="mt-6">
-              <h3 className="text-lg font-medium text-gray-900 dark:text-white">Rate this Product</h3>
-              {ratingSubmitting ? (
-                <div className="flex justify-center my-2">
-                  <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-orange-500"></div>
-                </div>
-              ) : (
-                <StarRating 
-                  ratingData={ratingData} 
-                  onRate={handleRate} 
-                  userRating={userRating}
-                />
-              )}
-              
-              {/* Display rating information */}
-              <div className="mt-2">
-                <div className="flex items-center gap-2">
-                  <div className="font-semibold text-sm text-gray-700 dark:text-gray-300">
-                    {ratingCount > 0 ? ratingCount : 0} {ratingCount === 1 ? 'user has' : 'users have'} rated this product
-                  </div>
-                  {averageRating > 0 && (
-                    <div className="flex items-center">
-                      <span className="text-sm font-medium text-orange-500">
-                        {averageRating.toFixed(1)}
-                      </span>
-                      <span className="ml-1 text-xs text-gray-500 dark:text-gray-400">
-                        ({getRatingPercentage(averageRating)}%)
-                      </span>
+                {activeTab === 'Details' && (
+                  data?.more_details && Object.keys(data.more_details).length > 0 ? (
+                    <dl className="divide-y divide-brown-100 dark:divide-dm-border">
+                      {Object.entries(data.more_details).map(([key, value]) => (
+                        <div key={key} className="flex py-2 gap-4">
+                          <dt className="w-1/3 text-brown-400 dark:text-white/40 font-medium">{key}</dt>
+                          <dd className="flex-1 text-charcoal dark:text-white/80">{value}</dd>
+                        </div>
+                      ))}
+                    </dl>
+                  ) : (
+                    <p className="text-brown-400 dark:text-white/40">No additional details available.</p>
+                  )
+                )}
+                {activeTab === 'Reviews' && (
+                  <div>
+                    <div className="flex items-center justify-between mb-4">
+                      <h4 className="font-semibold text-charcoal dark:text-white">Rate this Product</h4>
+                      {ratingCount > 0 && (
+                        <span className="text-xs text-brown-400 dark:text-white/40">
+                          {ratingCount} {ratingCount === 1 ? 'review' : 'reviews'}
+                        </span>
+                      )}
                     </div>
-                  )}
-                </div>
-              </div>
-              
-              {!isLoggedIn && (
-                <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
-                  Please login to rate this product
-                </p>
-              )}
-              
-              {/* Show users who rated this product */}
-              {ratingUsers.length > 0 && (
-                <div className="mt-3">
-                  <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Recent ratings:</h4>
-                  <ul className="text-xs text-gray-600 dark:text-gray-400">
-                    {ratingUsers.slice(0, 3).map((user, index) => (
-                      <li key={`mobile-user-${index}`} className="mb-1">
-                        <span className="font-medium">{user.name || 'Anonymous User'}</span> rated {user.rating} stars
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* Right Column - Product Details */}
-        <div className="hidden lg:block">
-          {/* Product Title & Unit */}
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">{data.name}</h1>
-          {data.unit && (
-            <p className="mt-2 text-gray-600 dark:text-gray-300">{data.unit}</p>
-          )}
-          
-          <Divider className="my-4" />
-          
-          {/* Price Section */}
-          <div className="mt-4">
-            <h2 className="text-sm font-medium text-gray-500 dark:text-gray-400">Price</h2>
-            <div className="flex items-center gap-3 mt-1">
-              <span className="text-2xl font-semibold text-green-600 dark:text-green-400">
-                {DisplayPriceInShillings(pricewithDiscount(data.price, data.discount))}
-              </span>
-              
-              {data.discount > 0 && (
-                <>
-                  <span className="text-base text-gray-500 line-through dark:text-gray-400">
-                    {DisplayPriceInShillings(data.price)}
-                  </span>
-                  <span className="text-base font-bold text-green-600 dark:text-green-400">
-                    {data.discount}% <span className="font-normal text-sm text-gray-500 dark:text-gray-400">Discount</span>
-                  </span>
-                </>
-              )}
-            </div>
-          </div>
-          
-          {/* Stock Status */}
-          <div className="mt-6">
-            <div className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
-              data.stock === 0 
-                ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300' 
-                : data.stock < 5 
-                  ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300' 
-                  : 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300'
-            }`}>
-              <span className={`w-2 h-2 rounded-full mr-2 ${
-                data.stock === 0 
-                  ? 'bg-red-500 animate-pulse' 
-                  : data.stock < 5 
-                    ? 'bg-orange-500 animate-pulse' 
-                    : 'bg-green-500'
-              }`}></span>
-              {data.stock === 0 
-                ? 'Out of Stock' 
-                : data.stock < 5 
-                  ? `Low Stock: ${data.stock} left` 
-                  : `In Stock: ${data.stock}`
-              }
-            </div>
-            
-            {/* Admin Inventory Alert */}
-            {data.stock < 5 && userIsAdmin && (
-              <div className="mt-2 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-md p-3 text-sm text-red-700 dark:text-red-300">
-                <div className="font-semibold flex items-center">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                  </svg>
-                  Inventory Alert
-                </div>
-                <p className="mt-1">Product "{data.name}" is running low on inventory ({data.stock} remaining). Consider restocking soon.</p>
-              </div>
-            )}
-          </div>
-          
-          {/* Add to Cart Button */}
-          {data.stock > 0 ? (
-            <div className="mt-6">
-              <AddToCartButton data={data} />
-            </div>
-          ) : (
-            <p className="mt-6 text-lg text-red-500 dark:text-red-400">Out of Stock</p>
-          )}
-          
-          {/* User Rating Section (Desktop) */}
-          <div className="mt-6">
-            <h3 className="text-lg font-medium text-gray-900 dark:text-white">Rate this Product</h3>
-            {ratingSubmitting ? (
-              <div className="flex justify-center my-2">
-                <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-orange-500"></div>
-              </div>
-            ) : (
-              <StarRating 
-                ratingData={ratingData} 
-                onRate={handleRate} 
-                userRating={userRating}
-              />
-            )}
-            
-            {/* Display rating information */}
-            <div className="mt-2">
-              <div className="flex items-center gap-2">
-                <div className="font-semibold text-sm text-gray-700 dark:text-gray-300">
-                  {ratingCount > 0 ? ratingCount : 0} {ratingCount === 1 ? 'user has' : 'users have'} rated this product
-                </div>
-                {averageRating > 0 && (
-                  <div className="flex items-center">
-                    <span className="text-sm font-medium text-orange-500">
-                      {averageRating.toFixed(1)}
-                    </span>
-                    <span className="ml-1 text-xs text-gray-500 dark:text-gray-400">
-                      ({getRatingPercentage(averageRating)}%)
-                    </span>
+                    {ratingSubmitting ? (
+                      <div className="flex justify-center py-3">
+                        <div className="w-6 h-6 rounded-full border-2 border-plum-700 border-t-transparent animate-spin" />
+                      </div>
+                    ) : (
+                      <StarRating ratingData={ratingData} onRate={handleRate} userRating={userRating} />
+                    )}
+                    {!isLoggedIn && (
+                      <p className="text-xs text-brown-400 dark:text-white/40 mt-2">
+                        Please <Link to="/login" className="text-plum-700 dark:text-plum-200 underline">login</Link> to rate this product.
+                      </p>
+                    )}
+                    {ratingUsers.length > 0 && (
+                      <ul className="mt-4 space-y-2">
+                        {ratingUsers.slice(0, 5).map((u, i) => (
+                          <li key={i} className="flex items-center gap-2 text-xs">
+                            <div className="w-6 h-6 rounded-full bg-plum-100 dark:bg-plum-900/40 text-plum-700 dark:text-plum-200 flex items-center justify-center font-semibold text-xs">
+                              {(u.name || 'A')[0].toUpperCase()}
+                            </div>
+                            <span className="font-medium text-charcoal dark:text-white/80">{u.name || 'Anonymous'}</span>
+                            <div className="flex items-center gap-0.5 ml-auto">
+                              {[1,2,3,4,5].map(s => (
+                                <FaStar key={s} size={10} className={s <= u.rating ? 'text-gold-500' : 'text-brown-200'} />
+                              ))}
+                            </div>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
                   </div>
                 )}
               </div>
             </div>
-            
-            {!isLoggedIn && (
-              <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
-                Please login to rate this product
-              </p>
-            )}
-            
-            {/* Show users who rated this product */}
-            {ratingUsers.length > 0 && (
-              <div className="mt-3">
-                <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Recent ratings:</h4>
-                <ul className="text-xs text-gray-600 dark:text-gray-400">
-                  {ratingUsers.slice(0, 3).map((user, index) => (
-                    <li key={`desktop-user-${index}`} className="mb-1">
-                      <span className="font-medium">{user.name || 'Anonymous User'}</span> rated {user.rating} stars
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-          </div>
-          
-          {/* Product Description & Details */}
-          <div className="mt-8 space-y-6">
-            {data.description && (
-              <div>
-                <h3 className="text-lg font-medium text-gray-900 dark:text-white">Description</h3>
-                <p className="mt-2 text-gray-600 dark:text-gray-300">{data.description}</p>
-              </div>
-            )}
-            
-            {data?.more_details && Object.keys(data.more_details).length > 0 && (
-              <div>
-                <h3 className="text-lg font-medium text-gray-900 dark:text-white">Specifications</h3>
-                <dl className="mt-2 grid grid-cols-1 gap-y-3">
-                  {Object.entries(data.more_details).map(([key, value], index) => (
-                    <div key={`detail-${index}`} className="grid grid-cols-2 gap-4">
-                      <dt className="text-sm font-medium text-gray-500 dark:text-gray-400">{key}</dt>
-                      <dd className="text-sm text-gray-600 dark:text-gray-300">{value}</dd>
-                    </div>
-                  ))}
-                </dl>
-              </div>
-            )}
           </div>
         </div>
-      </div>
 
-      {/* Mobile Product Details Section */}
-      <div className="mt-8 block lg:hidden">
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-4 space-y-4">
-          {data.description && (
-            <div>
-              <h3 className="text-lg font-medium text-gray-900 dark:text-white">Description</h3>
-              <p className="mt-2 text-gray-600 dark:text-gray-300">{data.description}</p>
-            </div>
-          )}
-          
-          {data?.more_details && Object.keys(data.more_details).length > 0 && (
-            <div>
-              <h3 className="text-lg font-medium text-gray-900 dark:text-white">Specifications</h3>
-              <dl className="mt-2 space-y-2">
-                {Object.entries(data.more_details).map(([key, value], index) => (
-                  <div key={`m-detail-${index}`}>
-                    <dt className="text-sm font-medium text-gray-500 dark:text-gray-400">{key}</dt>
-                    <dd className="text-sm text-gray-600 dark:text-gray-300 ml-4">{value}</dd>
-                  </div>
-                ))}
-              </dl>
-            </div>
-          )}
+        {/* ── Why Shop Section ─────────────────────────────────────── */}
+        <div className="mt-12 mb-6">
+          <h2 className="text-lg font-semibold text-charcoal dark:text-white mb-5 text-center">
+            Why shop from <span className="font-display italic text-plum-700 dark:text-plum-200">Nawiri Hair</span>?
+          </h2>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            {[
+              { img: image1, title: 'Superfast Delivery', desc: 'Get your order delivered to your doorstep at the earliest from stores near you.' },
+              { img: image2, title: 'Best Prices & Offers', desc: 'Best price destination with offers directly from the manufacturers.' },
+              { img: image3, title: 'Wide Assortment', desc: 'Choose from hundreds of hair products across textures, styles, and care needs.' },
+            ].map(({ img, title, desc }) => (
+              <div key={title} className="bg-white dark:bg-dm-card rounded-card border border-brown-100 dark:border-dm-border shadow-card p-5 flex flex-col items-center text-center">
+                <img src={img} alt={title} className="w-14 h-14 object-contain mb-3" />
+                <h3 className="font-semibold text-sm text-charcoal dark:text-white mb-1">{title}</h3>
+                <p className="text-xs text-brown-400 dark:text-white/50 leading-relaxed">{desc}</p>
+              </div>
+            ))}
+          </div>
         </div>
-      </div>
 
-      {/* Why Shop From Nawiri Hair Section */}
-      <div className="mt-12">
-        <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-6">Why shop from NAWIRI HAIR?</h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-4 flex flex-col sm:flex-row md:flex-col items-center">
-            <img
-              src={image1}
-              alt="Superfast Delivery"
-              className="w-16 h-16 object-contain mb-4 sm:mb-0 md:mb-4 sm:mr-4 md:mr-0"
-            />
-            <div className="text-center sm:text-left md:text-center">
-              <h3 className="font-semibold text-gray-900 dark:text-white">Superfast Delivery</h3>
-              <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">Get your order delivered to your doorstep at the earliest from dark stores near you.</p>
-            </div>
-          </div>
-          
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-4 flex flex-col sm:flex-row md:flex-col items-center">
-            <img
-              src={image2}
-              alt="Best Prices & Offers"
-              className="w-16 h-16 object-contain mb-4 sm:mb-0 md:mb-4 sm:mr-4 md:mr-0"
-            />
-            <div className="text-center sm:text-left md:text-center">
-              <h3 className="font-semibold text-gray-900 dark:text-white">Best Prices & Offers</h3>
-              <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">Best price destination with offers directly from the manufacturers.</p>
-            </div>
-          </div>
-          
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-4 flex flex-col sm:flex-row md:flex-col items-center">
-            <img
-              src={image3}
-              alt="Wide Assortment"
-              className="w-16 h-16 object-contain mb-4 sm:mb-0 md:mb-4 sm:mr-4 md:mr-0"
-            />
-            <div className="text-center sm:text-left md:text-center">
-              <h3 className="font-semibold text-gray-900 dark:text-white">Wide Assortment</h3>
-              <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">Choose from 5000+ products across food, personal care, household & other categories.</p>
-            </div>
-          </div>
-        </div>
       </div>
     </div>
   );

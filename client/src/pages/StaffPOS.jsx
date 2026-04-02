@@ -933,7 +933,7 @@ const StaffPOS = () => {
   }, [parkCurrentSale]);
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+    <div className="min-h-screen bg-ivory dark:bg-dm-surface">
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap');
         @page { size: 80mm auto; margin: 0; }
@@ -1106,30 +1106,30 @@ const StaffPOS = () => {
       {/* Loading overlay to keep hooks order consistent */}
       {productsLoading && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/30">
-          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-xl">
+          <div className="bg-white dark:bg-dm-card rounded-card p-6 shadow-xl">
             <LoadingSpinner size="large" />
           </div>
         </div>
       )}
       {/* Header / Toolbar */}
-      <div className="bg-white/90 backdrop-blur dark:bg-gray-800 sticky top-0 z-30 border-b border-gray-200 dark:border-gray-700">
+      <div className="bg-ivory/95 backdrop-blur dark:bg-dm-card sticky top-0 z-30 border-b border-brown-100 dark:border-dm-border">
         <div className="px-4 py-3 flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">NAWIRI Hair System</h1>
-            <p className="text-xs text-gray-600 dark:text-gray-400">Cashier: {user.name} • Branch: {user.staff_branch || 'Main Store'}</p>
+            <h1 className="font-display text-2xl italic text-plum-900 dark:text-white">Nawiri POS</h1>
+            <p className="text-xs text-brown-400 dark:text-white/40">Cashier: {user.name} • {user.staff_branch || 'Main Store'}</p>
           </div>
           <div className="flex items-center gap-3">
-            <button onClick={() => setShowParkedDrawer(true)} className="hidden md:flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 text-sm">
-              <FaListUl /> Held
+            <button onClick={() => setShowParkedDrawer(true)} className="hidden md:flex items-center gap-2 px-3 py-2 rounded-pill border border-brown-200 dark:border-dm-border hover:bg-plum-50 dark:hover:bg-dm-card-2 text-sm text-charcoal dark:text-white/80">
+              <FaListUl size={12} /> Held
             </button>
-            <button onClick={() => setShowHelp(true)} className="hidden md:flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 text-sm">
-              <FaQuestionCircle /> Help
+            <button onClick={() => setShowHelp(true)} className="hidden md:flex items-center gap-2 px-3 py-2 rounded-pill border border-brown-200 dark:border-dm-border hover:bg-plum-50 dark:hover:bg-dm-card-2 text-sm text-charcoal dark:text-white/80">
+              <FaQuestionCircle size={12} /> Help
             </button>
             <div className="text-right">
-              <div className="text-2xl font-extrabold text-gray-900 dark:text-white">{DisplayPriceInShillings(calculateTotals().total)}</div>
-              <div className="text-xs text-gray-600 dark:text-gray-400">{calculateTotals().itemCount} items</div>
+              <div className="text-2xl font-price font-extrabold text-gold-600 dark:text-gold-400">{DisplayPriceInShillings(calculateTotals().total)}</div>
+              <div className="text-xs text-brown-400 dark:text-white/40">{calculateTotals().itemCount} items</div>
             </div>
-            <button onClick={() => setShowPaymentModal(true)} disabled={cart.length===0} className="px-4 py-2 rounded-lg bg-primary-600 hover:bg-primary-700 text-white font-semibold disabled:opacity-50">
+            <button onClick={() => setShowPaymentModal(true)} disabled={cart.length===0} className="px-4 py-2 rounded-pill bg-gold-500 hover:bg-gold-400 text-charcoal font-semibold disabled:opacity-50 press transition-colors">
               Charge (F4)
             </button>
           </div>
@@ -1140,70 +1140,69 @@ const StaffPOS = () => {
         {/* Left Panel - Products */}
         <div className="flex-1 p-4 overflow-hidden">
           {/* Search and Scan Row */}
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-4 mb-4">
+          <div className="bg-white dark:bg-dm-card rounded-card shadow-card p-4 mb-4">
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 items-center">
               {/* Product Search */}
               <div className="relative">
-                <FaSearch className="absolute left-3 top-3 text-gray-400" />
+                <FaSearch className="absolute left-3 top-3 text-brown-300" />
                 <input
                   type="text"
                   placeholder="Search products..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   ref={searchRef}
-                  className="w-full pl-10 pr-4 py-2 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+                  className="w-full pl-10 pr-4 py-2 border border-blush-200 dark:border-dm-border rounded-pill bg-blush-100 dark:bg-dm-card-2 focus:ring-2 focus:ring-plum-500 text-charcoal dark:text-white placeholder:text-brown-300 outline-none"
                 />
               </div>
               {/* Barcode Scanner */}
               <div className="flex">
                 <div className="relative flex-1">
-                  <FaBarcode className="absolute left-3 top-3 text-gray-400" />
+                  <FaBarcode className="absolute left-3 top-3 text-brown-300" />
                   <input
                     type="text"
                     placeholder="Scan barcode..."
                     value={barcode}
                     onChange={(e) => setBarcode(e.target.value)}
                     onKeyPress={(e) => e.key === 'Enter' && addByBarcode()}
-                    className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-l-lg focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+                    className="w-full pl-10 pr-4 py-2 border border-blush-200 dark:border-dm-border rounded-l-full bg-blush-100 dark:bg-dm-card-2 focus:ring-2 focus:ring-plum-500 text-charcoal dark:text-white placeholder:text-brown-300 outline-none"
                   />
                 </div>
                 <button
                   onClick={addByBarcode}
-                  className="px-4 py-2 bg-primary-500 text-white rounded-r-lg hover:bg-primary-600"
+                  className="px-4 py-2 bg-plum-700 text-white rounded-r-full hover:bg-plum-800 transition-colors"
                 >
                   Add
                 </button>
               </div>
             </div>
 
-            {/* Category Filter moved below */}
-            <div className="mt-4 flex items-center gap-2 overflow-x-auto no-scrollbar">
-              <button onClick={() => setSelectedCategory('all')} className={`px-3 py-2 rounded-full text-sm whitespace-nowrap border ${selectedCategory==='all' ? 'bg-primary-600 text-white border-primary-600' : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-600'}`}>All</button>
+            {/* Category Filter */}
+            <div className="mt-4 flex items-center gap-2 overflow-x-auto scrollbar-hide">
+              <button onClick={() => setSelectedCategory('all')} className={`px-3 py-1.5 rounded-pill text-sm whitespace-nowrap border transition-colors ${selectedCategory==='all' ? 'bg-plum-700 text-white border-plum-700' : 'bg-blush-50 dark:bg-dm-card-2 text-charcoal dark:text-white/70 border-blush-200 dark:border-dm-border hover:bg-plum-50'}`}>All</button>
               {categories.map(c => (
-                <button key={c._id} onClick={() => setSelectedCategory(c._id)} className={`px-3 py-2 rounded-full text-sm whitespace-nowrap border ${selectedCategory===c._id ? 'bg-primary-600 text-white border-primary-600' : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-600'}`}>{c.name}</button>
+                <button key={c._id} onClick={() => setSelectedCategory(c._id)} className={`px-3 py-1.5 rounded-pill text-sm whitespace-nowrap border transition-colors ${selectedCategory===c._id ? 'bg-plum-700 text-white border-plum-700' : 'bg-blush-50 dark:bg-dm-card-2 text-charcoal dark:text-white/70 border-blush-200 dark:border-dm-border hover:bg-plum-50'}`}>{c.name}</button>
               ))}
             </div>
           </div>
 
           {/* Products Grid */}
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-4 h-[calc(100%-120px)] overflow-y-auto">
+          <div className="bg-white dark:bg-dm-card rounded-card shadow-card p-4 h-[calc(100%-120px)] overflow-y-auto scrollbar-hide">
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
               {filteredProducts.map(product => (
-                <div key={product._id} className="group border border-gray-200 dark:border-gray-700 rounded-xl p-3 hover:shadow-md transition-all bg-white dark:bg-gray-800">
-                  <div className="relative aspect-square mb-2 bg-gray-100 dark:bg-gray-700 rounded-lg overflow-hidden">
+                <div key={product._id} className="group border border-brown-100 dark:border-dm-border rounded-card p-3 hover-lift bg-white dark:bg-dm-card transition-all">
+                  <div className="relative aspect-square mb-2 bg-blush-50 dark:bg-dm-card-2 rounded-lg overflow-hidden">
                     {product.image && product.image[0] ? (
-                      <img src={product.image[0]} alt={product.name} className="w-full h-full object-cover" />
+                      <img src={product.image[0]} alt={product.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
                     ) : (
-                      <div className="w-full h-full flex items-center justify-center text-gray-400"><FaShoppingCart size={24} /></div>
+                      <div className="w-full h-full flex items-center justify-center text-brown-200"><FaShoppingCart size={24} /></div>
                     )}
-                    <button onClick={() => addToCart(product)} className="absolute bottom-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity px-3 py-1.5 rounded-lg bg-primary-600 text-white text-xs font-medium">Add</button>
-                    <div className="absolute left-2 top-2 bg-white/90 dark:bg-gray-800/80 text-xs px-2 py-1 rounded-md border border-gray-200 dark:border-gray-600">Stock: {product.stock}</div>
+                    <button onClick={() => addToCart(product)} className="absolute bottom-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity px-3 py-1.5 rounded-pill bg-gold-500 text-charcoal text-xs font-semibold press">Add</button>
+                    <div className="absolute left-2 top-2 bg-white/90 dark:bg-dm-card/90 text-xs px-2 py-0.5 rounded-pill border border-brown-100 dark:border-dm-border text-brown-500 dark:text-white/60">Stock: {product.stock}</div>
                   </div>
-                  <h3 className="font-medium text-sm text-gray-900 dark:text-white line-clamp-2 min-h-[36px]">{product.name}</h3>
+                  <h3 className="font-medium text-sm text-charcoal dark:text-white line-clamp-2 min-h-[36px]">{product.name}</h3>
                   <div className="flex items-center justify-between mt-1">
-                    <p className="text-primary-600 dark:text-primary-400 font-semibold text-sm">{DisplayPriceInShillings(product.price)}</p>
-                    <button onClick={() => addToCart(product)} className="px-2.5 py-1 rounded-md border border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 text-xs">+
-                    </button>
+                    <p className="font-price text-gold-600 dark:text-gold-400 font-semibold text-sm">{DisplayPriceInShillings(product.price)}</p>
+                    <button onClick={() => addToCart(product)} className="w-7 h-7 rounded-full border border-plum-200 dark:border-plum-700 hover:bg-plum-50 dark:hover:bg-plum-900/30 text-plum-700 dark:text-plum-300 text-sm flex items-center justify-center font-bold">+</button>
                   </div>
                 </div>
               ))}
@@ -1212,49 +1211,49 @@ const StaffPOS = () => {
         </div>
 
         {/* Right Panel - Cart & Customer */}
-        <div className="w-[360px] bg-white dark:bg-gray-800 border-l border-gray-200 dark:border-gray-700 flex flex-col">
+        <div className="w-[360px] bg-ivory dark:bg-dm-card border-l border-brown-100 dark:border-dm-border flex flex-col">
           {/* Customer Section */}
-          <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+          <div className="p-4 border-b border-brown-100 dark:border-dm-border">
             <div className="flex items-center justify-between mb-2">
-              <h3 className="font-semibold text-gray-900 dark:text-white">Customer</h3>
+              <h3 className="font-semibold text-charcoal dark:text-white">Customer</h3>
               <button
                 onClick={() => setShowCustomerModal(true)}
-                className="flex items-center gap-2 px-3 py-1 text-sm bg-primary-500 hover:bg-primary-600 text-white rounded-lg transition-colors"
+                className="flex items-center gap-2 px-3 py-1 text-sm bg-plum-700 hover:bg-plum-800 text-white rounded-pill transition-colors"
                 title="Search for existing customer"
               >
-                <FaUserPlus />
+                <FaUserPlus size={11} />
                 <span>Search</span>
               </button>
             </div>
             {customer ? (
-              <div className="bg-green-50 dark:bg-green-900/20 p-3 rounded-lg border border-green-200 dark:border-green-800">
+              <div className="bg-plum-50 dark:bg-plum-900/20 p-3 rounded-card border border-plum-100 dark:border-plum-800/30">
                 <div className="flex items-center justify-between">
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-1">
-                      <p className="font-medium text-gray-900 dark:text-white">{customer.name}</p>
+                      <p className="font-semibold text-charcoal dark:text-white">{customer.name}</p>
                       {scannedCustomer?.scanMethod && (
-                        <span className="text-xs bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200 px-2 py-0.5 rounded-full">
+                        <span className="text-xs bg-plum-100 dark:bg-plum-900 text-plum-700 dark:text-plum-200 px-2 py-0.5 rounded-pill">
                           {scannedCustomer.scanMethod === 'barcode' ? '📊' : '📸'} Scanned
                         </span>
                       )}
                     </div>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">{customer.email}</p>
+                    <p className="text-sm text-brown-400 dark:text-white/50">{customer.email}</p>
                     {customer.mobile && (
-                      <p className="text-sm text-gray-600 dark:text-gray-400">📞 {customer.mobile}</p>
+                      <p className="text-sm text-brown-400 dark:text-white/50">📞 {customer.mobile}</p>
                     )}
                     {customer.loyaltyCard && (
                       <div className="mt-2 space-y-1">
                         <div className="flex items-center gap-2">
-                          <span className="text-xs bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 px-2 py-0.5 rounded-full">
+                          <span className="text-xs bg-plum-100 dark:bg-plum-900 text-plum-700 dark:text-plum-200 px-2 py-0.5 rounded-pill">
                             {customer.loyaltyCard.tier} Member
                           </span>
-                          <span className="text-xs bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 px-2 py-0.5 rounded-full">
+                          <span className="text-xs bg-gold-100 dark:bg-gold-900/30 text-gold-700 dark:text-gold-300 px-2 py-0.5 rounded-pill">
                             {getCustomerDiscount()}% Discount
                           </span>
                         </div>
-                        <div className="flex items-center gap-4 text-xs text-gray-600 dark:text-gray-400">
+                        <div className="flex items-center gap-4 text-xs text-brown-400 dark:text-white/40">
                           <span>💳 {customer.loyaltyCard.cardNumber}</span>
-                          <span>⭐ {customer.loyaltyCard.pointsEarned || 0} points</span>
+                          <span>⭐ {customer.loyaltyCard.pointsEarned || 0} pts</span>
                         </div>
                         {discount > 0 && (
                           <div className="text-xs text-green-600 dark:text-green-400 font-medium">
@@ -1309,38 +1308,38 @@ const StaffPOS = () => {
           <div className="flex-1 overflow-y-auto p-4">
             <h3 className="font-semibold text-gray-900 dark:text-white mb-3">Cart Items</h3>
             {cart.length === 0 ? (
-              <div className="text-center py-8 text-gray-500 dark:text-gray-400">
-                <FaShoppingCart className="mx-auto mb-2 text-2xl" />
-                <p>Cart is empty</p>
+              <div className="text-center py-8 text-brown-300 dark:text-white/30">
+                <FaShoppingCart className="mx-auto mb-2 text-3xl" />
+                <p className="text-sm">Cart is empty</p>
               </div>
             ) : (
-              <div className="space-y-3">
+              <div className="space-y-2">
                 {cart.map(item => (
-                  <div key={item._id} className="border border-gray-200 dark:border-gray-700 rounded-lg p-3">
+                  <div key={item._id} className="border border-brown-100 dark:border-dm-border rounded-card p-3 bg-white dark:bg-dm-card">
                     <div className="flex gap-3 min-w-0">
-                      <div className="w-12 h-12 rounded-md bg-gray-100 dark:bg-gray-700 overflow-hidden flex-shrink-0">
+                      <div className="w-12 h-12 rounded-lg bg-blush-50 dark:bg-dm-card-2 overflow-hidden flex-shrink-0">
                         {item.image?.[0] ? (
                           <img src={item.image[0]} alt={item.name} className="w-full h-full object-cover" />
                         ) : null}
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex justify-between items-start mb-2 gap-2">
-                          <h4 className="font-medium text-sm text-gray-900 dark:text-white truncate pr-2" title={item.name}>{item.name}</h4>
-                          <button onClick={() => removeFromCart(item._id)} className="text-red-500 hover:text-red-600 flex-shrink-0"><FaTrash size={14} /></button>
+                          <h4 className="font-medium text-sm text-charcoal dark:text-white truncate pr-2" title={item.name}>{item.name}</h4>
+                          <button onClick={() => removeFromCart(item._id)} className="text-blush-400 hover:text-red-500 flex-shrink-0 transition-colors"><FaTrash size={13} /></button>
                         </div>
                         <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <button onClick={() => updateQuantity(item._id, item.quantity - 1)} className="w-6 h-6 rounded-full bg-gray-200 dark:bg-gray-600 flex items-center justify-center text-gray-600 dark:text-gray-300"><FaMinus size={10} /></button>
-                            <input type="number" min="1" value={item.quantity} onChange={(e)=>updateQuantity(item._id, Math.max(1, parseInt(e.target.value||'1')))} className="w-12 text-center text-sm border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white" />
-                            <button onClick={() => updateQuantity(item._id, item.quantity + 1)} className="w-6 h-6 rounded-full bg-gray-200 dark:bg-gray-600 flex items-center justify-center text-gray-600 dark:text-gray-300"><FaPlus size={10} /></button>
+                          <div className="flex items-center gap-1.5">
+                            <button onClick={() => updateQuantity(item._id, item.quantity - 1)} className="w-6 h-6 rounded-full bg-blush-100 dark:bg-dm-card-2 flex items-center justify-center text-plum-600 dark:text-plum-300"><FaMinus size={9} /></button>
+                            <input type="number" min="1" value={item.quantity} onChange={(e)=>updateQuantity(item._id, Math.max(1, parseInt(e.target.value||'1')))} className="w-10 text-center text-sm border border-blush-200 dark:border-dm-border rounded-md bg-white dark:bg-dm-card text-charcoal dark:text-white" />
+                            <button onClick={() => updateQuantity(item._id, item.quantity + 1)} className="w-6 h-6 rounded-full bg-blush-100 dark:bg-dm-card-2 flex items-center justify-center text-plum-600 dark:text-plum-300"><FaPlus size={9} /></button>
                           </div>
                           <div className="text-right min-w-0">
-                            <p className="text-sm font-semibold text-gray-900 dark:text-white truncate" title={DisplayPriceInShillings(item.price * item.quantity)}>{DisplayPriceInShillings(item.price * item.quantity)}</p>
-                            <div className="flex items-center justify-end gap-2 text-xs text-gray-500 dark:text-gray-400">
-                              <span className="truncate" title={`${DisplayPriceInShillings(item.price)} ea`}>{DisplayPriceInShillings(item.price)} ea</span>
+                            <p className="font-price text-sm font-semibold text-gold-600 dark:text-gold-400 truncate">{DisplayPriceInShillings(item.price * item.quantity)}</p>
+                            <div className="flex items-center justify-end gap-1.5 text-xs text-brown-400 dark:text-white/40">
+                              <span className="truncate">{DisplayPriceInShillings(item.price)} ea</span>
                               <span>•</span>
-                              <span className="flex items-center gap-1"><FaPercent />
-                                <input type="number" min="0" max="100" value={item.discountPct || ''} onChange={(e)=> setCart(prev=>prev.map(it => it._id===item._id ? { ...it, discountPct: Math.max(0, Math.min(100, parseFloat(e.target.value || '0'))) } : it))} className="w-12 text-right border border-gray-300 dark:border-gray-600 rounded px-1 dark:bg-gray-700 dark:text-white" placeholder="0" />
+                              <span className="flex items-center gap-0.5"><FaPercent size={9} />
+                                <input type="number" min="0" max="100" value={item.discountPct || ''} onChange={(e)=> setCart(prev=>prev.map(it => it._id===item._id ? { ...it, discountPct: Math.max(0, Math.min(100, parseFloat(e.target.value || '0'))) } : it))} className="w-10 text-right border border-blush-200 dark:border-dm-border rounded px-1 bg-white dark:bg-dm-card text-charcoal dark:text-white" placeholder="0" />
                               </span>
                             </div>
                           </div>
@@ -1354,27 +1353,27 @@ const StaffPOS = () => {
           </div>
 
           {/* Cart Summary & Actions */}
-          <div className="p-4 border-t border-gray-200 dark:border-gray-700">
-            <div className="space-y-2 mb-4">
+          <div className="p-4 border-t border-brown-100 dark:border-dm-border">
+            <div className="space-y-1.5 mb-4 bg-blush-50 dark:bg-dm-card-2 rounded-card p-3">
               <div className="flex justify-between text-sm">
-                <span className="text-gray-600 dark:text-gray-400">Subtotal:</span>
-                <span className="text-gray-900 dark:text-white">{DisplayPriceInShillings(totals.subtotal)}</span>
+                <span className="text-brown-400 dark:text-white/50">Subtotal:</span>
+                <span className="text-charcoal dark:text-white font-medium">{DisplayPriceInShillings(totals.subtotal)}</span>
               </div>
               {totals.discountAmount > 0 && (
                 <div className="flex justify-between text-sm">
-                  <span className="text-gray-600 dark:text-gray-400">Discount:</span>
-                  <span className="text-red-600">-{DisplayPriceInShillings(totals.discountAmount)}</span>
+                  <span className="text-brown-400 dark:text-white/50">Discount:</span>
+                  <span className="text-blush-500">-{DisplayPriceInShillings(totals.discountAmount)}</span>
                 </div>
               )}
               <div className="flex items-center justify-between text-sm">
-                <label className="flex items-center gap-2 text-gray-600 dark:text-gray-400 cursor-pointer">
-                  <input type="checkbox" checked={applyTax} onChange={e=>setApplyTax(e.target.checked)} /> Apply Tax (16%)
+                <label className="flex items-center gap-2 text-brown-400 dark:text-white/50 cursor-pointer">
+                  <input type="checkbox" checked={applyTax} onChange={e=>setApplyTax(e.target.checked)} className="accent-plum-600" /> Tax (16%)
                 </label>
-                <span className="text-gray-900 dark:text-white">{DisplayPriceInShillings(totals.tax || 0)}</span>
+                <span className="text-charcoal dark:text-white">{DisplayPriceInShillings(totals.tax || 0)}</span>
               </div>
-              <div className="flex justify-between font-semibold text-lg">
-                <span className="text-gray-900 dark:text-white">Total:</span>
-                <span className="text-gray-900 dark:text-white">{DisplayPriceInShillings(totals.total)}</span>
+              <div className="flex justify-between font-bold text-base pt-1 border-t border-brown-100 dark:border-dm-border">
+                <span className="text-charcoal dark:text-white">Total:</span>
+                <span className="font-price text-gold-600 dark:text-gold-400">{DisplayPriceInShillings(totals.total)}</span>
               </div>
             </div>
 
@@ -1382,15 +1381,15 @@ const StaffPOS = () => {
               {/* Discount Input */}
               <div className="grid grid-cols-3 gap-2 items-center">
                 <div className="col-span-1 relative z-10">
-                  <label className="inline-flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400">
-                    <span>Discount</span>
+                  <label className="inline-flex items-center gap-1 text-xs text-brown-400 dark:text-white/50">
+                    <span>Disc.</span>
                     <select
                       value={discountMode}
                       onChange={(e)=>setDiscountMode(e.target.value)}
-                      className="px-2 py-1 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white text-xs relative z-20"
+                      className="px-1.5 py-1 border border-blush-200 dark:border-dm-border rounded-md bg-white dark:bg-dm-card text-charcoal dark:text-white text-xs"
                     >
-                      <option value="percent">Percent</option>
-                      <option value="amount">Amount</option>
+                      <option value="percent">%</option>
+                      <option value="amount">KSh</option>
                     </select>
                   </label>
                 </div>
@@ -1398,48 +1397,48 @@ const StaffPOS = () => {
                   <div className="col-span-2 flex items-center gap-2">
                     <input
                       type="number"
-                      placeholder="Discount %"
+                      placeholder="0"
                       value={discount}
                       onChange={(e) => setDiscount(Math.max(0, Math.min(100, parseFloat(e.target.value) || 0)))}
-                      className="flex-1 px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white"
+                      className="flex-1 px-3 py-1.5 text-sm border border-blush-200 dark:border-dm-border rounded-pill bg-white dark:bg-dm-card text-charcoal dark:text-white"
                     />
-                    <span className="text-sm text-gray-600 dark:text-gray-400">% off</span>
+                    <span className="text-xs text-brown-400 dark:text-white/40">% off</span>
                   </div>
                 ) : (
                   <div className="col-span-2 flex items-center gap-2">
                     <input
                       type="number"
-                      placeholder="Discount KSh"
+                      placeholder="0"
                       value={discountAmount}
                       onChange={(e) => setDiscountAmount(Math.max(0, parseFloat(e.target.value) || 0))}
-                      className="flex-1 px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white"
+                      className="flex-1 px-3 py-1.5 text-sm border border-blush-200 dark:border-dm-border rounded-pill bg-white dark:bg-dm-card text-charcoal dark:text-white"
                     />
-                    <span className="text-sm text-gray-600 dark:text-gray-400">KSh</span>
+                    <span className="text-xs text-brown-400 dark:text-white/40">KSh</span>
                   </div>
                 )}
               </div>
 
               {/* Order note */}
-              <textarea value={orderNote} onChange={(e)=>setOrderNote(e.target.value)} placeholder="Order note (optional)" className="w-full text-sm border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white p-2" rows={2} />
+              <textarea value={orderNote} onChange={(e)=>setOrderNote(e.target.value)} placeholder="Order note (optional)" className="w-full text-sm border border-blush-200 dark:border-dm-border rounded-card bg-white dark:bg-dm-card text-charcoal dark:text-white placeholder:text-brown-300 p-2 resize-none" rows={2} />
 
               {/* Action Buttons */}
               <div className="grid grid-cols-2 gap-2">
                 <button
                   onClick={clearCart}
                   disabled={cart.length === 0}
-                  className="px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50"
+                  className="px-3 py-2 text-sm border border-brown-200 dark:border-dm-border rounded-pill text-charcoal dark:text-white/70 hover:bg-blush-50 dark:hover:bg-dm-card-2 disabled:opacity-50 transition-colors"
                 >
-                  Clear Cart
+                  Clear
                 </button>
                 <button
                   onClick={() => setShowPaymentModal(true)}
                   disabled={cart.length === 0}
-                  className="px-3 py-2 text-sm bg-primary-500 text-white rounded-lg hover:bg-primary-600 disabled:opacity-50"
+                  className="px-3 py-2 text-sm bg-gold-500 hover:bg-gold-400 text-charcoal font-semibold rounded-pill disabled:opacity-50 press transition-colors"
                 >
                   Pay Now
                 </button>
-                <button onClick={parkCurrentSale} disabled={cart.length===0} className="px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 flex items-center justify-center gap-2"><FaSave/> Hold (F7)</button>
-                <button onClick={()=>setShowParkedDrawer(true)} className="px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center justify-center gap-2"><FaListUl/> Held (F8)</button>
+                <button onClick={parkCurrentSale} disabled={cart.length===0} className="px-3 py-2 text-sm border border-brown-200 dark:border-dm-border rounded-pill hover:bg-plum-50 dark:hover:bg-dm-card-2 text-charcoal dark:text-white/70 disabled:opacity-50 flex items-center justify-center gap-2 transition-colors"><FaSave size={12}/> Hold</button>
+                <button onClick={()=>setShowParkedDrawer(true)} className="px-3 py-2 text-sm border border-brown-200 dark:border-dm-border rounded-pill hover:bg-plum-50 dark:hover:bg-dm-card-2 text-charcoal dark:text-white/70 flex items-center justify-center gap-2 transition-colors"><FaListUl size={12}/> Held</button>
               </div>
             </div>
           </div>
@@ -1448,10 +1447,10 @@ const StaffPOS = () => {
 
       {/* Customer Modal */}
       {showCustomerModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-ivory dark:bg-dm-card rounded-card shadow-hover p-6 w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col animate-scale-in">
             <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Select Customer</h3>
+              <h3 className="font-display text-xl italic text-plum-900 dark:text-white">Select Customer</h3>
               <button
                 onClick={() => {
                   setShowCustomerModal(false);
@@ -1460,20 +1459,19 @@ const StaffPOS = () => {
                   setLoyaltyCardNumber('');
                   setShowQRScanner(false);
                   setQrScannerError('');
-                  // Stop camera if active
                   const video = document.getElementById('qr-video');
                   if (video && video.srcObject) {
                     video.srcObject.getTracks().forEach(track => track.stop());
                   }
                 }}
-                className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                className="text-brown-300 hover:text-charcoal dark:text-white/40 dark:hover:text-white transition-colors"
               >
                 <FaTimes />
               </button>
             </div>
             
             <div className="relative mb-4">
-              <FaSearch className="absolute left-3 top-3 text-gray-400" />
+              <FaSearch className="absolute left-3 top-3 text-brown-300" />
               <input
                 type="text"
                 placeholder="Search customers..."
@@ -1482,33 +1480,33 @@ const StaffPOS = () => {
                   setCustomerSearch(e.target.value);
                   searchCustomers(e.target.value);
                 }}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+                className="w-full pl-10 pr-4 py-2 border border-blush-200 dark:border-dm-border rounded-pill bg-blush-100 dark:bg-dm-card-2 focus:ring-2 focus:ring-plum-500 text-charcoal dark:text-white placeholder:text-brown-300 outline-none"
               />
             </div>
 
             {/* Code Scanner for Loyalty Cards */}
-            <div className="mb-4 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
-              <h4 className="text-sm font-medium text-blue-900 dark:text-blue-200 mb-3">Scan Loyalty Card</h4>
+            <div className="mb-4 p-4 bg-plum-50 dark:bg-plum-900/20 rounded-card border border-plum-100 dark:border-plum-800/30">
+              <h4 className="text-sm font-semibold text-plum-800 dark:text-plum-200 mb-3">Scan Loyalty Card</h4>
               
               {/* Scan Mode Selection */}
               <div className="mb-3">
                 <div className="flex gap-2">
                   <button
                     onClick={() => setScanMode('barcode')}
-                    className={`flex-1 px-3 py-2 text-sm rounded-lg border transition-colors ${
+                    className={`flex-1 px-3 py-2 text-sm rounded-pill border transition-colors ${
                       scanMode === 'barcode'
-                        ? 'bg-blue-600 text-white border-blue-600'
-                        : 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600'
+                        ? 'bg-plum-700 text-white border-plum-700'
+                        : 'bg-white dark:bg-dm-card text-charcoal dark:text-white/70 border-brown-200 dark:border-dm-border hover:bg-plum-50'
                     }`}
                   >
-                    📊 Barcode (Default)
+                    📊 Barcode
                   </button>
                   <button
                     onClick={() => setScanMode('qr')}
-                    className={`flex-1 px-3 py-2 text-sm rounded-lg border transition-colors ${
+                    className={`flex-1 px-3 py-2 text-sm rounded-pill border transition-colors ${
                       scanMode === 'qr'
-                        ? 'bg-blue-600 text-white border-blue-600'
-                        : 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600'
+                        ? 'bg-plum-700 text-white border-plum-700'
+                        : 'bg-white dark:bg-dm-card text-charcoal dark:text-white/70 border-brown-200 dark:border-dm-border hover:bg-plum-50'
                     }`}
                   >
                     📸 QR Code
@@ -1521,54 +1519,41 @@ const StaffPOS = () => {
                   <button
                     onClick={() => {
                       setShowQRScanner(true);
-                      // Initialize scanner after state update
                       setTimeout(initializeScanner, 100);
                     }}
-                    className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-plum-700 hover:bg-plum-800 text-white rounded-pill transition-colors"
                   >
                     {scanMode === 'barcode' ? (
-                      <>
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4h2v16H3zm4-2h2v20H7zm4 4h2v12h-2zm4-2h2v16h-2zm4 2h2v12h-2z" />
-                        </svg>
-                        Start Barcode Scanner
-                      </>
+                      <><FaBarcode /> Start Barcode Scanner</>
                     ) : (
-                      <>
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h2M4 4h4m12 0h2M4 20h4" />
-                        </svg>
-                        Start QR Scanner
-                      </>
+                      <><FaQrcode /> Start QR Scanner</>
                     )}
                   </button>
-                  <p className="text-xs text-gray-600 dark:text-gray-400 mt-2">
-                    Click to activate camera and scan customer's loyalty card {scanMode}
+                  <p className="text-xs text-brown-400 dark:text-white/40 mt-2">
+                    Activate camera to scan customer's loyalty card
                   </p>
                 </div>
               ) : (
                 <div className="space-y-3">
-                  <div className="bg-white dark:bg-gray-700 p-4 rounded-lg">
-                    <div className="aspect-square bg-gray-100 dark:bg-gray-600 rounded-lg flex items-center justify-center relative">
-                      <video 
-                        id="scanner-video" 
+                  <div className="bg-white dark:bg-dm-card p-3 rounded-card">
+                    <div className="aspect-square bg-blush-50 dark:bg-dm-card-2 rounded-lg flex items-center justify-center relative">
+                      <video
+                        id="scanner-video"
                         className="w-full h-full object-cover rounded-lg"
-                        autoPlay 
+                        autoPlay
                         playsInline
                       ></video>
-                      <div className="absolute inset-0 border-2 border-blue-500 rounded-lg"></div>
+                      <div className="absolute inset-0 border-2 border-plum-500 rounded-lg"></div>
                       <div className="absolute top-2 left-2 right-2">
-                        <p className="text-xs text-white bg-black bg-opacity-50 px-2 py-1 rounded">
-                          Position {scanMode} within the frame
+                        <p className="text-xs text-white bg-black/50 px-2 py-1 rounded-pill">
+                          Position {scanMode} within frame
                         </p>
                       </div>
-                      
-                      {/* Simulate code detection for testing */}
                       <button
                         onClick={() => handleCodeDetected('NAWIRI001234567')}
-                        className="absolute bottom-2 right-2 px-2 py-1 bg-green-600 text-white text-xs rounded opacity-75 hover:opacity-100"
+                        className="absolute bottom-2 right-2 px-2 py-1 bg-gold-500 text-charcoal text-xs rounded-pill press"
                       >
-                        Test {scanMode.charAt(0).toUpperCase() + scanMode.slice(1)}
+                        Test
                       </button>
                     </div>
                   </div>
@@ -1615,8 +1600,8 @@ const StaffPOS = () => {
             {/* Loading indicator */}
             {loadingCustomers ? (
               <div className="text-center py-4">
-                <div className="inline-block animate-spin rounded-full h-6 w-6 border-b-2 border-primary-600"></div>
-                <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">Loading customers...</p>
+                <div className="inline-block animate-spin rounded-full h-6 w-6 border-b-2 border-plum-600"></div>
+                <p className="text-sm text-brown-400 dark:text-white/40 mt-2">Loading customers...</p>
               </div>
             ) : (
               <div className="flex-1 overflow-y-auto">
@@ -1675,20 +1660,20 @@ const StaffPOS = () => {
                     <p className="text-sm">No customers loaded yet</p>
                     <button
                       onClick={loadAllCustomers}
-                      className="mt-2 px-4 py-2 bg-blue-600 text-white text-sm rounded hover:bg-blue-700"
+                      className="mt-2 px-4 py-2 bg-plum-700 hover:bg-plum-800 text-white text-sm rounded-pill transition-colors"
                     >
                       Load Customers
                     </button>
                   </div>
                 ) : customerSearch.trim() ? (
-                  <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+                  <div className="text-center py-8 text-brown-300 dark:text-white/30">
                     <p className="text-sm">No customers found for "{customerSearch}"</p>
                     <p className="text-xs mt-1">Try a different search term</p>
                   </div>
                 ) : (
-                  <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+                  <div className="text-center py-8 text-brown-300 dark:text-white/30">
                     <p className="text-sm">Start typing to search customers</p>
-                    <p className="text-xs mt-1">Or scan a loyalty card QR code above</p>
+                    <p className="text-xs mt-1">Or scan a loyalty card above</p>
                   </div>
                 )}
               </div>
@@ -1701,53 +1686,53 @@ const StaffPOS = () => {
       {showPaymentModal && (
         <div className="fixed inset-0 bg-black/50 z-50">
           <div className="absolute inset-0" onClick={()=>setShowPaymentModal(false)} />
-          <div className="absolute right-0 top-0 h-full w-[420px] bg-white dark:bg-gray-800 shadow-xl p-6 overflow-y-auto">
+          <div className="absolute right-0 top-0 h-full w-[420px] bg-ivory dark:bg-dm-card shadow-hover p-6 overflow-y-auto scrollbar-hide">
             <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Take Payment</h3>
+              <h3 className="font-display text-lg italic text-plum-900 dark:text-white">Take Payment</h3>
               <button
                 onClick={() => setShowPaymentModal(false)}
-                className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                className="text-brown-300 hover:text-charcoal dark:text-white/40 dark:hover:text-white transition-colors"
               >
                 <FaTimes />
               </button>
             </div>
 
             <div className="mb-4">
-              <div className="text-center py-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                <p className="text-2xl font-bold text-gray-900 dark:text-white">
+              <div className="text-center py-4 bg-gradient-to-br from-plum-50 to-blush-50 dark:from-plum-900/20 dark:to-dm-card-2 rounded-card border border-plum-100 dark:border-plum-800/30">
+                <p className="font-price text-2xl font-bold text-gold-600 dark:text-gold-400">
                   {DisplayPriceInShillings(totals.total)}
                 </p>
-                <p className="text-sm text-gray-600 dark:text-gray-400">Total Amount</p>
+                <p className="text-xs text-brown-400 dark:text-white/40 mt-0.5">Total Amount</p>
               </div>
             </div>
 
             {/* Split payments */}
             <div className="space-y-3 mb-4">
               <div className="flex items-center justify-between">
-                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Payments</label>
+                <label className="text-sm font-semibold text-charcoal dark:text-white">Payments</label>
               </div>
               {splitPayments.map((row, idx) => (
                 <div key={idx} className="grid grid-cols-6 gap-2 items-center">
-                  <select value={row.method} onChange={e=>updateSplitRow(idx, 'method', e.target.value)} className="col-span-2 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white">
+                  <select value={row.method} onChange={e=>updateSplitRow(idx, 'method', e.target.value)} className="col-span-2 px-3 py-2 border border-blush-200 dark:border-dm-border rounded-pill bg-white dark:bg-dm-card text-charcoal dark:text-white">
                     <option value="cash">Cash</option>
                     <option value="card">Card</option>
                     <option value="mobile">M-Pesa</option>
                   </select>
                   {row.method === 'mobile' ? (
                     <div className="col-span-3 flex items-center gap-2">
-                      <input type="tel" value={row.phone || ''} onChange={e=>updateSplitRow(idx,'phone', e.target.value)} placeholder="07XXXXXXXX" className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white" />
-                      <button onClick={()=>requestMpesaSTKForRow(idx)} disabled={row.mpesaRequesting} className="px-3 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 disabled:opacity-50">
+                      <input type="tel" value={row.phone || ''} onChange={e=>updateSplitRow(idx,'phone', e.target.value)} placeholder="07XXXXXXXX" className="flex-1 px-3 py-2 border border-blush-200 dark:border-dm-border rounded-pill bg-white dark:bg-dm-card text-charcoal dark:text-white" />
+                      <button onClick={()=>requestMpesaSTKForRow(idx)} disabled={row.mpesaRequesting} className="px-3 py-2 bg-plum-700 hover:bg-plum-800 text-white rounded-pill disabled:opacity-50 transition-colors text-sm">
                         {row.mpesaRequesting ? 'Sending…' : (row.mpesaStatus === 'pending' ? 'Resend' : 'Send')}
                       </button>
                     </div>
                   ) : <div className="col-span-3" />}
                   <div className="col-span-1 flex items-center justify-end gap-2">
                     {splitPayments.length > 1 && (
-                      <button onClick={()=>removeSplitRow(idx)} className="text-red-500"><FaTimes /></button>
+                      <button onClick={()=>removeSplitRow(idx)} className="text-blush-400 hover:text-red-500"><FaTimes /></button>
                     )}
                   </div>
                   {row.method === 'mobile' && (
-                    <div className="col-span-6 text-xs text-gray-500">
+                    <div className="col-span-6 text-xs text-brown-400 dark:text-white/40">
                       {row.mpesaStatus === 'pending' && 'Waiting for customer approval…'}
                       {row.mpesaStatus === 'success' && `Payment confirmed${row.allocatedAmount ? `: KSh ${row.allocatedAmount.toFixed(2)}` : ''}.`}
                       {row.mpesaStatus === 'failed' && 'Payment failed. Try again.'}
@@ -1757,28 +1742,25 @@ const StaffPOS = () => {
               ))}
 
               <div className="pt-2">
-                <button onClick={addSplitRow} className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">Add Method</button>
+                <button onClick={addSplitRow} className="w-full px-3 py-2 border border-blush-200 dark:border-dm-border rounded-pill text-charcoal dark:text-white/70 hover:bg-blush-50 dark:hover:bg-dm-card-2 text-sm transition-colors">+ Add Method</button>
               </div>
             </div>
 
             {/* Cash tendered input if cash method present */}
             {splitPayments.some(r=>r.method==='cash') && (
               <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Cash Tendered</label>
-                <input type="number" value={amountTendered} onChange={(e)=>setAmountTendered(e.target.value)} placeholder="Enter amount" className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white" />
-                {/* Change preview only when cash is the only method */}
+                <label className="block text-sm font-medium text-charcoal dark:text-white/70 mb-2">Cash Tendered</label>
+                <input type="number" value={amountTendered} onChange={(e)=>setAmountTendered(e.target.value)} placeholder="Enter amount" className="w-full px-3 py-2 border border-blush-200 dark:border-dm-border rounded-pill bg-blush-100 dark:bg-dm-card-2 focus:ring-2 focus:ring-plum-500 text-charcoal dark:text-white outline-none" />
                 {splitPayments.length === 1 && splitPayments[0].method === 'cash' && amountTendered && parseFloat(amountTendered) >= totals.total && (
-                  <p className="text-sm text-green-600 dark:text-green-400 mt-1">Change: {DisplayPriceInShillings(Math.max(0, parseFloat(amountTendered) - totals.total))}</p>
+                  <p className="text-sm text-plum-600 dark:text-plum-300 mt-1">Change: {DisplayPriceInShillings(Math.max(0, parseFloat(amountTendered) - totals.total))}</p>
                 )}
               </div>
             )}
 
-            {/* M-Pesa inputs are handled per split row above */}
-
-            <div className="flex space-x-2">
+            <div className="flex gap-2">
               <button
                 onClick={() => setShowPaymentModal(false)}
-                className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
+                className="flex-1 px-4 py-2 border border-brown-200 dark:border-dm-border rounded-pill text-charcoal dark:text-white/70 hover:bg-blush-50 dark:hover:bg-dm-card-2 transition-colors"
               >
                 Cancel
               </button>
@@ -1787,7 +1769,7 @@ const StaffPOS = () => {
               <button
                 onClick={processSale}
                 disabled={loading || anyMobilePending}
-                className="flex-1 px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 disabled:opacity-50"
+                className="flex-1 px-4 py-2 bg-gold-500 hover:bg-gold-400 text-charcoal font-semibold rounded-pill disabled:opacity-50 press transition-colors"
               >
                 {loading ? <LoadingSpinner size="small" /> : (anyMobilePending ? 'Awaiting M-Pesa…' : 'Complete Sale')}
               </button>
@@ -1799,13 +1781,13 @@ const StaffPOS = () => {
 
       {/* Receipt Modal */}
       {showReceiptModal && currentSale && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-[420px] max-w-full mx-4 print:w-[80mm]">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white dark:bg-dm-card rounded-card shadow-hover p-6 w-[420px] max-w-full mx-4 print:w-[80mm]">
             <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Receipt</h3>
+              <h3 className="font-display text-lg italic text-plum-900 dark:text-white">Receipt</h3>
               <button
                 onClick={() => setShowReceiptModal(false)}
-                className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                className="text-brown-300 hover:text-charcoal dark:text-white/40 dark:hover:text-white transition-colors"
               >
                 <FaTimes />
               </button>
@@ -2017,17 +1999,17 @@ const StaffPOS = () => {
               </div>
             </div>
 
-            <div className="flex space-x-2 mt-4">
+            <div className="flex gap-2 mt-4">
               <button
                 onClick={printReceipt}
-                className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center justify-center"
+                className="flex-1 px-4 py-2 border border-brown-200 dark:border-dm-border rounded-pill text-charcoal dark:text-white/70 hover:bg-blush-50 dark:hover:bg-dm-card-2 flex items-center justify-center gap-2 transition-colors"
               >
-                <FaPrint className="mr-2" />
+                <FaPrint size={14} />
                 Print
               </button>
               <button
                 onClick={() => setShowReceiptModal(false)}
-                className="flex-1 px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600"
+                className="flex-1 px-4 py-2 bg-gold-500 hover:bg-gold-400 text-charcoal font-semibold rounded-pill press transition-colors"
               >
                 Done
               </button>
@@ -2040,10 +2022,10 @@ const StaffPOS = () => {
       {showParkedDrawer && (
         <div className="fixed inset-0 z-40">
           <div className="absolute inset-0 bg-black/50" onClick={()=>setShowParkedDrawer(false)} />
-          <div className="absolute right-0 top-0 h-full w-[380px] bg-white dark:bg-gray-800 p-4 overflow-y-auto">
+          <div className="absolute right-0 top-0 h-full w-[380px] bg-ivory dark:bg-dm-card p-4 overflow-y-auto scrollbar-hide shadow-hover">
             <div className="flex items-center justify-between mb-3">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Held Sales</h3>
-              <button onClick={()=>setShowParkedDrawer(false)} className="text-gray-500"><FaTimes/></button>
+              <h3 className="font-display text-lg italic text-plum-900 dark:text-white">Held Sales</h3>
+              <button onClick={()=>setShowParkedDrawer(false)} className="text-brown-300 hover:text-charcoal dark:text-white/40 transition-colors"><FaTimes/></button>
             </div>
             <div className="mb-3">
               <input
@@ -2051,48 +2033,48 @@ const StaffPOS = () => {
                 value={parkedSearch}
                 onChange={(e)=>setParkedSearch(e.target.value)}
                 placeholder="Search by product, customer, or note"
-                className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white"
+                className="w-full px-3 py-2 text-sm border border-blush-200 dark:border-dm-border rounded-pill bg-blush-100 dark:bg-dm-card-2 text-charcoal dark:text-white placeholder:text-brown-300 outline-none"
               />
             </div>
             {parkedSales.length === 0 ? (
-              <p className="text-sm text-gray-500">No held sales</p>
+              <p className="text-sm text-brown-300 dark:text-white/30">No held sales</p>
             ) : (
               <div className="space-y-3">
                 {filteredParked.map(p => (
-                  <div key={p.id} className="border border-gray-200 dark:border-gray-700 rounded-lg p-3">
+                  <div key={p.id} className="border border-brown-100 dark:border-dm-border rounded-card p-3 bg-white dark:bg-dm-card">
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0">
-                        <p className="text-sm font-medium truncate" title={new Date(p.when).toLocaleString()}>{new Date(p.when).toLocaleString()}</p>
-                        <p className="text-xs text-gray-500">
-                          {p.cart.length} items • {p.customer?.name || 'Walk-in'} • {DisplayPriceInShillings(parkedTotal(p))}
+                        <p className="text-sm font-medium text-charcoal dark:text-white truncate">{new Date(p.when).toLocaleString()}</p>
+                        <p className="text-xs text-brown-400 dark:text-white/50">
+                          {p.cart.length} items • {p.customer?.name || 'Walk-in'} • <span className="font-price text-gold-600">{DisplayPriceInShillings(parkedTotal(p))}</span>
                         </p>
-                        {p.orderNote && <p className="text-xs text-gray-400 truncate" title={p.orderNote}>Note: {p.orderNote}</p>}
+                        {p.orderNote && <p className="text-xs text-brown-300 dark:text-white/30 truncate">Note: {p.orderNote}</p>}
                       </div>
                       <div className="flex items-center gap-2 flex-shrink-0">
-                        <button onClick={()=>resumeParkedSale(p.id)} className="px-3 py-1.5 text-xs rounded-md border border-primary-600 text-primary-700 hover:bg-primary-50">Resume</button>
-                        <button onClick={()=>deleteParkedSale(p.id)} className="px-2 py-1.5 text-xs rounded-md border border-gray-300 hover:bg-gray-50">Delete</button>
+                        <button onClick={()=>resumeParkedSale(p.id)} className="px-3 py-1 text-xs rounded-pill bg-plum-700 hover:bg-plum-800 text-white transition-colors">Resume</button>
+                        <button onClick={()=>deleteParkedSale(p.id)} className="px-2 py-1 text-xs rounded-pill border border-brown-200 dark:border-dm-border hover:bg-blush-50 dark:hover:bg-dm-card-2 text-charcoal dark:text-white/60 transition-colors">Del</button>
                       </div>
                     </div>
                     <div className="mt-2">
                       {expandedParked[p.id] ? (
                         <div className="space-y-1">
                           {(p.cart || []).map((i, idx) => (
-                            <div key={idx} className="text-xs text-gray-600 dark:text-gray-300 flex justify-between gap-2">
-                              <span className="truncate" title={`${i.quantity} x ${i.name}`}>{i.quantity} x {i.name}</span>
-                              <span className="flex-shrink-0">{DisplayPriceInShillings(i.price * i.quantity)}</span>
+                            <div key={idx} className="text-xs text-brown-400 dark:text-white/50 flex justify-between gap-2">
+                              <span className="truncate">{i.quantity} x {i.name}</span>
+                              <span className="flex-shrink-0 font-price text-gold-600 dark:text-gold-400">{DisplayPriceInShillings(i.price * i.quantity)}</span>
                             </div>
                           ))}
                         </div>
                       ) : (
                         <div className="space-y-1">
                           {(p.cart || []).slice(0,3).map((i, idx) => (
-                            <div key={idx} className="text-xs text-gray-600 dark:text-gray-300 flex justify-between gap-2">
-                              <span className="truncate" title={`${i.quantity} x ${i.name}`}>{i.quantity} x {i.name}</span>
+                            <div key={idx} className="text-xs text-brown-400 dark:text-white/50 flex justify-between gap-2">
+                              <span className="truncate">{i.quantity} x {i.name}</span>
                               <span className="flex-shrink-0">{DisplayPriceInShillings(i.price * i.quantity)}</span>
                             </div>
                           ))}
                           {(p.cart || []).length > 3 && (
-                            <div className="text-xs text-gray-500">+ {(p.cart || []).length - 3} more…</div>
+                            <div className="text-xs text-brown-300 dark:text-white/30">+ {(p.cart || []).length - 3} more…</div>
                           )}
                         </div>
                       )}
@@ -2101,7 +2083,7 @@ const StaffPOS = () => {
                       <div className="mt-2">
                         <button
                           onClick={()=>setExpandedParked(prev => ({ ...prev, [p.id]: !prev[p.id] }))}
-                          className="text-xs text-primary-700 hover:underline"
+                          className="text-xs text-plum-600 dark:text-plum-300 hover:underline"
                         >
                           {expandedParked[p.id] ? 'Hide items' : 'Show items'}
                         </button>
@@ -2118,12 +2100,12 @@ const StaffPOS = () => {
       {/* Help Modal */}
       {showHelp && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center">
-          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-[600px] max-w-full">
+          <div className="bg-ivory dark:bg-dm-card rounded-card shadow-hover p-6 w-[600px] max-w-full animate-scale-in">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Keyboard Shortcuts</h3>
-              <button onClick={()=>setShowHelp(false)} className="text-gray-500"><FaTimes/></button>
+              <h3 className="font-display text-lg italic text-plum-900 dark:text-white">Keyboard Shortcuts</h3>
+              <button onClick={()=>setShowHelp(false)} className="text-brown-300 hover:text-charcoal dark:text-white/40 transition-colors"><FaTimes/></button>
             </div>
-            <div className="grid grid-cols-2 gap-3 text-sm text-gray-700 dark:text-gray-300">
+            <div className="grid grid-cols-2 gap-3 text-sm text-charcoal dark:text-white/70">
               <div>F2 – Focus Search</div>
               <div>F4 – Open Payment</div>
               <div>F6 – Increase Discount</div>

@@ -674,70 +674,66 @@ const CheckoutPage = ({ isCutView = false, onClose = null }) => {
     if (fulfillmentMethod === 'delivery') {
       return (
         <>
-          <h3 className='text-lg font-semibold dark:text-white'>Choose your address</h3>
+          <h3 className='text-lg font-semibold text-charcoal dark:text-white mb-3'>Delivery Address</h3>
           {!hasActiveAddresses && (
-            <div className="bg-yellow-100 border border-yellow-400 text-yellow-700 dark:bg-yellow-800/30 dark:border-yellow-700 dark:text-yellow-200 px-4 py-2 rounded mb-4">
+            <div className="bg-gold-100 dark:bg-gold-600/10 border border-gold-300 dark:border-gold-600/30 text-gold-700 dark:text-gold-300 px-4 py-2 rounded-card mb-4 text-sm">
               Please add a delivery address to proceed with payment.
             </div>
           )}
           {addressError && (
-            <div className="bg-red-100 border border-red-400 text-red-700 dark:bg-red-900/30 dark:border-red-700 dark:text-red-200 px-4 py-2 rounded mb-4">
+            <div className="bg-blush-100 dark:bg-blush-500/10 border border-blush-300 dark:border-blush-500/30 text-blush-600 dark:text-blush-300 px-4 py-2 rounded-card mb-4 text-sm">
               Please select a delivery address before proceeding with payment.
             </div>
           )}
           {!isPaymentEnabled && hasActiveAddresses && !addressError && (
-            <div className="bg-blue-100 border border-blue-400 text-blue-700 dark:bg-blue-900/30 dark:border-blue-700 dark:text-blue-200 px-4 py-2 rounded mb-4">
+            <div className="bg-plum-50 dark:bg-plum-900/20 border border-plum-200 dark:border-plum-700/40 text-plum-700 dark:text-plum-300 px-4 py-2 rounded-card mb-4 text-sm">
               Select an address to enable payment options.
             </div>
           )}
-          <div className='bg-white dark:bg-gray-700 p-2 grid gap-4 rounded shadow transition-colors duration-200'>
+          <div className='grid gap-3 mb-4'>
             {hasActiveAddresses ? (
               addressList.map((address, index) => {
-                // Only render addresses with status = true
                 if (!address.status) return null;
-                
                 return (
-                  <label 
+                  <label
                     key={`address-${address._id || index}`}
                     htmlFor={`address${index}`}
                     className="cursor-pointer"
                   >
-                    <div className={`border rounded p-3 flex gap-3 transition-colors duration-200 
-                      ${selectAddress === index 
-                        ? 'bg-blue-50 border-blue-500 border-2 dark:bg-blue-900/30 dark:border-blue-400' 
-                        : 'dark:border-gray-600 hover:bg-blue-50 dark:hover:bg-blue-900/20'}`}>
-                      <div>
-                        <input 
-                          id={`address${index}`} 
-                          type='radio' 
-                          value={index} 
-                          checked={selectAddress === index}
-                          onChange={(e) => setSelectAddress(parseInt(e.target.value))} 
-                          name='address' 
-                          className="accent-blue-500 dark:accent-blue-400"
-                        />
-                      </div>
-                      <div className="dark:text-gray-200">
-                        <p>{address.address_line}</p>
-                        <p>{address.city}</p>
-                        <p>{address.state}</p>
-                        <p>{address.country} - {address.pincode}</p>
-                        <p>{address.mobile}</p>
+                    <div className={`border-2 rounded-card p-4 flex gap-3 transition-all duration-200 ${
+                      selectAddress === index
+                        ? 'border-plum-700 bg-plum-50 dark:border-plum-400 dark:bg-plum-900/20'
+                        : 'border-brown-100 dark:border-dm-border bg-white dark:bg-dm-card hover:border-plum-200 dark:hover:border-plum-700/40'
+                    }`}>
+                      <input
+                        id={`address${index}`}
+                        type='radio'
+                        value={index}
+                        checked={selectAddress === index}
+                        onChange={(e) => setSelectAddress(parseInt(e.target.value))}
+                        name='address'
+                        className="accent-plum-700 mt-1 flex-shrink-0"
+                      />
+                      <div className="text-sm text-charcoal dark:text-white/80 leading-relaxed">
+                        <p className="font-medium">{address.address_line}</p>
+                        <p className="text-brown-400 dark:text-white/50">{address.city}, {address.state}</p>
+                        <p className="text-brown-400 dark:text-white/50">{address.country} — {address.pincode}</p>
+                        <p className="text-brown-400 dark:text-white/50 text-xs mt-0.5">{address.mobile}</p>
                       </div>
                     </div>
                   </label>
                 )
               })
             ) : (
-              <div className="p-4 text-center text-gray-500 dark:text-gray-400">
+              <div className="p-6 text-center text-brown-400 dark:text-white/40 text-sm bg-white dark:bg-dm-card rounded-card border border-brown-100 dark:border-dm-border">
                 No delivery addresses found. Please add an address to continue.
               </div>
             )}
-            <div 
-              onClick={() => setOpenAddress(true)} 
-              className='h-16 bg-blue-50 dark:bg-blue-900/20 border-2 border-dashed dark:border-blue-700 flex justify-center items-center cursor-pointer hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors duration-200 dark:text-gray-200'
+            <div
+              onClick={() => setOpenAddress(true)}
+              className='h-14 bg-blush-50 dark:bg-dm-card border-2 border-dashed border-blush-200 dark:border-dm-border rounded-card flex justify-center items-center cursor-pointer hover:bg-blush-100 dark:hover:bg-dm-card-2 hover:border-plum-300 dark:hover:border-plum-600 transition-all duration-200 text-sm font-medium text-plum-700 dark:text-plum-200 gap-2'
             >
-              Add address
+              + Add new address
             </div>
           </div>
         </>
@@ -776,24 +772,24 @@ const CheckoutPage = ({ isCutView = false, onClose = null }) => {
 
   // Full page render (original implementation)
   return (
-    <section className='bg-blue-50 dark:bg-gray-800 transition-colors duration-200'>
-      <div className='container mx-auto p-4 flex flex-col lg:flex-row w-full gap-5 justify-between'>
+    <section className='bg-ivory dark:bg-dm-surface transition-colors duration-200 min-h-screen'>
+      <div className='container mx-auto px-3 sm:px-5 py-6 sm:py-8 flex flex-col lg:flex-row w-full gap-6 justify-between items-start'>
         <div className='w-full'>
           {/* Address or Pickup Section */}
           {renderAddressOrPickupSection()}
         </div>
 
-        <div className='w-full max-w-md bg-white dark:bg-gray-700 py-4 px-2 rounded shadow transition-colors duration-200'>
+        <div className='w-full max-w-md bg-gold-100 dark:bg-dm-card rounded-card shadow-card py-5 px-4 lg:sticky lg:top-24 transition-colors duration-200'>
           {/**summary**/}
-          <h3 className='text-lg font-semibold dark:text-white px-4'>Summary</h3>
+          <h3 className='text-lg font-semibold text-charcoal dark:text-white px-1 mb-3'>Order Summary</h3>
           
           {/* Royal Card Badge */}
           {royalDiscount > 0 && (
-            <div className="mb-4 mx-4 p-3 bg-amber-100 dark:bg-amber-900/30 rounded-lg text-amber-800 dark:text-amber-200 flex items-center">
-              <FaCrown className="mr-2 text-xl" />
+            <div className="mb-4 p-3 bg-gradient-to-r from-gold-500/20 to-gold-100 dark:from-gold-600/20 dark:to-gold-900/10 border border-gold-300 dark:border-gold-600/40 rounded-card text-charcoal dark:text-white flex items-center gap-3">
+              <FaCrown className="text-gold-500 text-xl flex-shrink-0" />
               <div>
-                <p className="font-medium">Royal {royalCardData?.tier} Card</p>
-                <p className="text-sm">You're getting an additional {royalDiscount}% discount on all products!</p>
+                <p className="font-semibold text-sm">Royal {royalCardData?.tier} Card</p>
+                <p className="text-xs text-brown-400 dark:text-white/50">+{royalDiscount}% discount applied on all products!</p>
               </div>
             </div>
           )}
@@ -812,8 +808,8 @@ const CheckoutPage = ({ isCutView = false, onClose = null }) => {
             <CommunityCampaignProgress displayMode="slim" />
           </div>
           
-          <div className='bg-white dark:bg-gray-700 p-4 transition-colors duration-200'>
-            <h3 className='font-semibold dark:text-white'>Bill details</h3>
+          <div className='bg-white dark:bg-dm-card-2 p-4 rounded-card border border-brown-100 dark:border-dm-border mt-3 transition-colors duration-200'>
+            <h3 className='font-semibold text-charcoal dark:text-white mb-3 text-sm uppercase tracking-wide'>Bill Details</h3>
             <div className='flex gap-4 justify-between ml-1 dark:text-gray-200'>
               <p>Original price total</p>
               <p className='flex items-center gap-2'>
@@ -902,73 +898,89 @@ const CheckoutPage = ({ isCutView = false, onClose = null }) => {
           )}
 
           {/* Updated Price Display */}
-          <div className="mt-4 p-4 bg-white dark:bg-gray-700 rounded-lg shadow transition-colors duration-200">
-            <div className="flex justify-between items-center dark:text-gray-200">
-              <span className="font-medium">Subtotal:</span>
-              <span>KES {priceAfterCommunityDiscount.toLocaleString()}</span>
+          <div className="mt-4 p-4 bg-white dark:bg-dm-card rounded-card border border-brown-100 dark:border-dm-border transition-colors duration-200">
+            <div className="flex justify-between items-center text-sm text-charcoal dark:text-white/80">
+              <span>Subtotal</span>
+              <span className="font-price font-semibold">KES {priceAfterCommunityDiscount.toLocaleString()}</span>
             </div>
-            
+
             {usePoints && (
-              <div className="flex justify-between items-center text-green-600 dark:text-green-400">
-                <span>Points Discount:</span>
-                <span>- KES {pointsValue.toLocaleString()}</span>
+              <div className="flex justify-between items-center text-sm text-green-600 dark:text-green-400 mt-1">
+                <span>Points Discount</span>
+                <span className="font-price font-semibold">- KES {pointsValue.toLocaleString()}</span>
               </div>
             )}
-            
-            <div className="flex justify-between items-center mt-2 pt-2 border-t dark:border-gray-600 font-bold dark:text-white">
-              <span>Total:</span>
-              <span>KES {finalPrice.toLocaleString()}</span>
+
+            <div className="flex justify-between items-center mt-3 pt-3 border-t border-brown-100 dark:border-dm-border">
+              <span className="font-bold text-charcoal dark:text-white">Total</span>
+              <span className="font-price font-bold text-lg text-gold-600 dark:text-gold-300">KES {finalPrice?.toLocaleString()}</span>
             </div>
           </div>
 
-          <div className='w-full flex flex-col gap-4 mt-4 px-4'>
-            <button 
-              className={`py-2 px-4 rounded text-white font-semibold transition-colors duration-200 ${
+          <div className='w-full flex flex-col gap-3 mt-5'>
+            <p className="text-xs font-semibold uppercase tracking-widest text-brown-300 dark:text-white/30 mb-1">Choose Payment Method</p>
+            <button
+              className={`flex items-center justify-between w-full py-3 px-4 rounded-card border-2 font-semibold text-sm transition-all duration-200 press ${
                 (fulfillmentMethod === 'delivery' && isPaymentEnabled) || (fulfillmentMethod === 'pickup')
-                  ? 'bg-green-600 hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-600' 
-                  : 'bg-gray-400 dark:bg-gray-600 cursor-not-allowed'
-              }`} 
+                  ? 'border-plum-700 text-plum-700 dark:border-plum-400 dark:text-plum-200 bg-plum-50 dark:bg-plum-900/20 hover:bg-plum-100 dark:hover:bg-plum-900/40'
+                  : 'border-brown-100 dark:border-dm-border text-brown-300 dark:text-white/20 cursor-not-allowed'
+              }`}
               onClick={handleOnlinePayment}
               disabled={fulfillmentMethod === 'delivery' && !isPaymentEnabled}
             >
-              Pay with Card {fulfillmentMethod === 'delivery' && !isPaymentEnabled && '(Select Address First)'}
+              <span>Pay with Card (Stripe)</span>
+              {fulfillmentMethod === 'delivery' && !isPaymentEnabled && <span className="text-xs font-normal opacity-60">Select address first</span>}
             </button>
-            
-            <button 
-              className={`py-2 px-4 rounded text-white font-semibold transition-colors duration-200 ${
+
+            <button
+              className={`flex items-center justify-between w-full py-3 px-4 rounded-card border-2 font-semibold text-sm transition-all duration-200 press ${
                 (fulfillmentMethod === 'delivery' && isPaymentEnabled) || (fulfillmentMethod === 'pickup')
-                  ? 'bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600' 
-                  : 'bg-gray-400 dark:bg-gray-600 cursor-not-allowed'
+                  ? 'border-green-600 text-green-700 dark:border-green-500 dark:text-green-300 bg-green-50 dark:bg-green-900/10 hover:bg-green-100 dark:hover:bg-green-900/20'
+                  : 'border-brown-100 dark:border-dm-border text-brown-300 dark:text-white/20 cursor-not-allowed'
               }`}
               onClick={handleShowMpesaForm}
               disabled={fulfillmentMethod === 'delivery' && !isPaymentEnabled}
             >
-              Pay with M-Pesa {fulfillmentMethod === 'delivery' && !isPaymentEnabled && '(Select Address First)'}
+              <span>Pay with M-Pesa</span>
+              {fulfillmentMethod === 'delivery' && !isPaymentEnabled && <span className="text-xs font-normal opacity-60">Select address first</span>}
             </button>
-            
-            <button 
-              className={`py-2 px-4 border-2 font-semibold transition-colors duration-200 ${
+
+            <button
+              className={`flex items-center justify-between w-full py-3 px-4 rounded-card border-2 font-semibold text-sm transition-all duration-200 press ${
                 (fulfillmentMethod === 'delivery' && isPaymentEnabled) || (fulfillmentMethod === 'pickup')
-                  ? 'border-green-600 text-green-600 hover:bg-green-600 hover:text-white dark:border-green-500 dark:text-green-400 dark:hover:bg-green-700' 
-                  : 'border-gray-400 text-gray-400 dark:border-gray-600 dark:text-gray-500 cursor-not-allowed'
+                  ? 'border-brown-400 text-brown-500 dark:border-brown-500 dark:text-brown-300 bg-brown-50 dark:bg-brown-900/10 hover:bg-brown-100 dark:hover:bg-brown-900/20'
+                  : 'border-brown-100 dark:border-dm-border text-brown-300 dark:text-white/20 cursor-not-allowed'
               }`}
               onClick={handleCashOnDelivery}
               disabled={fulfillmentMethod === 'delivery' && !isPaymentEnabled}
             >
-              Cash on {fulfillmentMethod === 'delivery' ? 'Delivery' : 'Pickup'} 
-              {fulfillmentMethod === 'delivery' && !isPaymentEnabled && '(Select Address First)'}
+              <span>Cash on {fulfillmentMethod === 'delivery' ? 'Delivery' : 'Pickup'}</span>
+              {fulfillmentMethod === 'delivery' && !isPaymentEnabled && <span className="text-xs font-normal opacity-60">Select address first</span>}
             </button>
 
-            <button 
-              className={`py-2 px-4 rounded text-white font-semibold transition-colors duration-200 ${
-                isPaymentEnabled 
-                  ? 'bg-red-600 hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-600' 
-                  : 'bg-gray-400 dark:bg-gray-600 cursor-not-allowed'
+            <button
+              className={`flex items-center justify-between w-full py-3 px-4 rounded-card border-2 font-semibold text-sm transition-all duration-200 press ${
+                isPaymentEnabled
+                  ? 'border-plum-500 text-plum-700 dark:border-plum-400 dark:text-plum-200 bg-plum-50 dark:bg-plum-900/20 hover:bg-plum-100 dark:hover:bg-plum-900/40'
+                  : 'border-brown-100 dark:border-dm-border text-brown-300 dark:text-white/20 cursor-not-allowed'
               }`}
               onClick={handlePesapalPayment}
               disabled={!isPaymentEnabled}
             >
-              {isPesapalLoading ? 'Processing...' : 'Pay with PesaPal'} {!isPaymentEnabled && '(Select Address First)'}
+              <span>{isPesapalLoading ? 'Processing...' : 'Pay with PesaPal'}</span>
+              {!isPaymentEnabled && <span className="text-xs font-normal opacity-60">Select address first</span>}
+            </button>
+
+            <button
+              className={`w-full py-3.5 rounded-pill font-bold text-sm mt-1 transition-all duration-200 press shadow-sm ${
+                (fulfillmentMethod === 'delivery' && isPaymentEnabled) || (fulfillmentMethod === 'pickup')
+                  ? 'bg-gold-500 hover:bg-gold-400 text-charcoal hover:shadow-gold'
+                  : 'bg-brown-100 dark:bg-dm-card-2 text-brown-300 dark:text-white/20 cursor-not-allowed'
+              }`}
+              onClick={handleOnlinePayment}
+              disabled={fulfillmentMethod === 'delivery' && !isPaymentEnabled}
+            >
+              Confirm &amp; Pay — KES {finalPrice?.toLocaleString()}
             </button>
           </div>
         </div>
@@ -976,8 +988,8 @@ const CheckoutPage = ({ isCutView = false, onClose = null }) => {
 
       {/* M-Pesa Payment Modal */}
       {showMpesaForm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-gray-800 p-6 rounded-lg max-w-md w-full transition-colors duration-200">
+        <div className="fixed inset-0 bg-plum-900/60 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-dm-card p-6 rounded-card shadow-hover max-w-md w-full transition-colors duration-200 animate-scale-in">
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-lg font-bold dark:text-white">M-Pesa Payment</h3>
               <button 

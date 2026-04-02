@@ -52,7 +52,7 @@ import { searchUsers } from './controllers/user.controller.js';
 dotenv.config();
 
 // Define PORT at the top level so it's available throughout the file
-const PORT = process.env.PORT || 3001;
+const PORT = process.env.PORT || 5000;
 
 const app = express();
 

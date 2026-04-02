@@ -32,280 +32,142 @@ import SummaryApi from '../common/SummaryApi';
 import { logout } from '../store/userSlice';
 import Axios from '../utils/Axios';
 import AxiosToastError from '../utils/AxiosToastError';
-import Divider from './Divider';
 
 const DashboardSidebar = ({ userRole, isStaff }) => {
   const user = useSelector(state => state.user);
   const location = useLocation();
   const dispatch = useDispatch();
   const navigate = useNavigate();
-  
+
   const isAdmin = userRole === 'admin';
   const isDelivery = userRole === 'delivery';
-  
-  const isActive = (path) => {
-    return location.pathname === path || location.pathname.includes(path) 
-      ? 'bg-orange-200 dark:bg-orange-900/30 font-medium' 
-      : '';
-  };
-  
-  const handleLogout = async() => {
+
+  const handleLogout = async () => {
     try {
-      const response = await Axios({
-         ...SummaryApi.logout
-      });
-      
-      if(response.data.success){
+      const response = await Axios({ ...SummaryApi.logout });
+      if (response.data.success) {
         dispatch(logout());
         localStorage.clear();
         toast.success(response.data.message);
         navigate("/");
       }
     } catch (error) {
-      console.log(error);
       AxiosToastError(error);
     }
   };
-  
-  // Menu Item Component
-  const MenuItem = ({ to, icon: Icon, label, color = "text-blue-500" }) => (
-    <Link
-      to={to}
-      className={`px-3 py-2 hover:bg-orange-200 dark:hover:bg-orange-900/30 dark:hover:text-white flex items-center rounded mb-1 ${isActive(to)}`}
-    >
-      <Icon className={`mr-2 ${color}`} size={18} /> {label}
-    </Link>
-  );
 
-  // Section Label Component
+  const isActive = (path) =>
+    location.pathname === path || location.pathname.includes(path);
+
+  const MenuItem = ({ to, icon: Icon, label }) => {
+    const active = isActive(to);
+    return (
+      <Link
+        to={to}
+        className={`flex items-center gap-3 px-4 py-2.5 rounded-lg mx-2 mb-0.5 text-sm font-medium transition-all duration-200 group ${
+          active
+            ? 'bg-plum-700 border-l-4 border-gold-500 text-white'
+            : 'text-white/60 hover:bg-plum-800 hover:text-white border-l-4 border-transparent'
+        }`}
+      >
+        <Icon size={16} className={active ? 'text-gold-400' : 'text-white/40 group-hover:text-white/70'} />
+        <span className="truncate">{label}</span>
+      </Link>
+    );
+  };
+
   const SectionLabel = ({ title }) => (
-    <div className="text-xs font-medium uppercase text-gray-500 dark:text-gray-400 px-3 py-1 mt-4 mb-1">
+    <div className="text-xs font-semibold uppercase tracking-widest text-blush-400/70 px-6 py-1 mt-4 mb-1">
       {title}
     </div>
   );
 
-  return (
-    <div className="dashboard-sidebar dark:text-gray-200">
-      {/* User info at the top */}
-      <div className="px-3 py-2 mb-4">
-        <div className="font-medium text-gray-800 dark:text-white">{user.name || user.mobile}</div>
-        <div className="text-xs text-gray-500 dark:text-gray-400">{user.email || "No email provided"}</div>
-        {isAdmin && <div className="text-xs font-medium text-red-600 dark:text-red-400 mt-1">Administrator</div>}
-        {isDelivery && <div className="text-xs font-medium text-blue-600 dark:text-blue-400 mt-1">Delivery Personnel</div>}
-        {isStaff && <div className="text-xs font-medium text-green-600 dark:text-green-400 mt-1">Staff Member</div>}
-      </div>
-      
-      <Divider className="mb-4 dark:border-gray-700" />
+  const roleBadge = isAdmin
+    ? { label: 'Administrator', color: 'bg-gold-500/20 text-gold-300' }
+    : isDelivery
+      ? { label: 'Delivery', color: 'bg-plum-600/30 text-plum-200' }
+      : isStaff
+        ? { label: 'Staff', color: 'bg-blush-400/20 text-blush-300' }
+        : null;
 
-      {/* Main menu items - no sub-sections, just a flat list */}
-      <div className="space-y-0.5">
-        <MenuItem 
-          to="/dashboard/profile" 
-          icon={FaUser} 
-          label="My Profile" 
-        />
-        
-        <MenuItem 
-          to="/dashboard/myorders" 
-          icon={FaShoppingBag} 
-          label="My Orders" 
-          color="text-indigo-500"
-        />
-        
-        <MenuItem 
-          to="/dashboard/address" 
-          icon={FaMapMarkerAlt} 
-          label="My Addresses" 
-          color="text-red-500"
-        />
-        
-        <MenuItem 
-          to="/dashboard/loyalty-card" 
-          icon={FaCrown} 
-          label="Loyalty Card" 
-          color="text-purple-500"
-        />
-        
-        <MenuItem 
-          to="/dashboard/community-perks" 
-          icon={FaTrophy} 
-          label="Community Perks" 
-          color="text-amber-500"
-        />
-        
-        <MenuItem 
-          to="/dashboard/active-campaigns" 
-          icon={FaBullhorn} 
-          label="Active Campaigns" 
-          color="text-green-500"
-        />
-        
-        {/* Admin menu items */}
+  return (
+    <div className="flex flex-col h-full text-white">
+      {/* User info */}
+      <div className="px-4 py-4">
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-pill bg-plum-600 flex items-center justify-center flex-shrink-0 text-sm font-bold text-gold-300 border border-plum-500">
+            {(user.name || 'U')[0].toUpperCase()}
+          </div>
+          <div className="min-w-0">
+            <p className="font-semibold text-sm text-white truncate">{user.name || user.mobile}</p>
+            <p className="text-xs text-white/40 truncate">{user.email || "No email"}</p>
+          </div>
+        </div>
+        {roleBadge && (
+          <div className={`mt-2 ml-12 text-xs font-medium px-2.5 py-0.5 rounded-pill w-fit ${roleBadge.color}`}>
+            {roleBadge.label}
+          </div>
+        )}
+      </div>
+
+      <div className="mx-4 h-px bg-plum-700 mb-2" />
+
+      {/* Nav items */}
+      <nav className="flex-1 py-2">
+        <SectionLabel title="Account" />
+        <MenuItem to="/dashboard/profile" icon={FaUser} label="My Profile" />
+        <MenuItem to="/dashboard/myorders" icon={FaShoppingBag} label="My Orders" />
+        <MenuItem to="/dashboard/address" icon={FaMapMarkerAlt} label="My Addresses" />
+        <MenuItem to="/dashboard/loyalty-card" icon={FaCrown} label="Loyalty Card" />
+        <MenuItem to="/dashboard/community-perks" icon={FaTrophy} label="Community Perks" />
+        <MenuItem to="/dashboard/active-campaigns" icon={FaBullhorn} label="Active Campaigns" />
+
         {isAdmin && (
           <>
-            <Divider className="my-2 dark:border-gray-700" />
             <SectionLabel title="Admin" />
-            
-            <MenuItem 
-              to="/dashboard/allorders" 
-              icon={FaClipboardList} 
-              label="All Orders" 
-              color="text-teal-500"
-            />
-            
-            <MenuItem 
-              to="/dashboard/users-admin" 
-              icon={FaUsers} 
-              label="User Management" 
-              color="text-blue-600"
-            />
-            
-            <MenuItem 
-              to="/dashboard/staff/dashboard" 
-              icon={FaUserTie} 
-              label="Staff Dashboard" 
-              color="text-green-600"
-            />
-            
-            <MenuItem 
-              to="/dashboard/category" 
-              icon={FaListAlt} 
-              label="Category" 
-              color="text-blue-500"
-            />
-            
-            <MenuItem 
-              to="/dashboard/subcategory" 
-              icon={FaLayerGroup} 
-              label="Sub Category" 
-              color="text-green-500"
-            />
-            
-            <MenuItem 
-              to="/dashboard/upload-product" 
-              icon={FaUpload} 
-              label="Upload Product" 
-              color="text-purple-500"
-            />
-            
-            <MenuItem 
-              to="/dashboard/product" 
-              icon={FaBoxOpen} 
-              label="Products" 
-              color="text-yellow-500"
-            />
-            
-            <MenuItem 
-              to="/dashboard/loyalty-program-admin" 
-              icon={FaCrown} 
-              label="Loyalty Program" 
-              color="text-purple-500"
-            />
-            
-            <MenuItem 
-              to="/dashboard/admin-community-perks" 
-              icon={FaGift} 
-              label="Manage Perks" 
-              color="text-orange-500"
-            />
-            
-            <MenuItem 
-              to="/dashboard/pickup-management" 
-              icon={FaStore} 
-              label="Pickup Management" 
-              color="text-cyan-500"
-            />
-            
-            <MenuItem 
-              to="/dashboard/staff/delivery" 
-              icon={FaCog} 
-              label="Delivery Management" 
-              color="text-blue-600"
-            />
+            <MenuItem to="/dashboard/allorders" icon={FaClipboardList} label="All Orders" />
+            <MenuItem to="/dashboard/users-admin" icon={FaUsers} label="User Management" />
+            <MenuItem to="/dashboard/staff/dashboard" icon={FaUserTie} label="Staff Dashboard" />
+            <MenuItem to="/dashboard/category" icon={FaListAlt} label="Category" />
+            <MenuItem to="/dashboard/subcategory" icon={FaLayerGroup} label="Sub Category" />
+            <MenuItem to="/dashboard/upload-product" icon={FaUpload} label="Upload Product" />
+            <MenuItem to="/dashboard/product" icon={FaBoxOpen} label="Products" />
+            <MenuItem to="/dashboard/loyalty-program-admin" icon={FaCrown} label="Loyalty Program" />
+            <MenuItem to="/dashboard/admin-community-perks" icon={FaGift} label="Manage Perks" />
+            <MenuItem to="/dashboard/pickup-management" icon={FaStore} label="Pickup Management" />
+            <MenuItem to="/dashboard/staff/delivery" icon={FaCog} label="Delivery Management" />
           </>
         )}
-        
-        {/* Staff menu items */}
+
         {isStaff && (
           <>
-            <Divider className="my-2 dark:border-gray-700" />
             <SectionLabel title="Staff" />
-            
-            <MenuItem 
-              to="/dashboard/staff/verify-pickup" 
-              icon={FaQrcode} 
-              label="Verify Pickup" 
-              color="text-green-500"
-            />
-            
-            <MenuItem 
-              to="/dashboard/staff/pending-pickups" 
-              icon={FaBoxes} 
-              label="Pending Pickups" 
-              color="text-orange-500"
-            />
-            
-            <MenuItem 
-              to="/dashboard/staff/completed-verifications" 
-              icon={FaClipboardCheck} 
-              label="Verification History" 
-              color="text-blue-500"
-            />
+            <MenuItem to="/dashboard/staff/verify-pickup" icon={FaQrcode} label="Verify Pickup" />
+            <MenuItem to="/dashboard/staff/pending-pickups" icon={FaBoxes} label="Pending Pickups" />
+            <MenuItem to="/dashboard/staff/completed-verifications" icon={FaClipboardCheck} label="Verification History" />
           </>
         )}
-        
-        {/* Delivery menu items */}
+
         {isDelivery && (
           <>
-            <Divider className="my-2 dark:border-gray-700" />
             <SectionLabel title="Delivery" />
-            
-            <MenuItem 
-              to="/dashboard/delivery/dashboard" 
-              icon={FaTachometerAlt} 
-              label="Delivery Dashboard" 
-              color="text-green-500"
-            />
-            
-            <MenuItem 
-              to="/dashboard/delivery/active" 
-              icon={FaTruck} 
-              label="Active Deliveries" 
-              color="text-yellow-500"
-            />
-            
-            <MenuItem 
-              to="/dashboard/delivery/completed" 
-              icon={FaBoxOpen} 
-              label="Completed Deliveries" 
-              color="text-indigo-500"
-            />
-            
-            <MenuItem 
-              to="/dashboard/delivery/history" 
-              icon={FaHistory} 
-              label="Delivery History" 
-              color="text-amber-500"
-            />
-            
-            <MenuItem 
-              to="/dashboard/delivery/map" 
-              icon={FaMapMarkedAlt} 
-              label="Map View" 
-              color="text-red-500"
-            />
+            <MenuItem to="/dashboard/delivery/dashboard" icon={FaTachometerAlt} label="Delivery Dashboard" />
+            <MenuItem to="/dashboard/delivery/active" icon={FaTruck} label="Active Deliveries" />
+            <MenuItem to="/dashboard/delivery/completed" icon={FaBoxOpen} label="Completed Deliveries" />
+            <MenuItem to="/dashboard/delivery/history" icon={FaHistory} label="Delivery History" />
+            <MenuItem to="/dashboard/delivery/map" icon={FaMapMarkedAlt} label="Map View" />
           </>
         )}
-      </div>
-      
-      <Divider className="my-4 dark:border-gray-700" />
-      
-      {/* Logout button at the bottom */}
+      </nav>
+
+      {/* Logout */}
+      <div className="mx-4 h-px bg-plum-700 mb-2" />
       <button
         onClick={handleLogout}
-        className="w-full text-left px-3 py-2 hover:bg-orange-200 dark:hover:bg-orange-900/30 dark:hover:text-white flex items-center rounded"
+        className="flex items-center gap-3 px-6 py-3 text-sm font-medium text-white/50 hover:text-blush-300 hover:bg-plum-800/50 transition-all duration-200 rounded-lg mx-2 mb-3"
       >
-        <FaSignOutAlt className="mr-2 text-gray-500" /> Log Out
+        <FaSignOutAlt size={15} />
+        Log Out
       </button>
     </div>
   );

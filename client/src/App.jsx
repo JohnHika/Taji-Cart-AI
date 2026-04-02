@@ -259,23 +259,23 @@ function App() {
     }
   }, [location.pathname, categories, location.state]);
 
+  const isAuthPage = ['/login', '/register', '/forgot-password'].includes(location.pathname);
+
   return (
     <ErrorBoundary FallbackComponent={ErrorFallback}>
       <GlobalProvider> 
-        <Header/>
+        {!isAuthPage && <Header/>}
         <CartSynchronizer />
-        <main className='min-h-[78vh]'>
-          {/* Add suspense to catch lazy-loaded component errors */}
+        <main className={isAuthPage ? '' : 'min-h-[78vh]'}>
           <Suspense fallback={<div className="p-5 text-center">Loading...</div>}>
             <Outlet key={location.pathname} />
           </Suspense>
         </main>
-        <Footer/>
-        <BottomNavigation />
+        {!isAuthPage && <BottomNavigation />}
         <Toaster/>
         <ToastContainer position="top-right" autoClose={3000} />
-        {location.pathname !== '/checkout' && user?._id && <CartMobileLink/>}
-        <ChatbotAI />
+        {!isAuthPage && location.pathname !== '/checkout' && user?._id && <CartMobileLink/>}
+        {!isAuthPage && <ChatbotAI />}
       </GlobalProvider>
     </ErrorBoundary>
   );

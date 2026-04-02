@@ -1,5 +1,6 @@
-import React, { useCallback, useEffect, useState } from 'react';
-import { FaUsers } from 'react-icons/fa';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { FaUsers, FaChevronDown } from 'react-icons/fa';
+import { FiArrowRight } from 'react-icons/fi';
 import { useDispatch, useSelector } from "react-redux";
 import { Link, useNavigate } from "react-router-dom";
 import { toast } from 'react-toastify';
@@ -13,105 +14,91 @@ import { setAllCategory, setAllSubCategory } from "../store/productSlice";
 import Axios from "../utils/Axios";
 import { valideURLConvert } from "../utils/valideURLConvert";
 
+/* ─── Scroll-reveal hook ─────────────────────────────────────────────── */
+function useScrollReveal(threshold = 0.15) {
+  const ref = useRef(null);
+  const [visible, setVisible] = useState(false);
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      ([entry]) => { if (entry.isIntersecting) { setVisible(true); observer.disconnect(); } },
+      { threshold }
+    );
+    if (ref.current) observer.observe(ref.current);
+    return () => observer.disconnect();
+  }, [threshold]);
+  return [ref, visible];
+}
+
+/* ─── Section heading with reveal ───────────────────────────────────── */
+const SectionHeading = ({ title, tagline, linkTo, linkLabel }) => {
+  const [ref, visible] = useScrollReveal();
+  return (
+    <div
+      ref={ref}
+      className={`flex items-end justify-between mb-5 sm:mb-6 transition-all duration-500 ${visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}
+    >
+      <div>
+        <h2 className="text-xl sm:text-2xl font-semibold text-charcoal dark:text-white">{title}</h2>
+        {tagline && (
+          <p className="font-display italic text-sm text-plum-500 dark:text-plum-300 mt-0.5">{tagline}</p>
+        )}
+      </div>
+      {linkTo && (
+        <Link
+          to={linkTo}
+          className="flex items-center gap-1 text-sm font-semibold text-gold-600 dark:text-gold-300 hover:text-gold-500 underline underline-offset-2 transition-colors flex-shrink-0"
+        >
+          {linkLabel || 'See All'} <FiArrowRight size={14} />
+        </Link>
+      )}
+    </div>
+  );
+};
+
 const Home = () => {
-  const loadingCategory = useSelector(state => state.product.loadingCategory)
-  const categoryData = useSelector(state => state.product.allCategory)
-  const subCategoryData = useSelector(state => state.product.allSubCategory)
-  const navigate = useNavigate()
+  const loadingCategory = useSelector(state => state.product.loadingCategory);
+  const categoryData = useSelector(state => state.product.allCategory);
+  const subCategoryData = useSelector(state => state.product.allSubCategory);
+  const navigate = useNavigate();
   const dispatch = useDispatch();
   const [featuredCampaign, setFeaturedCampaign] = useState(null);
   const [loadingCampaign, setLoadingCampaign] = useState(true);
+  const [heroVisible, setHeroVisible] = useState(false);
+  const [communityRef, communityVisible] = useScrollReveal();
 
   useEffect(() => {
-    fetchFeaturedCampaign();
+    const timer = setTimeout(() => setHeroVisible(true), 100);
+    return () => clearTimeout(timer);
   }, []);
+
+  useEffect(() => { fetchFeaturedCampaign(); }, []);
 
   useEffect(() => {
     const fetchCategoriesData = async () => {
       try {
-        console.log("Home page: Explicitly fetching categories");
-        
-        const response = await Axios({
-          ...SummaryApi.getCategory,
-          timeout: 10000
-        });
-        
-        if (response.data && response.data.data) {
-          console.log(`Home page: Retrieved ${response.data.data.length} categories`);
-          dispatch(setAllCategory(response.data.data || []));
-        } else {
-          console.error("Home page: No categories data in response", response);
-        }
+        const response = await Axios({ ...SummaryApi.getCategory, timeout: 10000 });
+        if (response.data?.data) dispatch(setAllCategory(response.data.data || []));
       } catch (error) {
         console.error("Home page: Error fetching categories:", error);
       }
     };
-
-    if (!categoryData || categoryData.length === 0) {
-      fetchCategoriesData();
-    } else {
-      console.log("Home page: Categories already loaded:", categoryData.length);
-    }
+    if (!categoryData || categoryData.length === 0) fetchCategoriesData();
   }, [dispatch, categoryData]);
 
   const fetchSubCategories = async () => {
     try {
-      console.log("Explicitly fetching subcategories");
-      
-      // Check if the API endpoint is defined before using it
-      if (!SummaryApi.getSubCategory) {
-        console.error("SubCategory API endpoint is not defined in SummaryApi!");
-        console.log("Available API endpoints:", Object.keys(SummaryApi));
-        
-        // Try using getAllSubCategory instead (checking endpoint naming differences)
-        const endpoint = SummaryApi.getAllSubCategory || {
-          url: `${import.meta.env.VITE_SERVER_URL || import.meta.env.VITE_BACKEND_URL || 'http://localhost:8080'}/api/subcategory/get`,
-          method: 'get'
-        };
-        
-        console.log("Using fallback endpoint:", endpoint);
-        
-        const response = await Axios({
-          ...endpoint,
-          timeout: 10000
-        });
-        
-        console.log("SubCategory API response:", response);
-        
-        if (response.data && response.data.data) {
-          console.log(`Retrieved ${response.data.data.length} subcategories`);
-          dispatch(setAllSubCategory(response.data.data || []));
-          return response.data.data;
-        } else {
-          console.error("No subcategories data in response", response);
-          return [];
-        }
-      } else {
-        // Original code path when API is defined
-        console.log("SubCategory API endpoint:", SummaryApi.getSubCategory);
-        
-        const response = await Axios({
-          ...SummaryApi.getSubCategory,
-          timeout: 10000
-        });
-        
-        console.log("SubCategory API response:", response);
-        
-        if (response.data && response.data.data) {
-          console.log(`Retrieved ${response.data.data.length} subcategories`);
-          dispatch(setAllSubCategory(response.data.data || []));
-          return response.data.data;
-        } else {
-          console.error("No subcategories data in response", response);
-          return [];
-        }
+      const endpoint = SummaryApi.getSubCategory || SummaryApi.getAllSubCategory || {
+        url: `${import.meta.env.VITE_SERVER_URL || 'http://localhost:8080'}/api/subcategory/get`,
+        method: 'get'
+      };
+      const response = await Axios({ ...endpoint, timeout: 10000 });
+      if (response.data?.data) {
+        dispatch(setAllSubCategory(response.data.data || []));
+        return response.data.data;
       }
+      return [];
     } catch (error) {
       console.error("Error fetching subcategories:", error);
-      if (error.response) {
-        console.error("Error response data:", error.response.data);
-        console.error("Error response status:", error.response.status);
-      }
       return [];
     }
   };
@@ -119,12 +106,8 @@ const Home = () => {
   const fetchFeaturedCampaign = async () => {
     try {
       setLoadingCampaign(true);
-      const response = await Axios({
-        url: '/api/campaigns/active',
-        method: 'GET'
-      });
-      
-      if (response.data.success && response.data.data && response.data.data.length > 0) {
+      const response = await Axios({ url: '/api/campaigns/active', method: 'GET' });
+      if (response.data.success && response.data.data?.length > 0) {
         setFeaturedCampaign(response.data.data[0]);
       }
     } catch (error) {
@@ -134,207 +117,195 @@ const Home = () => {
     }
   };
 
-  const debouncedFetchSubCategories = useCallback(() => {
-    fetchSubCategories();
-  }, []);
+  const debouncedFetchSubCategories = useCallback(() => { fetchSubCategories(); }, []);
 
   useEffect(() => {
-    if (!subCategoryData || subCategoryData.length === 0) {
-      debouncedFetchSubCategories();
-    }
+    if (!subCategoryData || subCategoryData.length === 0) debouncedFetchSubCategories();
   }, [subCategoryData, debouncedFetchSubCategories]);
 
   const handleRedirectProductListpage = async (id, cat) => {
-    console.log("--------- Category Navigation Debug ----------");
-    console.log("1. Category clicked:", { id, name: cat });
-    
-    const loadingToast = toast.loading("Loading category products...");
-    
+    const loadingToast = toast.loading("Loading products...");
     try {
-      if (!subCategoryData || subCategoryData.length === 0) {
-        console.log("No subcategories loaded yet, fetching them now...");
-        await fetchSubCategories();
+      let currentSubCategories = subCategoryData;
+      if (!currentSubCategories || currentSubCategories.length === 0) {
+        currentSubCategories = await fetchSubCategories();
       }
-      
-      console.log("2. Available subCategories count:", subCategoryData?.length || 0);
-      
-      // Find matching subcategories for this category
-      const matchingSubcategories = subCategoryData.filter(sub => 
-        sub.category && Array.isArray(sub.category) && 
-        sub.category.some(c => c._id == id)
+      const matchingSubcategories = (currentSubCategories || []).filter(sub =>
+        sub.category?.some(c => c._id == id)
       );
-      
-      console.log(`Found ${matchingSubcategories.length} matching subcategories`);
-      
-      // First preferred option: Category with specific subcategory
-      const subcategory = matchingSubcategories.length > 0 ? matchingSubcategories[0] : null;
-      
-      if (subcategory) {
-        console.log("3. Found subcategory:", subcategory.name);
-        
-        // Use consistent URL format: /category-name-categoryId
-        // Don't include subcategory in URL to avoid route matching issues
-        const url = `/${valideURLConvert(cat)}-${id}`;
-        console.log("4. Navigating to:", url);
-        
-        // Pass subcategory info via state
-        const navigationState = {
-          categoryId: id,
-          categoryName: cat,
-          subcategoryId: subcategory._id,
-          subcategoryName: subcategory.name,
+      const subcategory = matchingSubcategories[0] || null;
+      const url = `/${valideURLConvert(cat)}-${id}`;
+      toast.dismiss(loadingToast);
+      navigate(url, {
+        state: {
+          categoryId: id, categoryName: cat,
+          subcategoryId: subcategory?._id,
+          subcategoryName: subcategory?.name,
           matchingSubcategories: matchingSubcategories.map(s => ({ id: s._id, name: s.name }))
-        };
-        
-        toast.dismiss(loadingToast);
-        toast.success(`Showing products in ${cat}`);
-        navigate(url, { state: navigationState });
-      } else {
-        console.warn("No subcategory found for this category");
-        
-        // Simpler URL format to avoid route matching issues
-        const directUrl = `/${valideURLConvert(cat)}-${id}`;
-        console.log("Navigating to:", directUrl);
-        
-        toast.dismiss(loadingToast);
-        navigate(directUrl, { 
-          state: { 
-            categoryId: id, 
-            categoryName: cat 
-          } 
-        });
-      }
+        }
+      });
     } catch (error) {
-      console.error("Navigation error:", error);
       toast.dismiss(loadingToast);
       toast.error("Something went wrong");
       navigate('/');
     }
-    
-    console.log("--------- End Navigation Debug ----------");
   };
 
   return (
-   <section className='bg-white dark:bg-gray-900 transition-colors'>
-      {/* Hero Banner Section */}
-      <div className='container mx-auto px-2 sm:px-4'>
-          <div className={`w-full h-auto min-h-[200px] sm:min-h-[250px] lg:min-h-[300px] bg-blue-100 dark:bg-blue-900 rounded-lg overflow-hidden ${!banner && "animate-pulse my-2" } `}>
-              <img
-                src={banner}
-                className='w-full h-full object-cover hidden lg:block'
-                alt='banner' 
-              />
-              <img
-                src={bannerMobile}
-                className='w-full h-full object-cover lg:hidden'
-                alt='banner' 
-              />
+    <section className="bg-ivory dark:bg-dm-surface transition-colors">
+
+      {/* ── Hero Banner ─────────────────────────────────────────────── */}
+      <div className="relative w-full overflow-hidden">
+        <div className="w-full min-h-[300px] sm:min-h-[420px] lg:min-h-[560px] bg-gradient-to-br from-plum-900 via-plum-700 to-charcoal flex items-center">
+          <div className="container mx-auto px-5 sm:px-8 py-16 sm:py-20">
+            <div className={`max-w-lg transition-all duration-700 ${heroVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'}`}>
+              <p className="font-display italic text-gold-300 text-base sm:text-lg mb-2 animate-fade-in">
+                Premium Hair Collection
+              </p>
+              <h1 className="font-display font-bold text-white text-4xl sm:text-5xl lg:text-6xl leading-tight animate-fade-up">
+                Your Hair,<br />
+                <span style={{ color: '#E8C478' }}>
+                  Your Crown
+                </span>
+              </h1>
+              <p className={`text-white/70 text-sm sm:text-base mt-4 leading-relaxed transition-all duration-700 delay-200 ${heroVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
+                Discover premium hair extensions, wigs, and care products crafted for every texture and style.
+              </p>
+              <div className={`flex flex-wrap items-center gap-3 mt-6 transition-all duration-700 delay-300 ${heroVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
+                <Link
+                  to="/categories"
+                  className="bg-gold-500 hover:bg-gold-400 text-charcoal font-semibold px-6 py-3 rounded-pill text-sm transition-all duration-200 press shadow-sm hover:shadow-gold"
+                >
+                  Shop Now
+                </Link>
+                <Link
+                  to="/campaigns"
+                  className="border border-white/60 text-white hover:bg-white/10 font-medium px-6 py-3 rounded-pill text-sm transition-all duration-200"
+                >
+                  View Campaigns
+                </Link>
+              </div>
+            </div>
           </div>
-      </div>
-      
-      {/* Categories Section */}
-      <div className='container mx-auto px-2 sm:px-4 my-4 sm:my-6'>
-        <div className='flex items-center justify-between mb-3 sm:mb-4'>
-          <h2 className='text-lg sm:text-xl lg:text-2xl font-semibold text-gray-800 dark:text-gray-200'>Categories</h2>
-          
-          <Link to="/categories" className='text-primary-200 hover:underline text-xs sm:text-sm font-medium'>
-            View All
-          </Link>
         </div>
-        
-        <div className='relative'>
-          <div className='flex overflow-x-auto pb-3 sm:pb-4 scrollbar-hide space-x-2 sm:space-x-4 
-              scroll-smooth snap-x snap-mandatory lg:flex-wrap lg:justify-start lg:space-x-0 lg:gap-3 xl:gap-4'>
-            {
-              loadingCategory ? (
-                new Array(12).fill(null).map((c, index) => (
-                  <div 
-                    key={index+"loadingcategory"} 
-                    className='bg-white dark:bg-gray-800 rounded-lg p-2 sm:p-3 lg:p-4 shadow animate-pulse flex flex-col items-center 
-                        flex-shrink-0 snap-start w-[90px] sm:w-[110px] md:w-[120px] lg:w-[140px] xl:w-[150px] lg:snap-align-none'
-                  >
-                    <div className='bg-blue-100 dark:bg-blue-900 w-full aspect-square rounded-md'></div>
-                    <div className='bg-blue-100 dark:bg-blue-900 h-3 sm:h-4 w-3/4 mt-2 sm:mt-3 rounded'></div>
+
+        {/* Scroll indicator */}
+        <div className="absolute bottom-5 left-1/2 -translate-x-1/2 text-white/50 animate-float hidden sm:block">
+          <FaChevronDown size={20} />
+        </div>
+      </div>
+
+      {/* ── Categories Section ───────────────────────────────────────── */}
+      <div className="container mx-auto px-3 sm:px-4 mt-8 sm:mt-10">
+        <SectionHeading
+          title="Shop by Category"
+          tagline="Find exactly what your hair needs"
+          linkTo="/categories"
+          linkLabel="View All"
+        />
+
+        <div className="relative">
+          <div className="flex overflow-x-auto pb-3 scrollbar-hide gap-3 scroll-smooth snap-x snap-mandatory lg:grid lg:grid-cols-5 xl:grid-cols-6 lg:gap-4">
+            {loadingCategory
+              ? new Array(10).fill(null).map((_, i) => (
+                <div
+                  key={i + "loadingcat"}
+                  className="flex-shrink-0 snap-start w-[90px] sm:w-[105px] lg:w-auto flex flex-col items-center"
+                >
+                  <div className="w-full aspect-square rounded-card bg-shimmer mb-2" />
+                  <div className="h-3 w-3/4 bg-shimmer rounded" />
+                </div>
+              ))
+              : categoryData.map((cat) => (
+                <div
+                  key={cat._id + "displayCategory"}
+                  onClick={() => handleRedirectProductListpage(cat._id, cat.name)}
+                  className="group flex-shrink-0 snap-start w-[90px] sm:w-[105px] lg:w-auto flex flex-col items-center cursor-pointer hover-lift press"
+                >
+                  {/* Category image circle */}
+                  <div className="w-full aspect-square rounded-card overflow-hidden bg-blush-100 dark:bg-dm-card border border-brown-100 dark:border-dm-border shadow-sm group-hover:shadow-hover group-hover:border-plum-200 dark:group-hover:border-plum-700 transition-all duration-300 flex items-center justify-center p-2 relative">
+                    <img
+                      src={cat.image}
+                      alt={cat.name}
+                      className="max-w-full max-h-full object-contain group-hover:scale-110 transition-transform duration-400"
+                      onError={(e) => { e.target.src = 'https://via.placeholder.com/100?text=Hair'; }}
+                    />
+                    {/* Plum overlay on hover */}
+                    <div className="absolute inset-0 bg-plum-900/0 group-hover:bg-plum-900/10 transition-all duration-300 rounded-card" />
                   </div>
-                ))
-              ) : (
-                categoryData.map((cat) => (
-                  <div 
-                    key={cat._id+"displayCategory"} 
-                    className='group bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 
-                        shadow-sm hover:shadow-md rounded-lg p-2 sm:p-3 lg:p-4 transition-all duration-200 cursor-pointer 
-                        flex-shrink-0 snap-start w-[90px] sm:w-[110px] md:w-[120px] lg:w-[140px] xl:w-[150px] lg:snap-align-none
-                        flex flex-col items-center active:scale-95 touch-manipulation'
-                    onClick={() => handleRedirectProductListpage(cat._id, cat.name)}
-                  >
-                    <div className='w-full aspect-square flex items-center justify-center overflow-hidden 
-                          rounded-md bg-gray-50 dark:bg-gray-900 p-1 sm:p-2 mb-1 sm:mb-2'>
-                      <img 
-                        src={cat.image}
-                        alt={cat.name}
-                        className='max-w-full max-h-full object-contain group-hover:scale-110 transition-transform duration-300'
-                        onError={(e) => {
-                          e.target.onerror = null;
-                          e.target.src = 'https://via.placeholder.com/100?text=No+Image';
-                        }}
-                      />
-                    </div>
-                    <span className='text-center text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 
-                          group-hover:text-primary-200 transition-colors truncate w-full leading-tight'>
-                      {cat.name}
-                    </span>
-                  </div>
-                ))
-              )
+                  <span className="text-center text-xs font-medium text-charcoal dark:text-white/80 group-hover:text-plum-700 dark:group-hover:text-plum-200 transition-colors mt-2 line-clamp-2 leading-tight w-full">
+                    {cat.name}
+                  </span>
+                </div>
+              ))
             }
           </div>
-          
-          {/* Gradient overlays for mobile scroll indication */}
-          <div className='absolute top-0 right-0 bottom-0 w-6 sm:w-8 lg:w-12 bg-gradient-to-l from-white dark:from-gray-900 to-transparent 
-              pointer-events-none lg:hidden'></div>
-          <div className='absolute top-0 left-0 bottom-0 w-6 sm:w-8 lg:w-12 bg-gradient-to-r from-white dark:from-gray-900 to-transparent 
-              pointer-events-none lg:hidden'></div>
+
+          {/* Edge fades (mobile) */}
+          <div className="absolute top-0 right-0 bottom-0 w-8 bg-gradient-to-l from-ivory dark:from-dm-surface to-transparent pointer-events-none lg:hidden" />
+          <div className="absolute top-0 left-0 bottom-0 w-8 bg-gradient-to-r from-ivory dark:from-dm-surface to-transparent pointer-events-none lg:hidden" />
         </div>
       </div>
 
-      {/* Community Challenges Section */}
-      <section className="container mx-auto px-2 sm:px-4 py-4 sm:py-6">
-        <div className="mb-3 sm:mb-4">
-          <h2 className="text-lg sm:text-xl font-bold flex items-center">
-            <FaUsers className="mr-2 text-primary-200 text-base sm:text-lg" /> 
-            Community Challenges
-          </h2>
-          <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mt-1">Join other shoppers to unlock exclusive rewards!</p>
-        </div>
-        
-        <UserActiveCampaigns />
-        
-        {loadingCampaign ? (
-          <div className="h-32 sm:h-40 bg-gray-100 dark:bg-gray-800 animate-pulse rounded-lg"></div>
-        ) : featuredCampaign ? (
-          <CommunityCampaignProgress campaign={featuredCampaign} />
-        ) : (
-          <div className="p-3 sm:p-4 border rounded-lg bg-gray-50 dark:bg-gray-800 dark:border-gray-700 text-center">
-            <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400">No active community campaigns at the moment.</p>
-            <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-500 mt-1">Check back soon for new challenges!</p>
+      {/* ── Divider ─────────────────────────────────────────────────── */}
+      <div className="container mx-auto px-4 my-8 sm:my-10">
+        <div className="section-divider" />
+      </div>
+
+      {/* ── Community Section ───────────────────────────────────────── */}
+      <div
+        ref={communityRef}
+        className={`container mx-auto px-3 sm:px-4 mb-8 sm:mb-10 transition-all duration-600 ${communityVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'}`}
+      >
+        <div className="bg-plum-100 dark:bg-plum-900/30 rounded-card p-5 sm:p-6 border border-plum-200 dark:border-plum-800">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-10 h-10 rounded-pill bg-plum-700 text-white flex items-center justify-center flex-shrink-0">
+              <FaUsers size={18} />
+            </div>
+            <div>
+              <h2 className="text-lg font-semibold text-charcoal dark:text-white">Community Challenges</h2>
+              <p className="text-xs text-brown-400 dark:text-white/50">Join shoppers to unlock exclusive rewards!</p>
+            </div>
+            <Link
+              to="/campaigns"
+              className="ml-auto text-sm font-semibold text-gold-600 dark:text-gold-300 hover:underline underline-offset-2 flex-shrink-0"
+            >
+              View All
+            </Link>
           </div>
-        )}
-      </section>
 
-      {/* Category-wise Product Sections */}
-      <div className='px-2 sm:px-4'>
-        {
-          categoryData?.map((c) => (
-            <CategoryWiseProductDisplay 
-              key={c?._id+"CategorywiseProduct"} 
-              id={c?._id} 
-              name={c?.name}
-            />
-          ))
-        }
+          <UserActiveCampaigns />
+
+          {loadingCampaign ? (
+            <div className="h-24 bg-shimmer rounded-card mt-3" />
+          ) : featuredCampaign ? (
+            <CommunityCampaignProgress campaign={featuredCampaign} />
+          ) : (
+            <div className="text-center py-4 text-sm text-brown-400 dark:text-white/40">
+              No active campaigns at the moment — check back soon!
+            </div>
+          )}
+        </div>
       </div>
-   </section>
-  )
-}
+
+      {/* ── Divider ─────────────────────────────────────────────────── */}
+      <div className="container mx-auto px-4 mb-8">
+        <div className="section-divider" />
+      </div>
+
+      {/* ── Category-wise Product Sections ──────────────────────────── */}
+      <div className="pb-8">
+        {categoryData?.map((c) => (
+          <CategoryWiseProductDisplay
+            key={c?._id + "CategorywiseProduct"}
+            id={c?._id}
+            name={c?.name}
+          />
+        ))}
+      </div>
+
+    </section>
+  );
+};
 
 export default Home;

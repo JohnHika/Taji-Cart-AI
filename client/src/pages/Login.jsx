@@ -12,172 +12,174 @@ import AxiosToastError from '../utils/AxiosToastError';
 import fetchUserDetails from '../utils/fetchUserDetails';
 
 const Login = () => {
-    const [data, setData] = useState({
-        email: "",
-        password: "",
-    })
-    const [showPassword, setShowPassword] = useState(false)
+    const [data, setData] = useState({ email: "", password: "" });
+    const [showPassword, setShowPassword] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
-    const navigate = useNavigate()
-    const dispatch = useDispatch()
+    const navigate = useNavigate();
+    const dispatch = useDispatch();
 
     const handleChange = (e) => {
-        const { name, value } = e.target
+        const { name, value } = e.target;
+        setData(prev => ({ ...prev, [name]: value }));
+    };
 
-        setData((preve) => {
-            return {
-                ...preve,
-                [name]: value
-            }
-        })
-    }
+    const valideValue = Object.values(data).every(el => el);
 
-    const valideValue = Object.values(data).every(el => el)
-
-    const handleSubmit = async(e) => {
-        e.preventDefault()
+    const handleSubmit = async (e) => {
+        e.preventDefault();
         setIsLoading(true);
-
         try {
-            const response = await Axios({
-                ...SummaryApi.login,
-                data: data
-            })
-            
-            if(response.data.error) {
-                // Enhanced error messaging for login failures
-                toast.error(response.data.message || "Login failed. Please check your credentials.");
+            const response = await Axios({ ...SummaryApi.login, data });
+            if (response.data.error) {
+                toast.error(response.data.message || "Login failed.");
                 setIsLoading(false);
                 return;
             }
-
-            if(response.data.success) {
-                console.log("Login successful, user data:", response.data.data);
-                
-                // Store tokens in sessionStorage for security
-                sessionStorage.setItem('accesstoken', response.data.data.accesstoken)
-                sessionStorage.setItem('refreshToken', response.data.data.refreshToken)
-
-                // Start the auto-refresh timer to maintain the session
-                if (window.setupRefreshTimer) {
-                    window.setupRefreshTimer();
-                }
-
-                const userDetails = await fetchUserDetails()
-                console.log("User details retrieved:", userDetails);
-                
-                // Set user details in Redux store with role information
+            if (response.data.success) {
+                sessionStorage.setItem('accesstoken', response.data.data.accesstoken);
+                sessionStorage.setItem('refreshToken', response.data.data.refreshToken);
+                if (window.setupRefreshTimer) window.setupRefreshTimer();
+                const userDetails = await fetchUserDetails();
                 dispatch(setUserDetails({
                     ...userDetails.data,
-                    // Ensure role information is prominently available
-                    accountType: userDetails.data.role || 
-                                 (userDetails.data.isAdmin ? 'admin' : 
-                                  userDetails.data.isDelivery ? 'delivery' : 
-                                  userDetails.data.isStaff ? 'staff' : 'customer')
-                }))
-                
-                dispatch(fetchCartItems())
-                
-                setData({
-                    email : "",
-                    password : "",
-                })
-                
-                toast.success(response.data.message)
-                
-                // Redirect to home page instead of dashboard
-                navigate("/")
+                    accountType: userDetails.data.role ||
+                        (userDetails.data.isAdmin ? 'admin' :
+                         userDetails.data.isDelivery ? 'delivery' :
+                         userDetails.data.isStaff ? 'staff' : 'customer')
+                }));
+                dispatch(fetchCartItems());
+                setData({ email: "", password: "" });
+                toast.success(response.data.message);
+                navigate("/");
             }
         } catch (error) {
-            // Handle different login error scenarios with appropriate messages
             if (error.response?.status === 400) {
-                if (error.response?.data?.message === "Incorrect password") {
-                    toast.error("Incorrect password. Please try again.");
-                } else if (error.response?.data?.message === "User not registered") {
-                    toast.error("Email not registered. Please check your email or create an account.");
-                } else {
-                    toast.error(error.response?.data?.message || "Login failed. Please check your credentials.");
-                }
+                const msg = error.response?.data?.message;
+                if (msg === "Incorrect password") toast.error("Incorrect password. Please try again.");
+                else if (msg === "User not registered") toast.error("Email not registered. Please create an account.");
+                else toast.error(msg || "Login failed.");
             } else {
-                // Use the general error handler for other error types
                 AxiosToastError(error);
             }
         } finally {
             setIsLoading(false);
         }
-    }
+    };
 
     return (
-        <section 
-            className='w-full min-h-screen flex items-center justify-center py-8 px-2 transition-colors duration-200 bg-gray-50 dark:bg-gray-900'
-        >
-            <div className='bg-white dark:bg-gray-800 my-4 w-full max-w-lg mx-auto rounded p-7 shadow-lg transition-colors duration-200'>
-                <h1 className="text-2xl font-bold text-center mb-6 dark:text-white transition-colors duration-200">Login to NAWIRI HAIR</h1>
-                
-                <form className='grid gap-4 py-4' onSubmit={handleSubmit}>
-                    <div className='grid gap-1'>
-                        <label htmlFor='email' className="dark:text-gray-200 transition-colors duration-200">Email:</label>
-                        <div className='bg-blue-50 dark:bg-gray-800 p-2 border dark:border-gray-700 rounded flex items-center focus-within:border-primary-200 dark:focus-within:border-primary-300 transition-colors duration-200'>
-                            <input
-                                type='email'
-                                id='email'
-                                className='w-full outline-none bg-transparent dark:text-white transition-colors duration-200'
-                                name='email'
-                                value={data.email}
-                                onChange={handleChange}
-                                placeholder='Enter your email'
-                                autoComplete="email"
-                            />
-                            <div className='text-gray-500 dark:text-gray-400 transition-colors duration-200'>
-                                <FaEnvelope />
-                            </div>
-                        </div>
+        <section className="w-full min-h-screen flex bg-ivory dark:bg-dm-surface transition-colors">
+            {/* Left brand panel (desktop only) */}
+            <div className="hidden lg:flex flex-col justify-between w-1/2 bg-plum-900 p-10 xl:p-14 relative overflow-hidden">
+                {/* Decorative circles */}
+                <div className="absolute -top-20 -right-20 w-64 h-64 rounded-full bg-plum-700/40" />
+                <div className="absolute -bottom-16 -left-16 w-48 h-48 rounded-full bg-plum-800/60" />
+                <div className="relative z-10">
+                    <h2 className="font-display text-gold-300 text-3xl font-semibold italic mb-1">Nawiri Hair</h2>
+                    <p className="text-white/50 text-sm">Premium Hair Collections</p>
+                </div>
+                <div className="relative z-10">
+                    <blockquote className="font-display text-white text-4xl xl:text-5xl font-semibold italic leading-tight">
+                        "Beautiful hair<br />starts here."
+                    </blockquote>
+                    <p className="text-white/50 text-sm mt-4">
+                        Your destination for premium hair extensions, wigs, and care products.
+                    </p>
+                </div>
+                <div className="relative z-10 flex gap-2">
+                    <div className="w-8 h-1 rounded-full bg-gold-500" />
+                    <div className="w-4 h-1 rounded-full bg-white/20" />
+                    <div className="w-2 h-1 rounded-full bg-white/20" />
+                </div>
+            </div>
+
+            {/* Right form panel */}
+            <div className="flex-1 flex items-center justify-center py-10 px-4 sm:px-8 lg:px-12">
+                <div className="w-full max-w-md animate-fade-up">
+                    <div className="mb-7">
+                        <h1 className="text-2xl font-bold text-charcoal dark:text-white">Welcome back</h1>
+                        <p className="text-sm text-brown-400 dark:text-white/50 mt-1">Sign in to your Nawiri Hair account</p>
                     </div>
-                    <div className='grid gap-1'>
-                        <label htmlFor='password' className="dark:text-gray-200 transition-colors duration-200">Password:</label>
-                        <div className='bg-blue-50 dark:bg-gray-800 p-2 border dark:border-gray-700 rounded flex items-center focus-within:border-primary-200 dark:focus-within:border-primary-300 transition-colors duration-200'>
-                            <input
-                                type={showPassword ? "text" : "password"}
-                                id='password'
-                                className='w-full outline-none bg-transparent dark:text-white transition-colors duration-200'
-                                name='password'
-                                value={data.password}
-                                onChange={handleChange}
-                                placeholder='Enter your password'
-                                autoComplete="current-password"
-                            />
-                            <div onClick={() => setShowPassword(preve => !preve)} className='cursor-pointer text-gray-500 dark:text-gray-400 transition-colors duration-200'>
-                                {
-                                    showPassword ? (
-                                        <FaRegEye />
-                                    ) : (
-                                        <FaRegEyeSlash />
-                                    )
-                                }
+
+                    <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
+                        {/* Email */}
+                        <div className="flex flex-col gap-1.5">
+                            <label htmlFor="email" className="text-sm font-medium text-charcoal dark:text-white/80">Email address</label>
+                            <div className="flex items-center gap-2 bg-blush-100 dark:bg-dm-card border border-blush-200 dark:border-dm-border rounded-card px-3 py-2.5 focus-within:border-plum-500 dark:focus-within:border-plum-500 focus-within:ring-1 focus-within:ring-plum-500/20 transition-all">
+                                <input
+                                    type="email"
+                                    id="email"
+                                    name="email"
+                                    value={data.email}
+                                    onChange={handleChange}
+                                    placeholder="you@example.com"
+                                    autoComplete="email"
+                                    className="flex-1 bg-transparent outline-none text-sm text-charcoal dark:text-white placeholder:text-brown-300 dark:placeholder:text-white/30"
+                                />
+                                <FaEnvelope className="text-brown-300 dark:text-white/30 flex-shrink-0" size={14} />
                             </div>
                         </div>
-                        <Link to={"/forgot-password"} className='block ml-auto text-green-700 dark:text-green-400 hover:text-green-800 dark:hover:text-green-300 transition-colors duration-200'>
-                            Forgot password?
+
+                        {/* Password */}
+                        <div className="flex flex-col gap-1.5">
+                            <div className="flex items-center justify-between">
+                                <label htmlFor="password" className="text-sm font-medium text-charcoal dark:text-white/80">Password</label>
+                                <Link to="/forgot-password" className="text-xs text-plum-700 dark:text-plum-200 hover:underline underline-offset-2 transition-colors">
+                                    Forgot password?
+                                </Link>
+                            </div>
+                            <div className="flex items-center gap-2 bg-blush-100 dark:bg-dm-card border border-blush-200 dark:border-dm-border rounded-card px-3 py-2.5 focus-within:border-plum-500 dark:focus-within:border-plum-500 focus-within:ring-1 focus-within:ring-plum-500/20 transition-all">
+                                <input
+                                    type={showPassword ? "text" : "password"}
+                                    id="password"
+                                    name="password"
+                                    value={data.password}
+                                    onChange={handleChange}
+                                    placeholder="Enter your password"
+                                    autoComplete="current-password"
+                                    className="flex-1 bg-transparent outline-none text-sm text-charcoal dark:text-white placeholder:text-brown-300 dark:placeholder:text-white/30"
+                                />
+                                <button
+                                    type="button"
+                                    onClick={() => setShowPassword(p => !p)}
+                                    className="text-brown-300 dark:text-white/30 hover:text-plum-700 dark:hover:text-plum-200 transition-colors"
+                                >
+                                    {showPassword ? <FaRegEye size={14} /> : <FaRegEyeSlash size={14} />}
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Submit */}
+                        <button
+                            type="submit"
+                            disabled={!valideValue || isLoading}
+                            className={`w-full py-3 rounded-pill font-semibold text-sm transition-all duration-200 press mt-1 ${
+                                valideValue && !isLoading
+                                    ? 'bg-gold-500 hover:bg-gold-400 text-charcoal shadow-sm hover:shadow-gold'
+                                    : 'bg-brown-100 dark:bg-dm-card-2 text-brown-300 dark:text-white/20 cursor-not-allowed'
+                            }`}
+                        >
+                            {isLoading ? "Signing in..." : "Sign In"}
+                        </button>
+                    </form>
+
+                    {/* Social auth */}
+                    <div className="my-5 flex items-center gap-3">
+                        <div className="flex-1 h-px bg-brown-100 dark:bg-dm-border" />
+                        <span className="text-xs text-brown-300 dark:text-white/30 flex-shrink-0">or continue with</span>
+                        <div className="flex-1 h-px bg-brown-100 dark:bg-dm-border" />
+                    </div>
+                    <SocialAuth />
+
+                    <p className="mt-6 text-sm text-brown-400 dark:text-white/50 text-center">
+                        Don't have an account?{' '}
+                        <Link to="/register" className="font-semibold text-plum-700 dark:text-plum-200 hover:underline underline-offset-2">
+                            Create one
                         </Link>
-                    </div>
-    
-                    <button 
-                        disabled={!valideValue || isLoading} 
-                        className={`${valideValue && !isLoading ? "bg-green-800 hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-600" : "bg-gray-500 dark:bg-gray-600"} text-white py-2 rounded font-semibold my-3 tracking-wide transition-colors duration-200`}>
-                        {isLoading ? "Logging in..." : "Login"}
-                    </button>
-                </form>
-
-                {/* Add Social Authentication */}
-                <SocialAuth />
-
-                <p className="dark:text-gray-300 transition-colors duration-200 mt-4">
-                    Don't have account? <Link to={"/register"} className='font-semibold text-green-700 dark:text-green-400 hover:text-green-800 dark:hover:text-green-300 transition-colors duration-200'>Register</Link>
-                </p>
+                    </p>
+                </div>
             </div>
         </section>
-    )
-}
+    );
+};
 
-export default Login
-
+export default Login;

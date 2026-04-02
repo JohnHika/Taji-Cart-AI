@@ -57,32 +57,35 @@ const AdminDashboard = () => {
   };
 
   return (
-    <div className="container mx-auto p-4">
-      <h1 className="text-2xl font-bold mb-4">Admin Dashboard</h1>
-      
+    <div className="container mx-auto p-4 md:p-6">
+      <h1 className="font-display text-3xl italic text-plum-900 dark:text-white mb-1">Admin Dashboard</h1>
+      <p className="text-brown-400 dark:text-white/40 text-sm mb-6">Manage your store campaigns and users</p>
+
       {/* Active Campaigns Section */}
       <div className="mb-8">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xl font-semibold">Active Campaigns</h2>
+          <h2 className="text-lg font-semibold text-charcoal dark:text-white">Active Campaigns</h2>
           <div className="flex items-center gap-4">
-            <Link to="/dashboard/active-campaigns" className="text-primary-200 hover:text-primary-300 text-sm">
-              View Active Campaigns
+            <Link to="/dashboard/active-campaigns" className="text-plum-600 hover:text-plum-800 dark:text-plum-300 dark:hover:text-plum-100 text-sm font-medium">
+              View All
             </Link>
-            <Link to="/dashboard/admin-community-perks" className="text-primary-200 hover:text-primary-300 text-sm">
+            <Link to="/dashboard/admin-community-perks" className="text-sm font-medium bg-plum-700 hover:bg-plum-800 text-white px-3 py-1.5 rounded-pill transition-colors">
               Manage Campaigns
             </Link>
           </div>
         </div>
         
         {loadingCampaigns ? (
-          <div className="flex justify-center items-center h-32 bg-white rounded-lg shadow p-4">
-            <FaSpinner className="animate-spin text-primary-300 text-2xl" />
+          <div className="flex justify-center items-center h-32 bg-white dark:bg-dm-card rounded-card shadow-card">
+            <FaSpinner className="animate-spin text-plum-500 text-2xl" />
           </div>
         ) : campaigns.length === 0 ? (
-          <div className="bg-white rounded-lg shadow p-6 text-center">
-            <FaBullhorn className="mx-auto text-gray-400 text-4xl mb-2" />
-            <p className="text-gray-600">No active campaigns at the moment</p>
-            <Link to="/dashboard/admin-community-perks" className="mt-3 inline-block text-primary-200 hover:underline">
+          <div className="bg-white dark:bg-dm-card rounded-card shadow-card p-8 text-center">
+            <div className="w-14 h-14 bg-plum-50 dark:bg-plum-900/30 rounded-full flex items-center justify-center mx-auto mb-3">
+              <FaBullhorn className="text-plum-400 text-2xl" />
+            </div>
+            <p className="text-brown-400 dark:text-white/50 mb-3">No active campaigns at the moment</p>
+            <Link to="/dashboard/admin-community-perks" className="inline-block bg-gold-500 hover:bg-gold-400 text-charcoal font-semibold px-4 py-2 rounded-pill text-sm transition-colors">
               Create New Campaign
             </Link>
           </div>
@@ -93,38 +96,42 @@ const AdminDashboard = () => {
               const isPerk = campaign.metadata?.isPerk === true;
               
               return (
-                <div 
-                  key={campaign._id} 
-                  className={`p-4 rounded-lg shadow ${isPerk ? 'bg-yellow-50 border border-yellow-200' : 'bg-white border border-gray-200'}`}
+                <div
+                  key={campaign._id}
+                  className={`p-4 rounded-card shadow-card border hover-lift transition-all ${
+                    isPerk
+                      ? 'bg-gold-50 dark:bg-gold-900/10 border-gold-200 dark:border-gold-800/30'
+                      : 'bg-white dark:bg-dm-card border-brown-100 dark:border-dm-border'
+                  }`}
                 >
                   <div className="flex items-start">
-                    <div className={`p-2 rounded-full ${isPerk ? 'bg-yellow-100' : 'bg-blue-100'} mr-3`}>
-                      <FaBullhorn className={isPerk ? 'text-yellow-600' : 'text-blue-600'} />
+                    <div className={`p-2 rounded-full mr-3 flex-shrink-0 ${isPerk ? 'bg-gold-100 dark:bg-gold-900/30' : 'bg-plum-50 dark:bg-plum-900/30'}`}>
+                      <FaBullhorn className={isPerk ? 'text-gold-600 dark:text-gold-400' : 'text-plum-600 dark:text-plum-400'} />
                     </div>
                     
-                    <div className="flex-1">
-                      <h3 className="font-medium text-gray-800">{campaign.title}</h3>
-                      <p className="text-sm text-gray-600 line-clamp-2">{campaign.description}</p>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-semibold text-charcoal dark:text-white truncate">{campaign.title}</h3>
+                      <p className="text-sm text-brown-400 dark:text-white/50 line-clamp-2 mt-0.5">{campaign.description}</p>
                       
                       <div className="mt-3">
-                        <div className="flex justify-between text-xs mb-1">
-                          <span>{campaign.currentProgress || 0} of {campaign.goalTarget} {campaign.goalType || 'purchases'}</span>
-                          <span>{progress}%</span>
+                        <div className="flex justify-between text-xs text-brown-400 dark:text-white/40 mb-1.5">
+                          <span>{campaign.currentProgress || 0} / {campaign.goalTarget} {campaign.goalType || 'purchases'}</span>
+                          <span className="font-semibold text-charcoal dark:text-white">{progress}%</span>
                         </div>
-                        <div className="w-full bg-gray-200 rounded-full h-2">
-                          <div 
-                            className={`${isPerk ? 'bg-yellow-500' : 'bg-blue-500'} h-2 rounded-full`}
+                        <div className="w-full bg-brown-100 dark:bg-dm-border rounded-full h-1.5">
+                          <div
+                            className={`h-1.5 rounded-full transition-all ${isPerk ? 'bg-gradient-to-r from-gold-400 to-gold-600' : 'bg-gradient-to-r from-plum-400 to-plum-700'}`}
                             style={{ width: `${progress}%` }}
                           />
                         </div>
                       </div>
                       
                       <div className="mt-3 text-right">
-                        <Link 
+                        <Link
                           to={`/dashboard/admin-community-perks?edit=${campaign._id}`}
-                          className="text-sm text-primary-200 hover:underline"
+                          className={`text-xs font-semibold hover:underline ${isPerk ? 'text-gold-600 dark:text-gold-400' : 'text-plum-600 dark:text-plum-300'}`}
                         >
-                          Manage
+                          Manage →
                         </Link>
                       </div>
                     </div>
@@ -138,7 +145,7 @@ const AdminDashboard = () => {
       
       {/* Users Section */}
       <div>
-        <h2 className="text-xl font-semibold mb-4">System Users</h2>
+        <h2 className="text-lg font-semibold text-charcoal dark:text-white mb-4">System Users</h2>
         <UserTable users={users} />
       </div>
     </div>

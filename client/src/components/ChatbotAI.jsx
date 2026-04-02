@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { FaCircle, FaDollarSign, FaExpand, FaMicrophone, FaPaperPlane, FaRobot, FaShoppingCart, FaSpinner, FaTimes, FaUser } from 'react-icons/fa';
+import { FaCircle, FaCrown, FaDollarSign, FaExpand, FaMicrophone, FaPaperPlane, FaRobot, FaShoppingCart, FaSpinner, FaTimes, FaUser } from 'react-icons/fa';
 import { useDispatch, useSelector } from 'react-redux';
 import { Link } from 'react-router-dom';
 import Axios from '../utils/Axios';
@@ -752,20 +752,23 @@ const ChatbotAI = () => {
   };
 
   return (
-    <div className="fixed bottom-20 sm:bottom-24 lg:bottom-5 right-5 z-50">
+    <div className="fixed bottom-20 sm:bottom-24 lg:bottom-5 right-4 z-50">
+      {/* Launcher button */}
       <button
         onClick={handleToggleChat}
-        className="bg-primary-200 dark:bg-primary-300 hover:bg-primary-300 dark:hover:bg-primary-400 text-white p-3 md:p-4 rounded-full shadow-lg flex items-center justify-center transition-all duration-300 w-12 h-12 md:w-auto md:h-auto"
+        className="bg-plum-700 hover:bg-plum-600 dark:bg-plum-800 dark:hover:bg-plum-700 text-white p-3 md:p-4 rounded-full shadow-hover flex items-center justify-center transition-all duration-300 w-12 h-12 md:w-14 md:h-14 press"
         aria-label="Chat with AI assistant"
       >
-        {isOpen ? <FaTimes size={20} className="md:text-2xl" /> : <FaRobot size={20} className="md:text-2xl" />}
+        {isOpen ? <FaTimes size={18} /> : <FaCrown size={18} />}
       </button>
+
       {isOpen && (
-        <div className="absolute bottom-14 right-0 md:bottom-16 md:right-0 w-[90vw] max-w-[360px] md:w-96 mx-2 md:mx-0 bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 overflow-hidden transition-all duration-300 max-h-[80vh] md:max-h-[600px]">
-          <div className="bg-primary-200 dark:bg-primary-300 text-white p-3 flex justify-between items-center">
-            <div className="flex items-center">
-              <FaRobot className="mr-2" />
-              <h3 className="font-medium text-sm md:text-base">Your Personal Shopping Assistant</h3>
+        <div className="absolute bottom-14 right-0 md:bottom-16 md:right-0 w-[92vw] max-w-[360px] md:w-96 mx-2 md:mx-0 bg-white dark:bg-dm-card rounded-card shadow-hover border border-brown-100 dark:border-dm-border overflow-hidden transition-all duration-300 max-h-[80vh] md:max-h-[600px] animate-scale-in">
+          {/* Panel header */}
+          <div className="bg-plum-700 dark:bg-plum-900 text-white px-4 py-3 flex justify-between items-center">
+            <div className="flex items-center gap-2">
+              <FaCrown size={14} className="text-gold-300" />
+              <h3 className="font-semibold text-sm">Hair Shopping Assistant</h3>
             </div>
             <div className="flex items-center">
               {/* Add New Chat button */}
@@ -824,8 +827,8 @@ const ChatbotAI = () => {
           
           {/* Chat History Panel */}
           {isHistoryOpen && (
-            <div className="absolute inset-0 z-10 bg-white dark:bg-gray-800 overflow-hidden">
-              <div className="bg-primary-200 dark:bg-primary-300 text-white p-3 flex justify-between items-center">
+            <div className="absolute inset-0 z-10 bg-white dark:bg-dm-card overflow-hidden">
+              <div className="bg-plum-700 dark:bg-plum-900 text-white px-4 py-3 flex justify-between items-center">
                 <h3 className="font-medium text-sm md:text-base">Chat History</h3>
                 <button 
                   onClick={() => setIsHistoryOpen(false)}
@@ -893,7 +896,7 @@ const ChatbotAI = () => {
               </div>
             </div>
           )}
-          <div className="px-3 py-2 bg-green-50 dark:bg-green-900 text-green-800 dark:text-green-100 text-xs md:text-sm flex flex-wrap md:flex-nowrap items-center justify-between gap-2">
+          <div className="px-3 py-2 bg-plum-50 dark:bg-plum-900/30 border-b border-plum-100 dark:border-plum-800 text-plum-700 dark:text-plum-200 text-xs md:text-sm flex flex-wrap md:flex-nowrap items-center justify-between gap-2">
             <div className="flex items-center">
               <FaDollarSign className="mr-1" />
               <span>
@@ -926,31 +929,31 @@ const ChatbotAI = () => {
               <span className="text-xs">{cartItems.length || cart.length} items</span>
             </div>
           </div>
-          <div className="h-60 md:h-80 overflow-y-auto p-3 bg-gray-50 dark:bg-gray-900">
+          <div className="h-60 md:h-80 overflow-y-auto p-3 bg-ivory dark:bg-dm-surface">
             {isLoading && messages.length <= 1 ? (
               <div className="flex justify-center items-center h-full">
                 <LoadingSpinner size="medium" />
               </div>
             ) : (
               messages.map((message, index) => (
-                <div 
-                  key={index} 
+                <div
+                  key={index}
                   className={`mb-3 ${message.type === 'user' ? 'text-right' : 'text-left'}`}
                 >
-                  <div 
-                    className={`inline-block px-3 py-2 rounded-lg max-w-3/4 ${
-                      message.type === 'user' 
-                        ? 'bg-primary-100 dark:bg-primary-300 text-gray-800 dark:text-white' 
-                        : 'bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white'
+                  <div
+                    className={`inline-block px-3 py-2 rounded-card max-w-[85%] text-left ${
+                      message.type === 'user'
+                        ? 'bg-gold-100 dark:bg-gold-600/20 text-charcoal dark:text-white border border-gold-200 dark:border-gold-600/30'
+                        : 'bg-blush-100 dark:bg-dm-card text-charcoal dark:text-white border border-blush-200 dark:border-dm-border'
                     }`}
                   >
-                    <div className="flex items-start">
+                    <div className="flex items-start gap-2">
                       {message.type === 'bot' && (
-                        <FaRobot className="mr-2 mt-1 text-gray-600 dark:text-gray-300 flex-shrink-0" size={14} />
+                        <FaCrown size={12} className="text-plum-500 dark:text-plum-300 flex-shrink-0 mt-1" />
                       )}
                       <div className="text-sm whitespace-pre-line">{formatMessageText(message.text)}</div>
                       {message.type === 'user' && (
-                        <FaUser className="ml-2 mt-1 text-gray-600 dark:text-gray-300 flex-shrink-0" size={14} />
+                        <FaUser size={11} className="ml-1 text-gold-500 flex-shrink-0 mt-1" />
                       )}
                     </div>
                   </div>
@@ -959,19 +962,13 @@ const ChatbotAI = () => {
             )}
             {isTyping && (
               <div className="mb-3 text-left">
-                <div className="inline-block px-3 py-2 rounded-lg bg-gray-200 dark:bg-gray-700">
-                  <div className="flex items-center">
-                    <FaRobot className="mr-2 text-gray-600 dark:text-gray-300" size={14} />
+                <div className="inline-block px-3 py-2 rounded-card bg-blush-100 dark:bg-dm-card border border-blush-200 dark:border-dm-border">
+                  <div className="flex items-center gap-1.5">
+                    <FaCrown size={12} className="text-plum-500" />
                     <div className="flex space-x-1">
-                      <div className="typing-dot animate-pulse">
-                        <FaCircle size={8} className="text-gray-600 dark:text-gray-300" />
-                      </div>
-                      <div className="typing-dot animate-pulse delay-150">
-                        <FaCircle size={8} className="text-gray-600 dark:text-gray-300" />
-                      </div>
-                      <div className="typing-dot animate-pulse delay-300">
-                        <FaCircle size={8} className="text-gray-600 dark:text-gray-300" />
-                      </div>
+                      <FaCircle size={5} className="text-plum-400 animate-pulse" />
+                      <FaCircle size={5} className="text-plum-400 animate-pulse delay-150" />
+                      <FaCircle size={5} className="text-plum-400 animate-pulse delay-300" />
                     </div>
                   </div>
                 </div>
@@ -993,83 +990,80 @@ const ChatbotAI = () => {
             </div>
           )}
           {sessionMetadata.lastProductViewed && (
-            <div className="p-2 border-t border-gray-200 dark:border-gray-700 flex justify-center gap-1 md:gap-2">
+            <div className="px-3 py-2 border-t border-brown-100 dark:border-dm-border flex justify-center gap-2">
               <button
-                onClick={() => {
-                  addToCartFromChat(sessionMetadata.lastProductViewed);
-                }}
-                className="text-[10px] md:text-xs bg-green-600 hover:bg-green-700 text-white px-2 md:px-3 py-1 rounded-full flex items-center"
+                onClick={() => addToCartFromChat(sessionMetadata.lastProductViewed)}
+                className="text-[10px] md:text-xs bg-gold-500 hover:bg-gold-400 text-charcoal font-semibold px-3 py-1.5 rounded-pill flex items-center gap-1 press"
                 disabled={isLoading || isTyping || isCheckoutRedirecting}
               >
-                <FaShoppingCart className="mr-1" size={10} /> Add to cart
+                <FaShoppingCart size={10} /> Add to cart
               </button>
               <button
                 onClick={() => handleSuggestionClick("Show me specs")}
-                className="text-[10px] md:text-xs bg-blue-100 dark:bg-blue-800 hover:bg-blue-200 dark:hover:bg-blue-700 text-blue-800 dark:text-blue-100 px-2 py-1 rounded-full"
+                className="text-[10px] md:text-xs bg-plum-50 dark:bg-plum-900/30 hover:bg-plum-100 dark:hover:bg-plum-900/50 text-plum-700 dark:text-plum-200 px-2 py-1.5 rounded-pill"
                 disabled={isLoading || isTyping}
               >
                 Specs
               </button>
               <button
                 onClick={() => handleSuggestionClick("Check stock")}
-                className="text-[10px] md:text-xs bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 px-2 py-1 rounded-full"
+                className="text-[10px] md:text-xs bg-brown-50 dark:bg-dm-card hover:bg-brown-100 dark:hover:bg-dm-card-2 text-brown-500 dark:text-white/60 px-2 py-1.5 rounded-pill"
                 disabled={isLoading || isTyping}
               >
                 Check stock
               </button>
             </div>
           )}
-          <div className="p-2 border-t border-gray-200 dark:border-gray-700 flex flex-wrap gap-1 md:gap-2">
+          <div className="px-3 py-2 border-t border-brown-100 dark:border-dm-border flex flex-wrap gap-1.5">
             {suggestions.map((suggestion, index) => (
               <button
                 key={index}
                 onClick={() => handleSuggestionClick(suggestion)}
-                className="text-[10px] md:text-xs bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 px-2 py-1 rounded-full"
+                className="text-[10px] md:text-xs bg-plum-50 dark:bg-plum-900/20 hover:bg-plum-100 dark:hover:bg-plum-900/40 text-plum-700 dark:text-plum-200 border border-plum-100 dark:border-plum-800 px-2 py-1 rounded-pill transition-colors"
                 disabled={isLoading || isTyping}
               >
                 {suggestion}
               </button>
             ))}
           </div>
-          <form onSubmit={handleSendMessage} className="p-2 md:p-3 border-t border-gray-200 dark:border-gray-700 flex">
+          <form onSubmit={handleSendMessage} className="p-2 md:p-3 border-t border-brown-100 dark:border-dm-border flex gap-1">
             <input
               type="text"
               ref={inputRef}
               value={inputText}
               onChange={(e) => setInputText(e.target.value)}
-              placeholder={sessionMetadata.budget ? 
-                `Ask about products under ${sessionMetadata.preferredCurrency === 'USD' ? 
-                  `$${sessionMetadata.budget}` : 
-                  `KES ${sessionMetadata.budget.toLocaleString()}`}...` : 
-                "Ask about products, deals, etc..."}
-              className="flex-grow p-2 text-sm md:text-base bg-gray-100 dark:bg-gray-700 rounded-l-lg outline-none text-gray-800 dark:text-white"
+              placeholder="Ask about hair products..."
+              className="flex-grow p-2 text-sm bg-blush-100 dark:bg-dm-card-2 border border-blush-200 dark:border-dm-border rounded-pill outline-none text-charcoal dark:text-white placeholder:text-brown-300 dark:placeholder:text-white/30 focus:border-plum-500 transition-colors px-3"
               disabled={isLoading || isTyping || isRecording || isTranscribing}
             />
             <button
               type="button"
               onClick={handleMicButtonClick}
               disabled={isTranscribing}
-              className={`p-2 ${isRecording ? 'bg-red-500 hover:bg-red-600' : 'bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600'} text-gray-700 dark:text-gray-200 rounded-none`}
+              className={`p-2 rounded-pill flex-shrink-0 transition-colors ${
+                isRecording
+                  ? 'bg-blush-400 text-white'
+                  : 'bg-plum-50 dark:bg-dm-card text-plum-500 hover:bg-plum-100'
+              }`}
               aria-label={isRecording ? "Stop recording" : "Start recording"}
-              title={isRecording ? "Stop recording" : "Start recording"}
             >
               {isRecording ? (
-                <div className="flex items-center">
-                  <span className="mr-1 text-[10px] md:text-xs font-medium text-white animate-pulse">{formatTime(recordingTime)}</span>
-                  <FaMicrophone className="text-white" />
+                <div className="flex items-center gap-1">
+                  <span className="text-[9px] font-medium animate-pulse">{formatTime(recordingTime)}</span>
+                  <FaMicrophone size={13} />
                 </div>
               ) : isTranscribing ? (
-                <FaSpinner className="animate-spin" />
+                <FaSpinner size={13} className="animate-spin" />
               ) : (
-                <FaMicrophone />
+                <FaMicrophone size={13} />
               )}
             </button>
             <button
               type="submit"
-              className="bg-primary-200 dark:bg-primary-300 hover:bg-primary-300 dark:hover:bg-primary-400 text-white p-2 rounded-r-lg disabled:opacity-50"
+              className="bg-gold-500 hover:bg-gold-400 text-charcoal p-2 px-3 rounded-pill disabled:opacity-40 transition-colors press flex-shrink-0"
               disabled={isLoading || isTyping || !inputText.trim() || isRecording || isTranscribing}
             >
-              <FaPaperPlane />
+              <FaPaperPlane size={14} />
             </button>
           </form>
         </div>

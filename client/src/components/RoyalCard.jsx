@@ -128,21 +128,21 @@ const RoyalCard = () => {
     }
   };
 
-  // Get card background based on tier
+  // Get card background based on tier — new Nawiri palette
   const getCardBackground = (tier) => {
     switch(tier) {
       case 'Basic':
-        return 'bg-gradient-to-r from-gray-600 to-gray-500';
+        return 'bg-gradient-to-br from-brown-400 to-charcoal';
       case 'Bronze':
-        return 'bg-gradient-to-r from-amber-700 to-amber-500';
+        return 'bg-gradient-to-br from-[#8B4513] to-[#3D1C0D]';
       case 'Silver':
-        return 'bg-gradient-to-r from-gray-400 to-gray-300';
+        return 'bg-gradient-to-br from-[#708090] to-[#2F3E46]';
       case 'Gold':
-        return 'bg-gradient-to-r from-yellow-600 to-amber-400';
+        return 'bg-gradient-to-br from-gold-500 to-[#7B4A1A]';
       case 'Platinum':
-        return 'bg-gradient-to-r from-blue-400 to-slate-300';
+        return 'bg-gradient-to-br from-plum-700 to-plum-900';
       default:
-        return 'bg-gradient-to-r from-gray-600 to-gray-500';
+        return 'bg-gradient-to-br from-brown-400 to-charcoal';
     }
   };
 
@@ -150,17 +150,17 @@ const RoyalCard = () => {
   const getSecondaryBackground = (tier) => {
     switch(tier) {
       case 'Basic':
-        return 'bg-gray-700';
+        return 'bg-charcoal/80';
       case 'Bronze':
-        return 'bg-amber-800';
+        return 'bg-[#3D1C0D]/90';
       case 'Silver':
-        return 'bg-gray-600';
+        return 'bg-[#2F3E46]/90';
       case 'Gold':
-        return 'bg-amber-700';
+        return 'bg-[#7B4A1A]/90';
       case 'Platinum':
-        return 'bg-blue-600';
+        return 'bg-plum-900/90';
       default:
-        return 'bg-gray-700';
+        return 'bg-charcoal/80';
     }
   };
 
@@ -168,17 +168,17 @@ const RoyalCard = () => {
   const getButtonBackground = (tier) => {
     switch(tier) {
       case 'Basic':
-        return 'bg-gray-800';
+        return 'bg-white/10 hover:bg-white/20';
       case 'Bronze':
-        return 'bg-amber-900';
+        return 'bg-white/10 hover:bg-white/20';
       case 'Silver':
-        return 'bg-gray-700';
+        return 'bg-white/10 hover:bg-white/20';
       case 'Gold':
-        return 'bg-amber-800';
+        return 'bg-white/10 hover:bg-white/20';
       case 'Platinum':
-        return 'bg-blue-700';
+        return 'bg-white/10 hover:bg-white/20';
       default:
-        return 'bg-gray-800';
+        return 'bg-white/10 hover:bg-white/20';
     }
   };
 
@@ -213,19 +213,20 @@ const RoyalCard = () => {
 
   if (isLoading) {
     return (
-      <div className="flex justify-center items-center h-40">
-        <FaSpinner className="animate-spin text-primary-300 text-3xl" />
+      <div className="flex flex-col justify-center items-center h-40 gap-3">
+        <div className="w-10 h-10 rounded-full border-2 border-plum-700 border-t-transparent animate-spin" />
+        <p className="text-sm font-display italic text-plum-500 dark:text-plum-300">Loading your card...</p>
       </div>
     );
   }
 
   if (fetchError) {
     return (
-      <div className="p-4 text-center bg-red-50 dark:bg-red-900/30 rounded-xl shadow">
-        <h3 className="font-medium text-lg mb-2 text-red-700 dark:text-red-300">Error Loading Royal Card</h3>
-        <p className="text-red-600 dark:text-red-300 mb-4 text-sm">{fetchError}</p>
-        <button 
-          className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg"
+      <div className="p-6 text-center bg-blush-50 dark:bg-blush-500/10 border border-blush-200 dark:border-blush-500/30 rounded-card">
+        <h3 className="font-semibold text-lg mb-2 text-charcoal dark:text-white">Error Loading Royal Card</h3>
+        <p className="text-blush-500 mb-4 text-sm">{fetchError}</p>
+        <button
+          className="bg-plum-700 hover:bg-plum-600 text-white px-5 py-2 rounded-pill text-sm font-semibold transition-colors press"
           onClick={fetchUserCardData}
         >
           Try Again
@@ -236,12 +237,12 @@ const RoyalCard = () => {
 
   if (!cardData) {
     return (
-      <div className="p-4 text-center bg-gray-50 dark:bg-gray-800 rounded-xl shadow">
-        <FaCrown className="text-yellow-500 text-3xl mx-auto mb-3" />
-        <h3 className="font-medium text-lg mb-2 dark:text-white">Activate Your Royal Card</h3>
-        <p className="text-gray-600 dark:text-gray-300 mb-4 text-sm">Enjoy exclusive discounts and rewards with our loyalty program.</p>
-        <button 
-          className="bg-primary-200 dark:bg-primary-300 hover:bg-primary-300 text-white px-4 py-2 rounded-lg"
+      <div className="p-6 text-center bg-plum-50 dark:bg-plum-900/20 border border-plum-100 dark:border-plum-800 rounded-card">
+        <FaCrown className="text-gold-500 text-3xl mx-auto mb-3 animate-float" />
+        <h3 className="font-semibold text-lg mb-2 text-charcoal dark:text-white">Activate Your Royal Card</h3>
+        <p className="text-brown-400 dark:text-white/50 mb-5 text-sm">Enjoy exclusive discounts and rewards with our loyalty program.</p>
+        <button
+          className="bg-gold-500 hover:bg-gold-400 text-charcoal font-semibold px-5 py-2 rounded-pill text-sm transition-colors press"
           onClick={fetchUserCardData}
         >
           Activate Now
@@ -450,8 +451,8 @@ const RoyalCard = () => {
   return (
     <div className="relative flex flex-col items-center w-full max-w-sm mx-auto px-2 sm:max-w-md sm:px-0">
       {/* Card container with the tier-specific background */}
-      <div 
-        className={`w-full rounded-xl overflow-hidden shadow-2xl relative ${tierBackground}`}
+      <div
+        className={`w-full rounded-[1.5rem] overflow-hidden shadow-2xl relative ${tierBackground}`}
         style={{ minHeight: 'auto' }}
       >
         {/* Add early access status indicator */}
@@ -481,12 +482,12 @@ const RoyalCard = () => {
           </div>
           
           <div className="flex items-center mb-3 sm:mb-4">
-            <FaCrown className="text-yellow-300 mr-2 text-lg sm:text-xl" />
-            <h2 className="text-white text-base sm:text-lg font-semibold">NAWIRI Royal Card</h2>
+            <FaCrown className="text-gold-300 mr-2 text-lg sm:text-xl" />
+            <h2 className="font-display text-gold-300 text-lg sm:text-xl font-semibold italic">Nawiri Royal Card</h2>
           </div>
-          
-          <div className="text-white text-xs sm:text-sm mb-1">Member Name:</div>
-          <div className="text-white font-medium mb-3 sm:mb-4 text-sm sm:text-base">{user.name || 'Valued Customer'}</div>
+
+          <div className="text-white/60 text-xs sm:text-sm mb-0.5">Member</div>
+          <div className="text-white font-display font-semibold italic mb-3 sm:mb-4 text-base sm:text-lg">{user.name || 'Valued Customer'}</div>
           
           <div className="text-white text-xs sm:text-sm mb-1">Membership Level:</div>
           <div className="flex items-center mb-3 sm:mb-4">
@@ -565,8 +566,8 @@ const RoyalCard = () => {
       
       {/* Next tier information for non-Platinum users */}
       {cardData.tier !== 'Platinum' && (
-        <div className="mt-3 sm:mt-4 p-3 bg-white dark:bg-gray-800 rounded-lg shadow-md text-sm w-full">
-          <h3 className="font-medium text-gray-700 dark:text-gray-300 text-sm">Next Tier: {getNextTierName()}</h3>
+        <div className="mt-4 p-4 bg-white dark:bg-dm-card rounded-card border border-brown-100 dark:border-dm-border shadow-card text-sm w-full">
+          <h3 className="font-semibold text-charcoal dark:text-white text-sm">Next Tier: <span className="text-gold-600 dark:text-gold-300">{getNextTierName()}</span></h3>
           
           {/* Enhanced progress visualization */}
           <div className="mt-3 mb-1 flex items-center justify-between">
@@ -578,16 +579,16 @@ const RoyalCard = () => {
           
           <div className="relative">
             {/* Progress background */}
-            <div className="h-5 bg-gray-200 dark:bg-gray-600 rounded-full overflow-hidden">
+            <div className="h-5 bg-brown-100 dark:bg-dm-card-2 rounded-pill overflow-hidden">
               {/* Progress filled area */}
-              <div 
+              <div
                 className="h-full flex items-center justify-end pr-2 text-xs font-semibold text-white"
                 style={{
                   width: `${Math.min(100, (cardData.points / getNextTierThreshold()) * 100)}%`,
-                  background: cardData.tier === 'Basic' ? 'linear-gradient(90deg, #92400E, #B45309)' : // Bronze colors
-                             cardData.tier === 'Bronze' ? 'linear-gradient(90deg, #6B7280, #9CA3AF)' : // Silver colors
-                             cardData.tier === 'Silver' ? 'linear-gradient(90deg, #B45309, #F59E0B)' : // Gold colors
-                             'linear-gradient(90deg, #2563EB, #93C5FD)' // Platinum colors
+                  background: cardData.tier === 'Basic' ? 'linear-gradient(90deg, #8B4513, #B45309)' :
+                             cardData.tier === 'Bronze' ? 'linear-gradient(90deg, #708090, #9CA3AF)' :
+                             cardData.tier === 'Silver' ? 'linear-gradient(90deg, #C9943A, #E8C478)' :
+                             'linear-gradient(90deg, #4B1E3E, #7B3D6E)'
                 }}
               >
                 {cardData.points > 0 && (
@@ -669,8 +670,8 @@ const RoyalCard = () => {
       )}
 
       {/* Tier Rankings Table */}
-      <div className="mt-3 sm:mt-4 bg-white dark:bg-gray-800 rounded-lg shadow-md p-2 sm:p-3 text-sm w-full">
-        <h3 className="font-medium text-gray-700 dark:text-white mb-2 text-sm">Royal Card Ranks</h3>
+      <div className="mt-4 bg-white dark:bg-dm-card rounded-card border border-brown-100 dark:border-dm-border shadow-card p-4 text-sm w-full">
+        <h3 className="font-semibold text-charcoal dark:text-white mb-3 text-sm">Royal Card Ranks</h3>
         
         {/* Early Access Notice - Show when enabled */}
         {thresholdsLoaded && isEarlyAccessEnabled() && (
