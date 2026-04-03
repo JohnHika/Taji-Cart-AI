@@ -86,22 +86,39 @@ const SearchPage = () => {
   }
 
   return (
-    <section className='bg-white dark:bg-gray-900 min-h-[80vh]'>
-      <div className='container mx-auto p-4'>
-        <div className="flex justify-between items-center mb-4">
-          <p className='font-semibold text-gray-800 dark:text-gray-200'>
-            {searchText ? `Search Results for "${searchText}": ${data.length}` : 'Enter search term'}
-          </p>
-          {loading && <p className="text-sm text-gray-500 dark:text-gray-400">Loading...</p>}
+    <section className="bg-ivory dark:bg-dm-surface min-h-[80vh] transition-colors duration-200">
+      <div className="container mx-auto px-4 py-6 sm:py-8">
+        <div className="mb-6 pb-4 border-b border-brown-100 dark:border-dm-border">
+          <h1 className="text-xl sm:text-2xl font-semibold text-charcoal dark:text-white">
+            {searchText ? (
+              <>Results for &ldquo;{searchText}&rdquo;</>
+            ) : (
+              <>Search the shop</>
+            )}
+          </h1>
+          {searchText && (
+            <p className="text-sm text-brown-400 dark:text-white/50 mt-1">
+              {loading ? 'Searching…' : `${data.length} product${data.length !== 1 ? 's' : ''} found`}
+            </p>
+          )}
+          {!searchText && (
+            <p className="text-sm text-brown-400 dark:text-white/50 mt-1">
+              Use the search bar above to find wigs, care, and accessories.
+            </p>
+          )}
         </div>
 
         <InfiniteScroll
-              dataLength={data.length}
-              hasMore={page < totalPage}
-              next={handleFetchMore}
-              loader={<div className="text-center py-4">Loading more...</div>}
+          dataLength={data.length}
+          hasMore={page < totalPage}
+          next={handleFetchMore}
+          loader={
+            <div className="text-center py-6 text-sm text-brown-400 dark:text-white/45">
+              Loading more…
+            </div>
+          }
         >
-        <div className='grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 py-4 gap-4'>
+        <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 py-2 gap-3 sm:gap-4">
               {
                 data.map((p,index)=>{
                   return(
@@ -123,21 +140,21 @@ const SearchPage = () => {
         </div>
         </InfiniteScroll>
 
-              {
-                //no data 
-                !data[0] && !loading && (
-                  <div className='flex flex-col justify-center items-center w-full mx-auto'>
-                    <img
-                      src={noDataImage} 
-                      className='w-full h-full max-w-xs max-h-xs block'
-                      alt="No results found"
-                    />
-                    <p className='font-semibold my-2 text-gray-800 dark:text-gray-200'>
-                      {searchText ? 'No products match your search' : 'Please enter a search term'}
-                    </p>
-                  </div>
-                )
-              }
+              {!data[0] && !loading && (
+                <div className="flex flex-col justify-center items-center w-full mx-auto py-12">
+                  <img
+                    src={noDataImage}
+                    className="w-full max-w-[220px] h-auto object-contain opacity-90"
+                    alt=""
+                  />
+                  <p className="font-semibold text-charcoal dark:text-white mt-4 text-center max-w-sm">
+                    {searchText ? 'No products match your search' : 'Type a search to see products'}
+                  </p>
+                  <p className="text-sm text-brown-400 dark:text-white/45 mt-2 text-center max-w-sm">
+                    Try different keywords or browse categories from the home page.
+                  </p>
+                </div>
+              )}
       </div>
     </section>
   )

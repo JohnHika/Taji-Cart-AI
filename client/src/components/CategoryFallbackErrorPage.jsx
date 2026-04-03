@@ -33,10 +33,10 @@ const CategoryFallbackErrorPage = () => {
           </Link>
           
           <Link 
-            to="/categories" 
+            to="/" 
             className="flex items-center justify-center px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white rounded hover:bg-gray-300 dark:hover:bg-gray-600 transition"
           >
-            Browse All Categories
+            Browse shop
           </Link>
         </div>
       </div>

@@ -4,8 +4,6 @@ import { FiArrowRight } from 'react-icons/fi';
 import { useDispatch, useSelector } from "react-redux";
 import { Link, useNavigate } from "react-router-dom";
 import { toast } from 'react-toastify';
-import bannerMobile from "../assets/bannermobile.jpg";
-import banner from "../assets/banner.png";
 import SummaryApi from "../common/SummaryApi";
 import CategoryWiseProductDisplay from '../components/CategoryWiseProductDisplay';
 import CommunityCampaignProgress from "../components/CommunityCampaignProgress";
@@ -56,6 +54,7 @@ const SectionHeading = ({ title, tagline, linkTo, linkLabel }) => {
 };
 
 const Home = () => {
+  const user = useSelector(state => state.user);
   const loadingCategory = useSelector(state => state.product.loadingCategory);
   const categoryData = useSelector(state => state.product.allCategory);
   const subCategoryData = useSelector(state => state.product.allSubCategory);
@@ -154,96 +153,105 @@ const Home = () => {
   return (
     <section className="bg-ivory dark:bg-dm-surface transition-colors">
 
-      {/* ── Hero Banner ─────────────────────────────────────────────── */}
-      <div className="relative w-full overflow-hidden">
-        <div className="w-full min-h-[300px] sm:min-h-[420px] lg:min-h-[560px] bg-gradient-to-br from-plum-900 via-plum-700 to-charcoal flex items-center">
-          <div className="container mx-auto px-5 sm:px-8 py-16 sm:py-20">
-            <div className={`max-w-lg transition-all duration-700 ${heroVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'}`}>
-              <p className="font-display italic text-gold-300 text-base sm:text-lg mb-2 animate-fade-in">
-                Premium Hair Collection
-              </p>
-              <h1 className="font-display font-bold text-white text-4xl sm:text-5xl lg:text-6xl leading-tight animate-fade-up">
-                Your Hair,<br />
-                <span style={{ color: '#E8C478' }}>
-                  Your Crown
-                </span>
-              </h1>
-              <p className={`text-white/70 text-sm sm:text-base mt-4 leading-relaxed transition-all duration-700 delay-200 ${heroVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
-                Discover premium hair extensions, wigs, and care products crafted for every texture and style.
-              </p>
-              <div className={`flex flex-wrap items-center gap-3 mt-6 transition-all duration-700 delay-300 ${heroVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
-                <Link
-                  to="/categories"
-                  className="bg-gold-500 hover:bg-gold-400 text-charcoal font-semibold px-6 py-3 rounded-pill text-sm transition-all duration-200 press shadow-sm hover:shadow-gold"
-                >
-                  Shop Now
-                </Link>
-                <Link
-                  to="/campaigns"
-                  className="border border-white/60 text-white hover:bg-white/10 font-medium px-6 py-3 rounded-pill text-sm transition-all duration-200"
-                >
-                  View Campaigns
-                </Link>
+      {/* ── Hero Banner (guests only) ─────────────────────────────── */}
+      {!user?._id && (
+        <div className="relative w-full overflow-hidden">
+          <div className="w-full min-h-[300px] sm:min-h-[420px] lg:min-h-[560px] bg-gradient-to-br from-plum-900 via-plum-700 to-charcoal flex items-center">
+            <div className="container mx-auto px-5 sm:px-8 py-16 sm:py-20">
+              <div className={`max-w-lg transition-all duration-700 ${heroVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'}`}>
+                <p className="font-display italic text-gold-300 text-base sm:text-lg mb-2 animate-fade-in">
+                  Premium Hair Collection
+                </p>
+                <h1 className="font-display font-bold text-white text-4xl sm:text-5xl lg:text-6xl leading-tight animate-fade-up">
+                  Your Hair,<br />
+                  <span style={{ color: '#E8C478' }}>
+                    Your Crown
+                  </span>
+                </h1>
+                <p className={`text-white/70 text-sm sm:text-base mt-4 leading-relaxed transition-all duration-700 delay-200 ${heroVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
+                  Discover premium hair extensions, wigs, and care products crafted for every texture and style.
+                </p>
+                <div className={`flex flex-wrap items-center gap-3 mt-6 transition-all duration-700 delay-300 ${heroVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
+                  <Link
+                    to="/"
+                    className="bg-gold-500 hover:bg-gold-400 text-charcoal font-semibold px-6 py-3 rounded-pill text-sm transition-all duration-200 press shadow-sm hover:shadow-gold"
+                  >
+                    Shop Now
+                  </Link>
+                  <Link
+                    to="/campaigns"
+                    className="border border-white/60 text-white hover:bg-white/10 font-medium px-6 py-3 rounded-pill text-sm transition-all duration-200"
+                  >
+                    View Campaigns
+                  </Link>
+                </div>
               </div>
             </div>
           </div>
-        </div>
 
-        {/* Scroll indicator */}
-        <div className="absolute bottom-5 left-1/2 -translate-x-1/2 text-white/50 animate-float hidden sm:block">
-          <FaChevronDown size={20} />
+          {/* Scroll indicator */}
+          <div className="absolute bottom-5 left-1/2 -translate-x-1/2 text-white/50 animate-float hidden sm:block">
+            <FaChevronDown size={20} />
+          </div>
         </div>
-      </div>
+      )}
 
-      {/* ── Categories Section ───────────────────────────────────────── */}
+      {/* ── Categories Section (compact pills) ───────────────────── */}
       <div className="container mx-auto px-3 sm:px-4 mt-8 sm:mt-10">
         <SectionHeading
           title="Shop by Category"
           tagline="Find exactly what your hair needs"
-          linkTo="/categories"
+          linkTo="/"
           linkLabel="View All"
         />
 
-        <div className="relative">
-          <div className="flex overflow-x-auto pb-3 scrollbar-hide gap-3 scroll-smooth snap-x snap-mandatory lg:grid lg:grid-cols-5 xl:grid-cols-6 lg:gap-4">
-            {loadingCategory
-              ? new Array(10).fill(null).map((_, i) => (
-                <div
-                  key={i + "loadingcat"}
-                  className="flex-shrink-0 snap-start w-[90px] sm:w-[105px] lg:w-auto flex flex-col items-center"
-                >
-                  <div className="w-full aspect-square rounded-card bg-shimmer mb-2" />
-                  <div className="h-3 w-3/4 bg-shimmer rounded" />
-                </div>
-              ))
-              : categoryData.map((cat) => (
-                <div
-                  key={cat._id + "displayCategory"}
-                  onClick={() => handleRedirectProductListpage(cat._id, cat.name)}
-                  className="group flex-shrink-0 snap-start w-[90px] sm:w-[105px] lg:w-auto flex flex-col items-center cursor-pointer hover-lift press"
-                >
-                  {/* Category image circle */}
-                  <div className="w-full aspect-square rounded-card overflow-hidden bg-blush-100 dark:bg-dm-card border border-brown-100 dark:border-dm-border shadow-sm group-hover:shadow-hover group-hover:border-plum-200 dark:group-hover:border-plum-700 transition-all duration-300 flex items-center justify-center p-2 relative">
-                    <img
-                      src={cat.image}
-                      alt={cat.name}
-                      className="max-w-full max-h-full object-contain group-hover:scale-110 transition-transform duration-400"
-                      onError={(e) => { e.target.src = 'https://via.placeholder.com/100?text=Hair'; }}
-                    />
-                    {/* Plum overlay on hover */}
-                    <div className="absolute inset-0 bg-plum-900/0 group-hover:bg-plum-900/10 transition-all duration-300 rounded-card" />
-                  </div>
-                  <span className="text-center text-xs font-medium text-charcoal dark:text-white/80 group-hover:text-plum-700 dark:group-hover:text-plum-200 transition-colors mt-2 line-clamp-2 leading-tight w-full">
-                    {cat.name}
-                  </span>
-                </div>
-              ))
-            }
+        <div className="relative -mx-3 sm:-mx-4">
+          {/* Outer: bounded width + horizontal scroll (inner row uses w-max so overflow is real) */}
+          <div
+            className="w-full max-w-full min-w-0 overflow-x-auto overflow-y-hidden pb-2 scroll-smooth snap-x snap-mandatory scrollbar-hide [touch-action:pan-x] [-webkit-overflow-scrolling:touch] px-3 sm:px-4"
+            role="region"
+            aria-label="Shop by category — scroll horizontally for more"
+          >
+            <div className="flex flex-nowrap gap-2.5 w-max pr-1">
+              {loadingCategory
+                ? new Array(10).fill(null).map((_, i) => (
+                    <div
+                      key={i + "loadingcat"}
+                      className="snap-start flex-shrink-0 flex items-center gap-2 px-3 py-2 rounded-pill border border-brown-100 dark:border-dm-border bg-white dark:bg-dm-card"
+                      style={{ minWidth: '120px' }}
+                    >
+                      <div className="w-7 h-7 rounded-full bg-shimmer flex-shrink-0" />
+                      <div className="h-3 flex-1 bg-shimmer rounded-pill" />
+                    </div>
+                  ))
+                : categoryData.map((cat) => (
+                    <button
+                      key={cat._id + "displayCategory"}
+                      type="button"
+                      onClick={() => handleRedirectProductListpage(cat._id, cat.name)}
+                      className="group snap-start flex-shrink-0 flex items-center gap-2 px-3 py-2 rounded-pill border border-brown-100 dark:border-dm-border bg-white dark:bg-dm-card hover:border-plum-300 dark:hover:border-plum-600 hover:bg-plum-50 dark:hover:bg-plum-900/20 shadow-sm hover:shadow-hover transition-all duration-200 cursor-pointer press"
+                    >
+                      <div className="w-7 h-7 rounded-full overflow-hidden flex-shrink-0 bg-blush-50 dark:bg-dm-card-2 flex items-center justify-center p-0.5">
+                        <img
+                          src={cat.image}
+                          alt={cat.name}
+                          className="w-full h-full object-contain group-hover:scale-110 transition-transform duration-300 pointer-events-none"
+                          draggable={false}
+                          onError={(e) => { e.target.src = 'https://via.placeholder.com/40?text=H'; }}
+                        />
+                      </div>
+                      <span className="text-xs sm:text-sm font-medium text-charcoal dark:text-white/80 group-hover:text-plum-700 dark:group-hover:text-plum-200 transition-colors whitespace-nowrap">
+                        {cat.name}
+                      </span>
+                    </button>
+                  ))
+              }
+            </div>
           </div>
 
-          {/* Edge fades (mobile) */}
-          <div className="absolute top-0 right-0 bottom-0 w-8 bg-gradient-to-l from-ivory dark:from-dm-surface to-transparent pointer-events-none lg:hidden" />
-          <div className="absolute top-0 left-0 bottom-0 w-8 bg-gradient-to-r from-ivory dark:from-dm-surface to-transparent pointer-events-none lg:hidden" />
+          {/* Edge fades */}
+          <div className="pointer-events-none absolute inset-y-0 right-0 w-10 bg-gradient-to-l from-ivory dark:from-dm-surface to-transparent" />
+          <div className="pointer-events-none absolute inset-y-0 left-0 w-10 bg-gradient-to-r from-ivory dark:from-dm-surface to-transparent" />
         </div>
       </div>
 
@@ -252,10 +260,26 @@ const Home = () => {
         <div className="section-divider" />
       </div>
 
-      {/* ── Community Section ───────────────────────────────────────── */}
+      {/* ── Category-wise Product Sections ──────────────────────────── */}
+      <div>
+        {categoryData?.map((c) => (
+          <CategoryWiseProductDisplay
+            key={c?._id + "CategorywiseProduct"}
+            id={c?._id}
+            name={c?.name}
+          />
+        ))}
+      </div>
+
+      {/* ── Divider ─────────────────────────────────────────────────── */}
+      <div className="container mx-auto px-4 mt-8 mb-8 sm:mb-10">
+        <div className="section-divider" />
+      </div>
+
+      {/* ── Community Section (bottom) ─────────────────────────────── */}
       <div
         ref={communityRef}
-        className={`container mx-auto px-3 sm:px-4 mb-8 sm:mb-10 transition-all duration-600 ${communityVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'}`}
+        className={`container mx-auto px-3 sm:px-4 pb-8 sm:pb-10 transition-all duration-600 ${communityVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'}`}
       >
         <div className="bg-plum-100 dark:bg-plum-900/30 rounded-card p-5 sm:p-6 border border-plum-200 dark:border-plum-800">
           <div className="flex items-center gap-3 mb-4">
@@ -286,22 +310,6 @@ const Home = () => {
             </div>
           )}
         </div>
-      </div>
-
-      {/* ── Divider ─────────────────────────────────────────────────── */}
-      <div className="container mx-auto px-4 mb-8">
-        <div className="section-divider" />
-      </div>
-
-      {/* ── Category-wise Product Sections ──────────────────────────── */}
-      <div className="pb-8">
-        {categoryData?.map((c) => (
-          <CategoryWiseProductDisplay
-            key={c?._id + "CategorywiseProduct"}
-            id={c?._id}
-            name={c?.name}
-          />
-        ))}
       </div>
 
     </section>

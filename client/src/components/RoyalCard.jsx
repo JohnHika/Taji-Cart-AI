@@ -670,127 +670,126 @@ const RoyalCard = () => {
       )}
 
       {/* Tier Rankings Table */}
-      <div className="mt-4 bg-white dark:bg-dm-card rounded-card border border-brown-100 dark:border-dm-border shadow-card p-4 text-sm w-full">
-        <h3 className="font-semibold text-charcoal dark:text-white mb-3 text-sm">Royal Card Ranks</h3>
+      <div className="mt-4 bg-white dark:bg-dm-card rounded-card border border-brown-100 dark:border-dm-border shadow-hover p-4 sm:p-5 text-sm w-full">
+        <h3 className="font-display font-semibold text-charcoal dark:text-white mb-1 text-base">Royal Card ranks</h3>
+        <p className="text-xs text-brown-500 dark:text-white/45 mb-3">Your tier, discount, and points needed — Nawiri Hair loyalty.</p>
         
-        {/* Early Access Notice - Show when enabled */}
         {thresholdsLoaded && isEarlyAccessEnabled() && (
-          <div className="mb-3 p-2 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-md">
-            <p className="text-xs flex items-center text-blue-700 dark:text-blue-300 font-medium">
-              <FaInfoCircle className="mr-1" /> Early Access Program Active
+          <div className="mb-4 p-3 rounded-card border border-plum-200 dark:border-plum-700 bg-plum-50/90 dark:bg-plum-900/35">
+            <p className="text-xs flex items-center gap-1.5 text-plum-800 dark:text-plum-200 font-semibold">
+              <FaInfoCircle className="text-gold-500 shrink-0" /> Early access program active
             </p>
-            <p className="text-xs mt-1 text-gray-600 dark:text-gray-400">
-              You can access tier benefits earlier than standard thresholds! See the "Early Access" column below.
+            <p className="text-xs mt-1.5 text-brown-700 dark:text-white/60 leading-relaxed">
+              You can unlock tier benefits before standard thresholds. Use the Early access column below.
             </p>
           </div>
         )}
         
-        <div className="overflow-x-auto -mx-2 sm:mx-0">
-          <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+        <div className="overflow-x-auto -mx-1 sm:mx-0 rounded-card border border-brown-100 dark:border-dm-border">
+          <table className="min-w-full divide-y divide-brown-100 dark:divide-dm-border">
             <thead>
-              <tr className="bg-gray-50 dark:bg-gray-700">
-                <th className="px-2 sm:px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Rank</th>
-                <th className="px-2 sm:px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Discount</th>
-                <th className="px-2 sm:px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Required Points</th>
-                {/* Only show early access column if it's enabled or user is admin */}
+              <tr className="bg-plum-50/80 dark:bg-plum-900/40">
+                <th className="px-3 py-2.5 text-left text-[0.65rem] font-semibold uppercase tracking-wider text-brown-600 dark:text-white/55">Rank</th>
+                <th className="px-3 py-2.5 text-left text-[0.65rem] font-semibold uppercase tracking-wider text-brown-600 dark:text-white/55">Discount</th>
+                <th className="px-3 py-2.5 text-left text-[0.65rem] font-semibold uppercase tracking-wider text-brown-600 dark:text-white/55">Required points</th>
                 {thresholdsLoaded && (isEarlyAccessEnabled() || isAdmin) && (
-                  <th className="px-2 sm:px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                    {isEarlyAccessEnabled() ? "Early Access" : "Previous Early Access"}
+                  <th className="px-3 py-2.5 text-left text-[0.65rem] font-semibold uppercase tracking-wider text-gold-700 dark:text-gold-400">
+                    {isEarlyAccessEnabled() ? 'Early access' : 'Previous early access'}
                   </th>
                 )}
               </tr>
             </thead>
-            <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-              <tr className={cardData.tier === 'Basic' ? 'bg-gray-50 dark:bg-gray-700' : ''}>
-                <td className="px-2 sm:px-3 py-2 whitespace-nowrap">
+            <tbody className="bg-white dark:bg-dm-card divide-y divide-brown-100 dark:divide-dm-border">
+              <tr className={cardData.tier === 'Basic' ? 'bg-plum-50/50 dark:bg-plum-900/20' : ''}>
+                <td className="px-3 py-2.5 whitespace-nowrap">
                   <div className="flex items-center">
-                    <div className="h-3 w-3 sm:h-4 sm:w-4 rounded-full bg-gray-400 mr-1 sm:mr-2"></div>
-                    <span className="font-medium dark:text-white text-xs sm:text-sm">Basic</span>
+                    <div className="h-3.5 w-3.5 sm:h-4 sm:w-4 rounded-full bg-brown-300 dark:bg-white/30 mr-2 ring-2 ring-brown-100 dark:ring-white/10" />
+                    <span className="font-medium text-charcoal dark:text-white text-xs sm:text-sm">Basic</span>
                   </div>
                 </td>
-                <td className="px-2 sm:px-3 py-2 whitespace-nowrap dark:text-gray-300 text-xs sm:text-sm">0%</td>
-                <td className="px-2 sm:px-3 py-2 whitespace-nowrap dark:text-gray-300 text-xs sm:text-sm">0</td>
+                <td className="px-3 py-2.5 whitespace-nowrap text-charcoal dark:text-white/75 text-xs sm:text-sm">0%</td>
+                <td className="px-3 py-2.5 whitespace-nowrap text-charcoal dark:text-white/75 text-xs sm:text-sm">0</td>
                 {thresholdsLoaded && (isEarlyAccessEnabled() || isAdmin) && (
-                  <td className="px-2 sm:px-3 py-2 whitespace-nowrap dark:text-gray-300 text-xs sm:text-sm">-</td>
+                  <td className="px-3 py-2.5 whitespace-nowrap text-charcoal dark:text-white/55 text-xs sm:text-sm">—</td>
                 )}
               </tr>
-              <tr className={cardData.tier === 'Bronze' ? 'bg-gray-50 dark:bg-gray-700' : ''}>
-                <td className="px-2 sm:px-3 py-2 whitespace-nowrap">
+              <tr className={cardData.tier === 'Bronze' ? 'bg-plum-50/50 dark:bg-plum-900/20' : ''}>
+                <td className="px-3 py-2.5 whitespace-nowrap">
                   <div className="flex items-center">
-                    <div className="h-3 w-3 sm:h-4 sm:w-4 rounded-full bg-amber-700 mr-1 sm:mr-2"></div>
-                    <span className="font-medium dark:text-white text-xs sm:text-sm">Bronze</span>
+                    <div className="h-3.5 w-3.5 sm:h-4 sm:w-4 rounded-full bg-amber-700 mr-2 ring-2 ring-amber-200/50 dark:ring-amber-900/40" />
+                    <span className="font-medium text-charcoal dark:text-white text-xs sm:text-sm">Bronze</span>
                   </div>
                 </td>
-                <td className="px-2 sm:px-3 py-2 whitespace-nowrap dark:text-gray-300 text-xs sm:text-sm">2%</td>
-                <td className="px-2 sm:px-3 py-2 whitespace-nowrap dark:text-gray-300 text-xs sm:text-sm">
+                <td className="px-3 py-2.5 whitespace-nowrap text-charcoal dark:text-white/75 text-xs sm:text-sm">2%</td>
+                <td className="px-3 py-2.5 whitespace-nowrap text-charcoal dark:text-white/75 text-xs sm:text-sm">
                   {formatNumber(getBronzeThreshold())}
                 </td>
                 {thresholdsLoaded && (isEarlyAccessEnabled() || isAdmin) && (
-                  <td className="px-2 sm:px-3 py-2 whitespace-nowrap dark:text-gray-300 text-xs sm:text-sm">
+                  <td className="px-3 py-2.5 whitespace-nowrap text-charcoal dark:text-white/75 text-xs sm:text-sm">
                     {formatNumber(getEarlyBronzeThreshold())} pts
                     {isEarlyAccessEnabled() && 
                      cardData.points >= getEarlyBronzeThreshold() && 
                      cardData.points < getBronzeThreshold() && (
-                      <span className="ml-1 sm:ml-2 text-xs bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 px-1 sm:px-2 py-0.5 rounded-full">
+                      <span className="ml-1 sm:ml-2 text-[0.65rem] bg-emerald-100 dark:bg-emerald-900/35 text-emerald-800 dark:text-emerald-300 px-2 py-0.5 rounded-pill font-medium">
                         Active
                       </span>
                     )}
                   </td>
                 )}
               </tr>
-              <tr className={cardData.tier === 'Silver' ? 'bg-gray-50 dark:bg-gray-700' : ''}>
-                <td className="px-2 sm:px-3 py-2 whitespace-nowrap">
+              <tr className={cardData.tier === 'Silver' ? 'bg-plum-50/50 dark:bg-plum-900/20' : ''}>
+                <td className="px-3 py-2.5 whitespace-nowrap">
                   <div className="flex items-center">
-                    <div className="h-3 w-3 sm:h-4 sm:w-4 rounded-full bg-gray-300 mr-1 sm:mr-2"></div>
-                    <span className="font-medium dark:text-white text-xs sm:text-sm">Silver</span>
+                    <div className="h-3.5 w-3.5 sm:h-4 sm:w-4 rounded-full bg-slate-300 dark:bg-slate-500 mr-2 ring-2 ring-slate-100 dark:ring-slate-700" />
+                    <span className="font-medium text-charcoal dark:text-white text-xs sm:text-sm">Silver</span>
                   </div>
                 </td>
-                <td className="px-2 sm:px-3 py-2 whitespace-nowrap dark:text-gray-300 text-xs sm:text-sm">3%</td>
-                <td className="px-2 sm:px-3 py-2 whitespace-nowrap dark:text-gray-300 text-xs sm:text-sm">
+                <td className="px-3 py-2.5 whitespace-nowrap text-charcoal dark:text-white/75 text-xs sm:text-sm">3%</td>
+                <td className="px-3 py-2.5 whitespace-nowrap text-charcoal dark:text-white/75 text-xs sm:text-sm">
                   {formatNumber(getSilverThreshold())}
                 </td>
                 {thresholdsLoaded && (isEarlyAccessEnabled() || isAdmin) && (
-                  <td className="px-2 sm:px-3 py-2 whitespace-nowrap dark:text-gray-300 text-xs sm:text-sm">
+                  <td className="px-3 py-2.5 whitespace-nowrap text-charcoal dark:text-white/75 text-xs sm:text-sm">
                     {formatNumber(getEarlySilverThreshold())} pts
                     {isEarlyAccessEnabled() && 
                      cardData.points >= getEarlySilverThreshold() && 
                      cardData.points < getSilverThreshold() && (
-                      <span className="ml-1 sm:ml-2 text-xs bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 px-1 sm:px-2 py-0.5 rounded-full">
+                      <span className="ml-1 sm:ml-2 text-[0.65rem] bg-emerald-100 dark:bg-emerald-900/35 text-emerald-800 dark:text-emerald-300 px-2 py-0.5 rounded-pill font-medium">
                         Active
                       </span>
                     )}
                   </td>
                 )}
               </tr>
-              <tr className={cardData.tier === 'Gold' ? 'bg-gray-50 dark:bg-gray-700' : ''}>
-                <td className="px-2 sm:px-3 py-2 whitespace-nowrap">
+              <tr className={cardData.tier === 'Gold' ? 'bg-plum-50/50 dark:bg-plum-900/20' : ''}>
+                <td className="px-3 py-2.5 whitespace-nowrap">
                   <div className="flex items-center">
-                    <div className="h-3 w-3 sm:h-4 sm:w-4 rounded-full bg-yellow-500 mr-1 sm:mr-2"></div>
-                    <span className="font-medium dark:text-white text-xs sm:text-sm">Gold</span>
+                    <div className="h-3.5 w-3.5 sm:h-4 sm:w-4 rounded-full bg-gold-500 mr-2 ring-2 ring-gold-200/60 dark:ring-gold-700/40" />
+                    <span className="font-medium text-charcoal dark:text-white text-xs sm:text-sm">Gold</span>
                   </div>
                 </td>
-                <td className="px-2 sm:px-3 py-2 whitespace-nowrap dark:text-gray-300 text-xs sm:text-sm">5%</td>
-                <td className="px-2 sm:px-3 py-2 whitespace-nowrap dark:text-gray-300 text-xs sm:text-sm">
+                <td className="px-3 py-2.5 whitespace-nowrap text-charcoal dark:text-white/75 text-xs sm:text-sm">5%</td>
+                <td className="px-3 py-2.5 whitespace-nowrap text-charcoal dark:text-white/75 text-xs sm:text-sm">
                   {formatNumber(getGoldThreshold())}
                 </td>
                 {thresholdsLoaded && (isEarlyAccessEnabled() || isAdmin) && (
-                  <td className="px-2 sm:px-3 py-2 whitespace-nowrap dark:text-gray-300 text-xs sm:text-sm">
+                  <td className="px-3 py-2.5 whitespace-nowrap text-charcoal dark:text-white/75 text-xs sm:text-sm">
                     {formatNumber(getEarlyGoldThreshold())} pts
                     {isEarlyAccessEnabled() && 
                      cardData.points >= getEarlyGoldThreshold() && 
                      cardData.points < getGoldThreshold() && (
-                      <span className="ml-1 sm:ml-2 text-xs bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 px-1 sm:px-2 py-0.5 rounded-full">
+                      <span className="ml-1 sm:ml-2 text-[0.65rem] bg-emerald-100 dark:bg-emerald-900/35 text-emerald-800 dark:text-emerald-300 px-2 py-0.5 rounded-pill font-medium">
                         Active
                       </span>
                     )}
                   </td>
                 )}
               </tr>
-              <tr className={cardData.tier === 'Platinum' ? 'bg-gray-50 dark:bg-gray-700 font-bold' : 'font-semibold'}>
-                <td className="px-2 sm:px-3 py-2 whitespace-nowrap">
+              <tr className={cardData.tier === 'Platinum' ? 'bg-plum-50/70 dark:bg-plum-900/25 font-semibold' : ''}>
+                <td className="px-3 py-2.5 whitespace-nowrap">
                   <div className="flex items-center">
-                    <div className="h-3 w-3 sm:h-4 sm:w-4 rounded-full bg-blue-500 mr-1 sm:mr-2"></div>
-                    <span className="dark:text-white text-xs sm:text-sm">Platinum</span>
+                    <div className="h-3.5 w-3.5 sm:h-4 sm:w-4 rounded-full bg-plum-600 mr-2 ring-2 ring-plum-200 dark:ring-plum-800" />
+                    <span className="text-charcoal dark:text-white text-xs sm:text-sm">Platinum</span>
                     {cardData.tier === 'Platinum' && 
                      cardData.points < getPlatinumThreshold() && 
                      !isAdmin && (
@@ -798,27 +797,27 @@ const RoyalCard = () => {
                     )}
                   </div>
                 </td>
-                <td className="px-2 sm:px-3 py-2 whitespace-nowrap dark:text-gray-300 text-xs sm:text-sm">7%</td>
-                <td className="px-3 py-2 whitespace-nowrap dark:text-gray-300">
-                  <span className="text-blue-600 dark:text-blue-400">
+                <td className="px-3 py-2.5 whitespace-nowrap text-charcoal dark:text-white/75 text-xs sm:text-sm">7%</td>
+                <td className="px-3 py-2.5 whitespace-nowrap text-charcoal dark:text-white/80">
+                  <span className="text-plum-700 dark:text-plum-300 font-medium">
                     {formatNumber(getPlatinumThreshold())}
                   </span>
                   {cardData.tier === 'Platinum' && 
                     cardData.points < getPlatinumThreshold() && 
                     !isAdmin && (
-                    <span className="block text-xs text-gray-500 dark:text-gray-400">
+                    <span className="block text-xs text-brown-500 dark:text-white/45 mt-0.5">
                       You: {formatNumber(cardData.points)} pts
                     </span>
                   )}
                 </td>
                 {thresholdsLoaded && (isEarlyAccessEnabled() || isAdmin) && (
-                  <td className="px-3 py-2 whitespace-nowrap dark:text-gray-300">
+                  <td className="px-3 py-2.5 whitespace-nowrap text-charcoal dark:text-white/75">
                     {formatNumber(getEarlyPlatinumThreshold())} pts
                     {isEarlyAccessEnabled() && 
                      cardData.points >= getEarlyPlatinumThreshold() && 
                      cardData.points < getPlatinumThreshold() && 
                      !isAdmin && (
-                      <span className="ml-2 text-xs bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 px-2 py-0.5 rounded-full">
+                      <span className="ml-2 text-[0.65rem] bg-emerald-100 dark:bg-emerald-900/35 text-emerald-800 dark:text-emerald-300 px-2 py-0.5 rounded-pill font-medium">
                         Active
                       </span>
                     )}
@@ -831,11 +830,11 @@ const RoyalCard = () => {
         
         {/* Early Access Warning for Non-Enabled State - only visible to users who had early access previously */}
         {thresholdsLoaded && !isEarlyAccessEnabled() && (
-          <div className="mt-3 p-2 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-md">
-            <p className="text-xs flex items-center text-amber-700 dark:text-amber-300 font-medium">
-              <FaInfoCircle className="mr-1" /> Early Access Program Inactive
+          <div className="mt-3 p-3 rounded-card border border-gold-200/80 dark:border-gold-800/40 bg-gold-50/80 dark:bg-gold-950/20">
+            <p className="text-xs flex items-center gap-1.5 text-charcoal dark:text-gold-200 font-semibold">
+              <FaInfoCircle className="text-gold-600 dark:text-gold-400 shrink-0" /> Early access program inactive
             </p>
-            <p className="text-xs mt-1 text-gray-600 dark:text-gray-400">
+            <p className="text-xs mt-1.5 text-brown-700 dark:text-white/55 leading-relaxed">
               {isInTierViaEarlyAccess() ? 
                 `The early access program is currently unavailable. You'll maintain your ${cardData.tier} tier benefits as long as you stay above ${formatNumber(getCurrentTierEarlyThreshold())} points.` :
                 "The early access program is currently unavailable. All tier upgrades now require the standard point thresholds shown above."
@@ -880,14 +879,16 @@ const RoyalCard = () => {
           </div>
         )}
         
-        <p className="mt-2 text-xs text-gray-600 dark:text-gray-400">
-          Earn 1 point for every KES 100 spent in our store.
-          {isAdmin && <span className="block mt-1">Admin accounts automatically receive Platinum status.</span>}
-          {thresholdsLoaded && <span className="block mt-1">
-            {isEarlyAccessEnabled() 
-              ? "Early access thresholds are set by our administrators to reward loyal customers."
-              : "Early access is currently disabled. Please refer to the standard point thresholds."}
-          </span>}
+        <p className="mt-4 text-xs text-brown-600 dark:text-white/50 leading-relaxed space-y-1">
+          <span className="block">Earn 1 point for every KES 100 spent in our store.</span>
+          {isAdmin && <span className="block mt-1 text-plum-700 dark:text-plum-300/90">Admin accounts automatically receive Platinum status.</span>}
+          {thresholdsLoaded && (
+            <span className="block mt-1">
+              {isEarlyAccessEnabled()
+                ? 'Early access thresholds are set by administrators to reward loyal customers.'
+                : 'Early access is currently disabled — use the standard point thresholds above.'}
+            </span>
+          )}
         </p>
       </div>
 
@@ -972,11 +973,11 @@ const RoyalCard = () => {
         </div>
       )}
 
-      {/* Mobile wallet integration buttons */}
-      <div className="mt-3 sm:mt-4 flex justify-center space-x-2 w-full">
+      <div className="mt-4 flex flex-col sm:flex-row justify-center gap-2 sm:gap-3 w-full max-w-md mx-auto">
         <button
+          type="button"
           onClick={() => window.alert('Feature coming soon!')}
-          className="flex items-center gap-1 bg-black text-white px-2 sm:px-3 py-1.5 rounded-lg text-xs flex-1 max-w-[120px] justify-center"
+          className="flex items-center justify-center gap-2 bg-charcoal dark:bg-black text-white px-4 py-2.5 rounded-pill text-xs font-semibold border border-brown-800 dark:border-white/10 shadow-sm hover:opacity-95 transition-opacity flex-1 min-w-0"
         >
           <svg viewBox="0 0 24 24" className="h-3 w-3 sm:h-4 sm:w-4" fill="currentColor">
             <path d="M17.6 13.2c0-2.1 1.7-3 1.8-3.1-1-1.4-2.5-1.6-3-1.6-1.3-.1-2.5.7-3.1.7-.7 0-1.7-.7-2.8-.7-1.4 0-2.8.8-3.5 2.1-1.5 2.6-.4 6.4 1.1 8.5.7 1 1.5 2.2 2.6 2.1 1-.1 1.4-.7 2.7-.7 1.2 0 1.6.7 2.7.7 1.1 0 1.8-1 2.5-2 .8-1.1 1.1-2.2 1.1-2.3-.1 0-2.1-.8-2.1-3"></path>
@@ -985,8 +986,9 @@ const RoyalCard = () => {
           <span className="hidden sm:inline">Add to</span> Wallet
         </button>
         <button
+          type="button"
           onClick={() => window.print()}
-          className="flex items-center gap-1 bg-gray-200 text-gray-800 px-2 sm:px-3 py-1.5 rounded-lg text-xs flex-1 max-w-[120px] justify-center"
+          className="flex items-center justify-center gap-2 bg-white dark:bg-dm-card text-charcoal dark:text-white border border-brown-200 dark:border-dm-border px-4 py-2.5 rounded-pill text-xs font-semibold shadow-sm hover:bg-plum-50 dark:hover:bg-plum-900/30 transition-colors flex-1 min-w-0"
         >
           <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 sm:h-4 sm:w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
@@ -1035,9 +1037,9 @@ const RoyalCard = () => {
                 toast.info("Reverted to your actual tier", { duration: 3000 });
               }, 5000);
             }}
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg text-sm font-medium transition"
+            className="w-full max-w-md mx-auto bg-gradient-to-r from-plum-700 to-plum-600 hover:from-plum-600 hover:to-plum-500 text-white py-3 rounded-pill text-sm font-semibold border border-plum-500/50 shadow-md transition"
           >
-            Preview Platinum Card (5 seconds)
+            Preview Platinum card (5 seconds)
           </button>
         </div>
       )}

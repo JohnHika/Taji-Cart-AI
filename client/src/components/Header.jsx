@@ -16,11 +16,11 @@ import ThemeToggle from './ThemeToggle';
 import UserMenu from './UserMenu';
 
 const navLinks = [
-    { label: 'Shop',     path: '/categories' },
+    { label: 'Shop',     path: '/' },
     { label: 'Collections', path: '/collections' },
     { label: 'Campaigns', path: '/campaigns' },
     { label: 'My Orders', path: '/dashboard/myorders' },
-    { label: 'Loyalty',  path: '/dashboard/community-perks' },
+    { label: 'Loyalty Program',  path: '/dashboard/loyalty-program' },
 ];
 
 const Header = () => {
@@ -97,8 +97,8 @@ const Header = () => {
                                 <img
                                     src={currentLogo}
                                     alt="Nawiri Hair"
-                                    className="h-auto object-contain drop-shadow transition-all duration-300"
-                                    style={{ maxHeight: isMobile ? '38px' : '50px', maxWidth: isMobile ? '120px' : '180px' }}
+                                    className="h-auto object-contain drop-shadow-md transition-all duration-300"
+                                    style={{ maxHeight: isMobile ? '50px' : '64px', maxWidth: isMobile ? '150px' : '220px' }}
                                     onError={handleLogoError}
                                 />
                             </Link>
@@ -158,7 +158,7 @@ const Header = () => {
                                         </button>
                                         {openUserMenu && (
                                             <div className="absolute right-0 top-full mt-2 animate-slide-down">
-                                                <div className="bg-white dark:bg-dm-card border border-brown-100 dark:border-dm-border rounded-card shadow-hover p-3 min-w-56">
+                                                <div className="bg-white dark:bg-dm-card border border-brown-100 dark:border-dm-border rounded-card shadow-hover p-3 min-w-56 max-h-[min(70vh,calc(100vh-5rem))] overflow-y-auto overscroll-contain">
                                                     <UserMenu close={handleCloseUserMenu} />
                                                 </div>
                                             </div>
@@ -207,30 +207,32 @@ const Header = () => {
                     )}
                 </div>
 
-                {/* ── Row 2: Navigation strip (desktop only) ──────────────── */}
-                <nav className="hidden lg:block border-t border-brown-100 dark:border-dm-border bg-ivory dark:bg-dm-surface">
-                    <div className="container mx-auto px-6">
-                        <ul className="flex items-center gap-1 h-10">
-                            {navLinks.map((link) => (
-                                <li key={link.path}>
-                                    <Link
-                                        to={link.path}
-                                        className={`relative px-4 py-2 text-sm transition-colors duration-150 rounded-lg font-medium ${
-                                            isActive(link.path)
-                                                ? 'text-plum-700 dark:text-plum-200'
-                                                : 'text-brown-500 dark:text-white/60 hover:text-plum-700 dark:hover:text-plum-200 hover:bg-plum-50 dark:hover:bg-plum-900/20'
-                                        }`}
-                                    >
-                                        {link.label}
-                                        {isActive(link.path) && (
-                                            <span className="absolute bottom-0 left-3 right-3 h-0.5 bg-plum-700 dark:bg-plum-300 rounded-pill" />
-                                        )}
-                                    </Link>
-                                </li>
-                            ))}
-                        </ul>
-                    </div>
-                </nav>
+                {/* ── Row 2: Navigation strip (desktop only, guests only) ──── */}
+                {!user?._id && (
+                    <nav className="hidden lg:block border-t border-brown-100 dark:border-dm-border bg-ivory dark:bg-dm-surface">
+                        <div className="container mx-auto px-6">
+                            <ul className="flex items-center gap-1 h-10">
+                                {navLinks.map((link) => (
+                                    <li key={link.path}>
+                                        <Link
+                                            to={link.path}
+                                            className={`relative px-4 py-2 text-sm transition-colors duration-150 rounded-lg font-medium ${
+                                                isActive(link.path)
+                                                    ? 'text-plum-700 dark:text-plum-200'
+                                                    : 'text-brown-500 dark:text-white/60 hover:text-plum-700 dark:hover:text-plum-200 hover:bg-plum-50 dark:hover:bg-plum-900/20'
+                                            }`}
+                                        >
+                                            {link.label}
+                                            {isActive(link.path) && (
+                                                <span className="absolute bottom-0 left-3 right-3 h-0.5 bg-plum-700 dark:bg-plum-300 rounded-pill" />
+                                            )}
+                                        </Link>
+                                    </li>
+                                ))}
+                            </ul>
+                        </div>
+                    </nav>
+                )}
             </header>
 
             {/* ── Mobile Drawer ─────────────────────────────────────────────── */}

@@ -33,20 +33,23 @@ const CartMobileLink = () => {
 
     // Always show cart icon even if empty
     return (
-        <div className='sticky bottom-4 p-2'>
-            <div className='bg-green-600 px-2 py-1 rounded text-neutral-100 text-sm flex items-center justify-between gap-3 lg:hidden'>
-                <div className='flex items-center gap-2'>
-                    <div className='p-2 bg-green-500 rounded w-fit'>
-                        <FaCartShopping />
+        <div className="sticky bottom-4 p-2 z-20 pointer-events-none">
+            <div className="pointer-events-auto bg-plum-800 dark:bg-plum-900 border border-plum-700 dark:border-plum-700 px-3 py-2 rounded-pill text-white text-sm flex items-center justify-between gap-3 lg:hidden shadow-hover max-w-md mx-auto">
+                <div className="flex items-center gap-2 min-w-0">
+                    <div className="p-2 bg-gold-500 text-charcoal rounded-pill w-fit shrink-0">
+                        <FaCartShopping className="text-base" />
                     </div>
-                    <div className='text-xs'>
-                        <p>{totalQty || 0} items</p>
-                        <p>{DisplayPriceInShillings(totalPrice || 0)}</p>
+                    <div className="text-xs leading-tight min-w-0">
+                        <p className="font-semibold">{totalQty || 0} items</p>
+                        <p className="text-gold-200 font-price truncate">{DisplayPriceInShillings(totalPrice || 0)}</p>
                     </div>
                 </div>
 
-                <Link to={"/cart"} className='flex items-center gap-1'>
-                    <span className='text-sm'>View Cart</span>
+                <Link
+                    to="/mobile/cart"
+                    className="flex items-center gap-1 text-gold-300 hover:text-gold-200 font-semibold text-sm shrink-0"
+                >
+                    <span>View cart</span>
                     <FaCaretRight />
                 </Link>
             </div>

@@ -17,6 +17,7 @@ import {
   FaUser
 } from 'react-icons/fa';
 import { useDispatch, useSelector } from 'react-redux';
+import { useLocation } from 'react-router-dom';
 import RoyalCard from '../components/RoyalCard';
 import UserProfileAvatarEdit from '../components/UserProfileAvatarEdit';
 import { setUserDetails } from '../store/userSlice'; // Changed from setUser to setUserDetails
@@ -24,13 +25,20 @@ import Axios from '../utils/Axios';
 
 const UserProfile = () => {
   console.log("UserProfile component rendering");
-  
+
+  const location = useLocation();
   const user = useSelector((state) => {
     console.log("User from Redux:", state.user);
     return state.user;
   });
   const dispatch = useDispatch();
   const [activeTab, setActiveTab] = useState('profile'); // 'profile', 'royal', or 'security'
+
+  useEffect(() => {
+    if (location.hash === '#royal') {
+      setActiveTab('royal');
+    }
+  }, [location.hash]);
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(false);
   const [showAvatarEdit, setShowAvatarEdit] = useState(false); // State for avatar edit modal
@@ -276,68 +284,73 @@ const UserProfile = () => {
   };
 
   return (
-    <div className="container mx-auto p-4">
-      {/* Add a simple fallback message if there's an error */}
+    <div className="min-h-full w-full">
+      <div className="container mx-auto px-4 py-6 sm:py-8 max-w-4xl">
       {!user || Object.keys(user).length === 0 ? (
-        <div className="bg-white dark:bg-gray-800 p-8 rounded-lg shadow text-center">
-          <h2 className="text-2xl font-bold text-red-500 mb-4">Error Loading Profile</h2>
-          <p className="mb-4">Unable to load user profile information.</p>
-          <p className="text-sm text-gray-600 dark:text-gray-400">
-            This might be due to a session timeout or login issue. Try refreshing the page or logging in again.
+        <div className="rounded-card border border-brown-100 dark:border-dm-border bg-white dark:bg-dm-card shadow-hover p-8 sm:p-10 text-center">
+          <h2 className="text-xl font-bold text-plum-700 dark:text-plum-300 mb-3">Unable to load profile</h2>
+          <p className="text-charcoal dark:text-white/80 mb-2">We couldn&apos;t load your account information.</p>
+          <p className="text-sm text-brown-500 dark:text-white/50">
+            Try refreshing the page or signing in again if your session expired.
           </p>
         </div>
       ) : (
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden">
-          {/* Header with background */}
-          <div className="bg-gradient-to-r from-primary-100 to-primary-200 dark:from-primary-200 dark:to-primary-300 p-6 relative">
-            <div className="flex items-center justify-between">
-              <h1 className="text-2xl font-bold text-white mb-2">My Account</h1>
+        <div className="rounded-card border border-brown-100 dark:border-dm-border shadow-hover overflow-hidden bg-white dark:bg-dm-card">
+          <div className="bg-gradient-to-br from-plum-900 via-plum-700 to-charcoal px-5 sm:px-8 pt-8 pb-0">
+            <div className="flex flex-wrap items-start justify-between gap-4">
+              <div>
+                <p className="font-display italic text-gold-300 text-sm mb-1">Nawiri Hair</p>
+                <h1 className="text-2xl sm:text-3xl font-bold text-white">My Account</h1>
+              </div>
               {activeTab === 'profile' && !isEditing && (
                 <button
+                  type="button"
                   onClick={handleEditProfile}
-                  className="flex items-center bg-white bg-opacity-20 hover:bg-opacity-30 text-white px-3 py-1 rounded-md text-sm transition"
+                  className="flex items-center gap-2 bg-white/15 hover:bg-white/25 text-white px-4 py-2 rounded-pill text-sm font-medium transition-colors border border-white/25"
                 >
-                  <FaEdit className="mr-1" /> Edit
+                  <FaEdit size={14} /> Edit profile
                 </button>
               )}
             </div>
-            
-            {/* Tabs */}
-            <div className="flex gap-1 mt-4 border-b border-white border-opacity-20">
+
+            <div className="flex flex-wrap gap-1 sm:gap-2 mt-8">
               <button
+                type="button"
                 onClick={() => setActiveTab('profile')}
-                className={`py-2 px-4 font-medium text-sm text-white rounded-t-md transition ${
+                className={`py-2.5 px-4 font-medium text-sm rounded-t-lg transition flex items-center gap-2 ${
                   activeTab === 'profile'
-                    ? 'bg-white bg-opacity-20 border-b-2 border-white'
-                    : 'hover:bg-white hover:bg-opacity-10'
+                    ? 'bg-ivory dark:bg-dm-card text-plum-800 dark:text-white shadow-[0_-4px_12px_rgba(0,0,0,0.08)]'
+                    : 'text-white/85 hover:text-white hover:bg-white/10 rounded-t-lg'
                 }`}
               >
-                <FaUser className="inline mr-2" /> Profile
+                <FaUser /> Profile
               </button>
               <button
+                type="button"
                 onClick={() => setActiveTab('royal')}
-                className={`py-2 px-4 font-medium text-sm text-white rounded-t-md transition ${
-                  activeTab === 'royal' 
-                    ? 'bg-white bg-opacity-20 border-b-2 border-white'
-                    : 'hover:bg-white hover:bg-opacity-10'
+                className={`py-2.5 px-4 font-medium text-sm rounded-t-lg transition flex items-center gap-2 ${
+                  activeTab === 'royal'
+                    ? 'bg-ivory dark:bg-dm-card text-plum-800 dark:text-white shadow-[0_-4px_12px_rgba(0,0,0,0.08)]'
+                    : 'text-white/85 hover:text-white hover:bg-white/10 rounded-t-lg'
                 }`}
               >
-                <FaCrown className="inline mr-2" /> Royal Card
+                <FaCrown className="text-gold-400" /> Royal Card
               </button>
               <button
+                type="button"
                 onClick={() => setActiveTab('security')}
-                className={`py-2 px-4 font-medium text-sm text-white rounded-t-md transition ${
-                  activeTab === 'security' 
-                    ? 'bg-white bg-opacity-20 border-b-2 border-white'
-                    : 'hover:bg-white hover:bg-opacity-10'
+                className={`py-2.5 px-4 font-medium text-sm rounded-t-lg transition flex items-center gap-2 ${
+                  activeTab === 'security'
+                    ? 'bg-ivory dark:bg-dm-card text-plum-800 dark:text-white shadow-[0_-4px_12px_rgba(0,0,0,0.08)]'
+                    : 'text-white/85 hover:text-white hover:bg-white/10 rounded-t-lg'
                 }`}
               >
-                <FaShieldAlt className="inline mr-2" /> Security
+                <FaShieldAlt /> Security
               </button>
             </div>
           </div>
 
-          <div className="p-6">
+          <div className="p-5 sm:p-8 bg-ivory dark:bg-dm-surface/50">
             {/* Profile Tab Content */}
             {activeTab === 'profile' && (
               <div className="space-y-6">
@@ -345,7 +358,7 @@ const UserProfile = () => {
                   <div className="space-y-4">
                     <div className="flex items-start">
                       <div className="flex-shrink-0 mr-4">
-                        <div className="w-24 h-24 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center overflow-hidden relative group">
+                        <div className="w-24 h-24 rounded-full bg-gradient-to-br from-plum-100 to-blush-100 dark:from-plum-900/50 dark:to-plum-800/30 ring-2 ring-plum-200/80 dark:ring-plum-700 flex items-center justify-center overflow-hidden relative group">
                           {user.avatar ? (
                             <img 
                               src={user.avatar} 
@@ -353,7 +366,7 @@ const UserProfile = () => {
                               className="w-full h-full object-cover"
                             />
                           ) : (
-                            <FaUser className="text-gray-400 text-4xl" />
+                            <FaUser className="text-plum-400 dark:text-plum-500 text-4xl" />
                           )}
                           <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
                                onClick={() => setShowAvatarEdit(true)}>
@@ -367,7 +380,7 @@ const UserProfile = () => {
                       
                       <div className="flex-grow">
                         <div className="mb-3">
-                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                          <label className="block text-sm font-medium text-charcoal dark:text-white/80 mb-1">
                             Full Name
                           </label>
                           <input
@@ -375,12 +388,12 @@ const UserProfile = () => {
                             name="name"
                             value={formData.name}
                             onChange={handleFormChange}
-                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-200 dark:bg-gray-700 dark:text-white"
+                            className="w-full px-3 py-2.5 border border-brown-200 dark:border-dm-border rounded-lg focus:outline-none focus:ring-2 focus:ring-plum-500/35 bg-white dark:bg-dm-card text-charcoal dark:text-white"
                           />
                         </div>
                         
                         <div className="mb-3">
-                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                          <label className="block text-sm font-medium text-charcoal dark:text-white/80 mb-1">
                             Email
                           </label>
                           <input
@@ -388,12 +401,12 @@ const UserProfile = () => {
                             name="email"
                             value={formData.email}
                             onChange={handleFormChange}
-                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-200 dark:bg-gray-700 dark:text-white"
+                            className="w-full px-3 py-2.5 border border-brown-200 dark:border-dm-border rounded-lg focus:outline-none focus:ring-2 focus:ring-plum-500/35 bg-white dark:bg-dm-card text-charcoal dark:text-white"
                           />
                         </div>
                         
                         <div className="mb-3">
-                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                          <label className="block text-sm font-medium text-charcoal dark:text-white/80 mb-1">
                             Phone Number
                           </label>
                           <input
@@ -401,7 +414,7 @@ const UserProfile = () => {
                             name="mobile"
                             value={formData.mobile}
                             onChange={handleFormChange}
-                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-200 dark:bg-gray-700 dark:text-white"
+                            className="w-full px-3 py-2.5 border border-brown-200 dark:border-dm-border rounded-lg focus:outline-none focus:ring-2 focus:ring-plum-500/35 bg-white dark:bg-dm-card text-charcoal dark:text-white"
                           />
                         </div>
                       </div>
@@ -418,14 +431,14 @@ const UserProfile = () => {
                             mobile: user.mobile || ''
                           });
                         }}
-                        className="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700"
+                        className="px-4 py-2.5 border border-brown-200 dark:border-dm-border text-charcoal dark:text-white/80 rounded-pill hover:bg-plum-50 dark:hover:bg-plum-900/25 font-medium transition-colors"
                       >
                         Cancel
                       </button>
                       <button
                         onClick={handleSaveProfile}
                         disabled={loading}
-                        className="flex items-center justify-center px-4 py-2 bg-primary-200 hover:bg-primary-300 text-white rounded-md transition-colors"
+                        className="flex items-center justify-center px-5 py-2.5 bg-plum-700 hover:bg-plum-600 text-white rounded-pill font-medium transition-colors disabled:opacity-60"
                       >
                         {loading ? (
                           <FaSpinner className="animate-spin mr-2" />
@@ -438,9 +451,10 @@ const UserProfile = () => {
                   </div>
                 ) : (
                   <div>
-                    <div className="flex items-start">
-                      <div className="flex-shrink-0 mr-4">
-                        <div className="w-24 h-24 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center overflow-hidden">
+                    <div className="rounded-card border border-brown-100 dark:border-dm-border bg-white dark:bg-dm-card p-5 sm:p-6 shadow-sm">
+                    <div className="flex items-start gap-4 sm:gap-6">
+                      <div className="flex-shrink-0">
+                        <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-full bg-gradient-to-br from-plum-100 to-blush-100 dark:from-plum-900/50 dark:to-plum-800/30 ring-2 ring-plum-200/80 dark:ring-plum-700 flex items-center justify-center overflow-hidden">
                           {user.avatar ? (
                             <img 
                               src={user.avatar} 
@@ -448,26 +462,31 @@ const UserProfile = () => {
                               className="w-full h-full object-cover"
                             />
                           ) : (
-                            <FaUser className="text-gray-400 text-4xl" />
+                            <FaUser className="text-plum-400 dark:text-plum-500 text-4xl sm:text-5xl" />
                           )}
                         </div>
                       </div>
                       
-                      <div className="flex-grow">
-                        <h2 className="text-xl font-semibold dark:text-white">{user.name}</h2>
-                        <p className="text-gray-600 dark:text-gray-300">{user.email}</p>
+                      <div className="flex-grow min-w-0">
+                        <h2 className="text-xl sm:text-2xl font-semibold text-charcoal dark:text-white">{user.name}</h2>
+                        <p className="text-brown-600 dark:text-white/65 mt-1 flex items-center gap-2">
+                          <FaEnvelope className="text-plum-500 shrink-0 text-sm" />
+                          {user.email}
+                        </p>
                         {user.mobile && (
-                          <p className="text-gray-600 dark:text-gray-300">{user.mobile}</p>
+                          <p className="text-brown-600 dark:text-white/65 mt-1 text-sm">{user.mobile}</p>
                         )}
                       </div>
                     </div>
+                    </div>
                     
-                    <div className="border-t border-gray-200 dark:border-gray-700 mt-6 pt-6">
-                      <h3 className="text-lg font-medium dark:text-white mb-4">Account Details</h3>
+                    <div className="border-t border-brown-100 dark:border-dm-border mt-6 pt-6">
+                      <div className="rounded-card border border-brown-100 dark:border-dm-border bg-white dark:bg-dm-card p-5 sm:p-6 shadow-sm">
+                      <h3 className="text-lg font-semibold text-charcoal dark:text-white mb-4">Account Details</h3>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
                         <div>
-                          <p className="text-sm text-gray-500 dark:text-gray-400">Account Created</p>
-                          <p className="font-medium dark:text-gray-200">
+                          <p className="text-sm text-brown-500 dark:text-white/50">Account Created</p>
+                          <p className="font-medium text-charcoal dark:text-white">
                             {user.createdAt 
                               ? formatDate(user.createdAt)
                               : 'N/A'}
@@ -475,7 +494,7 @@ const UserProfile = () => {
                         </div>
                         
                         <div>
-                          <p className="text-sm text-gray-500 dark:text-gray-400">Account Type</p>
+                          <p className="text-sm text-brown-500 dark:text-white/50">Account Type</p>
                           <div className="flex items-center">
                             <span className={`px-2 py-1 text-xs font-medium rounded-full ${
                               user.isAdmin || user.role === 'admin' 
@@ -494,8 +513,8 @@ const UserProfile = () => {
                         </div>
                         
                         <div>
-                          <p className="text-sm text-gray-500 dark:text-gray-400">Last Login</p>
-                          <p className="font-medium dark:text-gray-200">
+                          <p className="text-sm text-brown-500 dark:text-white/50">Last Login</p>
+                          <p className="font-medium text-charcoal dark:text-white">
                             {user.lastLogin 
                               ? formatDate(user.lastLogin)
                               : 'N/A'}
@@ -503,7 +522,7 @@ const UserProfile = () => {
                         </div>
                         
                         <div>
-                          <p className="text-sm text-gray-500 dark:text-gray-400">Email Verified</p>
+                          <p className="text-sm text-brown-500 dark:text-white/50">Email Verified</p>
                           <div className="flex flex-col">
                             {user.emailVerified || user.verify_email ? (
                               <span className="text-green-600 dark:text-green-400 flex items-center">
@@ -522,7 +541,7 @@ const UserProfile = () => {
                                   <button
                                     onClick={handleRequestVerification}
                                     disabled={verifyingEmail}
-                                    className="mt-1 text-sm flex items-center text-primary-200 hover:text-primary-300 dark:text-primary-300 dark:hover:text-primary-400"
+                                    className="mt-1 text-sm flex items-center font-semibold text-plum-700 hover:text-plum-600 dark:text-plum-300 dark:hover:text-plum-200"
                                   >
                                     {verifyingEmail ? (
                                       <>
@@ -540,18 +559,20 @@ const UserProfile = () => {
                           </div>
                         </div>
                       </div>
+                      </div>
                     </div>
                     
-                    <div className="border-t border-gray-200 dark:border-gray-700 mt-6 pt-6">
-                      <h3 className="text-lg font-medium dark:text-white mb-4">Notification Preferences</h3>
+                    <div className="border-t border-brown-100 dark:border-dm-border mt-6 pt-6">
+                      <div className="rounded-card border border-brown-100 dark:border-dm-border bg-white dark:bg-dm-card p-5 sm:p-6 shadow-sm">
+                      <h3 className="text-lg font-semibold text-charcoal dark:text-white mb-4">Notification Preferences</h3>
                       <div className="space-y-3">
                         <div className="flex items-center justify-between">
                           <div className="flex items-center space-x-2">
-                            <FaBell className="text-gray-500 dark:text-gray-400" />
-                            <span className="dark:text-gray-200">Email Notifications</span>
+                            <FaBell className="text-plum-500 dark:text-plum-400" />
+                            <span className="text-charcoal dark:text-white/90">Email Notifications</span>
                           </div>
                           <div className="relative w-12 h-6 transition duration-200 ease-linear rounded-full">
-                            <label htmlFor="email-notifications" className="w-12 h-6 flex items-center bg-gray-300 dark:bg-gray-600 rounded-full p-1 cursor-pointer transition duration-200 ease-in-out">
+                            <label htmlFor="email-notifications" className="w-12 h-6 flex items-center bg-brown-200 dark:bg-dm-border rounded-full p-1 cursor-pointer transition duration-200 ease-in-out">
                               <div className="bg-white w-4 h-4 rounded-full shadow-md transform duration-200 ease-in-out" style={{ transform: `translateX(${user.emailNotifications ? '24px' : '0'})` }}></div>
                             </label>
                             <input 
@@ -565,11 +586,11 @@ const UserProfile = () => {
                         
                         <div className="flex items-center justify-between">
                           <div className="flex items-center space-x-2">
-                            <FaBell className="text-gray-500 dark:text-gray-400" />
-                            <span className="dark:text-gray-200">Order Updates</span>
+                            <FaBell className="text-plum-500 dark:text-plum-400" />
+                            <span className="text-charcoal dark:text-white/90">Order Updates</span>
                           </div>
                           <div className="relative w-12 h-6 transition duration-200 ease-linear rounded-full">
-                            <label htmlFor="order-updates" className="w-12 h-6 flex items-center bg-gray-300 dark:bg-gray-600 rounded-full p-1 cursor-pointer transition duration-200 ease-in-out">
+                            <label htmlFor="order-updates" className="w-12 h-6 flex items-center bg-brown-200 dark:bg-dm-border rounded-full p-1 cursor-pointer transition duration-200 ease-in-out">
                               <div className="bg-white w-4 h-4 rounded-full shadow-md transform duration-200 ease-in-out" style={{ transform: `translateX(${user.orderUpdates ? '24px' : '0'})` }}></div>
                             </label>
                             <input 
@@ -580,6 +601,7 @@ const UserProfile = () => {
                             />
                           </div>
                         </div>
+                      </div>
                       </div>
                     </div>
                   </div>
@@ -593,26 +615,26 @@ const UserProfile = () => {
             {/* Security Tab Content */}
             {activeTab === 'security' && (
               <div className="max-w-xl mx-auto">
-                <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-gray-700 dark:to-gray-800 p-4 rounded-md mb-6">
-                  <div className="flex">
-                    <div className="flex-shrink-0">
-                      <FaShieldAlt className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                <div className="rounded-card border border-plum-200 dark:border-plum-800 bg-plum-50/80 dark:bg-plum-900/25 p-4 sm:p-5 mb-6">
+                  <div className="flex gap-3">
+                    <div className="flex-shrink-0 w-10 h-10 rounded-pill bg-plum-700 text-white flex items-center justify-center">
+                      <FaShieldAlt className="h-5 w-5" />
                     </div>
-                    <div className="ml-3">
-                      <h3 className="text-sm font-medium text-blue-800 dark:text-blue-300">Account Security</h3>
-                      <div className="mt-1 text-sm text-blue-700 dark:text-blue-400">
-                        <p>Protect your account by using a strong password and changing it regularly.</p>
-                      </div>
+                    <div>
+                      <h3 className="text-sm font-semibold text-charcoal dark:text-white">Account security</h3>
+                      <p className="mt-1 text-sm text-brown-600 dark:text-white/60 leading-relaxed">
+                        Use a strong password and update it from time to time to keep your Nawiri Hair account safe.
+                      </p>
                     </div>
                   </div>
                 </div>
                 
-                <form onSubmit={handleChangePassword} className="space-y-5">
-                  <h3 className="text-lg font-medium dark:text-white">Change Password</h3>
+                <form onSubmit={handleChangePassword} className="space-y-5 rounded-card border border-brown-100 dark:border-dm-border bg-white dark:bg-dm-card p-5 sm:p-6 shadow-sm">
+                  <h3 className="text-lg font-semibold text-charcoal dark:text-white">Change password</h3>
                   
                   <div>
-                    <label htmlFor="currentPassword" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      Current Password
+                    <label htmlFor="currentPassword" className="block text-sm font-medium text-charcoal dark:text-white/80 mb-1">
+                      Current password
                     </label>
                     <div className="relative">
                       <input
@@ -622,12 +644,12 @@ const UserProfile = () => {
                         value={passwordData.currentPassword}
                         onChange={handlePasswordChange}
                         required
-                        className="w-full pl-10 pr-10 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-200 dark:bg-gray-700 dark:text-white"
+                        className="w-full pl-10 pr-10 py-2.5 border border-brown-200 dark:border-dm-border rounded-lg focus:outline-none focus:ring-2 focus:ring-plum-500/35 bg-white dark:bg-dm-card text-charcoal dark:text-white"
                       />
-                      <FaKey className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                      <FaKey className="absolute left-3 top-1/2 transform -translate-y-1/2 text-brown-400 dark:text-white/40" />
                       <button
                         type="button"
-                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none"
+                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-brown-400 hover:text-plum-600 dark:text-white/50 dark:hover:text-white focus:outline-none"
                         onClick={() => setShowCurrentPassword(!showCurrentPassword)}
                       >
                         {showCurrentPassword ? <FaRegEyeSlash /> : <FaRegEye />}
@@ -636,8 +658,8 @@ const UserProfile = () => {
                   </div>
                   
                   <div>
-                    <label htmlFor="newPassword" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      New Password
+                    <label htmlFor="newPassword" className="block text-sm font-medium text-charcoal dark:text-white/80 mb-1">
+                      New password
                     </label>
                     <div className="relative">
                       <input
@@ -647,12 +669,12 @@ const UserProfile = () => {
                         value={passwordData.newPassword}
                         onChange={handlePasswordChange}
                         required
-                        className="w-full pl-10 pr-10 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-200 dark:bg-gray-700 dark:text-white"
+                        className="w-full pl-10 pr-10 py-2.5 border border-brown-200 dark:border-dm-border rounded-lg focus:outline-none focus:ring-2 focus:ring-plum-500/35 bg-white dark:bg-dm-card text-charcoal dark:text-white"
                       />
-                      <FaKey className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                      <FaKey className="absolute left-3 top-1/2 transform -translate-y-1/2 text-brown-400 dark:text-white/40" />
                       <button
                         type="button"
-                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none"
+                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-brown-400 hover:text-plum-600 dark:text-white/50 dark:hover:text-white focus:outline-none"
                         onClick={() => setShowNewPassword(!showNewPassword)}
                       >
                         {showNewPassword ? <FaRegEyeSlash /> : <FaRegEye />}
@@ -661,22 +683,22 @@ const UserProfile = () => {
                     {/* Password strength meter */}
                     {passwordData.newPassword && (
                       <div className="mt-2">
-                        <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                        <div className="w-full bg-brown-100 dark:bg-dm-border rounded-full h-2">
                           <div
                             className={`${passwordStrength.color} h-2 rounded-full`}
                             style={{ width: passwordStrength.width }}
                           ></div>
                         </div>
-                        <p className="text-xs mt-1 text-gray-600 dark:text-gray-400">
-                          Password Strength: {passwordStrength.label}
+                        <p className="text-xs mt-1 text-brown-600 dark:text-white/50">
+                          Password strength: {passwordStrength.label}
                         </p>
                       </div>
                     )}
                   </div>
                   
                   <div>
-                    <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      Confirm New Password
+                    <label htmlFor="confirmPassword" className="block text-sm font-medium text-charcoal dark:text-white/80 mb-1">
+                      Confirm new password
                     </label>
                     <div className="relative">
                       <input
@@ -686,12 +708,12 @@ const UserProfile = () => {
                         value={passwordData.confirmPassword}
                         onChange={handlePasswordChange}
                         required
-                        className="w-full pl-10 pr-10 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-200 dark:bg-gray-700 dark:text-white"
+                        className="w-full pl-10 pr-10 py-2.5 border border-brown-200 dark:border-dm-border rounded-lg focus:outline-none focus:ring-2 focus:ring-plum-500/35 bg-white dark:bg-dm-card text-charcoal dark:text-white"
                       />
-                      <FaKey className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                      <FaKey className="absolute left-3 top-1/2 transform -translate-y-1/2 text-brown-400 dark:text-white/40" />
                       <button
                         type="button"
-                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none"
+                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-brown-400 hover:text-plum-600 dark:text-white/50 dark:hover:text-white focus:outline-none"
                         onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                       >
                         {showConfirmPassword ? <FaRegEyeSlash /> : <FaRegEye />}
@@ -700,7 +722,7 @@ const UserProfile = () => {
                   </div>
                   
                   {passwordError && (
-                    <div className="p-3 bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-300 rounded-md text-sm">
+                    <div className="p-3 bg-red-50 dark:bg-red-950/40 text-red-800 dark:text-red-300 rounded-lg text-sm border border-red-100 dark:border-red-900/50">
                       <FaExclamationTriangle className="inline mr-2" />
                       {passwordError}
                     </div>
@@ -710,9 +732,9 @@ const UserProfile = () => {
                     <button
                       type="submit"
                       disabled={loading || !!passwordError}
-                      className={`flex items-center justify-center px-4 py-2 bg-primary-200 ${
-                        loading || passwordError ? 'opacity-70 cursor-not-allowed' : 'hover:bg-primary-300'
-                      } text-white rounded-md transition-colors`}
+                      className={`flex items-center justify-center px-5 py-2.5 bg-plum-700 font-medium ${
+                        loading || passwordError ? 'opacity-70 cursor-not-allowed' : 'hover:bg-plum-600'
+                      } text-white rounded-pill transition-colors`}
                     >
                       {loading ? (
                         <FaSpinner className="animate-spin mr-2" />
@@ -724,18 +746,18 @@ const UserProfile = () => {
                   </div>
                 </form>
                 
-                <div className="mt-8 border-t border-gray-200 dark:border-gray-700 pt-6">
-                  <h3 className="text-lg font-medium dark:text-white mb-4">Account Recovery</h3>
+                <div className="mt-8 border-t border-brown-100 dark:border-dm-border pt-6">
+                  <h3 className="text-lg font-semibold text-charcoal dark:text-white mb-4">Account recovery</h3>
                   <div className="mb-6">
-                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+                    <p className="text-sm text-brown-600 dark:text-white/55 mb-2 leading-relaxed">
                       If you forget your password, you can recover your account using your registered email address.
                     </p>
-                    <a href="/forgot-password" className="text-primary-200 hover:text-primary-300 dark:text-primary-300 dark:hover:text-primary-400 text-sm font-medium">
+                    <a href="/forgot-password" className="text-plum-700 hover:text-plum-600 dark:text-plum-300 dark:hover:text-plum-200 text-sm font-semibold underline underline-offset-2">
                       I forgot my password →
                     </a>
                   </div>
                   
-                  <div className="flex items-start space-x-3 p-3 bg-yellow-50 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300 rounded-md text-sm">
+                  <div className="flex items-start gap-3 p-4 bg-gold-50/90 dark:bg-gold-900/15 text-charcoal dark:text-gold-200/90 rounded-card text-sm border border-gold-200/80 dark:border-gold-800/40">
                     <div className="flex-shrink-0 pt-0.5">
                       <FaExclamationTriangle />
                     </div>
@@ -752,6 +774,7 @@ const UserProfile = () => {
       
       {/* Avatar Edit Modal */}
       {showAvatarEdit && <UserProfileAvatarEdit close={() => setShowAvatarEdit(false)} />}
+      </div>
     </div>
   );
 };

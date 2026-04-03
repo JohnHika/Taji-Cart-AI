@@ -9,7 +9,6 @@ import SummaryApi from './common/SummaryApi';
 import BottomNavigation from './components/BottomNavigation';
 import CartMobileLink from './components/CartMobile';
 import ChatbotAI from './components/ChatbotAI';
-import Footer from './components/Footer';
 import Header from './components/Header';
 import GlobalProvider from './provider/GlobalProvider';
 import { fetchCartItems } from './redux/slice/cartSlice';
@@ -21,17 +20,19 @@ import fetchUserDetails from './utils/fetchUserDetails';
 // Error fallback component
 function ErrorFallback({ error }) {
   return (
-    <div className="p-5 text-center" role="alert">
-      <h2 className="text-lg font-bold text-red-600">Something went wrong:</h2>
-      <pre className="mt-2 p-3 bg-gray-100 rounded text-red-500 overflow-auto text-left">
-        {error.message}
-      </pre>
-      <button
-        className="mt-4 px-4 py-2 bg-blue-500 text-white rounded"
-        onClick={() => window.location.reload()}
-      >
-        Try reloading
-      </button>
+    <div className="p-5 text-center bg-ivory dark:bg-dm-surface min-h-screen flex flex-col items-center justify-center" role="alert">
+      <div className="max-w-md w-full bg-white dark:bg-dm-card rounded-card border border-brown-100 dark:border-dm-border shadow-card p-8">
+        <h2 className="text-lg font-bold text-charcoal dark:text-white mb-3">Something went wrong</h2>
+        <pre className="mt-2 p-3 bg-blush-50 dark:bg-dm-card-2 rounded-card text-brown-500 dark:text-white/60 overflow-auto text-left text-xs">
+          {error.message}
+        </pre>
+        <button
+          className="mt-5 px-5 py-2.5 bg-gold-500 hover:bg-gold-400 text-charcoal font-semibold rounded-pill text-sm transition-colors press"
+          onClick={() => window.location.reload()}
+        >
+          Try reloading
+        </button>
+      </div>
     </div>
   );
 }
@@ -260,22 +261,25 @@ function App() {
   }, [location.pathname, categories, location.state]);
 
   const isAuthPage = ['/login', '/register', '/forgot-password'].includes(location.pathname);
+  const isDashboardShell = location.pathname.startsWith('/dashboard');
+
+  const showStoreChrome = !isAuthPage && !isDashboardShell;
 
   return (
     <ErrorBoundary FallbackComponent={ErrorFallback}>
-      <GlobalProvider> 
-        {!isAuthPage && <Header/>}
+      <GlobalProvider>
+        {showStoreChrome && <Header />}
         <CartSynchronizer />
         <main className={isAuthPage ? '' : 'min-h-[78vh]'}>
           <Suspense fallback={<div className="p-5 text-center">Loading...</div>}>
             <Outlet key={location.pathname} />
           </Suspense>
         </main>
-        {!isAuthPage && <BottomNavigation />}
-        <Toaster/>
+        {showStoreChrome && <BottomNavigation />}
+        <Toaster />
         <ToastContainer position="top-right" autoClose={3000} />
-        {!isAuthPage && location.pathname !== '/checkout' && user?._id && <CartMobileLink/>}
-        {!isAuthPage && <ChatbotAI />}
+        {showStoreChrome && location.pathname !== '/checkout' && user?._id && <CartMobileLink />}
+        {showStoreChrome && <ChatbotAI />}
       </GlobalProvider>
     </ErrorBoundary>
   );

@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { createBrowserRouter } from 'react-router-dom';
+import { createBrowserRouter, Navigate } from 'react-router-dom';
 import App from '../App';
 import CategoryFallbackErrorPage from '../components/CategoryFallbackErrorPage';
 import CategorySmartFallback from '../components/CategorySmartFallback';
@@ -51,9 +51,11 @@ import PendingPickups from '../pages/staff/PendingPickups';
 import VerificationHistory from '../pages/staff/VerificationHistory';
 import VerificationSuccess from '../pages/staff/VerificationSuccess';
 import VerifyPickup from '../pages/staff/VerifyPickup';
+import CollectionsPage from '../pages/CollectionsPage';
 import SubCategoryPage from '../pages/SubCategoryPage';
 import Success from '../pages/Success';
 import UploadProduct from '../pages/UploadProduct';
+import LoyaltyProgramPage from '../pages/LoyaltyProgramPage';
 import UserProfile from '../pages/UserProfile';
 import UserMenuMobile from '../pages/UserMenuMobile';
 import CartMobile from '../pages/CartMobile';
@@ -155,9 +157,13 @@ const router = createBrowserRouter([
       },
       {
         path: 'categories',
-        element: <CategoryPage />
+        element: <Navigate to="/" replace />
       },
-      
+      {
+        path: 'collections',
+        element: <CollectionsPage />
+      },
+
       // Staff POS route - must be before category catch-all routes
       {
         path: 'staff-pos',
@@ -224,9 +230,12 @@ const router = createBrowserRouter([
         path: 'wishlist',
         element: (
           <PrivateRoute>
-            <div className="p-4 text-center">
-              <h1 className="text-xl font-bold">Wishlist</h1>
-              <p className="text-gray-600 mt-2">Your wishlist is coming soon!</p>
+            <div className="min-h-[60vh] flex flex-col items-center justify-center gap-4 bg-ivory dark:bg-dm-surface p-6 text-center">
+              <div className="w-14 h-14 rounded-full bg-plum-50 dark:bg-plum-900/20 flex items-center justify-center">
+                <span className="text-2xl">🤍</span>
+              </div>
+              <h1 className="text-xl font-semibold text-charcoal dark:text-white">Wishlist</h1>
+              <p className="text-sm text-brown-400 dark:text-white/50">Your wishlist is coming soon!</p>
             </div>
           </PrivateRoute>
         )
@@ -389,6 +398,14 @@ const router = createBrowserRouter([
             element: (
               <PrivateRoute>
                 <CommunityPerks />
+              </PrivateRoute>
+            )
+          },
+          {
+            path: 'loyalty-program',
+            element: (
+              <PrivateRoute>
+                <LoyaltyProgramPage />
               </PrivateRoute>
             )
           },

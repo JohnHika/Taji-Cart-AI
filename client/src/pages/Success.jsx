@@ -417,7 +417,7 @@ function Success() {
     if (methodLower.includes('mpesa') || methodLower.includes('m-pesa')) {
       return <FaMobileAlt className="text-green-600 dark:text-green-400" />;
     } else if (methodLower.includes('card') || methodLower.includes('stripe')) {
-      return <FaCreditCard className="text-blue-600 dark:text-blue-400" />;
+      return <FaCreditCard className="text-plum-600 dark:text-plum-300" />;
     } else if (methodLower.includes('cash')) {
       return <FaMoneyBillWave className="text-green-600 dark:text-green-400" />;
     }
@@ -431,13 +431,13 @@ function Success() {
 
   if (user.role === 'staff') {
     return (
-      <div className='min-h-[80vh] py-8 flex items-center justify-center bg-gray-50 dark:bg-gray-900'>
-        <div className='w-full max-w-md bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md mx-auto'>
+      <div className='min-h-[80vh] py-8 flex items-center justify-center bg-ivory dark:bg-dm-surface'>
+        <div className='w-full max-w-md bg-white dark:bg-dm-card p-6 rounded-card border border-brown-100 dark:border-dm-border shadow-card mx-auto'>
           <div className='flex flex-col items-center mb-6'>
             <div className='w-16 h-16 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center mb-4'>
               <FaCheck className="text-green-600 dark:text-green-400" size={32} />
             </div>
-            <h2 className='text-xl font-semibold text-gray-800 dark:text-white'>Order Processed Successfully</h2>
+            <h2 className='text-xl font-semibold text-charcoal dark:text-white'>Order Processed Successfully</h2>
           </div>
         </div>
       </div>
@@ -445,8 +445,8 @@ function Success() {
   }
 
   return (
-    <div className='min-h-[80vh] py-8 flex items-center justify-center bg-gray-50 dark:bg-gray-900'>
-      <div className='w-full max-w-md bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md mx-auto'>
+    <div className='min-h-[80vh] py-8 flex items-center justify-center bg-ivory dark:bg-dm-surface'>
+      <div className='w-full max-w-md bg-white dark:bg-dm-card p-6 rounded-card border border-brown-100 dark:border-dm-border shadow-card mx-auto'>
         <div className='flex flex-col items-center mb-6'>
           <div className='w-16 h-16 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center mb-4'>
             {loading ? (
@@ -455,18 +455,18 @@ function Success() {
               <FaCheck className='text-green-600 dark:text-green-400 text-2xl' />
             )}
           </div>
-          <h1 className='text-2xl font-bold text-gray-800 dark:text-white mb-2'>
+          <h1 className='text-2xl font-bold text-charcoal dark:text-white mb-2'>
             Payment Successful!
           </h1>
-          <p className='text-gray-600 dark:text-gray-300 text-center'>
+          <p className='text-brown-500 dark:text-white/55 text-center'>
             Thank you for your order! Your payment has been processed successfully.
           </p>
         </div>
 
         {loading ? (
           <div className='flex flex-col items-center py-8'>
-            <FaSpinner className='text-blue-500 text-2xl animate-spin mb-4' />
-            <p className='text-gray-600 dark:text-gray-400'>Loading order details...</p>
+            <FaSpinner className='text-plum-600 text-2xl animate-spin mb-4' />
+            <p className='text-brown-400 dark:text-white/45'>Loading order details...</p>
           </div>
         ) : error ? (
           <div className='bg-green-50 dark:bg-green-900/20 p-4 rounded-lg mb-6 text-center'>
@@ -474,21 +474,21 @@ function Success() {
             <h3 className='font-semibold text-lg text-green-700 dark:text-green-400 mb-2'>
               Order Placed Successfully!
             </h3>
-            <p className='text-gray-600 dark:text-gray-400 text-sm'>
+            <p className='text-brown-400 dark:text-white/45 text-sm'>
               Your payment was successful and your order has been placed.
               <br /><br />
               You can view your complete order details in the "My Orders" section.
             </p>
           </div>
         ) : orderDetails ? (
-          <div className='border dark:border-gray-700 rounded-lg overflow-hidden mb-6' ref={receiptRef}>
-            <div className='bg-gray-50 dark:bg-gray-750 p-4 border-b dark:border-gray-700'>
+          <div className='border dark:border-dm-border rounded-lg overflow-hidden mb-6' ref={receiptRef}>
+            <div className='bg-blush-50 dark:bg-dm-card-2 p-4 border-b dark:border-dm-border'>
               <div className='flex justify-between items-center'>
-                <h3 className='text-lg font-semibold text-gray-800 dark:text-white flex items-center'>
+                <h3 className='text-lg font-semibold text-charcoal dark:text-white flex items-center'>
                   <FaReceipt className='mr-2 text-green-600 dark:text-green-400' />
                   Receipt
                 </h3>
-                <span className='text-sm text-gray-500 dark:text-gray-400'>
+                <span className='text-sm text-brown-400 dark:text-white/40'>
                   Order #{orderDetails.orderId || (orderDetails._id && orderDetails._id.substring(orderDetails._id.length - 8))}
                 </span>
               </div>
@@ -496,14 +496,14 @@ function Success() {
             
             <div className='p-4'>
               {/* Payment Method Section */}
-              <div className='mb-4 p-3 bg-gray-50 dark:bg-gray-750 rounded-lg'>
+              <div className='mb-4 p-3 bg-blush-50 dark:bg-dm-card-2 rounded-lg'>
                 <div className='flex items-center'>
                   {getPaymentIcon(orderDetails.paymentMethod)}
                   <div className='ml-2'>
-                    <p className='font-medium text-gray-800 dark:text-white'>
+                    <p className='font-medium text-charcoal dark:text-white'>
                       {orderDetails.paymentMethod || 'Online Payment'}
                     </p>
-                    <p className='text-sm text-gray-600 dark:text-gray-400'>
+                    <p className='text-sm text-brown-400 dark:text-white/45'>
                       Status: <span className='text-green-600 dark:text-green-400 font-medium'>
                         {orderDetails.payment_status || 'Paid'}
                       </span>
@@ -513,15 +513,15 @@ function Success() {
               </div>
               
               {/* Fulfillment Method */}
-              <div className='mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg'>
+              <div className='mb-4 p-3 bg-plum-50 dark:bg-plum-900/25 rounded-lg'>
                 <div className='flex items-center'>
                   {orderDetails.fulfillment_type === 'pickup' ? (
                     <>
                       <FaStore className='text-purple-600 dark:text-purple-400 mr-2' />
                       <div>
-                        <p className='font-medium text-gray-800 dark:text-white'>Pickup Order</p>
+                        <p className='font-medium text-charcoal dark:text-white'>Pickup Order</p>
                         {orderDetails.pickup_location && (
-                          <p className='text-sm text-gray-600 dark:text-gray-300'>
+                          <p className='text-sm text-brown-500 dark:text-white/55'>
                             Location: {orderDetails.pickup_location}
                           </p>
                         )}
@@ -531,7 +531,7 @@ function Success() {
                           </p>
                         )}
                         {orderDetails.pickupInstructions && (
-                          <p className='text-sm text-gray-600 dark:text-gray-300 mt-1 italic'>
+                          <p className='text-sm text-brown-500 dark:text-white/55 mt-1 italic'>
                             Instructions: {orderDetails.pickupInstructions}
                           </p>
                         )}
@@ -539,24 +539,24 @@ function Success() {
                     </>
                   ) : (
                     <>
-                      <FaTruck className='text-blue-600 dark:text-blue-400 mr-2' />
+                      <FaTruck className='text-plum-600 dark:text-plum-300 mr-2' />
                       <div>
-                        <p className='font-medium text-gray-800 dark:text-white'>Delivery Order</p>
+                        <p className='font-medium text-charcoal dark:text-white'>Delivery Order</p>
                         {orderDetails.delivery_address && typeof orderDetails.delivery_address === 'object' ? (
-                          <p className='text-sm text-gray-600 dark:text-gray-300'>
+                          <p className='text-sm text-brown-500 dark:text-white/55'>
                             To: {orderDetails.delivery_address.address_line || orderDetails.delivery_address.address}, 
                             {orderDetails.delivery_address.city && ` ${orderDetails.delivery_address.city}`}
                           </p>
                         ) : orderDetails.deliveryAddress ? (
-                          <p className='text-sm text-gray-600 dark:text-gray-300'>
+                          <p className='text-sm text-brown-500 dark:text-white/55'>
                             To: {orderDetails.deliveryAddress}
                           </p>
                         ) : (
-                          <p className='text-sm text-gray-600 dark:text-gray-300'>
+                          <p className='text-sm text-brown-500 dark:text-white/55'>
                             Your order will be delivered to your address.
                           </p>
                         )}
-                        <p className='text-sm text-gray-600 dark:text-gray-300'>
+                        <p className='text-sm text-brown-500 dark:text-white/55'>
                           Status: <span className='font-medium'>{orderDetails.status || 'Pending'}</span>
                         </p>
                       </div>
@@ -567,16 +567,16 @@ function Success() {
               
               {/* Order items */}
               <div className='mb-4'>
-                <h4 className='font-medium text-gray-800 dark:text-white mb-2 flex items-center'>
-                  <FaBox className='mr-2 text-gray-600 dark:text-gray-400' />
+                <h4 className='font-medium text-charcoal dark:text-white mb-2 flex items-center'>
+                  <FaBox className='mr-2 text-brown-400 dark:text-white/45' />
                   Order Items
                 </h4>
                 
-                <div className='border dark:border-gray-700 rounded-lg overflow-hidden'>
+                <div className='border dark:border-dm-border rounded-lg overflow-hidden'>
                   {orderDetails.items && orderDetails.items.length > 0 ? (
                     <>
                       {orderDetails.items.map((item, index) => (
-                        <div key={index} className='flex justify-between p-3 border-b dark:border-gray-700 last:border-b-0'>
+                        <div key={index} className='flex justify-between p-3 border-b dark:border-dm-border last:border-b-0'>
                           <div className='flex items-center'>
                             {item.productId && item.productId.image && (
                               <img 
@@ -586,15 +586,15 @@ function Success() {
                               />
                             )}
                             <div>
-                              <p className='font-medium text-gray-800 dark:text-white'>
+                              <p className='font-medium text-charcoal dark:text-white'>
                                 {item.productId ? item.productId.name : 'Product'}
                               </p>
-                              <p className='text-sm text-gray-600 dark:text-gray-400'>
+                              <p className='text-sm text-brown-400 dark:text-white/45'>
                                 Qty: {item.quantity || 1}
                               </p>
                             </div>
                           </div>
-                          <p className='font-medium text-gray-800 dark:text-white'>
+                          <p className='font-medium text-charcoal dark:text-white'>
                             {DisplayPriceInShillings(item.productId ? item.productId.price * (item.quantity || 1) : 0)}
                           </p>
                         </div>
@@ -611,20 +611,20 @@ function Success() {
                           />
                         )}
                         <div>
-                          <p className='font-medium text-gray-800 dark:text-white'>
+                          <p className='font-medium text-charcoal dark:text-white'>
                             {orderDetails.product_details.name}
                           </p>
-                          <p className='text-sm text-gray-600 dark:text-gray-400'>
+                          <p className='text-sm text-brown-400 dark:text-white/45'>
                             Qty: {orderDetails.quantity || 1}
                           </p>
                         </div>
                       </div>
-                      <p className='font-medium text-gray-800 dark:text-white'>
+                      <p className='font-medium text-charcoal dark:text-white'>
                         {DisplayPriceInShillings(orderDetails.totalAmt || 0)}
                       </p>
                     </div>
                   ) : (
-                    <div className='p-3 text-center text-gray-600 dark:text-gray-400'>
+                    <div className='p-3 text-center text-brown-400 dark:text-white/45'>
                       Order details will be available in your order history
                     </div>
                   )}
@@ -632,10 +632,10 @@ function Success() {
               </div>
               
               {/* Order summary */}
-              <div className='border-t dark:border-gray-700 pt-4'>
+              <div className='border-t dark:border-dm-border pt-4'>
                 <div className='flex justify-between mb-2'>
-                  <span className='text-gray-600 dark:text-gray-400'>Subtotal:</span>
-                  <span className='text-gray-800 dark:text-white'>
+                  <span className='text-brown-400 dark:text-white/45'>Subtotal:</span>
+                  <span className='text-charcoal dark:text-white'>
                     {DisplayPriceInShillings(orderDetails.subTotalAmt || orderDetails.totalAmt || 0)}
                   </span>
                 </div>
@@ -670,21 +670,21 @@ function Success() {
                 
                 {/* Delivery fee (if applicable) */}
                 <div className='flex justify-between mb-2'>
-                  <span className='text-gray-600 dark:text-gray-400'>Delivery Fee:</span>
-                  <span className='text-gray-800 dark:text-white'>
+                  <span className='text-brown-400 dark:text-white/45'>Delivery Fee:</span>
+                  <span className='text-charcoal dark:text-white'>
                     {orderDetails.deliveryFee ? DisplayPriceInShillings(orderDetails.deliveryFee) : 'Free'}
                   </span>
                 </div>
                 
                 {/* Final total */}
-                <div className='flex justify-between font-bold border-t dark:border-gray-700 pt-2 mt-2'>
-                  <span className='text-gray-800 dark:text-white'>Total:</span>
-                  <span className='text-gray-800 dark:text-white'>
+                <div className='flex justify-between font-bold border-t dark:border-dm-border pt-2 mt-2'>
+                  <span className='text-charcoal dark:text-white'>Total:</span>
+                  <span className='text-charcoal dark:text-white'>
                     {DisplayPriceInShillings(orderDetails.totalAmt || 0)}
                   </span>
                 </div>
                 
-                <div className='mt-3 text-sm text-gray-600 dark:text-gray-400'>
+                <div className='mt-3 text-sm text-brown-400 dark:text-white/45'>
                   <p>Order Date: {formatDate(orderDetails.createdAt)}</p>
                   <p className='flex items-center'>
                     Payment Method: {getPaymentIcon(orderDetails.paymentMethod)}
@@ -694,9 +694,9 @@ function Success() {
                 </div>
                 
                 {/* Tracking info */}
-                <div className='mt-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded flex items-start text-sm'>
-                  <FaInfoCircle className='text-blue-500 dark:text-blue-400 mt-0.5 mr-2 flex-shrink-0' />
-                  <p className='text-blue-700 dark:text-blue-300'>
+                <div className='mt-4 p-3 bg-plum-50 dark:bg-plum-900/25 rounded flex items-start text-sm'>
+                  <FaInfoCircle className='text-plum-500 dark:text-plum-300 mt-0.5 mr-2 flex-shrink-0' />
+                  <p className='text-plum-800 dark:text-plum-200'>
                     You can track your order status in the "My Orders" section. Please keep your order number 
                     <span className='font-mono font-bold mx-1'>
                       {orderDetails.orderId || (orderDetails._id && orderDetails._id.substring(orderDetails._id.length - 8))}
@@ -713,7 +713,7 @@ function Success() {
             <h3 className='font-semibold text-lg text-green-700 dark:text-green-400 mb-2'>
               Order Placed Successfully!
             </h3>
-            <p className='text-gray-600 dark:text-gray-400 text-sm'>
+            <p className='text-brown-400 dark:text-white/45 text-sm'>
               Your order has been placed and will be processed shortly.
               <br /><br />
               View all your orders in the "My Orders" section.
@@ -734,14 +734,14 @@ function Success() {
           
           <button 
             onClick={handleViewOrders}
-            className='w-full py-2 px-4 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded transition-colors'
+            className="w-full py-2.5 px-4 bg-gold-500 hover:bg-gold-400 text-charcoal font-semibold rounded-pill transition-colors press"
           >
             View My Orders
           </button>
           
           <Link 
             to="/"
-            className='w-full py-2 px-4 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-800 dark:text-white font-medium rounded text-center transition-colors'
+            className="w-full py-2.5 px-4 border border-brown-200 dark:border-dm-border text-charcoal dark:text-white font-medium rounded-pill text-center hover:bg-plum-50 dark:hover:bg-plum-900/30 transition-colors"
           >
             Continue Shopping
           </Link>

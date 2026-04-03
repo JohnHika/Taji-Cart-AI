@@ -312,7 +312,7 @@ const OrderTracking = () => {
     return (
       <div className="border-t pt-4 mb-6">
         <h3 className="font-medium mb-3 flex items-center">
-          <FaHistory className="mr-2 text-gray-600" /> 
+          <FaHistory className="mr-2 text-brown-500 dark:text-white/55" /> 
           Status History
         </h3>
         <div className="space-y-3">
@@ -324,9 +324,9 @@ const OrderTracking = () => {
                   <p className="font-medium">
                     {status.status.charAt(0).toUpperCase() + status.status.slice(1).replace('_', ' ')}
                   </p>
-                  <p className="text-sm text-gray-600">{formatDateTime(status.timestamp)}</p>
+                  <p className="text-sm text-brown-500 dark:text-white/55">{formatDateTime(status.timestamp)}</p>
                 </div>
-                {status.note && <p className="text-sm text-gray-600 mt-1">{status.note}</p>}
+                {status.note && <p className="text-sm text-brown-500 dark:text-white/55 mt-1">{status.note}</p>}
               </div>
             </div>
           ))}
@@ -360,7 +360,7 @@ const OrderTracking = () => {
             <div key={status.key} className="flex flex-col items-center mb-4 md:mb-0 relative">
               <div className={`w-12 h-12 rounded-full flex items-center justify-center mb-2 ${
                 isActive ? 'bg-primary-100 text-white' :
-                isCompleted ? 'bg-green-500 text-white' : 'bg-gray-200 text-gray-500'
+                isCompleted ? 'bg-plum-700 text-white' : 'bg-brown-100 dark:bg-dm-border text-brown-400 dark:text-white/40'
               }`}>
                 {status.icon}
               </div>
@@ -368,7 +368,7 @@ const OrderTracking = () => {
                 {status.label}
               </div>
               {index < statuses.length - 1 && (
-                <div className="hidden md:block h-[2px] w-16 bg-gray-300 absolute"
+                <div className="hidden md:block h-[2px] w-16 bg-brown-200 dark:bg-dm-border absolute"
                     style={{left: '100%', top: '24px', width: '100%'}} />
               )}
             </div>
@@ -389,15 +389,15 @@ const OrderTracking = () => {
   if (!isOnline) {
     return (
       <div className="container mx-auto px-4 py-8">
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 text-center">
+        <div className="bg-white dark:bg-dm-card rounded-card border border-brown-100 dark:border-dm-border shadow-card p-6 text-center">
           <div className="mb-4">
             <FaExclamationTriangle className="mx-auto text-5xl text-yellow-500 mb-3" />
           </div>
           <h2 className="text-xl font-bold mb-3 dark:text-white">You're Offline</h2>
-          <p className="text-gray-600 dark:text-gray-400 mb-4">
+          <p className="text-brown-500 dark:text-white/50 mb-4">
             Your internet connection appears to be offline. Real-time tracking is paused.
           </p>
-          <p className="text-sm text-gray-500 mb-4">
+          <p className="text-sm text-brown-400 dark:text-white/40 mb-4">
             Last updated: {formatDateTime(new Date())}
           </p>
           <div className="flex justify-center">
@@ -415,7 +415,7 @@ const OrderTracking = () => {
             <h2 className="text-lg font-medium mb-4">Last Known Status</h2>
             <p className="font-medium">Order #{order.orderId || order._id}</p>
             <p className="mb-4">Status: {order.status?.replace('_', ' ')}</p>
-            <p className="text-sm text-gray-500">
+            <p className="text-sm text-brown-400 dark:text-white/40">
               *This information may not be current due to your offline status.
             </p>
           </div>
@@ -438,7 +438,7 @@ const OrderTracking = () => {
   if (!order && !loading) {
     return (
       <div className="container mx-auto px-4 py-8">
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 text-center">
+        <div className="bg-white dark:bg-dm-card rounded-card border border-brown-100 dark:border-dm-border shadow-card p-6 text-center">
           <div className="mb-4">
             {errorCode === "ORDER_NOT_FOUND" ? (
               <FaBoxOpen className="mx-auto text-5xl text-red-500 mb-3" />
@@ -455,7 +455,7 @@ const OrderTracking = () => {
              "Tracking Unavailable"}
           </h2>
           
-          <p className="text-gray-600 dark:text-gray-400 mb-4">
+          <p className="text-brown-500 dark:text-white/50 mb-4">
             {errorCode === "ORDER_NOT_FOUND" ? 
               "We couldn't find this order in our system. Please check if the order ID is correct." : 
              errorCode === "UNAUTHORIZED_ACCESS" ? 
@@ -482,16 +482,16 @@ const OrderTracking = () => {
               )}
             </button>
             
-            <Link to="/dashboard/myorders" className="px-4 py-2 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-800 dark:text-white rounded-md transition-colors flex items-center justify-center">
+            <Link to="/dashboard/myorders" className="px-4 py-2 border border-brown-200 dark:border-dm-border hover:bg-plum-50 dark:hover:bg-plum-900/30 text-charcoal dark:text-white rounded-md transition-colors flex items-center justify-center">
               <FaArrowLeft className="mr-2" />
               Return to My Orders
             </Link>
           </div>
           
           {errorCode && (
-            <div className="mt-6 p-4 border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-800">
-              <h3 className="font-medium mb-2 text-gray-800 dark:text-gray-300">Troubleshooting Tips:</h3>
-              <ul className="list-disc pl-5 text-sm text-gray-600 dark:text-gray-400 text-left">
+            <div className="mt-6 p-4 border border-brown-100 dark:border-dm-border rounded-card bg-blush-50 dark:bg-dm-card-2">
+              <h3 className="font-medium mb-2 text-charcoal dark:text-white">Troubleshooting Tips:</h3>
+              <ul className="list-disc pl-5 text-sm text-brown-500 dark:text-white/50 text-left">
                 {errorCode === "ORDER_NOT_FOUND" && (
                   <>
                     <li>Check if the order ID in the URL is correct</li>
@@ -536,7 +536,7 @@ const OrderTracking = () => {
           <h2 className="text-lg font-medium">Order #{order.orderId || order._id}</h2>
           <div className={`px-3 py-1 rounded-full text-sm ${
             order.status === 'delivered' ? 'bg-green-100 text-green-800' :
-            'bg-blue-100 text-blue-800'
+            'bg-plum-100 text-plum-800 dark:bg-plum-900/40 dark:text-plum-200'
           }`}>
             {order.status?.replace('_', ' ')}
           </div>
@@ -572,7 +572,7 @@ const OrderTracking = () => {
         {renderStatusSteps()}
         
         {/* Progress bar */}
-        <div className="w-full bg-gray-200 rounded-full h-2.5 mb-6">
+        <div className="w-full bg-brown-100 dark:bg-dm-border rounded-full h-2.5 mb-6">
           <div 
             className="bg-primary-100 h-2.5 rounded-full transition-all duration-1000" 
             style={{ width: `${calculateProgress()}%` }}
@@ -587,12 +587,12 @@ const OrderTracking = () => {
           <div className="border-t pt-4 mb-6">
             <h3 className="font-medium mb-2">Delivery Personnel</h3>
             <div className="flex items-center">
-              <div className="w-12 h-12 bg-gray-200 rounded-full flex items-center justify-center mr-3">
-                <FaTruck className="text-gray-500" />
+              <div className="w-12 h-12 bg-plum-100 dark:bg-plum-900/40 rounded-full flex items-center justify-center mr-3">
+                <FaTruck className="text-plum-700 dark:text-plum-300" />
               </div>
               <div>
                 <p className="font-medium">{order.deliveryPersonnel.name}</p>
-                <p className="text-sm text-gray-600">{order.deliveryPersonnel.phoneNumber}</p>
+                <p className="text-sm text-brown-500 dark:text-white/55">{order.deliveryPersonnel.phoneNumber}</p>
               </div>
             </div>
           </div>
@@ -601,10 +601,10 @@ const OrderTracking = () => {
         {/* Map */}
         <div className="h-96 w-full rounded-lg overflow-hidden border relative">
           {(!deliveryLocation && !destinationLocation) && (
-            <div className="absolute inset-0 flex items-center justify-center bg-gray-100 bg-opacity-75 z-10">
+            <div className="absolute inset-0 flex items-center justify-center bg-ivory/90 dark:bg-dm-surface/90 z-10">
               <div className="text-center">
-                <FaMapMarkerAlt className="mx-auto text-3xl text-gray-400 mb-2" />
-                <p className="text-gray-600">Waiting for location data...</p>
+                <FaMapMarkerAlt className="mx-auto text-3xl text-brown-300 dark:text-white/35 mb-2" />
+                <p className="text-brown-500 dark:text-white/55">Waiting for location data...</p>
               </div>
             </div>
           )}
@@ -674,7 +674,7 @@ const OrderTracking = () => {
                 )}
                 <div>
                   <p className="font-medium">{item.productId ? item.productId.name : 'Product'}</p>
-                  <p className="text-sm text-gray-600">Qty: {item.quantity}</p>
+                  <p className="text-sm text-brown-500 dark:text-white/55">Qty: {item.quantity}</p>
                 </div>
               </div>
               <p className="font-medium">KSh {(item.productId ? item.productId.price : 0).toFixed(2)}</p>

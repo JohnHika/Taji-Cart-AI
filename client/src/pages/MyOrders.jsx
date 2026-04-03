@@ -76,12 +76,13 @@ const MyOrders = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-      <div className='bg-white dark:bg-gray-800 shadow-md p-5 mb-6 flex justify-between items-center'>
-        <h1 className="text-xl font-bold dark:text-gray-100">My Orders</h1>
+    <div className="min-h-screen bg-ivory dark:bg-dm-surface transition-colors">
+      <div className="container mx-auto px-4 py-6 sm:py-8">
+      <div className="bg-white dark:bg-dm-card border border-brown-100 dark:border-dm-border rounded-card shadow-hover p-5 mb-6 flex flex-wrap justify-between items-center gap-3">
+        <h1 className="text-xl font-bold text-charcoal dark:text-white">My Orders</h1>
         <button 
           onClick={fetchUserOrders} 
-          className="text-sm bg-primary-100 hover:bg-primary-200 text-white px-4 py-2 rounded-md transition-colors"
+          className="text-sm bg-plum-700 hover:bg-plum-600 text-white px-4 py-2 rounded-pill transition-colors font-medium"
         >
           Refresh Orders
         </button>
@@ -90,36 +91,36 @@ const MyOrders = () => {
       {loading ? (
         <div className="flex justify-center items-center h-64">
           <div className="text-center">
-            <FaSpinner className="animate-spin text-primary-300 text-4xl mx-auto mb-4" />
-            <p className="text-gray-600 dark:text-gray-400">Loading your orders...</p>
+            <FaSpinner className="animate-spin text-plum-600 dark:text-plum-300 text-4xl mx-auto mb-4" />
+            <p className="text-brown-500 dark:text-white/50">Loading your orders...</p>
           </div>
         </div>
       ) : !orders || !orders[0] ? (
-        <div className="px-6">
+        <div className="px-2 sm:px-0">
           <NoData message="You don't have any orders yet" />
           <div className="text-center mt-4">
             <Link 
               to="/" 
-              className="inline-block bg-primary-100 hover:bg-primary-200 text-white px-6 py-2 rounded-md transition-colors"
+              className="inline-block bg-gold-500 hover:bg-gold-400 text-charcoal font-semibold px-6 py-2 rounded-pill transition-colors"
             >
               Start Shopping
             </Link>
           </div>
         </div>
       ) : (
-        <div className="px-4 md:px-6 pb-8">
+        <div className="pb-4">
           <div className="grid gap-6">
             {orders.map((order, index) => (
               <div 
                 key={order._id + index + "order"} 
-                className='bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden transition-all hover:shadow-lg'
+                className="bg-white dark:bg-dm-card rounded-card border border-brown-100 dark:border-dm-border shadow-hover overflow-hidden transition-all hover:shadow-lg"
               >
                 {/* Order header */}
-                <div className="p-4 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-750 flex flex-col md:flex-row justify-between gap-3">
+                <div className="p-4 border-b border-brown-100 dark:border-dm-border bg-plum-50/40 dark:bg-plum-900/20 flex flex-col md:flex-row justify-between gap-3">
                   <div>
                     <div className="flex items-center gap-2 mb-1">
-                      <FaBox className="text-primary-100" />
-                      <span className="font-medium dark:text-gray-200">Order #{order?.orderId}</span>
+                      <FaBox className="text-plum-600 dark:text-plum-300" />
+                      <span className="font-medium text-charcoal dark:text-white">Order #{order?.orderId}</span>
                       
                       {/* Fulfillment type badge */}
                       <span className={`ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
@@ -133,7 +134,7 @@ const MyOrders = () => {
                         }
                       </span>
                     </div>
-                    <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+                    <div className="flex items-center gap-2 text-sm text-brown-600 dark:text-white/50">
                       <FaCalendarAlt />
                       <span>Placed on {formatDate(order?.createdAt)}</span>
                     </div>
@@ -143,7 +144,7 @@ const MyOrders = () => {
                     {order.status !== 'delivered' && order.status !== 'cancelled' && (
                       <Link 
                         to={`/order-tracking/${order._id}`} 
-                        className="inline-flex items-center gap-2 px-4 py-2 bg-primary-100 hover:bg-primary-200 text-white rounded-md text-sm transition-colors"
+                        className="inline-flex items-center gap-2 px-4 py-2 bg-plum-700 hover:bg-plum-600 text-white rounded-pill text-sm transition-colors font-medium"
                         aria-label={`Track order ${order.orderId || order._id}`}
                       >
                         <FaTruck /> Track Order
@@ -155,7 +156,7 @@ const MyOrders = () => {
                 {/* Order content */}
                 <div className="p-4">
                   {/* Product information */}
-                  <div className="flex flex-col md:flex-row gap-4 mb-4 pb-4 border-b border-gray-100 dark:border-gray-700">
+                  <div className="flex flex-col md:flex-row gap-4 mb-4 pb-4 border-b border-brown-100 dark:border-dm-border">
                     <div className="flex-shrink-0">
                       <img
                         src={order.product_details.image[0]} 
@@ -164,19 +165,19 @@ const MyOrders = () => {
                       />
                     </div>
                     <div className="flex-grow">
-                      <h3 className="font-medium text-gray-800 dark:text-gray-200 mb-1">{order.product_details.name}</h3>
-                      <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+                      <h3 className="font-medium text-charcoal dark:text-white mb-1">{order.product_details.name}</h3>
+                      <p className="text-sm text-brown-600 dark:text-white/55 mb-2">
                         {order.product_details.description ? 
                           order.product_details.description.substring(0, 100) + '...' : 
                           'No description available'}
                       </p>
                       <div className="flex items-center gap-1 text-sm">
-                        <span className="text-gray-600 dark:text-gray-400">Quantity:</span>
-                        <span className="dark:text-gray-300">{order.quantity || 1}</span>
+                        <span className="text-brown-600 dark:text-white/50">Quantity:</span>
+                        <span className="text-charcoal dark:text-white/80">{order.quantity || 1}</span>
                       </div>
                     </div>
                     <div className="flex-shrink-0 text-right">
-                      <div className="text-lg font-semibold text-gray-800 dark:text-gray-200">
+                      <div className="text-lg font-semibold text-charcoal dark:text-white">
                         KSh {order.product_details.price?.toLocaleString() || 'N/A'}
                       </div>
                     </div>
@@ -184,15 +185,15 @@ const MyOrders = () => {
                   
                   {/* Order details and payment info */}
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-                    <div className="bg-gray-50 dark:bg-gray-750 p-3 rounded-md">
-                      <div className="flex items-center gap-2 mb-2 text-gray-700 dark:text-gray-300 font-medium">
+                    <div className="bg-plum-50/50 dark:bg-plum-900/15 p-3 rounded-card border border-brown-100/80 dark:border-dm-border">
+                      <div className="flex items-center gap-2 mb-2 text-charcoal dark:text-white/85 font-medium">
                         <FaMoneyBillWave className="text-green-600" />
                         <span>Payment Information</span>
                       </div>
-                      <div className="text-gray-600 dark:text-gray-400 space-y-1">
+                      <div className="text-brown-600 dark:text-white/55 space-y-1">
                         <div className="flex justify-between">
                           <span>Method:</span>
-                          <span className="dark:text-gray-300">{order.paymentMethod || 'N/A'}</span>
+                          <span className="text-charcoal dark:text-white/80">{order.paymentMethod || 'N/A'}</span>
                         </div>
                         <div className="flex justify-between">
                           <span>Status:</span>
@@ -202,69 +203,69 @@ const MyOrders = () => {
                         </div>
                         <div className="flex justify-between">
                           <span>Total Amount:</span>
-                          <span className="dark:text-gray-300 font-medium">
+                          <span className="text-charcoal dark:text-white/90 font-medium">
                             KSh {order.totalAmount?.toLocaleString() || 'N/A'}
                           </span>
                         </div>
                       </div>
                     </div>
                     
-                    <div className="bg-gray-50 dark:bg-gray-750 p-3 rounded-md">
-                      <div className="flex items-center gap-2 mb-2 text-gray-700 dark:text-gray-300 font-medium">
+                    <div className="bg-plum-50/50 dark:bg-plum-900/15 p-3 rounded-card border border-brown-100/80 dark:border-dm-border">
+                      <div className="flex items-center gap-2 mb-2 text-charcoal dark:text-white/85 font-medium">
                         <FaShoppingBag className="text-blue-600" />
                         <span>Order Details</span>
                       </div>
-                      <div className="text-gray-600 dark:text-gray-400 space-y-1">
+                      <div className="text-brown-600 dark:text-white/55 space-y-1">
                         <div className="flex justify-between">
                           <span>Order Date:</span>
-                          <span className="dark:text-gray-300">{formatDate(order.createdAt)}</span>
+                          <span className="text-charcoal dark:text-white/80">{formatDate(order.createdAt)}</span>
                         </div>
                         {order.shippingDate && (
                           <div className="flex justify-between">
                             <span>Shipping Date:</span>
-                            <span className="dark:text-gray-300">{formatDate(order.shippingDate)}</span>
+                            <span className="text-charcoal dark:text-white/80">{formatDate(order.shippingDate)}</span>
                           </div>
                         )}
                         {order.deliveryDate && (
                           <div className="flex justify-between">
                             <span>Delivery Date:</span>
-                            <span className="dark:text-gray-300">{formatDate(order.deliveryDate)}</span>
+                            <span className="text-charcoal dark:text-white/80">{formatDate(order.deliveryDate)}</span>
                           </div>
                         )}
                       </div>
                     </div>
                     
-                    <div className="bg-gray-50 dark:bg-gray-750 p-3 rounded-md">
-                      <div className="flex items-center gap-2 mb-2 text-gray-700 dark:text-gray-300 font-medium">
+                    <div className="bg-plum-50/50 dark:bg-plum-900/15 p-3 rounded-card border border-brown-100/80 dark:border-dm-border">
+                      <div className="flex items-center gap-2 mb-2 text-charcoal dark:text-white/85 font-medium">
                         {order.fulfillment_type === 'delivery' ? (
                           <><FaMapMarkerAlt className="text-red-600" /><span>Delivery Information</span></>
                         ) : (
                           <><FaStore className="text-purple-600" /><span>Pickup Information</span></>
                         )}
                       </div>
-                      <div className="text-gray-600 dark:text-gray-400 space-y-1">
+                      <div className="text-brown-600 dark:text-white/55 space-y-1">
                         <div className="flex justify-between">
                           <span>Status:</span>
-                          <span className="capitalize dark:text-gray-300">{order.status || 'Processing'}</span>
+                          <span className="capitalize text-charcoal dark:text-white/80">{order.status || 'Processing'}</span>
                         </div>
                         
                         {order.fulfillment_type === 'delivery' && order.deliveryAddress && (
-                          <div className="dark:text-gray-300 mt-1 leading-snug">
+                          <div className="text-charcoal dark:text-white/80 mt-1 leading-snug">
                             {order.deliveryAddress}
                           </div>
                         )}
                         
                         {order.fulfillment_type === 'pickup' && order.pickup_location && (
-                          <div className="dark:text-gray-300 mt-1 leading-snug">
+                          <div className="text-charcoal dark:text-white/80 mt-1 leading-snug">
                             Pickup Location: {order.pickup_location}
                           </div>
                         )}
                         
                         {order.fulfillment_type === 'pickup' && order.pickupVerificationCode && (
-                          <div className="mt-2 p-2 bg-gray-100 dark:bg-gray-700 rounded border border-gray-200 dark:border-gray-600">
+                          <div className="mt-2 p-2 bg-brown-50 dark:bg-dm-card-2 rounded-card border border-brown-100 dark:border-dm-border">
                             <div className="flex items-center justify-between">
                               <span className="text-sm">Verification Code:</span>
-                              <span className="font-mono font-bold text-primary-100">
+                              <span className="font-mono font-bold text-plum-700 dark:text-plum-300">
                                 <FaQrcode className="inline mr-1" />
                                 {order.pickupVerificationCode}
                               </span>
@@ -280,6 +281,7 @@ const MyOrders = () => {
           </div>
         </div>
       )}
+      </div>
     </div>
   )
 }

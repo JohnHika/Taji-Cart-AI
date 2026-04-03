@@ -69,19 +69,20 @@ const Address = () => {
   }
   
   return (
-    <div className='min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-200'>
+    <div className="min-h-screen bg-ivory dark:bg-dm-surface transition-colors duration-200">
+        <div className="container mx-auto px-4 py-6 sm:py-8">
         {/* Header section */}
-        <div className='bg-white dark:bg-gray-800 shadow-lg px-4 py-3 flex justify-between gap-4 items-center transition-colors duration-200'>
-            <h2 className='font-semibold text-ellipsis line-clamp-1 text-gray-800 dark:text-white transition-colors duration-200'>Address Book</h2>
+        <div className="bg-white dark:bg-dm-card border border-brown-100 dark:border-dm-border rounded-card shadow-hover px-4 py-3 flex justify-between gap-4 items-center transition-colors duration-200">
+            <h2 className="font-semibold text-ellipsis line-clamp-1 text-charcoal dark:text-white transition-colors duration-200">Address Book</h2>
             <div className="flex items-center gap-2">
               {loading && (
-                <span className="text-sm text-gray-500 dark:text-gray-400 transition-colors duration-200">
+                <span className="text-sm text-brown-500 dark:text-white/50 transition-colors duration-200">
                   Loading...
                 </span>
               )}
               <button 
                 onClick={() => loadAddresses()} 
-                className='text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-white px-2 py-1 rounded transition-colors duration-200'
+                className="text-brown-600 dark:text-white/60 hover:text-plum-700 dark:hover:text-plum-200 px-2 py-1 rounded-lg transition-colors duration-200"
                 title="Refresh addresses"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
@@ -90,7 +91,7 @@ const Address = () => {
               </button>
               <button 
                 onClick={() => setOpenAddress(true)} 
-                className='border border-primary-200 dark:border-primary-300 text-primary-200 dark:text-primary-300 px-3 hover:bg-primary-200 dark:hover:bg-primary-300 hover:text-white dark:hover:text-gray-900 py-1.5 rounded-full transition-colors duration-200 flex items-center gap-1'
+                className="border border-plum-600 dark:border-plum-400 text-plum-700 dark:text-plum-200 px-3 hover:bg-plum-700 dark:hover:bg-plum-600 hover:text-white py-1.5 rounded-pill transition-colors duration-200 flex items-center gap-1 font-medium text-sm"
               >
                 <FaPlus size={12} /> Add Address
               </button>
@@ -99,21 +100,21 @@ const Address = () => {
         
         {/* Status and Debug info */}
         {loading ? (
-          <div className="p-4 bg-blue-50 dark:bg-gray-800 transition-colors duration-200">
-            <div className="text-center p-8 bg-white dark:bg-gray-700 rounded-lg shadow transition-colors duration-200">
+          <div className="p-4 mt-4 transition-colors duration-200">
+            <div className="text-center p-8 bg-white dark:bg-dm-card border border-brown-100 dark:border-dm-border rounded-card shadow-hover transition-colors duration-200">
               <div className="animate-pulse flex space-x-4 justify-center">
-                <div className="h-4 w-4 bg-gray-300 dark:bg-gray-500 rounded-full"></div>
-                <div className="h-4 w-4 bg-gray-300 dark:bg-gray-500 rounded-full"></div>
-                <div className="h-4 w-4 bg-gray-300 dark:bg-gray-500 rounded-full"></div>
+                <div className="h-4 w-4 bg-brown-200 dark:bg-dm-border rounded-full" />
+                <div className="h-4 w-4 bg-brown-200 dark:bg-dm-border rounded-full" />
+                <div className="h-4 w-4 bg-brown-200 dark:bg-dm-border rounded-full" />
               </div>
-              <p className="mt-4 text-gray-600 dark:text-gray-300 transition-colors duration-200">Loading addresses...</p>
+              <p className="mt-4 text-brown-600 dark:text-white/55 transition-colors duration-200">Loading addresses...</p>
             </div>
           </div>
         ) : (
-          <div className='bg-blue-50 dark:bg-gray-800 p-4 grid gap-4 transition-colors duration-200'>
+          <div className="mt-4 p-0 sm:p-1 grid gap-4 transition-colors duration-200">
               {/* Debug info */}
               {process.env.NODE_ENV !== 'production' && (
-                <div className="p-2 text-xs bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded border border-gray-200 dark:border-gray-600 transition-colors duration-200">
+                <div className="p-2 text-xs bg-plum-50 dark:bg-plum-900/25 text-brown-600 dark:text-white/55 rounded-card border border-brown-100 dark:border-dm-border transition-colors duration-200">
                   <p>Total addresses: {addressList.length}</p>
                   <p>Active addresses: {addressList.filter(addr => addr.status).length}</p>
                 </div>
@@ -121,7 +122,7 @@ const Address = () => {
               
               {/* Show message if no addresses */}
               {addressList.filter(addr => addr.status).length === 0 && (
-                <div className="p-6 text-center text-gray-500 dark:text-gray-400 bg-white dark:bg-gray-700 rounded-lg shadow transition-colors duration-200">
+                <div className="p-6 text-center text-brown-500 dark:text-white/50 bg-white dark:bg-dm-card border border-brown-100 dark:border-dm-border rounded-card shadow-hover transition-colors duration-200">
                   No addresses found. Add your first address to get started.
                 </div>
               )}
@@ -132,11 +133,11 @@ const Address = () => {
                   return(
                       <div 
                         key={address._id || index} 
-                        className={`border dark:border-gray-700 rounded-lg p-4 flex gap-3 bg-white dark:bg-gray-700 shadow-sm transition-colors duration-200 ${!address.status && 'hidden'}`}
+                        className={`border border-brown-100 dark:border-dm-border rounded-card p-4 flex gap-3 bg-white dark:bg-dm-card shadow-hover transition-colors duration-200 ${!address.status && 'hidden'}`}
                       >
-                          <div className='w-full dark:text-gray-200 transition-colors duration-200'>
-                            <p className="font-medium text-gray-800 dark:text-white mb-2 transition-colors duration-200">{address.address_line}</p>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 text-gray-600 dark:text-gray-300 transition-colors duration-200">
+                          <div className="w-full text-charcoal dark:text-white/90 transition-colors duration-200">
+                            <p className="font-medium text-charcoal dark:text-white mb-2 transition-colors duration-200">{address.address_line}</p>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 text-brown-600 dark:text-white/55 transition-colors duration-200">
                               <p>{address.city}</p>
                               <p>{address.state}</p>
                               <p>{address.country} - {address.pincode}</p>
@@ -172,9 +173,9 @@ const Address = () => {
               {/* Add address button */}
               <div 
                 onClick={() => setOpenAddress(true)} 
-                className='h-16 bg-white dark:bg-gray-700 border-2 border-dashed border-gray-300 dark:border-gray-600 flex justify-center items-center cursor-pointer rounded-lg hover:border-primary-200 dark:hover:border-primary-300 transition-colors duration-200'
+                className="h-16 bg-white dark:bg-dm-card border-2 border-dashed border-brown-200 dark:border-dm-border flex justify-center items-center cursor-pointer rounded-card hover:border-plum-400 dark:hover:border-plum-500 transition-colors duration-200"
               >
-                <span className="flex items-center gap-2 text-gray-600 dark:text-gray-300 transition-colors duration-200">
+                <span className="flex items-center gap-2 text-brown-600 dark:text-white/55 transition-colors duration-200">
                   <FaPlus size={14} />
                   Add new address
                 </span>
@@ -200,6 +201,7 @@ const Address = () => {
             }}/>
           )
         }
+        </div>
     </div>
   )
 }

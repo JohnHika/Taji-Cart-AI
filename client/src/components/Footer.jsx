@@ -17,18 +17,18 @@ const Footer = () => {
   };
 
   const shopLinks = [
-    { label: 'All Products', path: '/categories' },
-    { label: 'Hair Extensions', path: '/categories' },
-    { label: 'Wigs & Closures', path: '/categories' },
-    { label: 'Hair Care', path: '/categories' },
-    { label: 'Tools & Accessories', path: '/categories' },
+    { label: 'All Products', path: '/' },
+    { label: 'Hair Extensions', path: '/' },
+    { label: 'Wigs & Closures', path: '/' },
+    { label: 'Hair Care', path: '/' },
+    { label: 'Tools & Accessories', path: '/' },
     { label: 'Active Campaigns', path: '/campaigns' },
   ];
 
   const helpLinks = [
     { label: 'My Orders', path: '/dashboard/myorders' },
     { label: 'Track Order', path: '/dashboard/myorders' },
-    { label: 'Loyalty Program', path: '/dashboard/community-perks' },
+    { label: 'Loyalty Program', path: '/dashboard/loyalty-program' },
     { label: 'Contact Us', path: '/' },
     { label: 'Returns & Exchanges', path: '/' },
     { label: 'FAQs', path: '/' },

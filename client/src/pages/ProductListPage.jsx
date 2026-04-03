@@ -26,16 +26,16 @@ class ProductListPageErrorLogger extends React.Component {
   render() {
     if (this.state.hasError) {
       return (
-        <div className="p-8 bg-red-50 dark:bg-red-900 rounded m-4">
-          <h2 className="text-xl font-bold text-red-700 dark:text-red-300">
-            Error rendering ProductListPage
+        <div className="p-8 bg-blush-50 dark:bg-dm-card rounded-card m-4 border border-brown-100 dark:border-dm-border">
+          <h2 className="text-xl font-bold text-charcoal dark:text-white">
+            Something went wrong
           </h2>
-          <p className="my-4 text-red-600 dark:text-red-400">
+          <p className="my-4 text-brown-500 dark:text-white/60">
             {this.state.error?.message}
           </p>
-          <Link 
+          <Link
             to="/"
-            className="inline-block px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+            className="inline-block px-5 py-2.5 bg-plum-700 hover:bg-plum-600 text-white font-semibold rounded-pill text-sm transition-colors"
           >
             Return to Home
           </Link>
@@ -438,16 +438,16 @@ const ProductListPage = () => {
 
   if (error) {
     return (
-      <div className="min-h-[80vh] flex items-center justify-center p-5 dark:bg-gray-900">
-        <div className="max-w-md w-full p-6 bg-white rounded-lg shadow-lg dark:bg-gray-800">
-          <h1 className="text-2xl font-bold text-red-600 mb-4 dark:text-red-400">
+      <div className="min-h-[80vh] flex items-center justify-center p-5 bg-ivory dark:bg-dm-surface">
+        <div className="max-w-md w-full p-6 bg-white dark:bg-dm-card rounded-card shadow-card border border-brown-100 dark:border-dm-border">
+          <h1 className="text-2xl font-bold text-charcoal dark:text-white mb-4">
             Error Loading Products
           </h1>
-          <p className="text-gray-700 mb-5 dark:text-gray-300">{error}</p>
+          <p className="text-brown-500 dark:text-white/60 mb-5">{error}</p>
           <div className="flex justify-center">
-            <button 
+            <button
               onClick={() => navigate('/')}
-              className="px-4 py-2 bg-orange-500 text-white rounded-md hover:bg-orange-600"
+              className="px-5 py-2.5 bg-gold-500 hover:bg-gold-400 text-charcoal font-semibold rounded-pill text-sm transition-colors press"
             >
               Return to Home
             </button>
@@ -458,71 +458,89 @@ const ProductListPage = () => {
   }
 
   return (
-    <section className='min-h-screen w-full dark:bg-gray-900'>
-      <div className='mx-auto max-w-7xl p-2'>
-        <div className='grid grid-cols-1 md:grid-cols-4 gap-4'>
-          <div className='w-full shadow-sm p-2 bg-white dark:bg-gray-800'>
-            <h2 className='font-semibold mb-4 dark:text-gray-100'>Sub Categories</h2>
-            <div className='w-full grid gap-2'>
-              {
-                DisplaySubCatory.length > 0 ? 
-                  DisplaySubCatory.map(s => (
-                    <Link 
-                      key={s._id}
-                      to={`/${derivedParams.categorySlug}-${derivedParams.categoryId}/${valideURLConvert(s.name)}-${s._id}`}
-                      className="group"
-                    >
-                      <div className='p-2 rounded flex justify-between items-center bg-gray-100 group-hover:bg-primary-200 dark:bg-gray-700 dark:group-hover:bg-primary-300 dark:text-white text-sm'>
-                        <p>{s.name}</p>
-                        <p>{params.subcategoryName && params.subcategoryName.includes(s._id) ? '✓' : ''}</p>
-                      </div>
-                    </Link>
-                  ))
-                : (
-                  <div className="text-gray-500 dark:text-gray-400 text-sm">
-                    No subcategories available
+    <section className="min-h-screen w-full bg-ivory dark:bg-dm-surface transition-colors duration-200">
+      <div className="mx-auto max-w-7xl px-3 sm:px-4 py-4 sm:py-6">
+        <div className="grid grid-cols-1 md:grid-cols-[220px_1fr] gap-4">
+
+          {/* ── Subcategory sidebar ─────────────────────────────── */}
+          <aside className="md:sticky md:top-20 md:self-start">
+            <div className="bg-white dark:bg-dm-card rounded-card border border-brown-100 dark:border-dm-border shadow-card p-4">
+              <h2 className="text-sm font-semibold text-charcoal dark:text-white mb-3 uppercase tracking-wide">
+                Sub Categories
+              </h2>
+              <div className="flex flex-col gap-1">
+                {DisplaySubCatory.length > 0
+                  ? DisplaySubCatory.map(s => {
+                      const isActive = params.subcategoryName && params.subcategoryName.includes(s._id);
+                      return (
+                        <Link
+                          key={s._id}
+                          to={`/${derivedParams.categorySlug}-${derivedParams.categoryId}/${valideURLConvert(s.name)}-${s._id}`}
+                          className={`flex items-center justify-between px-3 py-2 rounded-lg text-sm transition-colors ${
+                            isActive
+                              ? 'bg-plum-50 dark:bg-plum-900/30 text-plum-700 dark:text-plum-200 font-medium'
+                              : 'text-charcoal dark:text-white/70 hover:bg-plum-50 dark:hover:bg-plum-900/20 hover:text-plum-700 dark:hover:text-plum-200'
+                          }`}
+                        >
+                          <span>{s.name}</span>
+                          {isActive && <span className="w-1.5 h-1.5 rounded-full bg-plum-700 dark:bg-plum-300 flex-shrink-0" />}
+                        </Link>
+                      );
+                    })
+                  : (
+                    <p className="text-sm text-brown-400 dark:text-white/40 px-2 py-1">
+                      No subcategories available
+                    </p>
+                  )
+                }
+              </div>
+            </div>
+          </aside>
+
+          {/* ── Products grid ───────────────────────────────────── */}
+          <div>
+            <div className="bg-white dark:bg-dm-card rounded-card border border-brown-100 dark:border-dm-border shadow-card px-4 py-3 mb-4">
+              <h3 className="font-semibold text-charcoal dark:text-white">
+                {navigationState.categoryName || 'Products'}
+              </h3>
+              {data.length > 0 && (
+                <p className="text-xs text-brown-400 dark:text-white/40 mt-0.5">
+                  {data.length} product{data.length !== 1 ? 's' : ''} found
+                </p>
+              )}
+            </div>
+
+            <div className="min-h-[60vh]">
+              {loading ? (
+                <Loading />
+              ) : data.length > 0 ? (
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
+                  {data.map((p, index) => (
+                    <CardProduct
+                      data={p}
+                      key={p._id + "productSubCategory" + index}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <div className="flex flex-col items-center justify-center py-20 gap-4 text-center">
+                  <div className="w-16 h-16 rounded-full bg-plum-50 dark:bg-plum-900/20 flex items-center justify-center">
+                    <span className="text-2xl">🛍️</span>
                   </div>
-                )
-              }
+                  <p className="text-brown-400 dark:text-white/50 text-sm">
+                    No products found in this category
+                  </p>
+                  <Link
+                    to="/"
+                    className="px-5 py-2.5 bg-gold-500 hover:bg-gold-400 text-charcoal font-semibold rounded-pill text-sm transition-colors press"
+                  >
+                    Browse All Categories
+                  </Link>
+                </div>
+              )}
             </div>
           </div>
 
-          {/**Product **/}
-          <div className='sticky top-20 md:col-span-3'>
-            <div className='bg-white dark:bg-gray-800 shadow-md p-4 z-10'>
-              <h3 className='font-semibold dark:text-gray-100'>Products</h3>
-            </div>
-            <div>
-              <div className='min-h-[80vh] max-h-[80vh] overflow-y-auto relative dark:bg-gray-900'>
-                {loading ? (
-                  <Loading />
-                ) : data.length > 0 ? (
-                  <div className='grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 p-4 gap-4'>
-                    {
-                      data.map((p, index) => (
-                        <CardProduct
-                          data={p}
-                          key={p._id + "productSubCategory" + index}
-                        />
-                      ))
-                    }
-                  </div>
-                ) : (
-                  <div className="flex justify-center items-center h-full py-20">
-                    <div className="text-center">
-                      <p className="text-gray-500 dark:text-gray-400 mb-4">No products found in this category</p>
-                      <Link 
-                        to="/"
-                        className="inline-block px-4 py-2 bg-orange-500 text-white rounded-md hover:bg-orange-600"
-                      >
-                        Browse All Products
-                      </Link>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
         </div>
       </div>
     </section>

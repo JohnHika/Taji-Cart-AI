@@ -28,13 +28,13 @@ const CheckoutPage = ({ isCutView = false, onClose = null }) => {
   
   // Get fulfillment method from location state if available
   const [fulfillmentMethod, setFulfillmentMethod] = useState(
-    location.state?.fulfillmentMethod || 'delivery'
+    location.state?.fulfillmentMethod || location.state?.fulfillment_type || 'delivery'
   );
   const [pickupLocation, setPickupLocation] = useState(
-    location.state?.pickupLocation || ''
+    location.state?.pickupLocation || location.state?.pickup_location || ''
   );
   const [pickupInstructions, setPickupInstructions] = useState(
-    location.state?.pickupInstructions || ''
+    location.state?.pickupInstructions || location.state?.pickup_instructions || ''
   );
   
   const addressList = useSelector(state => state.addresses.addressList);
@@ -393,16 +393,16 @@ const CheckoutPage = ({ isCutView = false, onClose = null }) => {
   // Render cut view or full page based on prop
   if (isCutView) {
     return (
-      <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex justify-end">
-        <div className="bg-blue-50 dark:bg-gray-800 w-full max-w-md h-full overflow-y-auto transition-colors duration-200">
+      <div className="fixed inset-0 bg-plum-900/50 z-50 flex justify-end backdrop-blur-[2px]">
+        <div className="bg-ivory dark:bg-dm-surface w-full max-w-md h-full overflow-y-auto transition-colors duration-200 border-l border-brown-100 dark:border-dm-border">
           {/* Cut View Header */}
-          <div className="sticky top-0 z-20 bg-white dark:bg-gray-700 p-4 flex justify-between items-center border-b border-gray-200 dark:border-gray-600 shadow-sm transition-colors duration-200">
+          <div className="sticky top-0 z-20 bg-white dark:bg-dm-card p-4 flex justify-between items-center border-b border-brown-100 dark:border-dm-border shadow-sm transition-colors duration-200">
             <h2 className="font-semibold text-lg dark:text-white">Checkout</h2>
             <button 
               onClick={onClose}
-              className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors duration-200"
+              className="p-2 rounded-full hover:bg-plum-50 dark:hover:bg-plum-900/30 transition-colors duration-200"
             >
-              <FaXmark className="text-gray-600 dark:text-gray-300" />
+              <FaXmark className="text-brown-500 dark:text-white/55" />
             </button>
           </div>
 
@@ -422,11 +422,11 @@ const CheckoutPage = ({ isCutView = false, onClose = null }) => {
                 </div>
               )}
               {!isPaymentEnabled && hasActiveAddresses && !addressError && (
-                <div className="bg-blue-100 border border-blue-400 text-blue-700 dark:bg-blue-900/30 dark:border-blue-700 dark:text-blue-200 px-4 py-2 rounded mb-4">
+                <div className="bg-plum-50 dark:bg-plum-900/30 border border-plum-200 dark:border-plum-700 text-plum-800 dark:text-plum-200 px-4 py-2 rounded-card mb-4 text-sm">
                   Select an address to enable payment options.
                 </div>
               )}
-              <div className='bg-white dark:bg-gray-700 p-2 grid gap-4 rounded shadow transition-colors duration-200'>
+              <div className='bg-white dark:bg-dm-card p-2 grid gap-4 rounded shadow transition-colors duration-200'>
                 {hasActiveAddresses ? (
                   addressList.map((address, index) => {
                     // Only render addresses with status = true
@@ -438,10 +438,10 @@ const CheckoutPage = ({ isCutView = false, onClose = null }) => {
                         htmlFor={`address-cut-${index}`}
                         className="cursor-pointer"
                       >
-                        <div className={`border rounded p-3 flex gap-3 transition-colors duration-200 
+                        <div className={`border rounded-card p-3 flex gap-3 transition-colors duration-200 
                           ${selectAddress === index 
-                            ? 'bg-blue-50 border-blue-500 border-2 dark:bg-blue-900/30 dark:border-blue-400' 
-                            : 'dark:border-gray-600 hover:bg-blue-50 dark:hover:bg-blue-900/20'}`}>
+                            ? 'bg-plum-50 border-plum-600 border-2 dark:bg-plum-900/40 dark:border-plum-400' 
+                            : 'border-brown-100 dark:border-dm-border hover:bg-plum-50/50 dark:hover:bg-plum-900/20'}`}>
                           <div>
                             <input 
                               id={`address-cut-${index}`} 
@@ -450,10 +450,10 @@ const CheckoutPage = ({ isCutView = false, onClose = null }) => {
                               checked={selectAddress === index}
                               onChange={(e) => setSelectAddress(parseInt(e.target.value))} 
                               name='address-cut' 
-                              className="accent-blue-500 dark:accent-blue-400"
+                              className="accent-plum-600 dark:accent-plum-400"
                             />
                           </div>
-                          <div className="dark:text-gray-200">
+                          <div className="dark:text-white/85">
                             <p>{address.address_line}</p>
                             <p>{address.city}</p>
                             <p>{address.state}</p>
@@ -465,13 +465,13 @@ const CheckoutPage = ({ isCutView = false, onClose = null }) => {
                     )
                   })
                 ) : (
-                  <div className="p-4 text-center text-gray-500 dark:text-gray-400">
+                  <div className="p-4 text-center text-brown-400 dark:text-white/45">
                     No delivery addresses found. Please add an address to continue.
                   </div>
                 )}
                 <div 
                   onClick={() => setOpenAddress(true)} 
-                  className='h-16 bg-blue-50 dark:bg-blue-900/20 border-2 border-dashed dark:border-blue-700 flex justify-center items-center cursor-pointer hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors duration-200 dark:text-gray-200'
+                  className="h-16 bg-plum-50/50 dark:bg-plum-900/20 border-2 border-dashed border-plum-200 dark:border-plum-700 flex justify-center items-center cursor-pointer hover:bg-plum-100/80 dark:hover:bg-plum-900/35 transition-colors duration-200 text-plum-800 dark:text-white/85 text-sm font-medium"
                 >
                   Add address
                 </div>
@@ -479,7 +479,7 @@ const CheckoutPage = ({ isCutView = false, onClose = null }) => {
             </div>
 
             {/* Summary Section */}
-            <div className='bg-white dark:bg-gray-700 p-4 rounded shadow mb-4 transition-colors duration-200'>
+            <div className='bg-white dark:bg-dm-card p-4 rounded shadow mb-4 transition-colors duration-200'>
               <h3 className='font-semibold mb-4 dark:text-white'>Order Summary</h3>
               
               {/* Royal Card Badge */}
@@ -508,10 +508,10 @@ const CheckoutPage = ({ isCutView = false, onClose = null }) => {
               </div>
               
               <div className='space-y-2'>
-                <div className='flex gap-4 justify-between ml-1 dark:text-gray-200'>
+                <div className='flex gap-4 justify-between ml-1 dark:text-white/85'>
                   <p>Original price total</p>
                   <p className='flex items-center gap-2'>
-                    <span className='line-through text-neutral-400 dark:text-gray-400'>{DisplayPriceInShillings(notDiscountTotalPrice)}</span>
+                    <span className='line-through text-brown-300 dark:text-white/35'>{DisplayPriceInShillings(notDiscountTotalPrice)}</span>
                   </p>
                 </div>
                 
@@ -543,7 +543,7 @@ const CheckoutPage = ({ isCutView = false, onClose = null }) => {
                 
                 {/* Community reward free shipping line */}
                 {selectedReward && selectedReward.type === 'shipping' && (
-                  <div className='flex gap-4 justify-between ml-1 text-blue-600 dark:text-blue-400'>
+                  <div className='flex gap-4 justify-between ml-1 text-plum-700 dark:text-plum-300'>
                     <p className='flex items-center'>
                       Community free shipping
                     </p>
@@ -551,17 +551,17 @@ const CheckoutPage = ({ isCutView = false, onClose = null }) => {
                   </div>
                 )}
                 
-                <div className='flex gap-4 justify-between ml-1 dark:text-gray-200'>
+                <div className='flex gap-4 justify-between ml-1 dark:text-white/85'>
                   <p>Subtotal</p>
                   <p className='font-medium'>{DisplayPriceInShillings(priceAfterCommunityDiscount)}</p>
                 </div>
                 
-                <div className='flex gap-4 justify-between ml-1 dark:text-gray-200'>
+                <div className='flex gap-4 justify-between ml-1 dark:text-white/85'>
                   <p>Quantity total</p>
                   <p className='flex items-center gap-2'>{totalQty} item{totalQty !== 1 ? 's' : ''}</p>
                 </div>
                 
-                <div className='flex gap-4 justify-between ml-1 dark:text-gray-200'>
+                <div className='flex gap-4 justify-between ml-1 dark:text-white/85'>
                   <p>Delivery Charge</p>
                   <p className='flex items-center gap-2'>Free</p>
                 </div>
@@ -570,19 +570,19 @@ const CheckoutPage = ({ isCutView = false, onClose = null }) => {
 
             {/* Loyalty Points Section */}
             {availablePoints > 0 && (
-              <div className="mb-4 p-4 bg-white dark:bg-gray-700 rounded-lg shadow transition-colors duration-200">
+              <div className="mb-4 p-4 bg-white dark:bg-dm-card rounded-lg shadow transition-colors duration-200">
                 <div className="flex items-center justify-between">
                   <div>
                     <h3 className="font-medium dark:text-white">Royal Loyalty Points</h3>
-                    <p className="text-sm text-gray-600 dark:text-gray-300">You have {availablePoints} points (worth up to KES {availablePoints})</p>
+                    <p className="text-sm text-brown-500 dark:text-white/55">You have {availablePoints} points (worth up to KES {availablePoints})</p>
                   </div>
-                  <div className="flex items-center dark:text-gray-200">
+                  <div className="flex items-center dark:text-white/85">
                     <input
                       type="checkbox"
                       id="usePoints-cut"
                       checked={usePoints}
                       onChange={() => setUsePoints(!usePoints)}
-                      className="mr-2 accent-blue-500 dark:accent-blue-400"
+                      className="mr-2 accent-plum-600 dark:accent-plum-400"
                     />
                     <label htmlFor="usePoints-cut">Use my points</label>
                   </div>
@@ -597,8 +597,8 @@ const CheckoutPage = ({ isCutView = false, onClose = null }) => {
             )}
 
             {/* Final Price Display */}
-            <div className="mb-6 p-4 bg-white dark:bg-gray-700 rounded-lg shadow transition-colors duration-200">
-              <div className="flex justify-between items-center dark:text-gray-200">
+            <div className="mb-6 p-4 bg-white dark:bg-dm-card rounded-lg shadow transition-colors duration-200">
+              <div className="flex justify-between items-center dark:text-white/85">
                 <span className="font-medium">Subtotal:</span>
                 <span>KES {priceAfterCommunityDiscount.toLocaleString()}</span>
               </div>
@@ -610,7 +610,7 @@ const CheckoutPage = ({ isCutView = false, onClose = null }) => {
                 </div>
               )}
               
-              <div className="flex justify-between items-center mt-2 pt-2 border-t dark:border-gray-600 font-bold dark:text-white">
+              <div className="flex justify-between items-center mt-2 pt-2 border-t dark:border-dm-border font-bold dark:text-white">
                 <span>Total:</span>
                 <span>KES {finalPrice.toLocaleString()}</span>
               </div>
@@ -621,9 +621,9 @@ const CheckoutPage = ({ isCutView = false, onClose = null }) => {
               <button 
                 className={`w-full py-2 px-4 rounded text-white font-semibold transition-colors duration-200 ${
                   isPaymentEnabled 
-                    ? 'bg-green-600 hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-600' 
-                    : 'bg-gray-400 dark:bg-gray-600 cursor-not-allowed'
-                }`} 
+                    ? 'bg-gold-500 hover:bg-gold-400 text-charcoal dark:text-charcoal' 
+                    : 'bg-brown-200 dark:bg-dm-border text-brown-400 dark:text-white/35 cursor-not-allowed'
+                }`}
                 onClick={handleOnlinePayment}
                 disabled={!isPaymentEnabled}
               >
@@ -632,8 +632,8 @@ const CheckoutPage = ({ isCutView = false, onClose = null }) => {
               <button 
                 className={`w-full py-2 px-4 rounded text-white font-semibold transition-colors duration-200 ${
                   isPaymentEnabled 
-                    ? 'bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600' 
-                    : 'bg-gray-400 dark:bg-gray-600 cursor-not-allowed'
+                    ? 'bg-plum-700 hover:bg-plum-600 dark:bg-plum-600 dark:hover:bg-plum-500' 
+                    : 'bg-brown-200 dark:bg-dm-border text-brown-400 dark:text-white/35 cursor-not-allowed'
                 }`}
                 onClick={handleShowMpesaForm}
                 disabled={!isPaymentEnabled}
@@ -643,8 +643,8 @@ const CheckoutPage = ({ isCutView = false, onClose = null }) => {
               <button 
                 className={`w-full py-2 px-4 border-2 font-semibold transition-colors duration-200 ${
                   isPaymentEnabled 
-                    ? 'border-green-600 text-green-600 hover:bg-green-600 hover:text-white dark:border-green-500 dark:text-green-400 dark:hover:bg-green-700' 
-                    : 'border-gray-400 text-gray-400 dark:border-gray-600 dark:text-gray-500 cursor-not-allowed'
+                    ? 'border-plum-600 text-plum-700 hover:bg-plum-50 hover:text-plum-900 dark:border-plum-500 dark:text-plum-200 dark:hover:bg-plum-900/40 dark:hover:text-white' 
+                    : 'border-brown-200 text-brown-300 dark:border-dm-border dark:text-white/30 cursor-not-allowed'
                 }`}
                 onClick={handleCashOnDelivery}
                 disabled={!isPaymentEnabled}
@@ -654,8 +654,8 @@ const CheckoutPage = ({ isCutView = false, onClose = null }) => {
               <button 
                 className={`w-full py-2 px-4 rounded text-white font-semibold transition-colors duration-200 ${
                   isPaymentEnabled 
-                    ? 'bg-red-600 hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-600' 
-                    : 'bg-gray-400 dark:bg-gray-600 cursor-not-allowed'
+                    ? 'bg-charcoal hover:bg-plum-900 text-white dark:bg-plum-800 dark:hover:bg-plum-700' 
+                    : 'bg-brown-200 dark:bg-dm-border text-brown-400 dark:text-white/35 cursor-not-allowed'
                 }`}
                 onClick={handlePesapalPayment}
                 disabled={!isPaymentEnabled}
@@ -742,19 +742,19 @@ const CheckoutPage = ({ isCutView = false, onClose = null }) => {
       return (
         <>
           <h3 className='text-lg font-semibold dark:text-white mb-2'>Pickup Information</h3>
-          <div className='bg-white dark:bg-gray-700 p-4 rounded shadow transition-colors duration-200'>
+          <div className='bg-white dark:bg-dm-card p-4 rounded shadow transition-colors duration-200'>
             <div className="flex items-center gap-2 mb-3">
               <FaStore className="text-purple-500" />
               <span className="font-medium dark:text-white">Pickup Location:</span>
             </div>
-            <p className="mb-3 dark:text-gray-200">{pickupLocation}</p>
+            <p className="mb-3 dark:text-white/85">{pickupLocation}</p>
             
             {pickupInstructions && (
               <>
                 <div className="flex items-center gap-2 mb-2 mt-4">
                   <span className="font-medium dark:text-white">Your Instructions:</span>
                 </div>
-                <p className="text-gray-600 dark:text-gray-300 italic">{pickupInstructions}</p>
+                <p className="text-brown-500 dark:text-white/55 italic">{pickupInstructions}</p>
               </>
             )}
             
@@ -810,10 +810,10 @@ const CheckoutPage = ({ isCutView = false, onClose = null }) => {
           
           <div className='bg-white dark:bg-dm-card-2 p-4 rounded-card border border-brown-100 dark:border-dm-border mt-3 transition-colors duration-200'>
             <h3 className='font-semibold text-charcoal dark:text-white mb-3 text-sm uppercase tracking-wide'>Bill Details</h3>
-            <div className='flex gap-4 justify-between ml-1 dark:text-gray-200'>
+            <div className='flex gap-4 justify-between ml-1 dark:text-white/85'>
               <p>Original price total</p>
               <p className='flex items-center gap-2'>
-                <span className='line-through text-neutral-400 dark:text-gray-400'>{DisplayPriceInShillings(notDiscountTotalPrice)}</span>
+                <span className='line-through text-brown-300 dark:text-white/35'>{DisplayPriceInShillings(notDiscountTotalPrice)}</span>
               </p>
             </div>
             
@@ -845,7 +845,7 @@ const CheckoutPage = ({ isCutView = false, onClose = null }) => {
             
             {/* Community reward free shipping line */}
             {selectedReward && selectedReward.type === 'shipping' && (
-              <div className='flex gap-4 justify-between ml-1 text-blue-600 dark:text-blue-400'>
+              <div className='flex gap-4 justify-between ml-1 text-plum-700 dark:text-plum-300'>
                 <p className='flex items-center'>
                   Community free shipping
                 </p>
@@ -853,17 +853,17 @@ const CheckoutPage = ({ isCutView = false, onClose = null }) => {
               </div>
             )}
             
-            <div className='flex gap-4 justify-between ml-1 dark:text-gray-200'>
+            <div className='flex gap-4 justify-between ml-1 dark:text-white/85'>
               <p>Subtotal</p>
               <p className='font-medium'>{DisplayPriceInShillings(priceAfterCommunityDiscount)}</p>
             </div>
             
-            <div className='flex gap-4 justify-between ml-1 dark:text-gray-200'>
+            <div className='flex gap-4 justify-between ml-1 dark:text-white/85'>
               <p>Quantity total</p>
               <p className='flex items-center gap-2'>{totalQty} item{totalQty !== 1 ? 's' : ''}</p>
             </div>
             
-            <div className='flex gap-4 justify-between ml-1 dark:text-gray-200'>
+            <div className='flex gap-4 justify-between ml-1 dark:text-white/85'>
               <p>Delivery Charge</p>
               <p className='flex items-center gap-2'>Free</p>
             </div>
@@ -871,19 +871,19 @@ const CheckoutPage = ({ isCutView = false, onClose = null }) => {
 
           {/* Loyalty Points Section */}
           {availablePoints > 0 && (
-            <div className="mt-4 p-4 bg-white dark:bg-gray-700 rounded-lg shadow transition-colors duration-200">
+            <div className="mt-4 p-4 bg-white dark:bg-dm-card rounded-lg shadow transition-colors duration-200">
               <div className="flex items-center justify-between">
                 <div>
                   <h3 className="font-medium dark:text-white">Royal Loyalty Points</h3>
-                  <p className="text-sm text-gray-600 dark:text-gray-300">You have {availablePoints} points (worth up to KES {availablePoints})</p>
+                  <p className="text-sm text-brown-500 dark:text-white/55">You have {availablePoints} points (worth up to KES {availablePoints})</p>
                 </div>
-                <div className="flex items-center dark:text-gray-200">
+                <div className="flex items-center dark:text-white/85">
                   <input
                     type="checkbox"
                     id="usePoints"
                     checked={usePoints}
                     onChange={() => setUsePoints(!usePoints)}
-                    className="mr-2 accent-blue-500 dark:accent-blue-400"
+                    className="mr-2 accent-plum-600 dark:accent-plum-400"
                   />
                   <label htmlFor="usePoints">Use my points</label>
                 </div>
@@ -935,7 +935,7 @@ const CheckoutPage = ({ isCutView = false, onClose = null }) => {
             <button
               className={`flex items-center justify-between w-full py-3 px-4 rounded-card border-2 font-semibold text-sm transition-all duration-200 press ${
                 (fulfillmentMethod === 'delivery' && isPaymentEnabled) || (fulfillmentMethod === 'pickup')
-                  ? 'border-green-600 text-green-700 dark:border-green-500 dark:text-green-300 bg-green-50 dark:bg-green-900/10 hover:bg-green-100 dark:hover:bg-green-900/20'
+                  ? 'border-plum-600 text-plum-800 dark:border-plum-400 dark:text-plum-200 bg-plum-50 dark:bg-plum-900/25 hover:bg-plum-100 dark:hover:bg-plum-900/40'
                   : 'border-brown-100 dark:border-dm-border text-brown-300 dark:text-white/20 cursor-not-allowed'
               }`}
               onClick={handleShowMpesaForm}
@@ -994,7 +994,7 @@ const CheckoutPage = ({ isCutView = false, onClose = null }) => {
               <h3 className="text-lg font-bold dark:text-white">M-Pesa Payment</h3>
               <button 
                 onClick={() => setShowMpesaForm(false)}
-                className="text-gray-500 hover:text-gray-700 dark:text-gray-300 dark:hover:text-gray-100"
+                className="text-brown-400 hover:text-charcoal dark:text-white/50 dark:hover:text-white"
               >
                 ✕
               </button>

@@ -56,28 +56,37 @@ const DashboardSidebar = ({ userRole, isStaff }) => {
     }
   };
 
-  const isActive = (path) =>
-    location.pathname === path || location.pathname.includes(path);
+  const isMenuItemActive = (to) => {
+    const [pathPart, hashPart] = to.split('#');
+    const pathOnly = pathPart || to;
+    if (pathOnly === '/dashboard/profile') {
+      if (hashPart === 'royal') {
+        return location.pathname === '/dashboard/profile' && location.hash === '#royal';
+      }
+      return location.pathname === '/dashboard/profile' && location.hash !== '#royal';
+    }
+    return location.pathname === pathOnly || location.pathname.startsWith(`${pathOnly}/`);
+  };
 
   const MenuItem = ({ to, icon: Icon, label }) => {
-    const active = isActive(to);
+    const active = isMenuItemActive(to);
     return (
       <Link
         to={to}
-        className={`flex items-center gap-3 px-4 py-2.5 rounded-lg mx-2 mb-0.5 text-sm font-medium transition-all duration-200 group ${
+        className={`flex items-center gap-3 px-4 py-2.5 rounded-pill mx-2 mb-1 text-sm font-medium transition-all duration-200 border ${
           active
-            ? 'bg-plum-700 border-l-4 border-gold-500 text-white'
-            : 'text-white/60 hover:bg-plum-800 hover:text-white border-l-4 border-transparent'
+            ? 'bg-plum-700 text-white border-gold-500/55 shadow-inner ring-1 ring-gold-400/20'
+            : 'text-white/75 border-transparent hover:bg-plum-800/95 hover:text-white hover:border-plum-600'
         }`}
       >
-        <Icon size={16} className={active ? 'text-gold-400' : 'text-white/40 group-hover:text-white/70'} />
+        <Icon size={15} className={active ? 'text-gold-400' : 'text-white/45'} />
         <span className="truncate">{label}</span>
       </Link>
     );
   };
 
   const SectionLabel = ({ title }) => (
-    <div className="text-xs font-semibold uppercase tracking-widest text-blush-400/70 px-6 py-1 mt-4 mb-1">
+    <div className="text-[0.65rem] font-semibold uppercase tracking-[0.2em] text-white/45 px-4 py-2 mt-4 mb-0.5">
       {title}
     </div>
   );
@@ -118,9 +127,9 @@ const DashboardSidebar = ({ userRole, isStaff }) => {
         <MenuItem to="/dashboard/profile" icon={FaUser} label="My Profile" />
         <MenuItem to="/dashboard/myorders" icon={FaShoppingBag} label="My Orders" />
         <MenuItem to="/dashboard/address" icon={FaMapMarkerAlt} label="My Addresses" />
-        <MenuItem to="/dashboard/loyalty-card" icon={FaCrown} label="Loyalty Card" />
-        <MenuItem to="/dashboard/community-perks" icon={FaTrophy} label="Community Perks" />
-        <MenuItem to="/dashboard/active-campaigns" icon={FaBullhorn} label="Active Campaigns" />
+        <MenuItem to="/dashboard/profile#royal" icon={FaCrown} label="Royal card" />
+        <MenuItem to="/dashboard/community-perks" icon={FaTrophy} label="Community perks" />
+        <MenuItem to="/dashboard/active-campaigns" icon={FaBullhorn} label="Active campaigns" />
 
         {isAdmin && (
           <>
