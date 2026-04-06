@@ -14,6 +14,13 @@ import { Navigate, useLocation } from 'react-router-dom';
 const PrivateRoute = ({ children, requireAdmin = false, requireStaff = false }) => {
   const user = useSelector(state => state.user);
   const location = useLocation();
+  const hasStoredSession = Boolean(
+    sessionStorage.getItem('accesstoken') ||
+    sessionStorage.getItem('refreshToken') ||
+    localStorage.getItem('accesstoken') ||
+    localStorage.getItem('refreshToken') ||
+    localStorage.getItem('token')
+  );
   
   // Check if user is authenticated
   const isAuthenticated = user && user._id;
@@ -34,6 +41,13 @@ const PrivateRoute = ({ children, requireAdmin = false, requireStaff = false }) 
   
   // Check if logged in
   if (!isAuthenticated) {
+    if (hasStoredSession) {
+      return (
+        <div className="min-h-[50vh] flex items-center justify-center text-sm text-gray-500 dark:text-gray-400">
+          Restoring your session...
+        </div>
+      );
+    }
     console.log('User not authenticated, redirecting to login');
     return <Navigate to="/login" state={{ from: location }} replace />;
   }

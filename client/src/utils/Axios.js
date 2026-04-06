@@ -1,168 +1,202 @@
 import axios from 'axios';
+import { apiBaseUrl } from '../common/apiBaseUrl';
 import SummaryApi from '../common/SummaryApi';
 
-const configuredBaseURL = import.meta.env.VITE_SERVER_URL || import.meta.env.VITE_BACKEND_URL;
-const localBaseURL = import.meta.env.VITE_LOCAL_BACKEND_URL || 'http://localhost:5000';
-const isLocalBrowser =
-  typeof window !== 'undefined' &&
-  ['localhost', '127.0.0.1'].includes(window.location.hostname);
+const inFlightMutationRequests = new Map();
 
-// Ensure your Axios instance is properly configured
+const isPlainObject = (value) =>
+  Object.prototype.toString.call(value) === '[object Object]';
+
+const sortObjectDeep = (value) => {
+  if (Array.isArray(value)) {
+    return value.map(sortObjectDeep);
+  }
+
+  if (!isPlainObject(value)) {
+    return value;
+  }
+
+  return Object.keys(value)
+    .sort()
+    .reduce((acc, key) => {
+      acc[key] = sortObjectDeep(value[key]);
+      return acc;
+    }, {});
+};
+
+const stableSerialize = (value) => {
+  if (value === undefined) return '';
+  return JSON.stringify(sortObjectDeep(value));
+};
+
+const isMultipartRequest = (headers = {}, data) => {
+  if (typeof FormData !== 'undefined' && data instanceof FormData) {
+    return true;
+  }
+
+  const contentType =
+    headers?.['Content-Type'] ||
+    headers?.['content-type'] ||
+    headers?.common?.['Content-Type'] ||
+    '';
+
+  return typeof contentType === 'string' && contentType.includes('multipart/form-data');
+};
+
+const getRequestLockKey = (config = {}) => {
+  if (config.allowConcurrent || config.skipRequestLock) {
+    return null;
+  }
+
+  if (typeof config.requestLockKey === 'string' && config.requestLockKey.trim()) {
+    return config.requestLockKey.trim();
+  }
+
+  const method = (config.method || 'GET').toUpperCase();
+
+  if (['GET', 'HEAD', 'OPTIONS'].includes(method)) {
+    return null;
+  }
+
+  if (isMultipartRequest(config.headers, config.data)) {
+    return null;
+  }
+
+  return `${method}::${config.url || ''}::${stableSerialize(config.params)}::${stableSerialize(config.data)}`;
+};
+
 const instance = axios.create({
-  baseURL: (import.meta.env.DEV && isLocalBrowser)
-    ? localBaseURL
-    : (configuredBaseURL || localBaseURL),
+  baseURL: apiBaseUrl,
   withCredentials: true,
   timeout: 30000,
   headers: {
     'Content-Type': 'application/json',
-    // Don't add Cache-Control here as a default header
   }
 });
 
-// Add an interceptor to include the token in every request
-instance.interceptors.request.use(config => {
-  const token = sessionStorage.getItem('accesstoken') || 
-                localStorage.getItem('accesstoken') || 
-                sessionStorage.getItem('token') || 
-                localStorage.getItem('token');
+instance.interceptors.request.use((config) => {
+  const token =
+    sessionStorage.getItem('accesstoken') ||
+    localStorage.getItem('accesstoken') ||
+    sessionStorage.getItem('token') ||
+    localStorage.getItem('token');
+
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
+
   return config;
 });
 
-// Flag to prevent multiple refresh token requests
 let isRefreshing = false;
-// Queue of requests that failed due to token expiration
 let failedQueue = [];
-// Set a timer for auto-refresh before token expiration
 let refreshTimer = null;
 
-// Process the queue of failed requests with new token or rejection
 const processQueue = (error, token = null) => {
-  failedQueue.forEach(prom => {
+  failedQueue.forEach((promiseHandlers) => {
     if (error) {
-      prom.reject(error);
+      promiseHandlers.reject(error);
     } else {
-      prom.resolve(token);
+      promiseHandlers.resolve(token);
     }
   });
-  
+
   failedQueue = [];
 };
 
-// Setup a timer to auto-refresh token before it expires
 const setupRefreshTimer = () => {
-  // Clear any existing timer
   if (refreshTimer) clearTimeout(refreshTimer);
-  
-  // Set timer to refresh 1 minute before token expires (29 minutes)
+
   refreshTimer = setTimeout(() => {
     console.log('Auto-refreshing token before expiration');
-    refreshToken().catch(err => {
-      console.error('Auto-refresh failed:', err);
+    refreshToken().catch((error) => {
+      console.error('Auto-refresh failed:', error);
     });
-  }, 29 * 60 * 1000); // 29 minutes in milliseconds
+  }, 29 * 60 * 1000);
 
   console.log('Auto-refresh timer set for 29 minutes');
 };
 
-// Make the setupRefreshTimer function available globally so it can be called from Login component
 if (typeof window !== 'undefined') {
   window.setupRefreshTimer = setupRefreshTimer;
 }
 
-// Function to refresh token
 const refreshToken = async () => {
   try {
-    const refreshToken = sessionStorage.getItem('refreshToken');
-    
-    if (!refreshToken) {
+    const storedRefreshToken = sessionStorage.getItem('refreshToken');
+
+    if (!storedRefreshToken) {
       throw new Error('No refresh token available');
     }
-    
+
     console.log('Attempting to refresh access token...');
     const response = await instance({
       ...SummaryApi.refreshToken,
-      data: { refreshToken }
+      data: { refreshToken: storedRefreshToken }
     });
-    
+
     if (response.data && response.data.data) {
-      const { accessToken, refreshToken: newRefreshToken } = response.data.data;
-      
-      // Store the new tokens
+      const {
+        accessToken,
+        refreshToken: newRefreshToken
+      } = response.data.data;
+
       sessionStorage.setItem('accesstoken', accessToken);
       sessionStorage.setItem('refreshToken', newRefreshToken);
-      
-      // Setup the refresh timer again
       setupRefreshTimer();
-      
+
       console.log('Token refreshed successfully');
       return accessToken;
-    } else {
-      throw new Error('Failed to refresh token');
     }
+
+    throw new Error('Failed to refresh token');
   } catch (error) {
     console.error('Token refresh failed:', error);
-    // Clear tokens on refresh failure
     sessionStorage.removeItem('accesstoken');
     sessionStorage.removeItem('refreshToken');
-    
-    // Redirect to login page if we're in a browser environment
+
     if (typeof window !== 'undefined') {
       window.location.href = '/login';
     }
-    
+
     throw error;
   }
 };
 
-// Initialize timer if we have a token already
 if (typeof window !== 'undefined' && sessionStorage.getItem('accesstoken')) {
   setupRefreshTimer();
 }
 
-// Response interceptor to handle token refresh
 instance.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config;
-    
-    // If the error is not 401 or the request has already been retried, reject
+
     if (!error.response || error.response.status !== 401 || originalRequest._retry) {
       return Promise.reject(error);
     }
-    
-    // Mark the request as retried
+
     originalRequest._retry = true;
-    
-    // If we're already refreshing, queue this request
+
     if (isRefreshing) {
       return new Promise((resolve, reject) => {
         failedQueue.push({ resolve, reject });
       })
-        .then(token => {
-          originalRequest.headers['Authorization'] = `Bearer ${token}`;
+        .then((token) => {
+          originalRequest.headers.Authorization = `Bearer ${token}`;
           return instance(originalRequest);
         })
-        .catch(err => Promise.reject(err));
+        .catch((refreshError) => Promise.reject(refreshError));
     }
-    
-    // Start refreshing
+
     isRefreshing = true;
-    
+
     try {
       const newToken = await refreshToken();
-      
-      // Process queued requests
       processQueue(null, newToken);
-      
-      // Update the authorization header
-      originalRequest.headers['Authorization'] = `Bearer ${newToken}`;
+      originalRequest.headers.Authorization = `Bearer ${newToken}`;
       return instance(originalRequest);
     } catch (refreshError) {
-      // Process queued requests with error
       processQueue(refreshError);
       return Promise.reject(refreshError);
     } finally {
@@ -171,39 +205,51 @@ instance.interceptors.response.use(
   }
 );
 
-// Add a request interceptor to handle errors
 instance.interceptors.request.use(
   (config) => {
-    // Get the token from localStorage
     const token = localStorage.getItem('accesstoken');
-    // If token exists, add to headers
+
     if (token) {
-      config.headers['Authorization'] = `Bearer ${token}`;
+      config.headers.Authorization = `Bearer ${token}`;
     }
+
     return config;
   },
-  (error) => {
-    return Promise.reject(error);
-  }
+  (error) => Promise.reject(error)
 );
 
-const Axios = (options) => {
-  // Get token from sessionStorage
+const Axios = (options = {}) => {
   const token = sessionStorage.getItem('accesstoken');
-  
-  // Add auth header if token exists in sessionStorage
+
   const headers = {
-    ...(token && { Authorization: `Bearer ${token}` })
+    ...(token ? { Authorization: `Bearer ${token}` } : {})
   };
-  
-  // Return axios request with merged options
-  return instance({
+
+  const requestConfig = {
     ...options,
     headers: {
       ...headers,
       ...options.headers
     }
+  };
+
+  const requestLockKey = getRequestLockKey(requestConfig);
+
+  if (requestLockKey && inFlightMutationRequests.has(requestLockKey)) {
+    return inFlightMutationRequests.get(requestLockKey);
+  }
+
+  const requestPromise = instance(requestConfig).finally(() => {
+    if (requestLockKey) {
+      inFlightMutationRequests.delete(requestLockKey);
+    }
   });
+
+  if (requestLockKey) {
+    inFlightMutationRequests.set(requestLockKey, requestPromise);
+  }
+
+  return requestPromise;
 };
 
 export default Axios;

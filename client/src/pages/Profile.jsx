@@ -348,14 +348,14 @@ const Profile = () => {
     }
 
     return (
-        <div className="container mx-auto p-4">
-            <h1 className="text-2xl font-bold mb-6 dark:text-white">My Account</h1>
+        <div className="mobile-page-shell container mx-auto">
+            <h1 className="mobile-section-title mb-4">My Account</h1>
             
             {/* Tab Navigation */}
-            <div className="flex flex-wrap border-b border-gray-200 dark:border-gray-700 mb-6">
+            <div className="mobile-chip-row border-b border-gray-200 dark:border-gray-700 mb-6">
                 <button
                     onClick={() => setActiveTab('profile')}
-                    className={`py-3 px-5 font-medium text-lg transition-colors duration-200 ${
+                    className={`shrink-0 py-3 px-4 font-medium text-sm sm:text-base transition-colors duration-200 ${
                         activeTab === 'profile' 
                         ? 'text-green-800 dark:text-green-500 border-b-2 border-green-800 dark:border-green-500' 
                         : 'text-gray-600 dark:text-gray-400 hover:text-green-700 dark:hover:text-green-400'
@@ -365,7 +365,7 @@ const Profile = () => {
                 </button>
                 <button
                     onClick={() => setActiveTab('security')}
-                    className={`py-3 px-5 font-medium text-lg transition-colors duration-200 ${
+                    className={`shrink-0 py-3 px-4 font-medium text-sm sm:text-base transition-colors duration-200 ${
                         activeTab === 'security' 
                         ? 'text-green-800 dark:text-green-500 border-b-2 border-green-800 dark:border-green-500' 
                         : 'text-gray-600 dark:text-gray-400 hover:text-green-700 dark:hover:text-green-400'
@@ -375,7 +375,7 @@ const Profile = () => {
                 </button>
                 <button
                     onClick={() => setActiveTab('royal-card')}
-                    className={`py-3 px-5 font-medium text-lg transition-colors duration-200 ${
+                    className={`shrink-0 py-3 px-4 font-medium text-sm sm:text-base transition-colors duration-200 ${
                         activeTab === 'royal-card' 
                         ? 'text-green-800 dark:text-green-500 border-b-2 border-green-800 dark:border-green-500' 
                         : 'text-gray-600 dark:text-gray-400 hover:text-green-700 dark:hover:text-green-400'
@@ -385,7 +385,7 @@ const Profile = () => {
                 </button>
                 <button
                     onClick={() => setActiveTab('rewards')}
-                    className={`py-3 px-5 font-medium text-lg transition-colors duration-200 ${
+                    className={`shrink-0 py-3 px-4 font-medium text-sm sm:text-base transition-colors duration-200 ${
                         activeTab === 'rewards' 
                         ? 'text-green-800 dark:text-green-500 border-b-2 border-green-800 dark:border-green-500' 
                         : 'text-gray-600 dark:text-gray-400 hover:text-green-700 dark:hover:text-green-400'
@@ -397,8 +397,8 @@ const Profile = () => {
             
             {/* Profile Tab Content */}
             {activeTab === 'profile' && (
-                <div className='p-4 bg-white dark:bg-gray-900 transition-colors duration-200'>
-                    <div className="max-w-3xl mx-auto bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md transition-colors duration-200">
+                <div className='bg-white dark:bg-gray-900 transition-colors duration-200'>
+                    <div className="mobile-surface max-w-3xl mx-auto p-4 sm:p-6 transition-colors duration-200">
                         <h1 className="text-2xl font-bold mb-6 text-gray-800 dark:text-white transition-colors duration-200">Profile Settings</h1>
 
                         {/* Profile avatar section */}
@@ -444,7 +444,7 @@ const Profile = () => {
                                 <button 
                                     onClick={() => fileInputRef.current?.click()}
                                     disabled={avatarLoading} 
-                                    className='text-sm border border-primary-100 dark:border-primary-300 hover:border-primary-200 dark:hover:border-primary-200 hover:bg-primary-200 dark:hover:bg-primary-200/90 px-4 py-2 rounded-full transition-colors duration-200 text-gray-700 dark:text-white hover:text-gray-900 disabled:opacity-50 disabled:cursor-not-allowed'
+                                    className='w-full sm:w-auto text-sm border border-primary-100 dark:border-primary-300 hover:border-primary-200 dark:hover:border-primary-200 hover:bg-primary-200 dark:hover:bg-primary-200/90 px-4 py-2 rounded-full transition-colors duration-200 text-gray-700 dark:text-white hover:text-gray-900 disabled:opacity-50 disabled:cursor-not-allowed'
                                 >
                                     {avatarLoading ? 'Uploading...' : 'Change Profile Picture'}
                                 </button>
@@ -550,7 +550,7 @@ const Profile = () => {
                         <div className="mt-10 pt-8 border-t border-gray-200 dark:border-gray-700 transition-colors duration-200">
                             <h2 className="text-xl font-bold mb-6 text-gray-800 dark:text-white transition-colors duration-200">Account Security</h2>
                             
-                            <div className="flex items-center justify-between">
+                            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                                 <div className="text-gray-600 dark:text-gray-300 transition-colors duration-200">
                                     <p>Need to update your password?</p>
                                     <p className="text-sm text-gray-500 dark:text-gray-400 transition-colors duration-200">Secure your account with a strong password</p>
@@ -570,9 +570,9 @@ const Profile = () => {
             
             {/* Security Tab Content */}
             {activeTab === 'security' && (
-                <div className="bg-white dark:bg-gray-900 p-4 transition-colors duration-200">
+                <div className="bg-white dark:bg-gray-900 transition-colors duration-200">
                     <div className="max-w-3xl mx-auto">
-                        <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md transition-colors duration-200">
+                        <div className="mobile-surface p-4 sm:p-6 transition-colors duration-200">
                             <h2 className="text-2xl font-bold mb-6 text-gray-800 dark:text-white transition-colors duration-200">Security Settings</h2>
                             
                             <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-gray-700 dark:to-gray-800 p-4 rounded-md mb-6 transition-colors duration-200">
@@ -692,7 +692,7 @@ const Profile = () => {
                                     <button
                                         type="submit"
                                         disabled={loading || !!passwordError}
-                                        className={`flex items-center justify-center px-4 py-2 bg-primary-200 ${
+                                        className={`w-full sm:w-auto flex items-center justify-center px-4 py-2 bg-primary-200 ${
                                             loading || passwordError ? 'opacity-70 cursor-not-allowed' : 'hover:bg-primary-300'
                                         } text-white rounded-md transition-colors`}
                                     >
@@ -733,16 +733,17 @@ const Profile = () => {
             
             {/* Royal Card Tab Content */}
             {activeTab === 'royal-card' && (
-                <div className="bg-white dark:bg-gray-900 p-4 transition-colors duration-200">
+                <div className="bg-white dark:bg-gray-900 transition-colors duration-200">
                     <div className="max-w-3xl mx-auto">
                         <h2 className="text-2xl font-bold mb-6 text-gray-800 dark:text-white transition-colors duration-200">My Royal Card</h2>
                         
-                        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden mb-6">
+                        <div className="mobile-surface overflow-hidden mb-6">
                             <RoyalCard />
                         </div>
                         
-                        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-4">
+                        <div className="mobile-surface p-4">
                             <h3 className="font-medium text-lg mb-2 dark:text-white">Royal Benefits</h3>
+                            <div className="overflow-x-auto hidden sm:block">
                             <table className="min-w-full text-sm">
                                 <thead>
                                     <tr className="border-b">
@@ -785,6 +786,25 @@ const Profile = () => {
                                     </tr>
                                 </tbody>
                             </table>
+                            </div>
+                            <div className="space-y-3 sm:hidden">
+                                {[
+                                    ['Basic', '0%', 'Card membership', '0'],
+                                    ['Bronze', '2%', 'Basic discount', '500'],
+                                    ['Silver', '3%', 'Free delivery on orders over KES 5,000', '1500'],
+                                    ['Gold', '5%', 'Free delivery + early access to sales', '3,000'],
+                                    ['Platinum', '7%', 'All benefits + exclusive products', '5,000']
+                                ].map(([tier, discount, benefits, points]) => (
+                                    <div key={tier} className="rounded-2xl border border-gray-200 p-3 dark:border-gray-700">
+                                        <div className="flex items-center justify-between gap-3">
+                                            <h4 className="font-semibold text-gray-900 dark:text-white">{tier}</h4>
+                                            <span className="rounded-full bg-pink-100 px-2.5 py-1 text-xs font-semibold text-pink-700 dark:bg-pink-900/40 dark:text-pink-300">{discount}</span>
+                                        </div>
+                                        <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">{benefits}</p>
+                                        <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">Required points: {points}</p>
+                                    </div>
+                                ))}
+                            </div>
                             
                             <div className="mt-3 text-sm text-gray-600 dark:text-gray-400">
                                 <p>Earn 1 point for every KES 100 spent in our store.</p>
@@ -797,11 +817,11 @@ const Profile = () => {
             
             {/* Community Rewards Tab Content */}
             {activeTab === 'rewards' && (
-                <div className="bg-white dark:bg-gray-900 p-4 transition-colors duration-200">
+                <div className="bg-white dark:bg-gray-900 transition-colors duration-200">
                     <div className="max-w-3xl mx-auto">
                         <h2 className="text-2xl font-bold mb-6 text-gray-800 dark:text-white transition-colors duration-200">My Rewards</h2>
                         
-                        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
+                        <div className="mobile-surface p-4 sm:p-6">
                             <div className="mb-6">
                                 <h3 className="text-lg font-medium text-gray-800 dark:text-white mb-4">Community Campaign Rewards</h3>
                                 <p className="text-gray-600 dark:text-gray-300 mb-6">

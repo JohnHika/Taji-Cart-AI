@@ -12,9 +12,8 @@ import {
 } from 'react-icons/fa';
 import { useDispatch, useSelector } from 'react-redux';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import logoLight from '../assets/Taji_Cart_Ai.png';
-import logoDark from '../assets/Taji_Cart_Ai_Light.png';
 import SummaryApi from '../common/SummaryApi';
+import { nawiriBrand } from '../config/brand';
 import { useTheme } from '../context/ThemeContext';
 import { logout } from '../store/userSlice';
 import Axios from '../utils/Axios';
@@ -27,9 +26,6 @@ const DeliveryNavigation = () => {
   const user = useSelector(state => state.user);
   const { darkMode } = useTheme();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  
-  // Use the appropriate logo based on theme
-  const currentLogo = darkMode ? logoLight : logoDark;
   
   const isActive = (path) => {
     return location.pathname === path ? 
@@ -67,9 +63,9 @@ const DeliveryNavigation = () => {
           <div className="flex items-center">
             <Link to="/delivery/dashboard" className="flex items-center">
               <img 
-                src={currentLogo} 
+                src={nawiriBrand.logo} 
                 alt="Nawiri Hair Logo" 
-                className="h-auto w-auto max-h-12 object-contain" 
+                className={`h-auto w-auto max-h-12 rounded-xl object-contain ${darkMode ? 'bg-white p-1.5' : ''}`} 
                 style={{ maxWidth: '120px' }}
               />
               <span className="ml-2 text-xl font-bold text-primary-200 hidden md:block">Driver Portal</span>

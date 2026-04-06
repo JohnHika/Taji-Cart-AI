@@ -1,5 +1,6 @@
 import { Resend } from 'resend';
 import dotenv from 'dotenv'
+import { nawiriBrand } from '../utils/brand.js';
 dotenv.config()
 
 if(!process.env.RESEND_API){
@@ -7,14 +8,17 @@ if(!process.env.RESEND_API){
 }
 
 const resend = new Resend(process.env.RESEND_API);
+const emailFrom = process.env.EMAIL_FROM || `${nawiriBrand.companyName} <onboarding@resend.dev>`;
+const replyTo = process.env.EMAIL_REPLY_TO || nawiriBrand.supportEmail;
 
 const sendEmail = async({sendTo, subject, html })=>{
     try {
         const { data, error } = await resend.emails.send({
-            from: 'NAWIRI HAIR <onboarding@resend.dev>',
+            from: emailFrom,
             to: sendTo,
             subject: subject,
             html: html,
+            reply_to: replyTo,
         });
 
         if (error) {

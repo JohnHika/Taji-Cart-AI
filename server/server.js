@@ -42,8 +42,8 @@ app.use(cors({
 app.use(bodyParser.json());
 
 mongoose.connect(process.env.MONGODB_URI, {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
+  serverSelectionTimeoutMS: 5000,
+  connectTimeoutMS: 10000,
 });
 
 mongoose.connection.on('connected', () => {

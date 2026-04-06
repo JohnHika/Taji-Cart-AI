@@ -24,7 +24,7 @@ const DeliveryLayout = () => {
   return (
     <div className="flex flex-col min-h-screen bg-gray-100 dark:bg-gray-900">
       <DeliveryNavigation />
-      <main className="flex-grow container mx-auto px-4 py-6">
+      <main className="flex-grow container mx-auto w-full max-w-full overflow-x-hidden px-3 py-4 sm:px-4 sm:py-6 pb-24 lg:pb-6">
         <Outlet />
       </main>
       <Footer />

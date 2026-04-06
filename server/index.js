@@ -56,6 +56,21 @@ const PORT = process.env.PORT || 5000;
 
 const app = express();
 
+const isPrivateNetworkOrigin = (origin) => {
+    try {
+        const { protocol, hostname } = new URL(origin);
+        if (!['http:', 'https:'].includes(protocol)) return false;
+        if (hostname === 'localhost' || hostname === '127.0.0.1') return true;
+
+        const is10 = /^10\./.test(hostname);
+        const is192 = /^192\.168\./.test(hostname);
+        const is172 = /^172\.(1[6-9]|2\d|3[0-1])\./.test(hostname);
+        return is10 || is192 || is172;
+    } catch (error) {
+        return false;
+    }
+};
+
 // Robust CORS configuration for production and dev
 const FRONTEND_URL = process.env.FRONTEND_URL;
 const allowedOrigins = [
@@ -63,6 +78,8 @@ const allowedOrigins = [
     'http://localhost:5174',
     'http://localhost:3000',
     'https://nawiri-hair-client.onrender.com',
+    'https://nawirihairke.com',
+    'https://www.nawirihairke.com',
     'https://www.nawirihair.com',
     'https://admin.nawirihair.com',
 ].filter(Boolean);
@@ -77,6 +94,7 @@ app.use(cors({
         // Allow same-origin requests or tools without origin
         if (!origin) return callback(null, true);
         if (allowedOrigins.includes(origin)) return callback(null, true);
+        if (isPrivateNetworkOrigin(origin)) return callback(null, true);
         return callback(new Error(`CORS: Origin ${origin} not allowed`));
     },
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],

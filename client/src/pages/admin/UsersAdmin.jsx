@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import toast from 'react-hot-toast';
 import { FaExclamationTriangle, FaSearch, FaSpinner, FaUsersCog } from 'react-icons/fa';
 import UserTable from '../../components/UserTable';
@@ -15,6 +15,7 @@ const UsersAdmin = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filteredUsers, setFilteredUsers] = useState([]);
   const [statusFilter, setStatusFilter] = useState('all');
+  const [roleFilter, setRoleFilter] = useState('all');
   
   // Selected user and modal states
   const [selectedUser, setSelectedUser] = useState(null);
@@ -30,7 +31,7 @@ const UsersAdmin = () => {
 
   useEffect(() => {
     filterUsers();
-  }, [searchTerm, statusFilter, users]);
+  }, [roleFilter, searchTerm, statusFilter, users]);
 
   const fetchUsersWithCacheBusting = async () => {
     try {
@@ -143,6 +144,15 @@ const UsersAdmin = () => {
     if (statusFilter !== 'all') {
       filtered = filtered.filter(user => user.status === statusFilter);
     }
+
+    if (roleFilter !== 'all') {
+      filtered = filtered.filter((user) => {
+        if (roleFilter === 'admin') return user.isAdmin || user.role === 'admin';
+        if (roleFilter === 'staff') return user.isStaff || user.role === 'staff';
+        if (roleFilter === 'delivery') return user.isDelivery || user.role === 'delivery';
+        return !user.isAdmin && !user.isStaff && !user.isDelivery && user.role !== 'admin' && user.role !== 'staff' && user.role !== 'delivery';
+      });
+    }
     
     setFilteredUsers(filtered);
   };
@@ -150,6 +160,21 @@ const UsersAdmin = () => {
   const handleStatusFilterChange = (e) => {
     setStatusFilter(e.target.value);
   };
+
+  const roleSummary = useMemo(() => {
+    const admins = users.filter((user) => user.isAdmin || user.role === 'admin').length;
+    const staff = users.filter((user) => user.isStaff || user.role === 'staff').length;
+    const delivery = users.filter((user) => user.isDelivery || user.role === 'delivery').length;
+    const customers = Math.max(users.length - admins - staff - delivery, 0);
+
+    return [
+      { label: 'All', value: users.length, filter: 'all' },
+      { label: 'Admins', value: admins, filter: 'admin' },
+      { label: 'Sellers', value: staff, filter: 'staff' },
+      { label: 'Drivers', value: delivery, filter: 'delivery' },
+      { label: 'Customers', value: customers, filter: 'customer' }
+    ];
+  }, [users]);
 
   // Role management handlers
   const handleRoleChange = (user) => {
@@ -390,27 +415,44 @@ const UsersAdmin = () => {
   const confirmationConfig = getConfirmationConfig();
 
   return (
-    <div className="container mx-auto p-6">
-      <div className="flex justify-between items-center mb-6">
+    <div className="container mx-auto w-full max-w-full overflow-x-hidden px-3 py-4 sm:px-4 sm:py-6 pb-24 lg:pb-6">
+      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold dark:text-white mb-2">User Management</h1>
           <p className="text-gray-600 dark:text-gray-300">
-            View and manage all users in the system
+            View and manage admins, sellers, drivers, and customers in one place.
           </p>
         </div>
         
         <button
           onClick={fetchUsersWithCacheBusting}
-          className="px-4 py-2 bg-primary-200 text-white rounded-lg hover:bg-primary-300 flex items-center"
+          className="px-4 py-2 bg-primary-200 text-white rounded-lg hover:bg-primary-300 flex items-center justify-center"
         >
           <FaUsersCog className="mr-2" /> Refresh Users
         </button>
       </div>
+
+      <div className="mb-6 flex gap-3 overflow-x-auto pb-2">
+        {roleSummary.map((item) => (
+          <button
+            key={item.filter}
+            onClick={() => setRoleFilter(item.filter)}
+            className={`min-w-[110px] rounded-2xl border px-4 py-3 text-left transition ${
+              roleFilter === item.filter
+                ? 'border-primary-200 bg-primary-50 text-primary-300 dark:border-primary-300 dark:bg-primary-900/20 dark:text-primary-200'
+                : 'border-gray-200 bg-white text-gray-700 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200'
+            }`}
+          >
+            <div className="text-lg font-bold">{item.value}</div>
+            <div className="text-xs font-medium uppercase tracking-wide">{item.label}</div>
+          </button>
+        ))}
+      </div>
       
       {/* Filters and Search */}
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 mb-6">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div className="relative flex-grow max-w-md">
+        <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+          <div className="relative w-full xl:max-w-md">
             <input
               type="text"
               placeholder="Search users by name, email or phone..."
@@ -421,18 +463,35 @@ const UsersAdmin = () => {
             <FaSearch className="absolute left-3 top-3 text-gray-400 dark:text-gray-300" />
           </div>
           
-          <div className="flex items-center">
-            <label className="mr-2 text-gray-700 dark:text-gray-300">Status:</label>
-            <select
-              value={statusFilter}
-              onChange={handleStatusFilterChange}
-              className="p-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-            >
-              <option value="all">All Users</option>
-              <option value="Active">Active</option>
-              <option value="Inactive">Inactive</option>
-              <option value="Suspended">Suspended</option>
-            </select>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:w-auto">
+            <div className="flex items-center gap-2">
+              <label className="text-gray-700 dark:text-gray-300 whitespace-nowrap">Status:</label>
+              <select
+                value={statusFilter}
+                onChange={handleStatusFilterChange}
+                className="min-w-0 flex-1 p-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+              >
+                <option value="all">All Users</option>
+                <option value="Active">Active</option>
+                <option value="Inactive">Inactive</option>
+                <option value="Suspended">Suspended</option>
+              </select>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <label className="text-gray-700 dark:text-gray-300 whitespace-nowrap">Role:</label>
+              <select
+                value={roleFilter}
+                onChange={(e) => setRoleFilter(e.target.value)}
+                className="min-w-0 flex-1 p-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+              >
+                <option value="all">All Roles</option>
+                <option value="admin">Admins</option>
+                <option value="staff">Sellers</option>
+                <option value="delivery">Drivers</option>
+                <option value="customer">Customers</option>
+              </select>
+            </div>
           </div>
         </div>
       </div>

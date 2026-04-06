@@ -98,7 +98,8 @@ const GlobalProvider = ({ children }) => {
                 data: {
                     _id: id,
                     qty: qty
-                }
+                },
+                requestLockKey: `cart:update:${id}:${qty}`
             });
             const { data: responseData } = response;
 
@@ -120,7 +121,8 @@ const GlobalProvider = ({ children }) => {
                 method: SummaryApi.deleteCartItem.method,
                 data: {
                     _id: cartId
-                }
+                },
+                requestLockKey: `cart:delete:${cartId}`
             });
             const { data: responseData } = response;
 
@@ -137,7 +139,8 @@ const GlobalProvider = ({ children }) => {
         try {
             const response = await Axios({
                 url: SummaryApi.clearCart.url,
-                method: SummaryApi.clearCart.method
+                method: SummaryApi.clearCart.method,
+                requestLockKey: `cart:clear:${user?._id || 'guest'}`
             });
 
             if (response.data.success) {

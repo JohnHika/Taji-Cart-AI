@@ -6,7 +6,10 @@ import staff from '../middleware/Staff.js'; // Fixed import - staff is a default
 
 // Import controller functions from deliveryController.js
 import {
+    getActiveDeliveriesForStaff,
     assignDeliveryPersonnel,
+    getCompletedDeliveriesForStaff,
+    getDispatchedOrders,
     dispatchOrder, // Import the new dispatch function
     exportDeliveryHistory,
     getActiveOrders,
@@ -17,6 +20,7 @@ import {
     getDeliveryStats,
     getPendingOrders,
     manuallyAssignDriver,
+    toggleDriverStatusForStaff,
     updateDriverLocation,
     updateOrderStatus
 } from '../controllers/deliveryController.js';
@@ -62,8 +66,20 @@ deliveryRouter.get('/dashboard-stats', auth, adminOrStaff, getDashboardStats);
 // Get available drivers for manual selection
 deliveryRouter.get('/available-drivers', auth, adminOrStaff, getAvailableDrivers);
 
+// Get dispatched orders waiting for driver assignment
+deliveryRouter.get('/dispatched-orders', auth, adminOrStaff, getDispatchedOrders);
+
+// Get active deliveries for staff/admin monitoring
+deliveryRouter.get('/active-deliveries', auth, adminOrStaff, getActiveDeliveriesForStaff);
+
+// Get completed deliveries for staff/admin monitoring
+deliveryRouter.get('/completed-deliveries', auth, adminOrStaff, getCompletedDeliveriesForStaff);
+
 // Manual assignment of a specific driver by admin/staff
 deliveryRouter.post('/assign-driver', auth, adminOrStaff, manuallyAssignDriver);
+
+// Toggle driver active status by admin/staff
+deliveryRouter.post('/toggle-driver-status', auth, adminOrStaff, toggleDriverStatusForStaff);
 
 // For fulfillment staff to dispatch an order for delivery
 deliveryRouter.post('/dispatch', auth, adminOrStaff, dispatchOrder);

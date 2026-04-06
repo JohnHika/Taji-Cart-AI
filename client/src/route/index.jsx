@@ -25,14 +25,17 @@ import DeliveryDashboard from '../pages/delivery/Dashboard';
 import DeliveryHistory from '../pages/delivery/DeliveryHistory';
 import DeliveryMap from '../pages/delivery/DeliveryMap';
 import DeliverySimulator from '../pages/DeliverySimulator';
+import DashboardHome from '../pages/DashboardHome';
 import Home from '../pages/Home';
 import Login from '../pages/Login';
 import MyOrders from '../pages/MyOrders';
+import OtpVerification from '../pages/OtpVerification';
 import OrderTracking from '../pages/OrderTracking.jsx';
 import ProductPage from '../pages/Product';
 import ProductDisplayPage from '../pages/ProductDisplayPage';
 import ProductListPage from '../pages/ProductListPage';
 import Register from '../pages/Register';
+import ResetPassword from '../pages/ResetPassword';
 import SearchPage from '../pages/SearchPage'; // Add SearchPage import
 import SocialAuthSuccess from '../pages/SocialAuthSuccess'; // Import the SocialAuthSuccess component
 import StaffPOS from '../pages/StaffPOS'; // Import POS component
@@ -41,6 +44,8 @@ import POSSales from '../pages/POSSales';
 
 // Import new staff components
 import StaffDashboard from '../pages/staff/Dashboard';
+import ActiveDeliveriesManagement from '../pages/staff/DeliveryManagement/ActiveDeliveries';
+import CompletedDeliveriesManagement from '../pages/staff/DeliveryManagement/CompletedDeliveries';
 import DeliveryManagement from '../pages/staff/DeliveryManagement';
 import DispatchedOrders from '../pages/staff/DeliveryManagement/DispatchedOrders';
 import DriversManagement from '../pages/staff/DeliveryManagement/DriversManagement';
@@ -52,6 +57,7 @@ import VerificationHistory from '../pages/staff/VerificationHistory';
 import VerificationSuccess from '../pages/staff/VerificationSuccess';
 import VerifyPickup from '../pages/staff/VerifyPickup';
 import CollectionsPage from '../pages/CollectionsPage';
+import ForgotPassword from '../pages/ForgotPassword';
 import SubCategoryPage from '../pages/SubCategoryPage';
 import Success from '../pages/Success';
 import UploadProduct from '../pages/UploadProduct';
@@ -59,6 +65,7 @@ import LoyaltyProgramPage from '../pages/LoyaltyProgramPage';
 import UserProfile from '../pages/UserProfile';
 import UserMenuMobile from '../pages/UserMenuMobile';
 import CartMobile from '../pages/CartMobile';
+import VerifyEmailPage from '../pages/VerifyEmailPage';
 
 // Add this debugging code near the top of your router configuration
 console.log("==== ROUTER CONFIGURATION ====");
@@ -129,6 +136,22 @@ const router = createBrowserRouter([
         path: 'register',
         element: <Register />
       },
+      {
+        path: 'verify-email',
+        element: <VerifyEmailPage />
+      },
+      {
+        path: 'forgot-password',
+        element: <ForgotPassword />
+      },
+      {
+        path: 'verification-otp',
+        element: <OtpVerification />
+      },
+      {
+        path: 'reset-password',
+        element: <ResetPassword />
+      },
       // Add SocialAuthSuccess route
       {
         path: 'social-auth-success',
@@ -167,6 +190,14 @@ const router = createBrowserRouter([
       // Staff POS route - must be before category catch-all routes
       {
         path: 'staff-pos',
+        element: (
+          <PrivateRoute requireStaff={true}>
+            <StaffPOS />
+          </PrivateRoute>
+        )
+      },
+      {
+        path: 'sales-counter',
         element: (
           <PrivateRoute requireStaff={true}>
             <StaffPOS />
@@ -305,6 +336,10 @@ const router = createBrowserRouter([
           </PrivateRoute>
         ),
         children: [
+          {
+            index: true,
+            element: <DashboardHome />
+          },
           {
             path: 'profile',
             element: <UserProfile />
@@ -498,7 +533,23 @@ const router = createBrowserRouter([
             )
           },
           {
+            path: 'sales-counter',
+            element: (
+              <PrivateRoute requireStaff={true}>
+                <StaffPOS />
+              </PrivateRoute>
+            )
+          },
+          {
             path: 'pos-dashboard',
+            element: (
+              <PrivateRoute requireStaff={true}>
+                <POSDashboard />
+              </PrivateRoute>
+            )
+          },
+          {
+            path: 'sales-hub',
             element: (
               <PrivateRoute requireStaff={true}>
                 <POSDashboard />
@@ -514,52 +565,46 @@ const router = createBrowserRouter([
             )
           },
           {
+            path: 'sales-history',
+            element: (
+              <PrivateRoute requireStaff={true}>
+                <POSSales />
+              </PrivateRoute>
+            )
+          },
+          {
             path: 'staff/delivery',
             element: (
               <PrivateRoute requireStaff={true}>
                 <DeliveryManagement />
               </PrivateRoute>
-            )
-          },
-          {
-            path: 'staff/delivery/pending',
-            element: (
-              <PrivateRoute requireStaff={true}>
-                <PendingDispatch />
-              </PrivateRoute>
-            )
-          },
-          {
-            path: 'staff/delivery/dispatched',
-            element: (
-              <PrivateRoute requireStaff={true}>
-                <DispatchedOrders />
-              </PrivateRoute>
-            )
-          },
-          {
-            path: 'staff/delivery/active',
-            element: (
-              <PrivateRoute requireStaff={true}>
-                <div>Active Deliveries</div>
-              </PrivateRoute>
-            )
-          },
-          {
-            path: 'staff/delivery/completed',
-            element: (
-              <PrivateRoute requireStaff={true}>
-                <div>Completed Deliveries</div>
-              </PrivateRoute>
-            )
-          },
-          {
-            path: 'staff/delivery/drivers',
-            element: (
-              <PrivateRoute requireStaff={true}>
-                <DriversManagement />
-              </PrivateRoute>
-            )
+            ),
+            children: [
+              {
+                index: true,
+                element: <Navigate to="pending" replace />
+              },
+              {
+                path: 'pending',
+                element: <PendingDispatch />
+              },
+              {
+                path: 'dispatched',
+                element: <DispatchedOrders />
+              },
+              {
+                path: 'active',
+                element: <ActiveDeliveriesManagement />
+              },
+              {
+                path: 'completed',
+                element: <CompletedDeliveriesManagement />
+              },
+              {
+                path: 'drivers',
+                element: <DriversManagement />
+              }
+            ]
           }
         ]
       },

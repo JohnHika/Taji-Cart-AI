@@ -1,27 +1,29 @@
-import React, { useEffect, useState } from 'react';
-import { FaBullhorn, FaSpinner } from 'react-icons/fa';
+﻿import React, { useEffect, useMemo, useState } from 'react';
+import { FaBarcode, FaBullhorn, FaCashRegister, FaClipboardList, FaSpinner, FaStore, FaUsers } from 'react-icons/fa';
 import { useSelector } from 'react-redux';
 import { Link, useNavigate } from 'react-router-dom';
 import SummaryApi from '../common/SummaryApi';
 import UserTable from '../components/UserTable';
 import Axios from '../utils/Axios';
 import AxiosToastError from '../utils/AxiosToastError';
+import isadmin from '../utils/isAdmin';
 
 const AdminDashboard = () => {
   const [users, setUsers] = useState([]);
   const [campaigns, setCampaigns] = useState([]);
   const [loadingCampaigns, setLoadingCampaigns] = useState(true);
   const navigate = useNavigate();
-  const userRole = useSelector(state => state.user.role); // Assuming user role is stored in Redux
+  const currentUser = useSelector(state => state.user);
+  const isAdmin = isadmin(currentUser);
 
   useEffect(() => {
-    if (userRole !== 'admin') {
+    if (!isAdmin) {
       navigate('/'); // Redirect to home if not admin
     } else {
       fetchUsers();
       fetchActiveCampaigns();
     }
-  }, [userRole]);
+  }, [isAdmin, navigate]);
 
   const fetchUsers = async () => {
     try {
@@ -56,18 +58,112 @@ const AdminDashboard = () => {
     return Math.min(100, Math.floor(((campaign.currentProgress || 0) / (campaign.goalTarget || 100)) * 100));
   };
 
-  return (
-    <div className="container mx-auto p-4 md:p-6">
-      <h1 className="font-display text-3xl italic text-plum-900 dark:text-white mb-1">Admin Dashboard</h1>
-      <p className="text-brown-400 dark:text-white/40 text-sm mb-6">Manage your store campaigns and users</p>
+  const roleSummary = useMemo(() => {
+    const admins = users.filter((user) => user.isAdmin || user.role === 'admin').length;
+    const staff = users.filter((user) => user.isStaff || user.role === 'staff').length;
+    const delivery = users.filter((user) => user.isDelivery || user.role === 'delivery').length;
+    const customers = Math.max(users.length - admins - staff - delivery, 0);
 
+    return [
+      { label: 'Total Users', value: users.length, icon: FaUsers, tone: 'bg-slate-100 text-slate-700 dark:bg-slate-800/70 dark:text-slate-200' },
+      { label: 'Admins', value: admins, icon: FaUsers, tone: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300' },
+      { label: 'Sellers', value: staff, icon: FaStore, tone: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300' },
+      { label: 'Drivers', value: delivery, icon: FaClipboardList, tone: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300' },
+      { label: 'Customers', value: customers, icon: FaUsers, tone: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300' }
+    ];
+  }, [users]);
+
+  const quickLinks = [
+    {
+      label: 'Open Sales Counter',
+      description: 'Test barcode scanning and branch selling from your admin account.',
+      path: '/dashboard/sales-counter',
+      icon: FaCashRegister
+    },
+    {
+      label: 'Sales Hub',
+      description: 'Check daily totals, transactions, and todayâ€™s top-selling items.',
+      path: '/dashboard/sales-hub',
+      icon: FaStore
+    },
+    {
+      label: 'Manage Orders',
+      description: 'Review order status, customer details, and fulfillment updates.',
+      path: '/dashboard/allorders',
+      icon: FaClipboardList
+    },
+    {
+      label: 'Manage Users',
+      description: 'Filter sellers, drivers, admins, and customers by role.',
+      path: '/dashboard/users-admin',
+      icon: FaUsers
+    }
+  ];
+
+  const recentUsers = users.slice(0, 6);
+
+  return (
+    <div className="container mx-auto w-full max-w-full overflow-x-hidden px-3 py-4 sm:px-4 sm:py-6 pb-24 lg:pb-6">
+      <div className="mb-6 rounded-3xl bg-gradient-to-r from-rose-600 via-orange-500 to-amber-500 p-5 text-white shadow-lg sm:p-6">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+          <div className="min-w-0">
+            <p className="text-sm uppercase tracking-[0.2em] text-white/80">Admin overview</p>
+            <h1 className="mt-2 text-2xl font-bold sm:text-3xl">Control center</h1>
+            <p className="mt-2 max-w-2xl text-sm text-white/90 sm:text-base">
+              Keep the launch flow tight from one place: review orders, open the sales counter, and inspect seller accounts without switching users.
+            </p>
+          </div>
+          <Link
+            to="/dashboard/sales-counter"
+            className="inline-flex items-center justify-center rounded-2xl bg-white px-4 py-3 text-sm font-semibold text-orange-600 shadow-sm transition hover:bg-orange-50"
+          >
+            <FaBarcode className="mr-2" />
+            Scan Barcodes Now
+          </Link>
+        </div>
+      </div>
+
+      <div className="mb-6 grid grid-cols-1 gap-3 xs:grid-cols-2 lg:grid-cols-5">
+        {roleSummary.map((item) => {
+          const Icon = item.icon;
+          return (
+            <div key={item.label} className={`min-w-0 rounded-2xl p-4 shadow-sm ${item.tone}`}>
+              <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-white/70 dark:bg-black/10">
+                <Icon />
+              </div>
+              <div className="break-words text-xl sm:text-2xl font-bold">{item.value}</div>
+              <div className="mt-1 text-sm font-medium">{item.label}</div>
+            </div>
+          );
+        })}
+      </div>
+
+      <div className="mb-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        {quickLinks.map((link) => {
+          const Icon = link.icon;
+          return (
+            <Link
+              key={link.label}
+              to={link.path}
+              className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md dark:border-gray-700 dark:bg-gray-800"
+            >
+              <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-orange-100 text-orange-600 dark:bg-orange-900/30 dark:text-orange-300">
+                <Icon />
+              </div>
+              <h2 className="text-base font-semibold text-gray-900 dark:text-white">{link.label}</h2>
+              <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">{link.description}</p>
+            </Link>
+          );
+        })}
+      </div>
+      
       {/* Active Campaigns Section */}
       <div className="mb-8">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold text-charcoal dark:text-white">Active Campaigns</h2>
-          <div className="flex items-center gap-4">
-            <Link to="/dashboard/active-campaigns" className="text-plum-600 hover:text-plum-800 dark:text-plum-300 dark:hover:text-plum-100 text-sm font-medium">
-              View All
+        <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <h2 className="text-xl font-semibold">Active Campaigns</h2>
+          <div className="flex flex-wrap items-center gap-3">
+            <Link to="/dashboard/active-campaigns" className="text-primary-200 hover:text-primary-300 text-sm">
+              View Active Campaigns
             </Link>
             <Link to="/dashboard/admin-community-perks" className="text-sm font-medium bg-plum-700 hover:bg-plum-800 text-white px-3 py-1.5 rounded-pill transition-colors">
               Manage Campaigns
@@ -131,7 +227,7 @@ const AdminDashboard = () => {
                           to={`/dashboard/admin-community-perks?edit=${campaign._id}`}
                           className={`text-xs font-semibold hover:underline ${isPerk ? 'text-gold-600 dark:text-gold-400' : 'text-plum-600 dark:text-plum-300'}`}
                         >
-                          Manage →
+                          Manage â†’
                         </Link>
                       </div>
                     </div>
@@ -145,8 +241,20 @@ const AdminDashboard = () => {
       
       {/* Users Section */}
       <div>
-        <h2 className="text-lg font-semibold text-charcoal dark:text-white mb-4">System Users</h2>
-        <UserTable users={users} />
+        <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h2 className="text-xl font-semibold mb-1 dark:text-white">Recent System Users</h2>
+            <p className="text-sm text-gray-600 dark:text-gray-300">
+              Quick visibility into the people using the store, selling, and delivering.
+            </p>
+          </div>
+          <Link to="/dashboard/users-admin" className="text-sm font-medium text-primary-200 hover:text-primary-300">
+            Open full user management
+          </Link>
+        </div>
+        <div className="rounded-2xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
+          <UserTable users={recentUsers} />
+        </div>
       </div>
     </div>
   );

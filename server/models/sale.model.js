@@ -6,6 +6,10 @@ const saleItemSchema = new mongoose.Schema({
     ref: 'product',
     required: true
   },
+  sku: {
+    type: String,
+    default: ''
+  },
   name: {
     type: String,
     required: true

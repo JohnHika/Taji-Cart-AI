@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react'
+﻿import React, { useEffect, useRef, useState } from 'react'
 import { FaAngleLeft, FaAngleRight, FaStar, FaShieldAlt, FaTruck, FaTags } from "react-icons/fa"
 import { FiShoppingBag, FiHeart } from 'react-icons/fi'
 import { useSelector } from 'react-redux'
@@ -40,8 +40,24 @@ const ProductDisplayPage = () => {
   const navigate = useNavigate();
   const productParam = params.productId || '';
   const productId = productParam.split('-').pop();
-
-  const [data, setData] = useState({ name: "", image: [] });
+  
+  const [data, setData] = useState({
+    name: "",
+    image: [],
+    variants: {
+      color: "",
+      length: "",
+      density: "",
+      laceSpecification: ""
+    },
+    sku: ""
+  });
+  const [selectedVariant, setSelectedVariant] = useState({
+    color: "",
+    length: "",
+    density: "",
+    laceSpecification: ""
+  });
   const [image, setImage] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -94,11 +110,45 @@ const ProductDisplayPage = () => {
       const { data: responseData } = response;
       if (responseData.success) {
         setData(responseData.data);
-        const ratings = responseData.data.ratings || [];
-        setRatingData(ratings);
-        setRatingCount(ratings.length);
-        if (ratings.length > 0) {
-          setAverageRating(ratings.reduce((s, i) => s + (i.rating || 0), 0) / ratings.length);
+        
+        // Initialize selected variant with product's variant defaults
+        if (responseData.data.variants) {
+          setSelectedVariant(responseData.data.variants);
+        }
+        
+        // Set rating data from product response
+        if (responseData.data.ratings && Array.isArray(responseData.data.ratings)) {
+          setRatingData(responseData.data.ratings);
+          
+          // Calculate total ratings and average
+          const totalRatings = responseData.data.ratings.length;
+          setRatingCount(totalRatings);
+          
+          if (totalRatings > 0) {
+            const ratingSum = responseData.data.ratings.reduce((sum, item) => sum + (item.rating || 0), 0);
+            const avgRating = ratingSum / totalRatings;
+            setAverageRating(avgRating);
+          }
+          
+          // Extract user information from ratings
+          if (responseData.data.ratingUsers && Array.isArray(responseData.data.ratingUsers)) {
+            setRatingUsers(responseData.data.ratingUsers);
+          }
+        } else {
+          // Initialize empty arrays if no ratings exist
+          setRatingData([]);
+          setRatingCount(0);
+          setAverageRating(0);
+          setRatingUsers([]);
+        }
+        
+        // Set user's previous rating if available
+        if (isLoggedIn && responseData.data.userRating) {
+          setUserRating(responseData.data.userRating);
+        }
+        
+        if (!responseData.data || !responseData.data.name) {
+          setError('Invalid product data received');
         }
         if (responseData.data.ratingUsers) setRatingUsers(responseData.data.ratingUsers);
         if (isLoggedIn && responseData.data.userRating) setUserRating(responseData.data.userRating);
@@ -178,7 +228,7 @@ const ProductDisplayPage = () => {
         {/* Main grid */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-10">
 
-          {/* ── Left: Image Gallery ──────────────────────────────────── */}
+          {/* â”€â”€ Left: Image Gallery â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
           <div className="flex flex-col gap-3">
             {/* Main image */}
             <div className="relative bg-white dark:bg-dm-card rounded-card border border-brown-100 dark:border-dm-border shadow-card overflow-hidden">
@@ -240,7 +290,7 @@ const ProductDisplayPage = () => {
             )}
           </div>
 
-          {/* ── Right: Product Info ──────────────────────────────────── */}
+          {/* â”€â”€ Right: Product Info â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
           <div className="flex flex-col gap-4">
             {/* Category chip */}
             {data.category?.[0]?.name && (
@@ -350,67 +400,154 @@ const ProductDisplayPage = () => {
                 {activeTab === 'Description' && (
                   <p>{data.description || 'No description available for this product.'}</p>
                 )}
-                {activeTab === 'Details' && (
-                  data?.more_details && Object.keys(data.more_details).length > 0 ? (
-                    <dl className="divide-y divide-brown-100 dark:divide-dm-border">
-                      {Object.entries(data.more_details).map(([key, value]) => (
-                        <div key={key} className="flex py-2 gap-4">
-                          <dt className="w-1/3 text-brown-400 dark:text-white/40 font-medium">{key}</dt>
-                          <dd className="flex-1 text-charcoal dark:text-white/80">{value}</dd>
-                        </div>
-                      ))}
-                    </dl>
-                  ) : (
-                    <p className="text-brown-400 dark:text-white/40">No additional details available.</p>
-                  )
-                )}
-                {activeTab === 'Reviews' && (
-                  <div>
-                    <div className="flex items-center justify-between mb-4">
-                      <h4 className="font-semibold text-charcoal dark:text-white">Rate this Product</h4>
-                      {ratingCount > 0 && (
-                        <span className="text-xs text-brown-400 dark:text-white/40">
-                          {ratingCount} {ratingCount === 1 ? 'review' : 'reviews'}
-                        </span>
-                      )}
-                    </div>
-                    {ratingSubmitting ? (
-                      <div className="flex justify-center py-3">
-                        <div className="w-6 h-6 rounded-full border-2 border-plum-700 border-t-transparent animate-spin" />
+              </div>
+            </div>
+            
+            {/* Stock Status */}
+            <div className="mt-4">
+              <div className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
+                data.stock === 0 
+                  ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300' 
+                  : data.stock < 5 
+                    ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300' 
+                    : 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300'
+              }`}>
+                <span className={`w-2 h-2 rounded-full mr-2 ${
+                  data.stock === 0 
+                    ? 'bg-red-500 animate-pulse' 
+                    : data.stock < 5 
+                      ? 'bg-orange-500 animate-pulse' 
+                      : 'bg-green-500'
+                }`}></span>
+                {data.stock === 0 
+                  ? 'Out of Stock' 
+                  : data.stock < 5 
+                    ? `Low Stock: ${data.stock} left` 
+                    : `In Stock: ${data.stock}`
+                }
+              </div>
+            </div>
+            
+            {/* Hair Product Variant Selector */}
+            {data.variants && (Object.values(data.variants).some(v => v)) && (
+              <div className='bg-gradient-to-r from-rose-50 to-pink-50 dark:from-gray-800 dark:to-gray-750 border-2 border-rose-200 dark:border-rose-700 rounded-lg p-4 mt-4 mb-4'>
+                <h3 className='font-semibold text-rose-900 dark:text-rose-300 mb-3 flex items-center gap-2'>
+                  <span className='text-lg'>âœ¨</span> Select Hair Variant
+                </h3>
+                
+                <div className='grid grid-cols-1 md:grid-cols-2 gap-3'>
+                  {data.variants.color && (
+                    <div>
+                      <label className='text-xs font-semibold text-gray-700 dark:text-gray-300 block mb-1'>Color</label>
+                      <div className='bg-white dark:bg-gray-700 p-2 rounded border border-rose-200 dark:border-rose-700'>
+                        <p className='text-sm font-medium dark:text-white'>{data.variants.color}</p>
                       </div>
-                    ) : (
-                      <StarRating ratingData={ratingData} onRate={handleRate} userRating={userRating} />
-                    )}
-                    {!isLoggedIn && (
-                      <p className="text-xs text-brown-400 dark:text-white/40 mt-2">
-                        Please <Link to="/login" className="text-plum-700 dark:text-plum-200 underline">login</Link> to rate this product.
-                      </p>
-                    )}
-                    {ratingUsers.length > 0 && (
-                      <ul className="mt-4 space-y-2">
-                        {ratingUsers.slice(0, 5).map((u, i) => (
-                          <li key={i} className="flex items-center gap-2 text-xs">
-                            <div className="w-6 h-6 rounded-full bg-plum-100 dark:bg-plum-900/40 text-plum-700 dark:text-plum-200 flex items-center justify-center font-semibold text-xs">
-                              {(u.name || 'A')[0].toUpperCase()}
-                            </div>
-                            <span className="font-medium text-charcoal dark:text-white/80">{u.name || 'Anonymous'}</span>
-                            <div className="flex items-center gap-0.5 ml-auto">
-                              {[1,2,3,4,5].map(s => (
-                                <FaStar key={s} size={10} className={s <= u.rating ? 'text-gold-500' : 'text-brown-200'} />
-                              ))}
-                            </div>
-                          </li>
-                        ))}
-                      </ul>
-                    )}
+                    </div>
+                  )}
+                  {data.variants.length && (
+                    <div>
+                      <label className='text-xs font-semibold text-gray-700 dark:text-gray-300 block mb-1'>Length</label>
+                      <div className='bg-white dark:bg-gray-700 p-2 rounded border border-rose-200 dark:border-rose-700'>
+                        <p className='text-sm font-medium dark:text-white'>{data.variants.length}</p>
+                      </div>
+                    </div>
+                  )}
+                  {data.variants.density && (
+                    <div>
+                      <label className='text-xs font-semibold text-gray-700 dark:text-gray-300 block mb-1'>Density</label>
+                      <div className='bg-white dark:bg-gray-700 p-2 rounded border border-rose-200 dark:border-rose-700'>
+                        <p className='text-sm font-medium dark:text-white'>{data.variants.density}</p>
+                      </div>
+                    </div>
+                  )}
+                  {data.variants.laceSpecification && (
+                    <div>
+                      <label className='text-xs font-semibold text-gray-700 dark:text-gray-300 block mb-1'>Lace Type</label>
+                      <div className='bg-white dark:bg-gray-700 p-2 rounded border border-rose-200 dark:border-rose-700'>
+                        <p className='text-sm font-medium dark:text-white'>{data.variants.laceSpecification}</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+            
+            {/* Add to Cart Button */}
+            {data.stock > 0 && (
+              <div className="mt-4">
+                <AddToCartButton data={data} selectedVariant={selectedVariant} sku={data.sku} />
+              </div>
+            )}
+            
+            {/* User Rating Section (Mobile) */}
+            <div className="mt-6">
+              <h3 className="text-lg font-medium text-gray-900 dark:text-white">Rate this Product</h3>
+              {ratingSubmitting ? (
+                <div className="flex justify-center my-2">
+                  <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-orange-500"></div>
+                </div>
+              ) : (
+                <StarRating 
+                  ratingData={ratingData} 
+                  onRate={handleRate} 
+                  userRating={userRating}
+                />
+              )}
+              
+              {/* Display rating information */}
+              <div className="mt-2">
+                <div className="flex items-center gap-2">
+                  <div className="font-semibold text-sm text-gray-700 dark:text-gray-300">
+                    {ratingCount > 0 ? ratingCount : 0} {ratingCount === 1 ? 'user has' : 'users have'} rated this product
                   </div>
-                )}
+                  {averageRating > 0 && (
+                    <>
+                      <div className="flex items-center">
+                        <span className="text-sm font-medium text-orange-500">
+                          {averageRating.toFixed(1)}
+                        </span>
+                        <span className="ml-1 text-xs text-gray-500 dark:text-gray-400">
+                          ({getRatingPercentage(averageRating)}%)
+                        </span>
+                      </div>
+                      {ratingSubmitting ? (
+                        <div className="flex justify-center py-3">
+                          <div className="w-6 h-6 rounded-full border-2 border-plum-700 border-t-transparent animate-spin" />
+                        </div>
+                      ) : (
+                        <StarRating ratingData={ratingData} onRate={handleRate} userRating={userRating} />
+                      )}
+                      {!isLoggedIn && (
+                        <p className="text-xs text-brown-400 dark:text-white/40 mt-2">
+                          Please <Link to="/login" className="text-plum-700 dark:text-plum-200 underline">login</Link> to rate this product.
+                        </p>
+                      )}
+                      {ratingUsers.length > 0 && (
+                        <ul className="mt-4 space-y-2">
+                          {ratingUsers.slice(0, 5).map((u, i) => (
+                            <li key={i} className="flex items-center gap-2 text-xs">
+                              <div className="w-6 h-6 rounded-full bg-plum-100 dark:bg-plum-900/40 text-plum-700 dark:text-plum-200 flex items-center justify-center font-semibold text-xs">
+                                {(u.name || 'A')[0].toUpperCase()}
+                              </div>
+                              <span className="font-medium text-charcoal dark:text-white/80">{u.name || 'Anonymous'}</span>
+                              <div className="flex items-center gap-0.5 ml-auto">
+                                {[1, 2, 3, 4, 5].map((s) => (
+                                  <FaStar key={s} size={10} className={s <= u.rating ? 'text-gold-500' : 'text-brown-200'} />
+                                ))}
+                              </div>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </>
+                  )}
+                </div>
               </div>
             </div>
           </div>
         </div>
 
-        {/* ── Why Shop Section ─────────────────────────────────────── */}
+        {/* â”€â”€ Why Shop Section â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
         <div className="mt-12 mb-6">
           <h2 className="text-lg font-semibold text-charcoal dark:text-white mb-5 text-center">
             Why shop from <span className="font-display italic text-plum-700 dark:text-plum-200">Nawiri Hair</span>?

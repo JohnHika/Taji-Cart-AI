@@ -23,6 +23,9 @@ import {
   FaTruck,
   FaUserAlt
 } from 'react-icons/fa';
+import { format } from 'date-fns';
+import { buildApiUrl } from '../../common/apiBaseUrl';
+import useMobile from '../../hooks/useMobile';
 import Axios from '../../utils/Axios';
 
 // Simple date formatter function as fallback if date-fns is not available
@@ -31,16 +34,6 @@ const formatDate = (dateString) => {
   const date = new Date(dateString);
   return date.toLocaleString();
 };
-
-// Try to import date-fns, but provide fallback if not available
-let format;
-try {
-  const dateFns = require('date-fns');
-  format = dateFns.format;
-} catch (error) {
-  console.warn('date-fns not available, using fallback formatter');
-  format = formatDate;
-}
 
 const OrderDetailModal = ({ order, onClose, onStatusChange }) => {
   const [availableDrivers, setAvailableDrivers] = useState([]);
@@ -115,8 +108,8 @@ const OrderDetailModal = ({ order, onClose, onStatusChange }) => {
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
       <div className="bg-white dark:bg-gray-800 rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-        <div className="flex justify-between items-center p-6 border-b dark:border-gray-700">
-          <h2 className="text-xl font-bold dark:text-white">
+        <div className="flex items-start justify-between gap-3 p-4 sm:p-6 border-b dark:border-gray-700">
+          <h2 className="text-lg sm:text-xl font-bold dark:text-white">
             Order Details: {order.orderId || order._id.substring(order._id.length - 8)}
           </h2>
           <button 
@@ -127,9 +120,9 @@ const OrderDetailModal = ({ order, onClose, onStatusChange }) => {
           </button>
         </div>
         
-        <div className="p-6 space-y-6">
+        <div className="p-4 sm:p-6 space-y-6">
           {/* Order Status Banner */}
-          <div className={`p-3 rounded-md mb-4 flex items-center justify-between ${
+          <div className={`p-3 rounded-md mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between ${
             order.status === 'delivered' ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300' :
             order.status === 'cancelled' ? 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300' :
             order.status === 'shipping' || order.status === 'shipped' ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300' :
@@ -157,7 +150,7 @@ const OrderDetailModal = ({ order, onClose, onStatusChange }) => {
             
             {order.status !== 'delivered' && order.status !== 'cancelled' && (
               <select
-                className="border p-2 rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                className="w-full sm:w-auto border p-2 rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white"
                 value={order.status}
                 onChange={handleStatusChange}
               >
@@ -684,7 +677,7 @@ const OrderStatistics = ({ orders }) => {
   useEffect(() => {
     const fetchPosStats = async () => {
       try {
-        const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8080';
+        const backendUrl = buildApiUrl();
         const token = sessionStorage.getItem('accesstoken') || localStorage.getItem('accesstoken') || localStorage.getItem('token') || sessionStorage.getItem('token');
         const response = await fetch(`${backendUrl}/api/pos/admin/statistics`, {
           method: 'GET',
@@ -772,7 +765,7 @@ const OrderStatistics = ({ orders }) => {
     { label: 'In Transit', value: inTransit, color: 'bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300' },
     { label: 'Delivered', value: delivered, color: 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300' },
     { label: 'Cancelled', value: cancelled, color: 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300' },
-    { label: 'POS Sales', value: posOrders, color: 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-800 dark:text-indigo-300', icon: 'pos' },
+    { label: 'Counter Sales', value: posOrders, color: 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-800 dark:text-indigo-300', icon: 'pos' },
     { label: 'Pending Delivery', value: pendingDeliveryOrders, color: 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300', icon: 'truck' },
     { label: 'Delivered Orders', value: completedDeliveryOrders, color: 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300', icon: 'truck-check' },
     { label: 'Pending Pickup', value: pendingPickupOrders, color: 'bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300', icon: 'store' },
@@ -781,7 +774,7 @@ const OrderStatistics = ({ orders }) => {
 
   // POS Statistics if available
   const posStatItems = posStats ? [
-    { label: 'POS Sales', value: posStats.summary.totalSales, color: 'bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300', icon: 'pos' },
+    { label: 'Counter Sales', value: posStats.summary.totalSales, color: 'bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300', icon: 'pos' },
     { label: 'Items Sold', value: posStats.summary.totalItemsSold, color: 'bg-cyan-100 dark:bg-cyan-900/30 text-cyan-800 dark:text-cyan-300', icon: 'items' },
     { label: 'Avg Order Value', value: `KSh ${Math.round(posStats.summary.averageOrderValue || 0).toLocaleString()}`, color: 'bg-teal-100 dark:bg-teal-900/30 text-teal-800 dark:text-teal-300', icon: 'avg' },
   ] : [];
@@ -794,33 +787,33 @@ const OrderStatistics = ({ orders }) => {
       
       {/* Revenue Summary */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-        <div className="bg-emerald-100 dark:bg-emerald-900/30 text-emerald-800 dark:text-emerald-300 rounded-lg p-6 shadow-sm">
+        <div className="min-w-0 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-800 dark:text-emerald-300 rounded-lg p-4 sm:p-6 shadow-sm">
           <div className="flex items-center justify-between">
-            <div>
-              <div className="text-3xl font-bold">KSh {totalRevenue.toLocaleString()}</div>
+            <div className="min-w-0">
+              <div className="break-words text-xl sm:text-3xl font-bold">KSh {totalRevenue.toLocaleString()}</div>
               <div className="text-sm">Total Revenue</div>
             </div>
             <FaMoneyBillWave className="text-emerald-600 dark:text-emerald-400" size={32} />
           </div>
         </div>
         
-        <div className="bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 rounded-lg p-6 shadow-sm">
+        <div className="min-w-0 bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 rounded-lg p-4 sm:p-6 shadow-sm">
           <div className="flex items-center justify-between">
-            <div>
-              <div className="text-3xl font-bold">KSh {onlineRevenue.toLocaleString()}</div>
+            <div className="min-w-0">
+              <div className="break-words text-xl sm:text-3xl font-bold">KSh {onlineRevenue.toLocaleString()}</div>
               <div className="text-sm">Online Orders</div>
             </div>
             <FaShoppingCart className="text-blue-600 dark:text-blue-400" size={32} />
           </div>
         </div>
         
-        <div className="bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300 rounded-lg p-6 shadow-sm">
+        <div className="min-w-0 bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300 rounded-lg p-4 sm:p-6 shadow-sm">
           <div className="flex items-center justify-between">
-            <div>
-              <div className="text-3xl font-bold">
+            <div className="min-w-0">
+              <div className="break-words text-xl sm:text-3xl font-bold">
                 {loading ? '...' : `KSh ${posRevenue.toLocaleString()}`}
               </div>
-              <div className="text-sm">POS Sales</div>
+              <div className="text-sm">Counter Sales</div>
             </div>
             <FaCashRegister className="text-purple-600 dark:text-purple-400" size={32} />
           </div>
@@ -828,11 +821,11 @@ const OrderStatistics = ({ orders }) => {
       </div>
 
       {/* Order Statistics */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
         {statItems.map((item, index) => (
-          <div key={index} className={`${item.color} rounded-lg p-4 shadow-sm`}>
+          <div key={index} className={`${item.color} min-w-0 rounded-lg p-4 shadow-sm`}>
             <div className="flex justify-between items-center mb-1">
-              <div className="text-3xl font-bold">{item.value}</div>
+              <div className="break-words text-2xl sm:text-3xl font-bold">{item.value}</div>
               {item.icon === 'truck' && <FaTruck className="text-blue-600 dark:text-blue-400" size={20} />}
               {item.icon === 'truck-check' && (
                 <div className="relative">
@@ -855,9 +848,9 @@ const OrderStatistics = ({ orders }) => {
         
         {/* POS Statistics */}
         {posStatItems.map((item, index) => (
-          <div key={`pos-${index}`} className={`${item.color} rounded-lg p-4 shadow-sm`}>
+          <div key={`pos-${index}`} className={`${item.color} min-w-0 rounded-lg p-4 shadow-sm`}>
             <div className="flex justify-between items-center mb-1">
-              <div className="text-3xl font-bold">{item.value}</div>
+              <div className="break-words text-2xl sm:text-3xl font-bold">{item.value}</div>
               {item.icon === 'pos' && <FaCashRegister className="text-purple-600 dark:text-purple-400" size={20} />}
               {item.icon === 'items' && <FaBoxes className="text-cyan-600 dark:text-cyan-400" size={20} />}
               {item.icon === 'avg' && <FaCalculator className="text-teal-600 dark:text-teal-400" size={20} />}
@@ -871,6 +864,7 @@ const OrderStatistics = ({ orders }) => {
 };
 
 const AllOrdersAdmin = () => {
+  const [isMobile] = useMobile(768);
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -892,6 +886,10 @@ const AllOrdersAdmin = () => {
     fetchAllOrders();
     fetchPOSSales();
   }, []);
+
+  useEffect(() => {
+    setViewMode(isMobile ? 'grid' : 'table');
+  }, [isMobile]);
   
   const fetchAllOrders = async () => {
     try {
@@ -916,7 +914,7 @@ const AllOrdersAdmin = () => {
 
   const fetchPOSSales = async () => {
     try {
-      const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8080';
+      const backendUrl = buildApiUrl();
       const token = sessionStorage.getItem('accesstoken') || localStorage.getItem('accesstoken') || localStorage.getItem('token') || sessionStorage.getItem('token');
       const response = await fetch(`${backendUrl}/api/pos/admin/sales?includeItems=true`, {
         method: 'GET',
@@ -1104,7 +1102,7 @@ const AllOrdersAdmin = () => {
   };
   
   return (
-    <div className="p-4 md:p-6">
+    <div className="w-full max-w-full overflow-x-hidden p-4 md:p-6 pb-24 lg:pb-6">
       <h1 className="text-2xl font-bold mb-6 dark:text-white">Order Management</h1>
       
       {/* Statistics */}
@@ -1136,7 +1134,7 @@ const AllOrdersAdmin = () => {
       {/* Order Filters, Search and View Toggle */}
       <div className="mb-6 flex flex-col gap-4">
         {/* Filter tabs */}
-        <div className="flex flex-wrap gap-2">
+        <div className="flex gap-2 overflow-x-auto pb-1">
           <button
             className={`px-3 py-1.5 text-sm font-medium rounded-full 
               ${activeTab === 'all' ? 
@@ -1207,16 +1205,17 @@ const AllOrdersAdmin = () => {
                 'bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white hover:bg-gray-300 dark:hover:bg-gray-600'}`}
             onClick={() => { setActiveTab('POS'); setCurrentPage(1); }}
           >
-            POS Sales
+            Counter Sales
           </button>
         </div>
         
         {/* Search and Controls Row */}
-        <div className="flex flex-wrap items-center gap-2 justify-between">
+        <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
           {/* View Toggle */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 self-start">
             <button
               onClick={() => setViewMode('table')}
+              disabled={isMobile}
               className={`p-2 rounded-md ${
                 viewMode === 'table' 
                   ? 'bg-blue-600 text-white' 
@@ -1239,11 +1238,11 @@ const AllOrdersAdmin = () => {
             </button>
           </div>
           
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="grid w-full gap-2 sm:grid-cols-2 xl:flex xl:w-auto xl:flex-wrap xl:items-center">
             {/* Fulfillment Filter Dropdown */}
             <div className="relative">
               <select
-                className="border border-gray-300 dark:border-gray-600 rounded-md p-2 pr-8 bg-white dark:bg-gray-700 text-gray-800 dark:text-white"
+                className="w-full border border-gray-300 dark:border-gray-600 rounded-md p-2 pr-8 bg-white dark:bg-gray-700 text-gray-800 dark:text-white"
                 value={fulfillmentFilter}
                 onChange={(e) => { setFulfillmentFilter(e.target.value); setCurrentPage(1); }}
               >
@@ -1259,7 +1258,7 @@ const AllOrdersAdmin = () => {
               <input
                 type="text"
                 placeholder="Search orders..."
-                className="pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                className="w-full min-w-0 pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white xl:min-w-[260px]"
                 value={searchTerm}
                 onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
               />
@@ -1267,7 +1266,7 @@ const AllOrdersAdmin = () => {
             
             <button
               onClick={() => { fetchAllOrders(); fetchPOSSales(); }}
-              className="ml-2 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md flex items-center"
+              className="px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md flex items-center justify-center"
             >
               <FaSpinner className={`mr-1 ${loading ? 'animate-spin' : 'hidden'}`} />
               Refresh
@@ -1331,6 +1330,9 @@ const AllOrdersAdmin = () => {
                         </div>
                         <div className="text-xs text-gray-500 dark:text-gray-400 truncate max-w-[150px]">
                           {order.customer?.email || order.userId?.email || 'No email'}
+                        </div>
+                        <div className="text-xs text-gray-500 dark:text-gray-400 truncate max-w-[150px]">
+                          {order.customer?.phone || order.userId?.mobile || order.delivery_address?.phoneNumber || 'No phone'}
                         </div>
                       </td>
                       
@@ -1444,6 +1446,9 @@ const AllOrdersAdmin = () => {
                     </div>
                     <div className="text-xs text-gray-500 dark:text-gray-400 truncate" title={order.customer?.email || order.userId?.email || 'No email'}>
                       {order.customer?.email || order.userId?.email || 'No email'}
+                    </div>
+                    <div className="text-xs text-gray-500 dark:text-gray-400 truncate" title={order.customer?.phone || order.userId?.mobile || order.delivery_address?.phoneNumber || 'No phone'}>
+                      {order.customer?.phone || order.userId?.mobile || order.delivery_address?.phoneNumber || 'No phone'}
                     </div>
                   </div>
                   

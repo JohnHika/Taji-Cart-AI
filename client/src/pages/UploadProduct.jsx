@@ -21,15 +21,28 @@ const UploadProduct = () => {
   const isEditMode = !!editProductId;
 
   const [data, setData] = useState({
+      handle: "",
       name: "",
+      sku: "",
+      barcode: "",
+      qrCode: "",
       image: [],
       category: [],
       subCategory: [],
       unit: "",
       stock: "",
+      costPrice: "",
       price: "",
       discount: "",
+      weight: "",
+      imageFilename: "",
       description: "",
+      variants: {
+        color: "",
+        length: "",
+        density: "",
+        laceSpecification: ""
+      },
       more_details: {},
   });
   const [imageLoading, setImageLoading] = useState(false);
@@ -65,10 +78,14 @@ const UploadProduct = () => {
         // Transform the data to match our form structure
         setData({
           ...productData,
+          barcode: productData.barcode || "",
+          qrCode: productData.qrCode || "",
           // Ensure these are arrays even if API returns objects or null
           image: Array.isArray(productData.image) ? productData.image : [],
           category: Array.isArray(productData.category) ? productData.category : [],
           subCategory: Array.isArray(productData.subCategory) ? productData.subCategory : [],
+          // Ensure variants is an object with default values
+          variants: productData.variants || { color: "", length: "", density: "", laceSpecification: "" },
           // Ensure more_details is an object even if API returns null
           more_details: productData.more_details || {},
         });
@@ -87,10 +104,23 @@ const UploadProduct = () => {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setData((prev) => ({
-      ...prev,
-      [name]: value
-    }));
+    
+    // Handle nested variant fields
+    if (name.startsWith("variant_")) {
+      const variantField = name.replace("variant_", "");
+      setData((prev) => ({
+        ...prev,
+        variants: {
+          ...prev.variants,
+          [variantField]: value
+        }
+      }));
+    } else {
+      setData((prev) => ({
+        ...prev,
+        [name]: value
+      }));
+    }
   };
 
   // Single image upload handler (kept for backward compatibility)
@@ -237,15 +267,28 @@ const UploadProduct = () => {
         if (!isEditMode) {
           // Clear form only for new products
           setData({
+            handle: "",
             name: "",
+            sku: "",
+            barcode: "",
+            qrCode: "",
             image: [],
             category: [],
             subCategory: [],
             unit: "",
             stock: "",
+            costPrice: "",
             price: "",
             discount: "",
+            weight: "",
+            imageFilename: "",
             description: "",
+            variants: {
+              color: "",
+              length: "",
+              density: "",
+              laceSpecification: ""
+            },
             more_details: {},
           });
         } else {
@@ -298,12 +341,28 @@ const UploadProduct = () => {
       </div>
       <div className='grid p-3'>
         <form className='grid gap-4' onSubmit={handleSubmit}>
+          {/* Hair Product Identification */}
           <div className='grid gap-1'>
-            <label htmlFor='name' className='font-medium dark:text-gray-200'>Name</label>
+            <label htmlFor='handle' className='font-medium dark:text-gray-200'>Product Handle (Parent Name)</label>
+            <input 
+              id='handle'
+              type='text'
+              placeholder='e.g., brazilian-straight, virgin-curly (parent product identifier)'
+              name='handle'
+              value={data.handle}
+              onChange={handleChange}
+              required
+              className='bg-blue-50 dark:bg-gray-800 p-2 outline-none border dark:border-gray-700 focus-within:border-primary-200 dark:focus-within:border-primary-300 rounded dark:text-white transition-colors duration-200'
+            />
+            <p className='text-xs text-gray-500 dark:text-gray-400 mt-1'>Identifies that all variants belong to the same product</p>
+          </div>
+
+          <div className='grid gap-1'>
+            <label htmlFor='name' className='font-medium dark:text-gray-200'>Product Title (Customer Name)</label>
             <input 
               id='name'
               type='text'
-              placeholder='Enter product name'
+              placeholder='Enter customer-facing product name'
               name='name'
               value={data.name}
               onChange={handleChange}
@@ -311,6 +370,57 @@ const UploadProduct = () => {
               className='bg-blue-50 dark:bg-gray-800 p-2 outline-none border dark:border-gray-700 focus-within:border-primary-200 dark:focus-within:border-primary-300 rounded dark:text-white transition-colors duration-200'
             />
           </div>
+
+          <div className='grid gap-1'>
+            <label htmlFor='sku' className='font-medium dark:text-gray-200'>SKU (Internal Stock Code) *UNIQUE*</label>
+            <input 
+              id='sku'
+              type='text'
+              placeholder='e.g., BR-STR-13x4-18-150-001'
+              name='sku'
+              value={data.sku}
+              onChange={handleChange}
+              required
+              className='bg-blue-50 dark:bg-gray-800 p-2 outline-none border dark:border-gray-700 focus-within:border-primary-200 dark:focus-within:border-primary-300 rounded dark:text-white transition-colors duration-200'
+            />
+            <p className='text-xs text-red-500 dark:text-red-400 mt-1'>⚠️ Critical: Must be unique for every row for barcode scanning</p>
+          </div>
+
+          <div className='grid gap-4 md:grid-cols-2'>
+            <div className='grid gap-1'>
+              <label htmlFor='barcode' className='font-medium dark:text-gray-200'>Barcode Value</label>
+              <input 
+                id='barcode'
+                type='text'
+                placeholder='e.g., 6151234567890'
+                name='barcode'
+                value={data.barcode}
+                onChange={handleChange}
+                className='bg-blue-50 dark:bg-gray-800 p-2 outline-none border dark:border-gray-700 focus-within:border-primary-200 dark:focus-within:border-primary-300 rounded dark:text-white transition-colors duration-200'
+              />
+              <p className='text-xs text-gray-500 dark:text-gray-400 mt-1'>Enter the exact value encoded in the printed product barcode so staff can scan it at the sales counter.</p>
+            </div>
+
+            <div className='grid gap-1'>
+              <label htmlFor='qrCode' className='font-medium dark:text-gray-200'>QR Code Value</label>
+              <input 
+                id='qrCode'
+                type='text'
+                placeholder='e.g., TAJI-PROD-BR-STR-18-001'
+                name='qrCode'
+                value={data.qrCode}
+                onChange={handleChange}
+                className='bg-blue-50 dark:bg-gray-800 p-2 outline-none border dark:border-gray-700 focus-within:border-primary-200 dark:focus-within:border-primary-300 rounded dark:text-white transition-colors duration-200'
+              />
+              <p className='text-xs text-gray-500 dark:text-gray-400 mt-1'>If the packaging has a QR label, save its exact value here. Sellers can scan the barcode, QR code, or SKU.</p>
+            </div>
+          </div>
+
+          <div className='rounded-lg border border-dashed border-primary-200 dark:border-primary-700 bg-primary-50/60 dark:bg-primary-900/20 p-3 text-sm text-gray-700 dark:text-gray-200'>
+            <p className='font-medium'>Scanning flow</p>
+            <p className='mt-1'>Product images still upload to Cloudinary. Barcode and QR fields store the scan value itself, so the sales counter can fetch the matching product immediately after scanning without needing a barcode image upload.</p>
+          </div>
+
           <div className='grid gap-1'>
             <label htmlFor='description' className='font-medium dark:text-gray-200'>Description</label>
             <textarea 
@@ -533,12 +643,73 @@ const UploadProduct = () => {
             />
           </div>
 
+          {/* Hair Product Variants Section */}
+          <div className='bg-gradient-to-r from-rose-50 to-pink-50 dark:from-gray-800 dark:to-gray-750 border-2 border-rose-200 dark:border-rose-700 rounded-lg p-4 mt-4'>
+            <h3 className='font-semibold text-rose-900 dark:text-rose-300 mb-4 flex items-center gap-2'>
+              <span className='text-lg'>✨</span> Hair Variant Details
+            </h3>
+            
+            <div className='grid grid-cols-1 md:grid-cols-2 gap-3'>
+              <div className='grid gap-1'>
+                <label htmlFor='variant_color' className='font-medium text-gray-700 dark:text-gray-200'>Color</label>
+                <input 
+                  id='variant_color'
+                  type='text'
+                  placeholder='e.g., #1B, #613, #27 (Brown)'
+                  name='variant_color'
+                  value={data.variants.color}
+                  onChange={handleChange}
+                  className='bg-white dark:bg-gray-700 p-2 outline-none border border-rose-200 dark:border-rose-700 focus-within:border-rose-400 dark:focus-within:border-rose-500 rounded dark:text-white transition-colors duration-200'
+                />
+              </div>
+
+              <div className='grid gap-1'>
+                <label htmlFor='variant_length' className='font-medium text-gray-700 dark:text-gray-200'>Length</label>
+                <input 
+                  id='variant_length'
+                  type='text'
+                  placeholder='e.g., 18", 20", 22"'
+                  name='variant_length'
+                  value={data.variants.length}
+                  onChange={handleChange}
+                  className='bg-white dark:bg-gray-700 p-2 outline-none border border-rose-200 dark:border-rose-700 focus-within:border-rose-400 dark:focus-within:border-rose-500 rounded dark:text-white transition-colors duration-200'
+                />
+              </div>
+
+              <div className='grid gap-1'>
+                <label htmlFor='variant_density' className='font-medium text-gray-700 dark:text-gray-200'>Density</label>
+                <input 
+                  id='variant_density'
+                  type='text'
+                  placeholder='e.g., 150%, 180%, 200%'
+                  name='variant_density'
+                  value={data.variants.density}
+                  onChange={handleChange}
+                  className='bg-white dark:bg-gray-700 p-2 outline-none border border-rose-200 dark:border-rose-700 focus-within:border-rose-400 dark:focus-within:border-rose-500 rounded dark:text-white transition-colors duration-200'
+                />
+              </div>
+
+              <div className='grid gap-1'>
+                <label htmlFor='variant_laceSpecification' className='font-medium text-gray-700 dark:text-gray-200'>Lace Specification</label>
+                <input 
+                  id='variant_laceSpecification'
+                  type='text'
+                  placeholder='e.g., 13x4 HD, 5x5 Transparent, 4x4 Swiss'
+                  name='variant_laceSpecification'
+                  value={data.variants.laceSpecification}
+                  onChange={handleChange}
+                  className='bg-white dark:bg-gray-700 p-2 outline-none border border-rose-200 dark:border-rose-700 focus-within:border-rose-400 dark:focus-within:border-rose-500 rounded dark:text-white transition-colors duration-200'
+                />
+              </div>
+            </div>
+          </div>
+
           <div className='grid gap-1'>
-            <label htmlFor='stock' className='font-medium dark:text-gray-200'>Number of Stock</label>
+            <label htmlFor='stock' className='font-medium dark:text-gray-200'>Stock Quantity</label>
             <input 
               id='stock'
               type='number'
-              placeholder='Enter product stock'
+              placeholder='Enter number of pieces in stock'
               name='stock'
               value={data.stock}
               onChange={handleChange}
@@ -548,35 +719,73 @@ const UploadProduct = () => {
             />
           </div>
 
-          <div className='grid gap-1'>
-            <label htmlFor='price' className='font-medium dark:text-gray-200'>Price (KSh)</label>
-            <input 
-              id='price'
-              type='number'
-              placeholder='Enter product price'
-              name='price'
-              value={data.price}
-              onChange={handleChange}
-              required
-              min="0"
-              className='bg-blue-50 dark:bg-gray-800 p-2 outline-none border dark:border-gray-700 focus-within:border-primary-200 dark:focus-within:border-primary-300 rounded dark:text-white transition-colors duration-200'
-            />
+          {/* Pricing Section */}
+          <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
+            <div className='grid gap-1'>
+              <label htmlFor='costPrice' className='font-medium dark:text-gray-200'>Cost Price (KSh)</label>
+              <input 
+                id='costPrice'
+                type='number'
+                placeholder='Vendor cost per piece'
+                name='costPrice'
+                value={data.costPrice}
+                onChange={handleChange}
+                required
+                min="0"
+                step="0.01"
+                className='bg-blue-50 dark:bg-gray-800 p-2 outline-none border dark:border-gray-700 focus-within:border-primary-200 dark:focus-within:border-primary-300 rounded dark:text-white transition-colors duration-200'
+              />
+              <p className='text-xs text-gray-500 dark:text-gray-400'>What you pay the vendor</p>
+            </div>
+
+            <div className='grid gap-1'>
+              <label htmlFor='price' className='font-medium dark:text-gray-200'>Retail Price (KSh)</label>
+              <input 
+                id='price'
+                type='number'
+                placeholder='Customer selling price'
+                name='price'
+                value={data.price}
+                onChange={handleChange}
+                required
+                min="0"
+                step="0.01"
+                className='bg-blue-50 dark:bg-gray-800 p-2 outline-none border dark:border-gray-700 focus-within:border-primary-200 dark:focus-within:border-primary-300 rounded dark:text-white transition-colors duration-200'
+              />
+              <p className='text-xs text-gray-500 dark:text-gray-400'>What customers pay</p>
+            </div>
           </div>
 
-          <div className='grid gap-1'>
-            <label htmlFor='discount' className='font-medium dark:text-gray-200'>Discount (%)</label>
-            <input 
-              id='discount'
-              type='number'
-              placeholder='Enter product discount'
-              name='discount'
-              value={data.discount}
-              onChange={handleChange}
-              required
-              min="0"
-              max="100"
-              className='bg-blue-50 dark:bg-gray-800 p-2 outline-none border dark:border-gray-700 focus-within:border-primary-200 dark:focus-within:border-primary-300 rounded dark:text-white transition-colors duration-200'
-            />
+          <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
+            <div className='grid gap-1'>
+              <label htmlFor='discount' className='font-medium dark:text-gray-200'>Discount (%)</label>
+              <input 
+                id='discount'
+                type='number'
+                placeholder='Enter discount percentage'
+                name='discount'
+                value={data.discount}
+                onChange={handleChange}
+                min="0"
+                max="100"
+                className='bg-blue-50 dark:bg-gray-800 p-2 outline-none border dark:border-gray-700 focus-within:border-primary-200 dark:focus-within:border-primary-300 rounded dark:text-white transition-colors duration-200'
+              />
+            </div>
+
+            <div className='grid gap-1'>
+              <label htmlFor='weight' className='font-medium dark:text-gray-200'>Weight (Grams)</label>
+              <input 
+                id='weight'
+                type='number'
+                placeholder='Weight for shipping calculation'
+                name='weight'
+                value={data.weight}
+                onChange={handleChange}
+                min="0"
+                step="0.1"
+                className='bg-blue-50 dark:bg-gray-800 p-2 outline-none border dark:border-gray-700 focus-within:border-primary-200 dark:focus-within:border-primary-300 rounded dark:text-white transition-colors duration-200'
+              />
+            </div>
           </div>
 
           {/* Additional Product Details */}

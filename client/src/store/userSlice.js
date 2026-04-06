@@ -6,13 +6,18 @@ const initialValue = {
     email : "",
     avatar : "",
     mobile : "",
-    verify_email : "",
+    mobile_verified: false,
+    verify_email : false,
     last_login_date : "",
     status : "",
     address_details : [],
     shopping_cart : [],
     orderHistory : [],
     role : "",
+    isAdmin: false,
+    isStaff: false,
+    isDelivery: false,
+    accountType: "",
     isAuthenticated: false,
 }
 
@@ -54,6 +59,7 @@ const userSlice  = createSlice({
             state.email = userData?.email
             state.avatar = userData?.avatar
             state.mobile = userData?.mobile
+            state.mobile_verified = Boolean(userData?.mobile_verified)
             state.verify_email = userData?.verify_email
             state.last_login_date = userData?.last_login_date
             state.status = userData?.status
@@ -61,6 +67,10 @@ const userSlice  = createSlice({
             state.shopping_cart = userData?.shopping_cart
             state.orderHistory = userData?.orderHistory
             state.role = userData?.role
+            state.isAdmin = Boolean(userData?.isAdmin)
+            state.isStaff = Boolean(userData?.isStaff)
+            state.isDelivery = Boolean(userData?.isDelivery)
+            state.accountType = userData?.accountType || ''
             state.isAuthenticated = true;
         },
         updatedAvatar : (state,action)=>{
@@ -72,13 +82,18 @@ const userSlice  = createSlice({
             state.email = ""
             state.avatar = ""
             state.mobile = ""
-            state.verify_email = ""
+            state.mobile_verified = false
+            state.verify_email = false
             state.last_login_date = ""
             state.status = ""
             state.address_details = []
             state.shopping_cart = []
             state.orderHistory = []
             state.role = ""
+            state.isAdmin = false
+            state.isStaff = false
+            state.isDelivery = false
+            state.accountType = ""
             state.isAuthenticated = false;
         },
         logoutSuccess: (state) => {
@@ -86,7 +101,13 @@ const userSlice  = createSlice({
             state.name = '';
             state.email = '';
             state.avatar = '';
+            state.mobile = '';
+            state.mobile_verified = false;
             state.role = '';
+            state.isAdmin = false;
+            state.isStaff = false;
+            state.isDelivery = false;
+            state.accountType = '';
         },
     }
 })

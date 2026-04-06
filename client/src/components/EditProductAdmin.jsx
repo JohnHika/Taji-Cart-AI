@@ -17,6 +17,9 @@ const EditProductAdmin = ({ close ,data : propsData,fetchProductData}) => {
   const [data, setData] = useState({
     _id : propsData._id,
     name: propsData.name,
+    sku: propsData.sku || "",
+    barcode: propsData.barcode || "",
+    qrCode: propsData.qrCode || "",
     image: propsData.image,
     category: propsData.category,
     subCategory: propsData.subCategory,
@@ -129,6 +132,9 @@ const EditProductAdmin = ({ close ,data : propsData,fetchProductData}) => {
         fetchProductData()
         setData({
           name: "",
+          sku: "",
+          barcode: "",
+          qrCode: "",
           image: [],
           category: [],
           subCategory: [],
@@ -172,6 +178,44 @@ const EditProductAdmin = ({ close ,data : propsData,fetchProductData}) => {
                   required
                   className='bg-blue-50 p-2 outline-none border focus-within:border-primary-200 rounded'
                 />
+              </div>
+              <div className='grid gap-1'>
+                <label htmlFor='sku' className='font-medium'>SKU</label>
+                <input
+                  id='sku'
+                  type='text'
+                  placeholder='Enter internal stock code'
+                  name='sku'
+                  value={data.sku}
+                  onChange={handleChange}
+                  className='bg-blue-50 p-2 outline-none border focus-within:border-primary-200 rounded'
+                />
+              </div>
+              <div className='grid gap-4 md:grid-cols-2'>
+                <div className='grid gap-1'>
+                  <label htmlFor='barcode' className='font-medium'>Barcode Value</label>
+                  <input
+                    id='barcode'
+                    type='text'
+                    placeholder='Enter barcode value'
+                    name='barcode'
+                    value={data.barcode}
+                    onChange={handleChange}
+                    className='bg-blue-50 p-2 outline-none border focus-within:border-primary-200 rounded'
+                  />
+                </div>
+                <div className='grid gap-1'>
+                  <label htmlFor='qrCode' className='font-medium'>QR Code Value</label>
+                  <input
+                    id='qrCode'
+                    type='text'
+                    placeholder='Enter QR value'
+                    name='qrCode'
+                    value={data.qrCode}
+                    onChange={handleChange}
+                    className='bg-blue-50 p-2 outline-none border focus-within:border-primary-200 rounded'
+                  />
+                </div>
               </div>
               <div className='grid gap-1'>
                 <label htmlFor='description' className='font-medium'>Description</label>

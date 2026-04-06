@@ -1,11 +1,12 @@
 import React from 'react';
 import { FaMapMarkerAlt } from 'react-icons/fa';
+import { nawiriBrand } from '../config/brand';
 
 const pickupLocations = [
   {
     id: 'main-store',
     name: 'Main Store',
-    address: '123 Main Street, Nairobi',
+    address: nawiriBrand.location,
     hours: '9:00 AM - 8:00 PM'
   },
   {

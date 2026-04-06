@@ -6,6 +6,8 @@ import { toast } from 'react-toastify';
 import LoadingSpinner from '../components/LoadingSpinner';
 import Axios from '../utils/Axios';
 
+const EMPTY_CART_ITEMS = [];
+
 const ChatInterface = () => {
   const [activeSession, setActiveSession] = useState(null);
   const [recentSessions, setRecentSessions] = useState([]);
@@ -32,7 +34,7 @@ const ChatInterface = () => {
   const recordingTimerRef = useRef(null);
   
   const user = useSelector(state => state.user);
-  const cartItems = useSelector(state => state.cart?.items || []);
+  const cartItems = useSelector(state => state.cartItem?.cart ?? EMPTY_CART_ITEMS);
   const dispatch = useDispatch();
   const navigate = useNavigate();
 

@@ -10,16 +10,26 @@ const deliveryPersonnelSchema = new mongoose.Schema({
         type: String,
         required: true
     },
+    profileImage: String,
     phoneNumber: String,
     currentLocation: {
         lat: Number,
         lng: Number,
         lastUpdated: Date
     },
+    isActive: {
+        type: Boolean,
+        default: true
+    },
     isAvailable: {
         type: Boolean,
         default: true
     },
+    activeOrdersCount: {
+        type: Number,
+        default: 0
+    },
+    lastActive: Date,
     activeOrders: [{
         type: mongoose.Schema.Types.ObjectId,
         ref: 'order'

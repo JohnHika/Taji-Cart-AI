@@ -9,6 +9,54 @@ import { getAuthToken, MPESA_STK_URL } from '../config/mpesa.js';
 import MpesaPayment from '../models/mpesaPayment.model.js';
 
 const router = express.Router();
+
+const escapeRegex = (value = '') => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+router.get('/products/lookup', auth, Staff, async (req, res) => {
+  try {
+    const rawCode = String(req.query.code || '').trim();
+
+    if (!rawCode) {
+      return res.status(400).json({ success: false, message: 'Barcode, QR code, or SKU is required' });
+    }
+
+    const exactCodeMatch = await Product.findOne({
+      $or: [
+        { barcode: { $regex: `^${escapeRegex(rawCode)}$`, $options: 'i' } },
+        { qrCode: { $regex: `^${escapeRegex(rawCode)}$`, $options: 'i' } },
+        { sku: { $regex: `^${escapeRegex(rawCode)}$`, $options: 'i' } }
+      ]
+    });
+
+    if (exactCodeMatch) {
+      return res.json({ success: true, data: exactCodeMatch });
+    }
+
+    const exactName = await Product.findOne({
+      name: { $regex: `^${escapeRegex(rawCode)}$`, $options: 'i' }
+    });
+
+    if (exactName) {
+      return res.json({ success: true, data: exactName });
+    }
+
+    const partialName = await Product.findOne({
+      name: { $regex: escapeRegex(rawCode), $options: 'i' }
+    });
+
+    if (partialName) {
+      return res.json({ success: true, data: partialName });
+    }
+
+    return res.status(404).json({
+      success: false,
+      message: 'No product matches that barcode, QR code, or SKU'
+    });
+  } catch (error) {
+    console.error('Product lookup error:', error);
+    return res.status(500).json({ success: false, message: error.message });
+  }
+});
 // Initiate M-Pesa STK Push for NAWIRI
 router.post('/mpesa/stk-push', auth, Staff, async (req, res) => {
   try {
@@ -209,6 +257,67 @@ router.post('/sale', auth, Staff, async (req, res) => {
         message: 'Payment method is required'
       });
     }
+
+    const normalizedItemsMap = new Map();
+    for (const rawItem of items) {
+      const productId = String(rawItem.product || rawItem.productId || '').trim();
+      const quantity = Math.max(1, Number(rawItem.quantity || 1));
+      const unitPrice = Number(rawItem.price || 0);
+      const itemTotal = Number(rawItem.total || unitPrice * quantity);
+
+      if (!productId) {
+        return res.status(400).json({
+          success: false,
+          message: 'Each sale item must include a product id'
+        });
+      }
+
+      if (!normalizedItemsMap.has(productId)) {
+        normalizedItemsMap.set(productId, {
+          product: productId,
+          sku: rawItem.sku || '',
+          name: rawItem.name || '',
+          price: unitPrice,
+          quantity,
+          total: itemTotal
+        });
+      } else {
+        const existing = normalizedItemsMap.get(productId);
+        existing.quantity += quantity;
+        existing.total += itemTotal;
+        if (!existing.sku && rawItem.sku) existing.sku = rawItem.sku;
+        if (!existing.name && rawItem.name) existing.name = rawItem.name;
+        if (!existing.price && unitPrice) existing.price = unitPrice;
+      }
+    }
+
+    const normalizedItems = Array.from(normalizedItemsMap.values());
+    const productIds = normalizedItems.map(item => item.product);
+    const products = await Product.find({ _id: { $in: productIds } }).select('_id name sku price stock');
+    const productMap = new Map(products.map(product => [String(product._id), product]));
+
+    for (const item of normalizedItems) {
+      const product = productMap.get(String(item.product));
+
+      if (!product) {
+        return res.status(404).json({
+          success: false,
+          message: `Product not found for item ${item.name || item.product}`
+        });
+      }
+
+      if (product.stock < item.quantity) {
+        return res.status(409).json({
+          success: false,
+          message: `${product.name} only has ${product.stock} item(s) left in stock`
+        });
+      }
+
+      item.name = item.name || product.name;
+      item.sku = item.sku || product.sku || '';
+      item.price = item.price || product.price;
+      item.total = Number(item.total || item.price * item.quantity);
+    }
     
     // Generate sale number
     const today = new Date();
@@ -226,9 +335,38 @@ router.post('/sale', auth, Staff, async (req, res) => {
     const saleNumber = `${dateStr}${nextNumber.toString().padStart(4, '0')}`;
     
     // Create sale record
+    const reservedStock = [];
+    for (const item of normalizedItems) {
+      const updatedProduct = await Product.findOneAndUpdate(
+        {
+          _id: item.product,
+          stock: { $gte: item.quantity }
+        },
+        {
+          $inc: { stock: -item.quantity }
+        },
+        {
+          new: true
+        }
+      );
+
+      if (!updatedProduct) {
+        for (const reserved of reservedStock) {
+          await Product.findByIdAndUpdate(reserved.product, { $inc: { stock: reserved.quantity } });
+        }
+
+        return res.status(409).json({
+          success: false,
+          message: `Stock changed before checkout. Please rescan ${item.name} and try again.`
+        });
+      }
+
+      reservedStock.push({ product: item.product, quantity: item.quantity });
+    }
+
     const sale = new Sale({
       saleNumber,
-      items,
+      items: normalizedItems,
       customer: customer || null,
       customerName: customerName || '',
       customerPhone: customerPhone || '',
@@ -261,14 +399,13 @@ router.post('/sale', auth, Staff, async (req, res) => {
       }
     });
 
-    await sale.save();
-    
-    // Update product stock
-    for (const item of items) {
-      await Product.findByIdAndUpdate(
-        item.product,
-        { $inc: { stock: -item.quantity } }
-      );
+    try {
+      await sale.save();
+    } catch (saveError) {
+      for (const reserved of reservedStock) {
+        await Product.findByIdAndUpdate(reserved.product, { $inc: { stock: reserved.quantity } });
+      }
+      throw saveError;
     }
     
     res.status(201).json({

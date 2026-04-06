@@ -181,7 +181,7 @@ const Dashboard = () => {
   }
   
   return (
-    <div className="container mx-auto py-4">
+    <div className="mobile-page-shell container mx-auto py-0">
       <div className="mb-8">
         <h1 className="text-2xl font-bold mb-2 dark:text-white">Delivery Dashboard</h1>
         <p className="text-gray-600 dark:text-gray-400">Welcome back, {user.name}</p>
@@ -263,7 +263,7 @@ const Dashboard = () => {
                   order.status === 'out_for_delivery' ? 'bg-yellow-50 dark:bg-yellow-900/20' :
                   'bg-green-50 dark:bg-green-900/20'
                 }`}>
-                  <div className="flex items-center justify-between">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <div>
                       <h3 className="text-lg font-semibold text-gray-800 dark:text-white">
                         Order #{order.orderId}
@@ -312,7 +312,7 @@ const Dashboard = () => {
                     </div>
                   </div>
                   
-                  <div className="flex justify-between items-center">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <a
                       href={`https://maps.google.com/?q=${order.deliveryAddress}`}
                       target="_blank"
@@ -326,7 +326,7 @@ const Dashboard = () => {
                     {getNextStatus(order.status) && (
                       <button 
                         onClick={() => handleStatusUpdate(order._id, getNextStatus(order.status))}
-                        className="px-4 py-2 bg-primary-200 text-white rounded-md hover:bg-primary-300 transition-colors flex items-center"
+                        className="w-full sm:w-auto px-4 py-2 bg-primary-200 text-white rounded-md hover:bg-primary-300 transition-colors flex items-center justify-center"
                       >
                         {order.status === 'nearby' ? (
                           <>

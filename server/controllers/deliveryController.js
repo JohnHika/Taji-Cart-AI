@@ -1,8 +1,108 @@
 import mongoose from 'mongoose';
+import sendEmail from '../config/sendEmail.js';
 import DeliveryPersonnelModel from '../models/deliverypersonnel.model.js';
 import { default as Order, default as OrderModel } from '../models/order.model.js';
 import User from '../models/user.model.js';
 import { emitOrderStatusUpdated, getIO } from '../socket/socket.js';
+import { nawiriBrand } from '../utils/brand.js';
+import { renderOrderNoticeEmail } from '../utils/emailTemplates.js';
+
+const activeDriverFilter = {
+  $or: [
+    { isActive: true },
+    { isActive: { $exists: false } }
+  ]
+};
+
+const availableDriverFilter = {
+  $and: [
+    activeDriverFilter,
+    {
+      $or: [
+        { isAvailable: true },
+        { isAvailable: { $exists: false } }
+      ]
+    }
+  ]
+};
+
+const formatDeliveryItems = (order) => {
+  if (Array.isArray(order.items) && order.items.length > 0) {
+    return order.items.map((item) => ({
+      name: item.name || item.productName || item.productId?.name || 'Unknown Product',
+      quantity: item.quantity || 1
+    }));
+  }
+
+  if (order.product_details?.name || order.productId?.name) {
+    return [{
+      name: order.product_details?.name || order.productId?.name || 'Unknown Product',
+      quantity: 1
+    }];
+  }
+
+  return [];
+};
+
+const formatDeliveryAddress = (order) => ({
+  street: order.delivery_address?.street || order.delivery_address?.address || 'Address not specified',
+  city: order.delivery_address?.city || '',
+  neighborhood: order.delivery_address?.neighborhood || order.delivery_address?.area || '',
+  landmark: order.delivery_address?.landmark || '',
+  fullAddress: order.delivery_address?.fullAddress || ''
+});
+
+const formatDeliveryCustomer = (order) => ({
+  name: order.userId?.name || 'Unknown Customer',
+  phone: order.userId?.phone || order.userId?.mobile || 'No Contact',
+  email: order.userId?.email || 'No Email'
+});
+
+const formatStaffDeliveryOrder = (order) => ({
+  _id: order._id,
+  orderId: order.orderId || order._id.toString().slice(-6).toUpperCase(),
+  status: order.status,
+  customer: formatDeliveryCustomer(order),
+  deliveryAddress: formatDeliveryAddress(order),
+  items: formatDeliveryItems(order),
+  total: order.totalAmt || order.total || 0,
+  paymentStatus: order.payment_status || order.paymentStatus || 'unknown',
+  createdAt: order.createdAt,
+  updatedAt: order.updatedAt,
+  dispatchedAt: order.dispatchInfo?.dispatchedAt || null,
+  deliveredAt: order.deliveredAt || null,
+  estimatedDeliveryTime: order.estimatedDeliveryTime || null,
+  driver: order.deliveryPersonnel ? {
+    _id: order.deliveryPersonnel._id,
+    name: order.deliveryPersonnel.name || order.deliveryPersonnel.userId?.name || 'Unassigned driver',
+    isAvailable: order.deliveryPersonnel.isAvailable !== false,
+    isActive: order.deliveryPersonnel.isActive !== false,
+    activeOrdersCount: order.deliveryPersonnel.activeOrdersCount || 0,
+    phone: order.deliveryPersonnel.userId?.mobile || order.deliveryPersonnel.phoneNumber || '',
+    email: order.deliveryPersonnel.userId?.email || ''
+  } : null
+});
+
+const sendDispatchUpdateEmail = async (order, user) => {
+  if (!user?.email) {
+    return;
+  }
+
+  await sendEmail({
+    sendTo: user.email,
+    subject: `Order dispatched - ${nawiriBrand.shortName}`,
+    html: renderOrderNoticeEmail({
+      name: user.name,
+      title: 'Your order has been dispatched',
+      intro: 'Your order is now in our delivery workflow and will be assigned to a rider shortly.',
+      orderId: order.orderId || order._id?.toString(),
+      total: `KES ${Number(order.totalAmt || order.total || 0).toLocaleString()}`,
+      fulfillmentType: 'Delivery',
+      ctaLabel: 'Track your order',
+      ctaUrl: nawiriBrand.websiteUrl,
+    })
+  });
+};
 
 // Get delivery driver statistics
 export const getDeliveryStats = async (req, res) => {
@@ -638,6 +738,13 @@ export const dispatchOrder = async (req, res) => {
       console.log('Could not create notification:', notificationError.message);
       // Continue with the flow even if notification creation fails
     }
+
+    try {
+      const customer = await User.findById(order.userId).select('name email');
+      await sendDispatchUpdateEmail(order, customer);
+    } catch (emailError) {
+      console.log('Could not send dispatch email:', emailError.message);
+    }
     
     // Return success response
     return res.status(200).json({
@@ -678,9 +785,8 @@ export const getAvailableDrivers = async (req, res) => {
     }
     
     // Find all active delivery personnel
-    const allDrivers = await DeliveryPersonnelModel.find({
-      isActive: true
-    }).select('name userId profileImage activeOrdersCount isAvailable currentLocation lastActive')
+    const allDrivers = await DeliveryPersonnelModel.find(activeDriverFilter)
+    .select('name userId profileImage phoneNumber activeOrdersCount isAvailable isActive currentLocation lastActive')
     .sort({ isAvailable: -1, activeOrdersCount: 1 });
     
     if (!allDrivers || allDrivers.length === 0) {
@@ -857,7 +963,7 @@ export const manuallyAssignDriver = async (req, res) => {
     }
     
     // Check if the driver is active
-    if (!selectedDriver.isActive) {
+    if (selectedDriver.isActive === false) {
       return res.status(400).json({
         success: false,
         message: 'The selected driver is not active'
@@ -997,11 +1103,8 @@ export const getDashboardStats = async (req, res) => {
     
     try {
       DeliveryPersonnelModel = mongoose.model('DeliveryPersonnel');
-      totalDrivers = await DeliveryPersonnelModel.countDocuments({ isActive: true });
-      availableDrivers = await DeliveryPersonnelModel.countDocuments({ 
-        isActive: true,
-        isAvailable: true
-      });
+      totalDrivers = await DeliveryPersonnelModel.countDocuments(activeDriverFilter);
+      availableDrivers = await DeliveryPersonnelModel.countDocuments(availableDriverFilter);
     } catch (err) {
       console.log('Warning: DeliveryPersonnelModel not available or empty', err.message);
     }
@@ -1034,9 +1137,7 @@ export const getDashboardStats = async (req, res) => {
     let activeDrivers = [];
     try {
       if (DeliveryPersonnelModel) {
-        activeDrivers = await DeliveryPersonnelModel.find({
-          isActive: true
-        })
+        activeDrivers = await DeliveryPersonnelModel.find(activeDriverFilter)
         .select('name currentLocation activeOrdersCount isAvailable userId')
         .limit(10);
       }
@@ -1216,6 +1317,158 @@ export const getPendingOrders = async (req, res) => {
     return res.status(500).json({
       success: false,
       message: 'Error fetching pending orders',
+      error: error.message
+    });
+  }
+};
+
+export const getDispatchedOrders = async (req, res) => {
+  try {
+    const orders = await Order.find({
+      status: 'dispatched',
+      fulfillment_type: 'delivery'
+    })
+      .populate('userId', 'name email mobile phone')
+      .populate('delivery_address')
+      .sort({ 'dispatchInfo.dispatchedAt': -1, updatedAt: -1 })
+      .limit(100);
+
+    return res.status(200).json({
+      success: true,
+      data: orders.map(formatStaffDeliveryOrder)
+    });
+  } catch (error) {
+    console.error('Error fetching dispatched orders:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Error fetching dispatched orders',
+      error: error.message
+    });
+  }
+};
+
+export const getActiveDeliveriesForStaff = async (req, res) => {
+  try {
+    const orders = await Order.find({
+      status: { $in: ['driver_assigned', 'out_for_delivery', 'nearby'] },
+      fulfillment_type: 'delivery'
+    })
+      .populate('userId', 'name email mobile phone')
+      .populate('delivery_address')
+      .populate({
+        path: 'deliveryPersonnel',
+        populate: {
+          path: 'userId',
+          select: 'name email mobile phone'
+        }
+      })
+      .sort({ updatedAt: -1 })
+      .limit(100);
+
+    return res.status(200).json({
+      success: true,
+      data: orders.map(formatStaffDeliveryOrder)
+    });
+  } catch (error) {
+    console.error('Error fetching active deliveries for staff:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Error fetching active deliveries',
+      error: error.message
+    });
+  }
+};
+
+export const getCompletedDeliveriesForStaff = async (req, res) => {
+  try {
+    const { startDate, endDate } = req.query;
+    const query = {
+      status: 'delivered',
+      fulfillment_type: 'delivery'
+    };
+
+    if (startDate || endDate) {
+      query.deliveredAt = {};
+      if (startDate) query.deliveredAt.$gte = new Date(startDate);
+      if (endDate) query.deliveredAt.$lte = new Date(endDate);
+    }
+
+    const orders = await Order.find(query)
+      .populate('userId', 'name email mobile phone')
+      .populate('delivery_address')
+      .populate({
+        path: 'deliveryPersonnel',
+        populate: {
+          path: 'userId',
+          select: 'name email mobile phone'
+        }
+      })
+      .sort({ deliveredAt: -1, updatedAt: -1 })
+      .limit(100);
+
+    return res.status(200).json({
+      success: true,
+      data: orders.map(formatStaffDeliveryOrder)
+    });
+  } catch (error) {
+    console.error('Error fetching completed deliveries for staff:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Error fetching completed deliveries',
+      error: error.message
+    });
+  }
+};
+
+export const toggleDriverStatusForStaff = async (req, res) => {
+  try {
+    const { driverId, isActive } = req.body;
+
+    if (!driverId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Driver ID is required'
+      });
+    }
+
+    const driver = await DeliveryPersonnelModel.findById(driverId);
+
+    if (!driver) {
+      return res.status(404).json({
+        success: false,
+        message: 'Driver not found'
+      });
+    }
+
+    const nextActiveState = typeof isActive === 'boolean'
+      ? isActive
+      : driver.isActive === false;
+
+    driver.isActive = nextActiveState;
+
+    if (!nextActiveState) {
+      driver.isAvailable = false;
+    } else if (driver.isAvailable === undefined) {
+      driver.isAvailable = true;
+    }
+
+    driver.lastActive = new Date();
+    await driver.save();
+
+    return res.status(200).json({
+      success: true,
+      message: `Driver ${nextActiveState ? 'activated' : 'deactivated'} successfully`,
+      data: {
+        _id: driver._id,
+        isActive: driver.isActive,
+        isAvailable: driver.isAvailable
+      }
+    });
+  } catch (error) {
+    console.error('Error toggling driver status:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to update driver status',
       error: error.message
     });
   }

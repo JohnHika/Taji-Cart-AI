@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useRef, useState } from 'react'
 import { useForm } from "react-hook-form"
 import Axios from '../utils/Axios'
 import SummaryApi from '../common/SummaryApi'
@@ -10,11 +10,17 @@ import { useGlobalContext } from '../provider/GlobalProvider'
 const AddAddress = ({close}) => {
     const { register, handleSubmit,reset } = useForm()
     const { fetchAddress } = useGlobalContext()
+    const [submitting, setSubmitting] = useState(false)
+    const submitLockRef = useRef(false)
 
     const onSubmit = async(data)=>{
-        console.log("data",data)
+        if (submitLockRef.current || submitting) {
+            return
+        }
     
         try {
+            submitLockRef.current = true
+            setSubmitting(true)
             const response = await Axios({
                 ...SummaryApi.createAddress,
                 data : {
@@ -24,7 +30,8 @@ const AddAddress = ({close}) => {
                     country : data.country,
                     pincode : data.pincode,
                     mobile : data.mobile
-                }
+                },
+                requestLockKey : `address:create:${data.addressline}:${data.city}:${data.mobile}`
             })
 
             const { data : responseData } = response
@@ -39,6 +46,9 @@ const AddAddress = ({close}) => {
             }
         } catch (error) {
             AxiosToastError(error)
+        } finally {
+            setSubmitting(false)
+            submitLockRef.current = false
         }
     }
   return (
@@ -106,7 +116,13 @@ const AddAddress = ({close}) => {
                     />
                 </div>
 
-                <button type='submit' className='bg-primary-200 w-full  py-2 font-semibold mt-4 hover:bg-primary-100'>Submit</button>
+                <button
+                    type='submit'
+                    disabled={submitting}
+                    className='bg-primary-200 w-full py-2 font-semibold mt-4 hover:bg-primary-100 disabled:opacity-60 disabled:cursor-not-allowed'
+                >
+                    {submitting ? 'Saving...' : 'Submit'}
+                </button>
             </form>
         </div>
     </section>

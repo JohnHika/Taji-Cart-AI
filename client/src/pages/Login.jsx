@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import toast from 'react-hot-toast';
 import { FaEnvelope, FaRegEye, FaRegEyeSlash } from "react-icons/fa";
 import { useDispatch } from 'react-redux';
 import { Link, useNavigate } from 'react-router-dom';
 import SummaryApi from '../common/SummaryApi';
 import SocialAuth from '../components/SocialAuth';
+import { nawiriBrand } from '../config/brand';
 import { fetchCartItems } from '../redux/slice/cartSlice';
 import { setUserDetails } from '../store/userSlice';
 import Axios from '../utils/Axios';
@@ -15,6 +16,7 @@ const Login = () => {
     const [data, setData] = useState({ email: "", password: "" });
     const [showPassword, setShowPassword] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
+    const submitLockRef = useRef(false);
     const navigate = useNavigate();
     const dispatch = useDispatch();
 
@@ -27,9 +29,15 @@ const Login = () => {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+        if (submitLockRef.current || isLoading) return;
+        submitLockRef.current = true;
         setIsLoading(true);
         try {
-            const response = await Axios({ ...SummaryApi.login, data });
+            const response = await Axios({
+                ...SummaryApi.login,
+                data,
+                requestLockKey: `auth:login:${data.email.trim().toLowerCase()}`
+            });
             if (response.data.error) {
                 toast.error(response.data.message || "Login failed.");
                 setIsLoading(false);
@@ -53,7 +61,10 @@ const Login = () => {
                 navigate("/");
             }
         } catch (error) {
-            if (error.response?.status === 400) {
+            if (error.response?.status === 403 && error.response?.data?.requiresVerification) {
+                toast.error(error.response.data.message || 'Please verify your email before signing in.');
+                navigate(`/verify-email?email=${encodeURIComponent(error.response.data.email || data.email.trim())}&sent=1`);
+            } else if (error.response?.status === 400) {
                 const msg = error.response?.data?.message;
                 if (msg === "Incorrect password") toast.error("Incorrect password. Please try again.");
                 else if (msg === "User not registered") toast.error("Email not registered. Please create an account.");
@@ -63,6 +74,7 @@ const Login = () => {
             }
         } finally {
             setIsLoading(false);
+            submitLockRef.current = false;
         }
     };
 
@@ -74,15 +86,17 @@ const Login = () => {
                 <div className="absolute -top-20 -right-20 w-64 h-64 rounded-full bg-plum-700/40" />
                 <div className="absolute -bottom-16 -left-16 w-48 h-48 rounded-full bg-plum-800/60" />
                 <div className="relative z-10">
-                    <h2 className="font-display text-gold-300 text-3xl font-semibold italic mb-1">Nawiri Hair</h2>
-                    <p className="text-white/50 text-sm">Premium Hair Collections</p>
+                    <div className="inline-flex rounded-3xl bg-white p-3 shadow-lg">
+                        <img src={nawiriBrand.logo} alt={nawiriBrand.shortName} className="h-20 w-auto object-contain" />
+                    </div>
+                    <p className="mt-4 text-white/70 text-sm">{nawiriBrand.companyName}</p>
                 </div>
                 <div className="relative z-10">
                     <blockquote className="font-display text-white text-4xl xl:text-5xl font-semibold italic leading-tight">
-                        "Beautiful hair<br />starts here."
+                        {nawiriBrand.motto}
                     </blockquote>
                     <p className="text-white/50 text-sm mt-4">
-                        Your destination for premium hair extensions, wigs, and care products.
+                        Secure sign-in, polished service, and premium hair collections built for confident everyday styling.
                     </p>
                 </div>
                 <div className="relative z-10 flex gap-2">

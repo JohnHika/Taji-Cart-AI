@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import toast from 'react-hot-toast'
 import { FaMinus, FaPlus } from "react-icons/fa6"
 import { useSelector } from 'react-redux'
@@ -7,7 +7,15 @@ import { useGlobalContext } from '../provider/GlobalProvider'
 import Axios from '../utils/Axios'
 import Loading from './Loading'
 
-const AddToCartButton = ({ data, product: productProp, cartData, showText = true }) => {
+const buildVariantKey = (variant = {}) =>
+    JSON.stringify({
+        color: variant?.color || '',
+        length: variant?.length || '',
+        density: variant?.density || '',
+        laceSpecification: variant?.laceSpecification || ''
+    })
+
+const AddToCartButton = ({ data, product: productProp, cartData, selectedVariant, sku, showText = true }) => {
     const { fetchCartItem, updateCartItem, deleteCartItem } = useGlobalContext()
     const [loading, setLoading] = useState(false)
     const [updateLoading, setUpdateLoading] = useState(false)
@@ -15,93 +23,99 @@ const AddToCartButton = ({ data, product: productProp, cartData, showText = true
     const [isAvailableCart, setIsAvailableCart] = useState(false)
     const [qty, setQty] = useState(0)
     const [cartItemDetails, setCartItemDetails] = useState()
-    const user = useSelector(state => state.user);
+    const user = useSelector(state => state.user)
+    const addActionLockRef = useRef(false)
+    const quantityActionLockRef = useRef(false)
 
-    // Normalize incoming product data from various callers
     const product = data || productProp || cartData?.productId
+    const normalizedSku = typeof sku === 'string' ? sku.trim() : ''
+    const selectedVariantKey = buildVariantKey(selectedVariant)
+
+    const isMatchingCartItem = (item) => {
+        if (item.productId?._id !== product?._id) {
+            return false
+        }
+
+        const itemSku = typeof item.sku === 'string' ? item.sku.trim() : ''
+
+        if (normalizedSku || itemSku) {
+            return itemSku === normalizedSku
+        }
+
+        return buildVariantKey(item.selectedVariant) === selectedVariantKey
+    }
 
     const handleAddToCart = async (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        
-        // Check if user is logged in
+        e.preventDefault()
+        e.stopPropagation()
+
+        if (addActionLockRef.current || loading) {
+            return
+        }
+
         if (!user?._id) {
-            toast.error("Please log in to add items to cart");
-            return;
+            toast.error("Please log in to add items to cart")
+            return
         }
-        
-        // Validate product
+
         if (!product?._id) {
-            toast.error("Product information is missing");
-            return;
+            toast.error("Product information is missing")
+            return
         }
 
-        // Check if product already exists in cart
-        console.log("Cart items in Redux:", cartItem);
-        console.log("Current product ID:", product._id);
+        const matchingItems = cartItem.filter(isMatchingCartItem)
 
-        const matchingItems = cartItem.filter(item => 
-            item.productId?._id === product._id
-        );
-        console.log("Matching items:", matchingItems);
-        
         if (matchingItems.length > 0) {
-            toast.error("Item already in cart");
-            return;
+            toast.error("Item already in cart")
+            return
         }
 
         try {
-            setLoading(true);
-            
-            // Create the request payload
+            addActionLockRef.current = true
+            setLoading(true)
+
             const payload = {
                 productId: product._id,
                 quantity: 1
-            };
-            
-            console.log("Add to cart payload:", payload);
-            
-            // Use direct URL and method reference instead of spreading SummaryApi
+            }
+
+            if (normalizedSku) {
+                payload.sku = normalizedSku
+            }
+
+            if (selectedVariant && Object.values(selectedVariant).some(value => value)) {
+                payload.selectedVariant = selectedVariant
+            }
+
             const response = await Axios({
                 url: SummaryApi.addTocart.url,
                 method: SummaryApi.addTocart.method,
-                data: payload
-            });
-
-            console.log("Add to cart response:", response.data);
+                data: payload,
+                requestLockKey: `cart:add:${user._id}:${product._id}:${normalizedSku}:${selectedVariantKey}`
+            })
 
             if (response.data.success) {
-                toast.success(response.data.message || "Item added to cart");
-                // Immediately fetch updated cart items
-                await fetchCartItem();
+                toast.success(response.data.message || "Item added to cart")
+                await fetchCartItem()
             } else {
-                toast.error(response.data.message || "Failed to add item to cart");
+                toast.error(response.data.message || "Failed to add item to cart")
             }
         } catch (error) {
-            console.error("Add to cart error:", error);
-            
-            if (error.response) {
-                console.log("Error data:", error.response.data);
-                console.log("Error status:", error.response.status);
-                
-                if (error.response.status === 401) {
-                    toast.error("Session expired. Please log in again.");
-                } else {
-                    const errorMessage = error.response.data.message || 
-                                      "Could not add item to cart";
-                    toast.error(errorMessage);
-                }
+            if (error.response?.status === 401) {
+                toast.error("Session expired. Please log in again.")
             } else {
-                toast.error("Network error. Please try again.");
+                const errorMessage = error.response?.data?.message || "Network error. Please try again."
+                toast.error(errorMessage)
             }
         } finally {
-            setLoading(false);
+            setLoading(false)
+            addActionLockRef.current = false
         }
     }
 
-    // Check if item is in cart
     useEffect(() => {
         const productId = product?._id
+
         if (!productId) {
             setIsAvailableCart(false)
             setQty(0)
@@ -109,110 +123,115 @@ const AddToCartButton = ({ data, product: productProp, cartData, showText = true
             return
         }
 
-        const checkingItem = cartItem.some(item => item.productId?._id === productId)
-        setIsAvailableCart(checkingItem)
-
-        const found = cartItem.find(item => item.productId?._id === productId)
+        const found = cartItem.find(isMatchingCartItem)
+        setIsAvailableCart(Boolean(found))
         setQty(found?.quantity || 0)
         setCartItemDetails(found)
-    }, [product, cartItem])
+    }, [product, cartItem, normalizedSku, selectedVariantKey])
 
     const increaseQty = async(e) => {
         e.preventDefault()
         e.stopPropagation()
-        
+
+        if (quantityActionLockRef.current || updateLoading || !cartItemDetails?._id) {
+            return
+        }
+
         try {
+            quantityActionLockRef.current = true
             setUpdateLoading(true)
-            const response = await updateCartItem(cartItemDetails?._id, qty + 1)
-            
+            const response = await updateCartItem(cartItemDetails._id, qty + 1)
+
             if(response?.success){
                 toast.success("Quantity increased")
             }
         } catch (error) {
             if (error.response?.status === 401) {
-                toast.error("Session expired. Please log in again.");
+                toast.error("Session expired. Please log in again.")
             } else {
-                toast.error("Failed to update quantity");
+                toast.error("Failed to update quantity")
             }
         } finally {
             setUpdateLoading(false)
+            quantityActionLockRef.current = false
         }
     }
 
     const decreaseQty = async(e) => {
         e.preventDefault()
         e.stopPropagation()
-        
+
+        if (quantityActionLockRef.current || updateLoading || !cartItemDetails?._id) {
+            return
+        }
+
         try {
+            quantityActionLockRef.current = true
             setUpdateLoading(true)
+
             if(qty === 1){
-                const response = await deleteCartItem(cartItemDetails?._id)
+                const response = await deleteCartItem(cartItemDetails._id)
+
                 if(response?.success) {
                     toast.success("Item removed from cart")
                 }
             } else {
-                const response = await updateCartItem(cartItemDetails?._id, qty - 1)
+                const response = await updateCartItem(cartItemDetails._id, qty - 1)
+
                 if(response?.success){
                     toast.success("Quantity decreased")
                 }
             }
         } catch (error) {
             if (error.response?.status === 401) {
-                toast.error("Session expired. Please log in again.");
+                toast.error("Session expired. Please log in again.")
             } else {
-                toast.error("Failed to update quantity");
+                toast.error("Failed to update quantity")
             }
         } finally {
             setUpdateLoading(false)
+            quantityActionLockRef.current = false
         }
     }
 
-    // Function to clear cart (for debugging) - can be removed
     const clearCart = async() => {
         try {
-            setLoading(true);
-            // If you have a clearCart API endpoint:
-            // await Axios({
-            //     ...SummaryApi.clearCart
-            // });
-            
-            // Alternative: remove each item manually
+            setLoading(true)
+
             for (const item of cartItem) {
-                await deleteCartItem(item._id);
+                await deleteCartItem(item._id)
             }
-            
-            toast.success("Cart cleared for debugging");
-            fetchCartItem(); // Refresh cart data
+
+            toast.success("Cart cleared for debugging")
+            fetchCartItem()
         } catch (error) {
-            toast.error("Failed to clear cart");
+            toast.error("Failed to clear cart")
         } finally {
-            setLoading(false);
+            setLoading(false)
         }
     }
 
     return (
-        <div className='w-full'>
+        <div className='w-full min-w-0 max-w-none sm:max-w-[120px] lg:max-w-[150px]'>
             {
                 isAvailableCart ? (
-                    <div className='flex w-full h-8 rounded-pill border border-plum-200 dark:border-plum-700 overflow-hidden'>
-                        <button
-                            onClick={decreaseQty}
+                    <div className='flex w-full h-full bg-white dark:bg-gray-800 rounded-lg border border-pink-200 dark:border-pink-700 overflow-hidden shadow-sm'>
+                        <button 
+                            onClick={decreaseQty} 
                             disabled={updateLoading}
                             aria-label="Decrease quantity"
-                            className='bg-plum-700 hover:bg-plum-600 text-white flex-none w-8 flex items-center justify-center touch-manipulation transition-colors'
+                            className='bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600 active:from-pink-700 active:to-rose-700 text-white flex-1 w-full p-1.5 sm:p-2 flex items-center justify-center text-xs sm:text-sm touch-manipulation transition-all min-w-[24px]'
                         >
                             {updateLoading ? <Loading /> : <FaMinus size={10} />}
                         </button>
 
-                        <div className='flex-1 font-semibold font-price flex items-center justify-center text-xs bg-plum-50 dark:bg-plum-900/30 text-plum-700 dark:text-plum-200 border-x border-plum-200 dark:border-plum-700'>
-                            {qty}
-                        </div>
+                        <div className='flex-1 w-full font-semibold px-1 sm:px-2 flex items-center justify-center text-xs sm:text-sm bg-pink-50 dark:bg-gray-700 dark:text-white min-w-[28px] border-x border-pink-200 dark:border-pink-700'>{qty}</div>
 
                         <button
                             onClick={increaseQty}
                             disabled={updateLoading}
                             aria-label="Increase quantity"
-                            className='bg-plum-700 hover:bg-plum-600 text-white flex-none w-8 flex items-center justify-center touch-manipulation transition-colors'
+                            className='bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600 active:from-pink-700 active:to-rose-700 text-white flex-1 w-full p-1.5 sm:p-2 flex items-center justify-center text-xs sm:text-sm touch-manipulation transition-all min-w-[24px]'
                         >
                             {updateLoading ? <Loading /> : <FaPlus size={10} />}
                         </button>
@@ -221,7 +240,7 @@ const AddToCartButton = ({ data, product: productProp, cartData, showText = true
                     <button
                         onClick={handleAddToCart}
                         disabled={loading || !product?._id}
-                        className='bg-gold-500 hover:bg-gold-400 disabled:bg-brown-100 disabled:text-brown-300 text-charcoal font-semibold text-xs py-2 rounded-pill w-full touch-manipulation transition-colors press shadow-sm'
+                        className='bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600 active:from-pink-700 active:to-rose-700 text-white px-2 sm:px-3 lg:px-4 py-1.5 sm:py-2 rounded-lg text-[11px] sm:text-sm font-semibold w-full touch-manipulation transition-all shadow-sm hover:shadow-md'
                     >
                         {loading ? <Loading /> : (showText ? 'Add to Cart' : '+')}
                     </button>

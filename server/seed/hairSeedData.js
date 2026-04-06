@@ -4,10 +4,11 @@
  * Populates the database with:
  *   - 8 categories (hair types + products)
  *   - 24 subcategories
- *   - 52 luxury products (KES pricing)
+ *   - optional sample products when SEED_SAMPLE_PRODUCTS=true
  *
  * Images are read from ./images/ and uploaded to Cloudinary before insertion.
  * The script is idempotent: existing records (matched by name) are skipped.
+ * Sample products are disabled by default to avoid reintroducing hardcoded catalog data.
  *
  * Usage:
  *   cd server
@@ -30,6 +31,9 @@ dotenv.config();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname  = path.dirname(__filename);
 const IMAGES_DIR = path.join(__dirname, 'images');
+const SHOULD_SEED_SAMPLE_PRODUCTS = process.env.SEED_SAMPLE_PRODUCTS === 'true';
+const PLACEHOLDER_IMAGE_URL = 'https://res.cloudinary.com/demo/image/upload/v1/samples/ecommerce/leather-bag-gray';
+const CLOUDINARY_UPLOAD_TIMEOUT_MS = Number(process.env.CLOUDINARY_UPLOAD_TIMEOUT_MS || 20000);
 
 // ── Cloudinary ──────────────────────────────────────────────────────────────
 
@@ -43,21 +47,51 @@ async function uploadToCloudinary(filename) {
   const filepath = path.join(IMAGES_DIR, filename);
   if (!fs.existsSync(filepath)) {
     console.warn(`  ⚠  Image not found: ${filename} — using placeholder`);
-    return 'https://res.cloudinary.com/demo/image/upload/v1/samples/ecommerce/leather-bag-gray';
+    return PLACEHOLDER_IMAGE_URL;
   }
 
   const buffer    = fs.readFileSync(filepath);
   const mimeType  = 'image/png';
   const b64       = `data:${mimeType};base64,${buffer.toString('base64')}`;
 
-  const result = await new Promise((resolve, reject) => {
-    cloudinary.uploader.upload(
-      b64,
-      { folder: 'nawiri-hair/seed', resource_type: 'auto' },
-      (err, res) => (err ? reject(err) : resolve(res)),
-    );
-  });
-  return result.secure_url;
+  const uploadOnce = () =>
+    new Promise((resolve, reject) => {
+      cloudinary.uploader.upload(
+        b64,
+        { folder: 'nawiri-hair/seed', resource_type: 'auto' },
+        (err, res) => (err ? reject(err) : resolve(res)),
+      );
+    });
+
+  const uploadWithTimeout = () =>
+    Promise.race([
+      uploadOnce(),
+      new Promise((_, reject) => {
+        setTimeout(() => {
+          reject(new Error(`Cloudinary upload timeout after ${CLOUDINARY_UPLOAD_TIMEOUT_MS}ms`));
+        }, CLOUDINARY_UPLOAD_TIMEOUT_MS);
+      }),
+    ]);
+
+  const maxAttempts = 3;
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    try {
+      const result = await uploadWithTimeout();
+      return result.secure_url;
+    } catch (error) {
+      const msg = error?.message || String(error);
+      if (attempt < maxAttempts) {
+        const delayMs = 500 * attempt;
+        console.warn(`  ⚠  Cloudinary upload failed (${filename}) attempt ${attempt}/${maxAttempts}: ${msg}. Retrying in ${delayMs}ms...`);
+        await new Promise((resolve) => setTimeout(resolve, delayMs));
+      } else {
+        console.warn(`  ⚠  Cloudinary upload failed (${filename}) after ${maxAttempts} attempts: ${msg}. Using placeholder image.`);
+        return PLACEHOLDER_IMAGE_URL;
+      }
+    }
+  }
+
+  return PLACEHOLDER_IMAGE_URL;
 }
 
 // ── Database ─────────────────────────────────────────────────────────────────
@@ -741,10 +775,14 @@ async function main() {
       subDocs[sub.name] = doc;
     }
 
-    console.log('\n📦 Seeding Products...');
-    const products = buildProducts(catDocs, subDocs);
-    for (const p of products) {
-      await upsertProduct(p);
+    if (SHOULD_SEED_SAMPLE_PRODUCTS) {
+      console.log('\n📦 Seeding Products...');
+      const products = buildProducts(catDocs, subDocs);
+      for (const p of products) {
+        await upsertProduct(p);
+      }
+    } else {
+      console.log('\n⏭️  Skipping sample product seeding (set SEED_SAMPLE_PRODUCTS=true to enable).');
     }
 
     const catCount  = await CategoryModel.countDocuments();

@@ -1,4 +1,3 @@
-import axios from 'axios'; // Use lowercase axios
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import React, { useEffect, useRef, useState } from 'react';
@@ -7,6 +6,8 @@ import { MapContainer, Marker, Polyline, Popup, TileLayer } from 'react-leaflet'
 import { Link, useParams } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import io from 'socket.io-client';
+import { socketBaseUrl } from '../common/apiBaseUrl';
+import Axios from '../utils/Axios';
 
 // Fix for default marker icons in Leaflet
 delete L.Icon.Default.prototype._getIconUrl;
@@ -85,8 +86,7 @@ const OrderTracking = () => {
   
   // Connect to Socket.io server with reconnection handling
   useEffect(() => {
-    // Get backend URL from environment variable or use default
-    const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8080';
+    const backendUrl = socketBaseUrl;
     
     const connectSocket = () => {
       console.log(`Connecting to socket server at ${backendUrl}`);
@@ -230,7 +230,10 @@ const OrderTracking = () => {
       setError(null);
       setErrorCode(null);
       
-      const response = await axios.get(`/api/order/track/${orderId}`);
+      const response = await Axios({
+        url: `/api/order/track/${orderId}`,
+        method: 'GET'
+      });
       
       if (response.data.success) {
         const orderData = response.data.data;

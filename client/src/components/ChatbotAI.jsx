@@ -5,6 +5,8 @@ import { Link } from 'react-router-dom';
 import Axios from '../utils/Axios';
 import LoadingSpinner from './LoadingSpinner';
 
+const EMPTY_CART_ITEMS = [];
+
 const ChatbotAI = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState([
@@ -29,7 +31,7 @@ const ChatbotAI = () => {
 
   const [cart, setCart] = useState([]);
   const [isCheckoutRedirecting, setIsCheckoutRedirecting] = useState(false);
-  const cartItems = useSelector(state => state.cart?.items || []);
+  const cartItems = useSelector(state => state.cartItem?.cart ?? EMPTY_CART_ITEMS);
   const dispatch = useDispatch();
 
   const [isRecording, setIsRecording] = useState(false);

@@ -12,8 +12,10 @@ import {
     refreshToken,
     registerUserController,
     resetpassword,
+    requestPhoneVerificationOtpController,
     scanLoyaltyCard,
     searchUsers,
+    sendVerificationEmailController,
     setDeliveryRoleController,
     setStaffRoleController,
     unblockUserController,
@@ -22,6 +24,7 @@ import {
     uploadAvatar,
     userDetails,
     verifyEmailController,
+    verifyPhoneOtpController,
     verifyForgotPasswordOtp
 } from '../controllers/user.controller.js';
 import { admin } from '../middleware/Admin.js';
@@ -35,6 +38,7 @@ const userRouter = Router()
 // Public routes
 userRouter.post('/register', registerUserController)
 userRouter.post('/verify-email', verifyEmailController)
+userRouter.post('/send-verification-email', sendVerificationEmailController)
 userRouter.post('/login', loginController)
 userRouter.get('/logout', logoutController)
 userRouter.put('/forgot-password', forgotPasswordController)
@@ -47,6 +51,8 @@ userRouter.get('/user-details', auth, userDetails)
 userRouter.put('/upload-avatar', auth, upload.single('avatar'), uploadAvatar)
 userRouter.put('/update-user', auth, updateUserDetails)
 userRouter.post('/change-password', auth, changePassword)
+userRouter.post('/request-phone-verification-otp', auth, requestPhoneVerificationOtpController)
+userRouter.post('/verify-phone-otp', auth, verifyPhoneOtpController)
 
 // Admin routes
 userRouter.get('/admin/users/search', auth, admin, searchUsers)
