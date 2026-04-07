@@ -4,146 +4,157 @@ import dotenv from 'dotenv';
 import express from 'express';
 import rateLimit from 'express-rate-limit';
 import session from 'express-session';
-import connectDB from './config/connectDB.js';
-import passport from './config/passport.js';
-import { closeInactiveSessions } from './controllers/chat.controller.js';
-import addressRouter from './route/address.routes.js';
-import campaignRouter from './route/campaign.routes.js';
-import cartRouter from './route/cart.routes.js';
-import categoryRouter from './route/category.routes.js';
-import chatRoutes from './route/chat.routes.js';
-import deliveryRoutes from './route/delivery.routes.js';
-import loyaltyRouter from './route/loyalty.routes.js';
-import mpesaRouter from './route/mpesa.routes.js';
-import orderRouter from './route/order.routes.js';
-import productRouter from './route/product.routes.js';
-import productSearchRouter from './route/productSearch.routes.js';
-import recommandRouter from './route/recommend.routes.js';
-import reviewRouter from './route/review.routes.js';
-import searchRoutes from './route/search.routes.js';
-import stripeRouter from './route/stripe.routes.js';
-import subcategoryRouter from './route/subcategory.routes.js';
-import trackingRoutes from './route/tracking.routes.js';
-import uploadRouter from './route/upload.routes.js';
-import userRoutes from './route/user.route.js';
-import authRoutes from './routes/auth.routes.js';
+import passport from 'passport';
 
-// Load environment variables
+import connectDB from './config/connectDB.js';
+import './config/passport.js'; // registers passport strategies (side-effect only)
+
+// ── Routes (corrected paths matching actual files on disk) ──────────────────
+import addressRouter from './route/address.route.js';
+import cartRouter from './route/cart.route.js';
+import categoryRouter from './route/category.route.js';
+import chatRoutes from './route/chat.route.js';
+import campaignRouter from './route/communitycampaign.routes.js';
+import deliveryRoutes from './route/delivery.route.js';
+import loyaltyRouter from './route/loyalty.routes.js';
+import mpesaRouter from './route/mpesa.route.js';
+import orderRouter from './route/order.route.js';
+import pesapalRouter from './route/pesapal.route.js';
+import productRouter from './route/product.route.js';
+import recommendRouter from './route/recommendation.route.js';
+import stripeRouter from './route/stripe.route.js';
+import subCategoryRouter from './route/subCategory.route.js';
+import trackingRouter from './route/tracking.route.js';
+import uploadRouter from './route/upload.router.js';
+import userRouter from './route/user.route.js';
+import authRoutes from './routes/auth.routes.js';
+import posRouter from './routes/pos.js';
+
+// ── Controllers used directly on admin routes ───────────────────────────────
+import { initiatePayment as pesapalInitiate } from './controllers/pesapal.controller.js';
+import {
+    getBenefitRanges,
+    getLoyaltyCards,
+    getLoyaltyStats,
+    getTierThresholds,
+    getUserLoyaltyCard,
+    recalculateAllTiers,
+    refreshUserPoints,
+    requestSecurityCode,
+    updateBenefitRanges,
+    updateTierThresholds,
+} from './controllers/loyalty.controller.js';
+import { searchUsers } from './controllers/user.controller.js';
+import { admin } from './middleware/Admin.js';
+import auth from './middleware/auth.js';
+
 dotenv.config();
 
-// Create Express application
 const app = express();
 
-// Database connection
+// Connect to database on startup
 connectDB();
 
-// Middlewares
-const FRONTEND_URL_APP = process.env.FRONTEND_URL;
-const allowedOriginsApp = [
-  'http://localhost:5173',
-  'http://localhost:5174',
-  'http://localhost:3000',
-  'https://nawiri-hair-client.onrender.com',
-  'https://nawirihairke.com',
-  'https://www.nawirihairke.com',
-  'https://www.nawirihair.com', 
-  'https://admin.nawirihair.com'
+// ── CORS ────────────────────────────────────────────────────────────────────
+const FRONTEND_URL = process.env.FRONTEND_URL;
+const allowedOrigins = [
+    'http://localhost:5173',
+    'http://localhost:5174',
+    'http://localhost:3000',
+    'https://nawiri-hair-client.onrender.com',
+    'https://nawirihairke.com',
+    'https://www.nawirihairke.com',
+    'https://www.nawirihair.com',
+    'https://admin.nawirihair.com',
 ];
-if (FRONTEND_URL_APP && !allowedOriginsApp.includes(FRONTEND_URL_APP)) {
-  allowedOriginsApp.push(FRONTEND_URL_APP);
+if (FRONTEND_URL && !allowedOrigins.includes(FRONTEND_URL)) {
+    allowedOrigins.push(FRONTEND_URL);
 }
-// Ensure CORS runs before any potential early responses (like rate limiter)
+
 app.use(cors({
-  origin: (origin, callback) => {
-    if (!origin) return callback(null, true);
-    if (allowedOriginsApp.includes(origin)) return callback(null, true);
-    return callback(new Error(`CORS: Origin ${origin} not allowed`));
-  },
-  credentials: true
+    credentials: true,
+    origin: (origin, callback) => {
+        if (!origin) return callback(null, true);
+        if (allowedOrigins.includes(origin)) return callback(null, true);
+        return callback(new Error(`CORS: Origin ${origin} not allowed`));
+    },
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+    optionsSuccessStatus: 200,
 }));
-// Handle preflight quickly
 app.options('*', cors());
 
-// Apply rate limiting to prevent abuse (after CORS to include headers on errors)
+// ── Core middleware ──────────────────────────────────────────────────────────
 const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 200,
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: 'Too many requests, please try again later'
+    windowMs: 15 * 60 * 1000,
+    max: 200,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: 'Too many requests, please try again later',
 });
 app.use(limiter);
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
-
-// Initialize Passport
 app.use(passport.initialize());
-
-// Configure session middleware
 app.use(session({
-  secret: 'your-secret-key',
-  resave: false,
-  saveUninitialized: true,
-  cookie: { secure: process.env.NODE_ENV === 'production' }
+    secret: process.env.SESSION_SECRET || 'taji-cart-session-secret',
+    resave: false,
+    saveUninitialized: false,
+    cookie: { secure: process.env.NODE_ENV === 'production' },
 }));
 
-// Schedule regular cleanup of inactive chat sessions (runs every 24 hours)
-const CLEANUP_INTERVAL = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
-setInterval(async () => {
-  try {
-    const closedCount = await closeInactiveSessions();
-    console.log(`Scheduled task: Closed ${closedCount} inactive chat sessions`);
-  } catch (error) {
-    console.error('Scheduled task error:', error);
-  }
-}, CLEANUP_INTERVAL);
+// ── Routes ───────────────────────────────────────────────────────────────────
+app.get('/', (req, res) => res.json({ message: 'Taji Cart API is running ✅' }));
 
-// Run once at startup
-setTimeout(async () => {
-  try {
-    const closedCount = await closeInactiveSessions();
-    console.log(`Initial cleanup: Closed ${closedCount} inactive chat sessions`);
-  } catch (error) {
-    console.error('Initial cleanup error:', error);
-  }
-}, 10000); // Wait 10 seconds after server start
-
-// API routes
-app.use('/api/user', userRoutes);
+app.use('/api/user', userRouter);
+app.use('/api/auth', authRoutes);
+app.use('/auth', authRoutes);
 app.use('/api/category', categoryRouter);
-app.use('/api/subcategory', subcategoryRouter);
+app.use('/api/subcategory', subCategoryRouter);
+app.use('/api/file', uploadRouter);
 app.use('/api/upload', uploadRouter);
 app.use('/api/product', productRouter);
+app.use('/api/products', productRouter);
 app.use('/api/cart', cartRouter);
 app.use('/api/address', addressRouter);
 app.use('/api/order', orderRouter);
-app.use('/api/mpesa', mpesaRouter);
 app.use('/api/stripe', stripeRouter);
-app.use('/api/recommend', recommandRouter);
-app.use('/api/review', reviewRouter);
-app.use('/api/loyalty', loyaltyRouter);
-app.use('/api/campaigns', campaignRouter);
-app.use('/api/delivery', deliveryRoutes);
-app.use('/api/search', searchRoutes);
+app.use('/api/pesapal', pesapalRouter);
+app.post('/api/init-pesapal', auth, pesapalInitiate);
+app.use('/api/mpesa', mpesaRouter);
 app.use('/api/chat', chatRoutes);
-app.use('/api/tracking', trackingRoutes);
-app.use('/api/product-search', productSearchRouter);
+app.use('/api/loyalty', loyaltyRouter);
+app.use('/api', campaignRouter);
+app.use('/api/tracking', trackingRouter);
+app.use('/api/pos', posRouter);
+app.use('/api/delivery', deliveryRoutes);
+app.use('/api/recommend', recommendRouter);
 
-// OAuth authentication routes
-app.use('/api/auth', authRoutes);
+// ── Admin loyalty routes ─────────────────────────────────────────────────────
+app.get('/api/admin/loyalty/cards', auth, admin, getLoyaltyCards);
+app.get('/api/admin/loyalty/stats', auth, admin, getLoyaltyStats);
+app.get('/api/admin/loyalty/thresholds', auth, admin, getTierThresholds);
+app.put('/api/admin/loyalty/thresholds', auth, admin, updateTierThresholds);
+app.get('/api/admin/loyalty/benefit-ranges', auth, admin, getBenefitRanges);
+app.put('/api/admin/loyalty/benefit-ranges', auth, admin, updateBenefitRanges);
+app.post('/api/admin/loyalty/refresh-points', auth, admin, refreshUserPoints);
+app.post('/api/loyalty/request-security-code', auth, admin, requestSecurityCode);
+app.post('/api/admin/loyalty/recalculate-tiers', auth, admin, recalculateAllTiers);
+app.get('/api/admin/users/search', auth, admin, searchUsers);
+app.get('/api/users/:userId/loyalty-card', auth, getUserLoyaltyCard);
 
-// Default route
-app.get('/', (req, res) => {
-  res.send('Welcome to Nawiri Hair API!');
-});
-
-// Not Found route
-app.use('*', (req, res) => {
-  res.status(404).json({
-    message: `${req.originalUrl} not found!`,
-    success: false
-  });
+// ── Global error handler ─────────────────────────────────────────────────────
+app.use((err, req, res, next) => {
+    console.error('💥 Global error:', { message: err.message, path: req.path });
+    if (err.name === 'UnauthorizedError' || err.name === 'JsonWebTokenError') {
+        return res.status(401).json({ success: false, message: 'Invalid or expired token' });
+    }
+    res.status(500).json({
+        success: false,
+        message: 'Internal server error',
+        error: process.env.NODE_ENV === 'development' ? err.message : undefined,
+    });
 });
 
 export default app;
