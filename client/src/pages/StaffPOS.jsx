@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
 import QRCode from 'qrcode';
 import { 
@@ -1804,7 +1804,7 @@ const StaffPOS = () => {
               </div>
 
               {productScannerStatus && (
-                <p className="text-sm text-blue-700 dark:text-blue-300">{productScannerStatus}</p>
+                <p className="text-sm text-plum-700 dark:text-plum-300">{productScannerStatus}</p>
               )}
 
               {productScannerError && (
@@ -1957,7 +1957,7 @@ const StaffPOS = () => {
                   </div>
                   
                   {loyaltyScannerStatus && (
-                    <p className="text-xs text-blue-700 dark:text-blue-300">{loyaltyScannerStatus}</p>
+                    <p className="text-xs text-plum-700 dark:text-plum-300">{loyaltyScannerStatus}</p>
                   )}
                   
                   <div className="flex flex-col sm:flex-row gap-2">
@@ -1983,7 +1983,7 @@ const StaffPOS = () => {
                     <button
                       onClick={scanLoyaltyCard}
                       disabled={scanningCard || !loyaltyCardNumber.trim()}
-                      className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
+                      className="px-4 py-2 bg-plum-700 text-white rounded hover:bg-plum-600 disabled:opacity-50"
                     >
                       {scanningCard ? 'Verifying...' : 'Verify'}
                     </button>
@@ -2016,7 +2016,7 @@ const StaffPOS = () => {
                             setCustomerSearch('');
                             setCustomerSearchResults(allCustomers);
                           }}
-                          className="text-xs text-blue-600 hover:text-blue-800"
+                          className="text-xs text-plum-600 hover:text-plum-800"
                         >
                           Clear search
                         </button>
@@ -2045,7 +2045,7 @@ const StaffPOS = () => {
                       </div>
                       <div className="flex flex-col items-end gap-1">
                         {customerResult.loyaltyCard && (
-                          <span className="text-xs bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 px-2 py-0.5 rounded-full">
+                          <span className="text-xs bg-plum-100 dark:bg-plum-900 text-plum-800 dark:text-plum-200 px-2 py-0.5 rounded-full">
                             {customerResult.loyaltyCard.tier}
                           </span>
                         )}

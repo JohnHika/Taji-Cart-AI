@@ -1,13 +1,11 @@
-﻿import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { FaUsers, FaChevronDown } from 'react-icons/fa';
-import { FiArrowRight } from 'react-icons/fi';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { FaUsers } from 'react-icons/fa';
 import { useDispatch, useSelector } from "react-redux";
 import { Link, useNavigate } from "react-router-dom";
 import { toast } from 'react-toastify';
-import bannerMobile from "../assets/bannermobile.jpg";
-import banner from "../assets/banner.png";
 import SummaryApi from "../common/SummaryApi";
-import CategoryWiseProductDisplay from '../components/CategoryWiseProductDisplay';
+import CardLoading from '../components/CardLoading';
+import CardProduct from '../components/CardProduct';
 import CommunityCampaignProgress from "../components/CommunityCampaignProgress";
 import UserActiveCampaigns from "../components/UserActiveCampaigns";
 import { setAllCategory, setAllSubCategory } from "../store/productSlice";
@@ -28,33 +26,7 @@ function useScrollReveal(threshold = 0.15) {
   return [ref, visible];
 }
 
-const SectionHeading = ({ title, tagline, linkTo, linkLabel }) => {
-  const [ref, visible] = useScrollReveal();
-  return (
-    <div
-      ref={ref}
-      className={`flex items-end justify-between mb-5 sm:mb-6 transition-all duration-500 ${visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}
-    >
-      <div>
-        <h2 className="text-xl sm:text-2xl font-semibold text-charcoal dark:text-white">{title}</h2>
-        {tagline && (
-          <p className="font-display italic text-sm text-plum-500 dark:text-plum-300 mt-0.5">{tagline}</p>
-        )}
-      </div>
-      {linkTo && (
-        <Link
-          to={linkTo}
-          className="flex items-center gap-1 text-sm font-semibold text-gold-600 dark:text-gold-300 hover:text-gold-500 underline underline-offset-2 transition-colors flex-shrink-0"
-        >
-          {linkLabel || 'See All'} <FiArrowRight size={14} />
-        </Link>
-      )}
-    </div>
-  );
-};
-
 const Home = () => {
-  const user = useSelector(state => state.user);
   const loadingCategory = useSelector(state => state.product.loadingCategory);
   const categoryData = useSelector(state => state.product.allCategory);
   const subCategoryData = useSelector(state => state.product.allSubCategory);
@@ -62,15 +34,31 @@ const Home = () => {
   const dispatch = useDispatch();
   const [featuredCampaign, setFeaturedCampaign] = useState(null);
   const [loadingCampaign, setLoadingCampaign] = useState(true);
-  const [heroVisible, setHeroVisible] = useState(false);
   const [communityRef, communityVisible] = useScrollReveal();
-
-  useEffect(() => {
-    const timer = setTimeout(() => setHeroVisible(true), 100);
-    return () => clearTimeout(timer);
-  }, []);
+  const [allProducts, setAllProducts] = useState([]);
+  const [loadingProducts, setLoadingProducts] = useState(true);
 
   useEffect(() => { fetchFeaturedCampaign(); }, []);
+
+  useEffect(() => {
+    const fetchAllProducts = async () => {
+      try {
+        setLoadingProducts(true);
+        const response = await Axios({ ...SummaryApi.getProduct, data: {} });
+        if (response.data?.success && Array.isArray(response.data.data)) {
+          setAllProducts(response.data.data);
+        } else {
+          setAllProducts([]);
+        }
+      } catch (error) {
+        console.error('Home: failed to load products', error);
+        setAllProducts([]);
+      } finally {
+        setLoadingProducts(false);
+      }
+    };
+    fetchAllProducts();
+  }, []);
 
   useEffect(() => {
     const fetchCategoriesData = async () => {
@@ -147,167 +135,94 @@ const Home = () => {
   };
 
   return (
-   <section className='bg-white dark:bg-gray-900 transition-colors'>
-      {/* Premium Hero Banner Section - Hair Products */}
-      <div className='container mx-auto px-2 sm:px-4'>
-          <div className='w-full h-auto min-h-[200px] sm:min-h-[280px] lg:min-h-[350px] rounded-lg overflow-hidden shadow-lg relative bg-gradient-to-r from-pink-600 to-rose-600'>
-            {/* Gradient Overlay for better text readability */}
-            <div className='absolute inset-0 bg-gradient-to-r from-black/60 via-black/40 to-transparent z-10'></div>
-            
-            {/* Hero Banner Image Background - positioned behind overlay */}
-            <img
-              src={banner}
-              className='w-full h-full object-cover hidden lg:block absolute inset-0'
-              alt='Nawiri Hair Premium Products' 
-            />
-            <img
-              src={bannerMobile}
-              className='w-full h-full object-cover lg:hidden absolute inset-0'
-              alt='Nawiri Hair Premium Products' 
-            />
-            
-            {/* Hero Content - positioned on top */}
-            <div className='absolute inset-0 flex flex-col justify-center items-start pl-4 sm:pl-6 lg:pl-10 z-20'>
-              <h1 className='text-2xl sm:text-3xl lg:text-5xl font-bold text-white mb-2 sm:mb-4 drop-shadow-lg'>
-                Premium Hair Products
-              </h1>
-              <p className='text-xs sm:text-sm lg:text-lg text-gray-100 mb-4 sm:mb-6 drop-shadow max-w-md'>
-                Discover premium hair extensions, care products, and styling solutions. Transform your look with Nawiri Hair quality.
-              </p>
-              <Link 
-                to="/categories" 
-                className='bg-gradient-to-r from-pink-500 to-rose-600 hover:from-pink-600 hover:to-rose-700 text-white px-4 sm:px-6 lg:px-8 py-2 sm:py-3 rounded-full font-semibold text-sm sm:text-base transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105'
-              >
-                Shop Now
-              </Link>
-            </div>
-          </div>
-      </div>
-      
-      {/* Hair Product Categories Section */}
-      <div className='container mx-auto px-2 sm:px-4 my-6 sm:my-10'>
+   <section className='bg-ivory dark:bg-dm-surface transition-colors'>
+      {/* Categories */}
+      <div className='container mx-auto px-2 pt-4 sm:px-4 sm:pt-6 my-6 sm:my-10'>
         {/* Premium Benefits Banner */}
-        <div className='hidden mb-8 bg-gradient-to-r from-pink-600 to-rose-600 rounded-2xl p-6 sm:p-8 text-white shadow-lg'>
+        <div className='hidden mb-8 bg-gradient-to-r from-plum-800 to-plum-600 rounded-2xl p-6 sm:p-8 text-white shadow-lg border border-plum-700/50'>
           <div className='grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6'>
             <div className='flex flex-col items-center sm:items-start text-center sm:text-left'>
-              <div className='text-3xl mb-2'>âœ“</div>
+              <div className='text-3xl mb-2'>✓</div>
               <h3 className='font-bold text-sm sm:text-base'>100% Authentic</h3>
-              <p className='text-xs sm:text-sm text-pink-100'>Nawiri Hair quality guaranteed</p>
+              <p className='text-xs sm:text-sm text-plum-100'>Nawiri Hair quality guaranteed</p>
             </div>
             <div className='flex flex-col items-center sm:items-start text-center sm:text-left'>
-              <div className='text-3xl mb-2'>ðŸš€</div>
+              <div className='text-3xl mb-2'>🚀</div>
               <h3 className='font-bold text-sm sm:text-base'>Fast Delivery</h3>
-              <p className='text-xs sm:text-sm text-pink-100'>Quick & reliable shipping</p>
+              <p className='text-xs sm:text-sm text-plum-100'>Quick & reliable shipping</p>
             </div>
             <div className='flex flex-col items-center sm:items-start text-center sm:text-left'>
-              <div className='text-3xl mb-2'>ðŸ’¯</div>
+              <div className='text-3xl mb-2'>💯</div>
               <h3 className='font-bold text-sm sm:text-base'>Money-Back Guarantee</h3>
-              <p className='text-xs sm:text-sm text-pink-100'>Satisfaction guaranteed</p>
+              <p className='text-xs sm:text-sm text-plum-100'>Satisfaction guaranteed</p>
             </div>
           </div>
         </div>
 
-        <div className='flex items-center justify-between mb-6 sm:mb-8'>
+        <div className='mb-5 flex flex-col gap-3 sm:mb-6 sm:flex-row sm:items-end sm:justify-between'>
           <div>
-            <h2 className='text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900 dark:text-white'>Hair Collections</h2>
-            <p className='text-xs sm:text-sm text-gray-600 dark:text-gray-400 mt-1'>Explore our exclusive range of hair products & extensions</p>
+            <h2 className='text-xl font-bold text-charcoal dark:text-white sm:text-2xl lg:text-3xl'>Categories</h2>
+            <p className='mt-1 text-xs text-brown-600 dark:text-white/60 sm:text-sm'>Shop by category — tap a pill to browse products</p>
           </div>
-          
-          <Link to="/categories" className='text-pink-600 hover:text-pink-700 dark:text-pink-400 dark:hover:text-pink-300 underline text-xs sm:text-sm font-semibold transition-colors'>
-            View All â†’
+          <Link to="/" className='shrink-0 text-xs font-semibold text-gold-600 underline underline-offset-2 transition-colors hover:text-gold-500 dark:text-gold-300 dark:hover:text-gold-200 sm:text-sm'>
+            View all →
           </Link>
         </div>
-        
-        <div className='relative'>
-          <div className='flex overflow-x-auto pb-3 sm:pb-4 scrollbar-hide space-x-2 sm:space-x-3 lg:space-x-4
-              scroll-smooth snap-x snap-mandatory lg:flex-wrap lg:justify-start lg:gap-3 xl:gap-4'>
-            {
-              loadingCategory ? (
-                new Array(12).fill(null).map((c, index) => (
-                  <div 
-                    key={index+"loadingcategory"} 
-                    className='bg-white dark:bg-gray-800 rounded-xl p-3 sm:p-4 shadow-sm animate-pulse flex flex-col items-center 
-                        flex-shrink-0 snap-start w-[95px] sm:w-[115px] md:w-[130px] lg:w-[150px] xl:w-[160px] lg:snap-align-none border border-gray-100 dark:border-gray-700'
-                  >
-                    <div className='bg-gradient-to-br from-pink-100 to-rose-100 dark:from-pink-900 dark:to-rose-900 w-full aspect-square rounded-lg'></div>
-                    <div className='bg-pink-100 dark:bg-pink-900 h-3 sm:h-4 w-3/4 mt-3 sm:mt-4 rounded-full'></div>
-                  </div>
-                ))
-              ) : (
-                categoryData.map((cat) => (
-                  <div 
-                    key={cat._id+"displayCategory"} 
-                    className='group bg-gradient-to-br from-white to-gray-50 dark:from-gray-800 dark:to-gray-900 hover:from-pink-50 hover:to-rose-50 dark:hover:from-gray-700 dark:hover:to-gray-800
-                        shadow-sm hover:shadow-lg rounded-xl p-3 sm:p-4 transition-all duration-300 cursor-pointer 
-                        flex-shrink-0 snap-start w-[95px] sm:w-[115px] md:w-[130px] lg:w-[150px] xl:w-[160px] lg:snap-align-none
-                        flex flex-col items-center active:scale-95 touch-manipulation border border-gray-100 dark:border-gray-700 hover:border-pink-200 dark:hover:border-pink-800'
-                    onClick={() => handleRedirectProductListpage(cat._id, cat.name)}
-                  >
-                    <div className='w-full aspect-square flex items-center justify-center overflow-hidden 
-                          rounded-lg bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 p-2 mb-2 sm:mb-3'>
-                      <img 
-                        src={cat.image}
-                        alt={cat.name}
-                        className='max-w-full max-h-full object-contain group-hover:scale-125 transition-transform duration-300'
-                        onError={(e) => {
-                          e.target.onerror = null;
-                          e.target.src = 'https://via.placeholder.com/100?text=Hair';
-                        }}
-                      />
-                    </div>
-                    <span className='text-center text-xs sm:text-sm font-semibold text-gray-700 dark:text-gray-300 
-                          group-hover:text-pink-600 dark:group-hover:text-pink-400 transition-colors truncate w-full leading-tight'>
-                      {cat.name}
-                    </span>
-                  </div>
-                ))
-              )
-            }
-          </div>
 
-          {/* Edge fades */}
-          <div className="pointer-events-none absolute inset-y-0 right-0 w-10 bg-gradient-to-l from-ivory dark:from-dm-surface to-transparent" />
-          <div className="pointer-events-none absolute inset-y-0 left-0 w-10 bg-gradient-to-r from-ivory dark:from-dm-surface to-transparent" />
+        <div className='flex flex-wrap gap-2 sm:gap-2.5'>
+          {loadingCategory
+            ? new Array(10).fill(null).map((_, index) => (
+                <div
+                  key={`cat-skel-${index}`}
+                  className='h-9 w-24 animate-pulse rounded-full bg-plum-100 dark:bg-plum-900/50 sm:h-10 sm:w-28'
+                />
+              ))
+            : categoryData.map((cat) => (
+                <button
+                  key={cat._id + 'pill'}
+                  type='button'
+                  onClick={() => handleRedirectProductListpage(cat._id, cat.name)}
+                  className='group inline-flex max-w-full items-center gap-2 rounded-full border border-brown-200/90 bg-white px-3 py-1.5 text-left text-xs font-semibold text-charcoal shadow-sm transition-all hover:border-plum-300 hover:bg-plum-50 hover:shadow-md active:scale-[0.98] dark:border-dm-border dark:bg-dm-card dark:text-white/90 dark:hover:border-plum-600 dark:hover:bg-plum-900/30 sm:px-4 sm:py-2 sm:text-sm'
+                >
+                  <span className='relative h-7 w-7 shrink-0 overflow-hidden rounded-full bg-gradient-to-br from-ivory to-plum-100 dark:from-dm-card-2 dark:to-plum-900/40'>
+                    <img
+                      src={cat.image}
+                      alt=''
+                      className='h-full w-full object-contain p-0.5 transition-transform group-hover:scale-110'
+                      onError={(e) => {
+                        e.target.onerror = null;
+                        e.target.src = 'https://via.placeholder.com/56?text=·';
+                      }}
+                    />
+                  </span>
+                  <span className='min-w-0 truncate'>{cat.name}</span>
+                </button>
+              ))}
         </div>
       </div>
 
-      {/* Community Challenges Section */}
-      <section className="container mx-auto px-2 sm:px-4 py-6 sm:py-10 bg-gradient-to-br from-pink-50 to-rose-50 dark:from-gray-800 dark:to-gray-900 rounded-xl my-6 sm:my-8">
-        <div className="mb-4 sm:mb-6">
-          <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold flex items-center text-gray-900 dark:text-white">
-            <FaUsers className="mr-3 text-pink-600 dark:text-pink-400 text-lg sm:text-2xl" /> 
-            Exclusive Community Rewards
-          </h2>
-          <p className="text-xs sm:text-sm text-gray-700 dark:text-gray-300 mt-2">Join thousands of hair enthusiasts & unlock special discounts, early access to new products, and exclusive rewards!</p>
+      {/* All products (categories are above) */}
+      <div className="container mx-auto px-2 py-8 sm:px-4 sm:py-10">
+        <div className="mb-6 flex flex-col gap-1 sm:mb-8">
+          <h2 className="text-2xl font-bold text-charcoal dark:text-white lg:text-3xl">All products</h2>
+          <p className="text-sm text-brown-600 dark:text-white/60">Browse everything in one place — use categories above to filter by type.</p>
         </div>
-        
-        <UserActiveCampaigns />
-        
-        {loadingCampaign ? (
-          <div className="h-32 sm:h-40 bg-gray-100 dark:bg-gray-800 animate-pulse rounded-lg"></div>
-        ) : featuredCampaign ? (
-          <CommunityCampaignProgress campaign={featuredCampaign} />
-        ) : (
-          <div className="p-3 sm:p-4 border rounded-lg bg-gray-50 dark:bg-gray-800 dark:border-gray-700 text-center">
-            <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400">No active community campaigns at the moment.</p>
-            <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-500 mt-1">Check back soon for new challenges!</p>
-          </div>
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+          {loadingProducts
+            ? Array.from({ length: 12 }).map((_, i) => (
+                <div key={`home-skel-${i}`} className="flex justify-center">
+                  <CardLoading />
+                </div>
+              ))
+            : allProducts.map((p) => (
+                <div key={p._id} className="flex justify-center">
+                  <CardProduct data={p} />
+                </div>
+              ))}
+        </div>
+        {!loadingProducts && allProducts.length === 0 && (
+          <p className="py-10 text-center text-sm text-brown-500 dark:text-white/50">No products available yet.</p>
         )}
-      </section>
-
-      {/* Hair Products by Category */}
-      <div className='px-2 sm:px-4 py-6 sm:py-10'>
-        <h2 className='text-2xl lg:text-3xl font-bold text-gray-900 dark:text-white mb-2 sm:mb-4'>Shop by Hair Type & Concern</h2>
-        <p className='text-sm text-gray-600 dark:text-gray-400 mb-6 sm:mb-8'>Find the perfect products for your hair goals</p>
-        {
-          categoryData?.map((c) => (
-            <CategoryWiseProductDisplay 
-              key={c?._id+"CategorywiseProduct"} 
-              id={c?._id} 
-              name={c?.name}
-            />
-          ))
-        }
       </div>
 
       {/* â”€â”€ Divider â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
@@ -345,7 +260,7 @@ const Home = () => {
             <CommunityCampaignProgress campaign={featuredCampaign} />
           ) : (
             <div className="text-center py-4 text-sm text-brown-400 dark:text-white/40">
-              No active campaigns at the moment â€” check back soon!
+              No active campaigns at the moment — check back soon!
             </div>
           )}
         </div>

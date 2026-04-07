@@ -1,4 +1,4 @@
-﻿import React, { useMemo } from 'react';
+import React, { useMemo } from 'react';
 import { FaCashRegister, FaClipboardList, FaCompass, FaHeart, FaHome, FaMapMarkedAlt, FaSearch, FaShoppingCart, FaStore, FaTruck, FaUser, FaUsers } from 'react-icons/fa';
 import { useSelector } from 'react-redux';
 import { Link, useLocation } from 'react-router-dom';
@@ -22,7 +22,7 @@ const BottomNavigation = () => {
         { label: 'Counter', icon: FaCashRegister, path: '/dashboard/sales-counter', active: location.pathname.includes('/dashboard/sales-counter') || location.pathname.includes('/dashboard/staff-pos') },
         { label: 'Hub', icon: FaStore, path: '/dashboard/sales-hub', active: location.pathname.includes('/dashboard/sales-hub') || location.pathname.includes('/dashboard/pos-dashboard') },
         { label: 'Users', icon: FaUsers, path: '/dashboard/users-admin', active: location.pathname.includes('/dashboard/users-admin') },
-        { label: 'Profile', icon: FaUser, path: '/mobile/profile', active: location.pathname === '/mobile/profile' || location.pathname === '/dashboard/profile' }
+        { label: 'Profile', icon: FaUser, path: '/dashboard/profile', active: location.pathname === '/mobile/profile' || location.pathname === '/dashboard/profile' }
       ];
     }
 
@@ -32,7 +32,7 @@ const BottomNavigation = () => {
         { label: 'Active', icon: FaClipboardList, path: '/dashboard/delivery/active', active: location.pathname.includes('/dashboard/delivery/active') || location.pathname.includes('/delivery/active') },
         { label: 'Map', icon: FaMapMarkedAlt, path: '/dashboard/delivery/map', active: location.pathname.includes('/dashboard/delivery/map') || location.pathname.includes('/delivery/map') },
         { label: 'History', icon: FaStore, path: '/dashboard/delivery/history', active: location.pathname.includes('/dashboard/delivery/history') || location.pathname.includes('/delivery/history') },
-        { label: 'Profile', icon: FaUser, path: '/mobile/profile', active: location.pathname === '/mobile/profile' || location.pathname === '/dashboard/profile' }
+        { label: 'Profile', icon: FaUser, path: '/dashboard/profile', active: location.pathname === '/mobile/profile' || location.pathname === '/dashboard/profile' }
       ];
     }
 
@@ -42,7 +42,7 @@ const BottomNavigation = () => {
         { label: 'Sales', icon: FaClipboardList, path: '/dashboard/sales-hub', active: location.pathname.includes('/dashboard/sales-hub') || location.pathname.includes('/dashboard/pos-dashboard') },
         { label: 'Delivery', icon: FaTruck, path: '/dashboard/staff/delivery', active: location.pathname.includes('/dashboard/staff/delivery') },
         { label: 'Pickups', icon: FaShoppingCart, path: '/dashboard/staff/pending-pickups', active: location.pathname.includes('/dashboard/staff/pending-pickups') },
-        { label: 'Profile', icon: FaUser, path: '/mobile/profile', active: location.pathname === '/mobile/profile' || location.pathname === '/dashboard/profile' }
+        { label: 'Profile', icon: FaUser, path: '/dashboard/profile', active: location.pathname === '/mobile/profile' || location.pathname === '/dashboard/profile' }
       ];
     }
 
@@ -51,11 +51,11 @@ const BottomNavigation = () => {
       { label: 'Search', icon: FaSearch, path: '/search', active: location.pathname === '/search' },
       { label: 'Cart', icon: FaShoppingCart, path: '/mobile/cart', active: location.pathname === '/mobile/cart', badge: totalQty > 0 ? totalQty : null },
       { label: 'Wishlist', icon: FaHeart, path: '/wishlist', active: location.pathname === '/wishlist' },
-      { label: user?._id ? 'Profile' : 'Login', icon: FaUser, path: user?._id ? '/mobile/profile' : '/login', active: location.pathname === '/mobile/profile' || location.pathname === '/dashboard/profile' }
+      { label: user?._id ? 'Profile' : 'Login', icon: FaUser, path: user?._id ? '/dashboard/profile' : '/login', active: location.pathname === '/mobile/profile' || location.pathname === '/dashboard/profile' }
     ];
   }, [isAdmin, isDelivery, isUserStaff, location.pathname, totalQty, user?._id]);
 
-  const hiddenRoutes = ['/login', '/register', '/checkout', '/mobile/cart', '/mobile/profile'];
+  const hiddenRoutes = ['/login', '/register', '/checkout', '/dashboard/checkout', '/dashboard/cart', '/mobile/cart', '/mobile/profile'];
   if (hiddenRoutes.includes(location.pathname)) return null;
 
   return (

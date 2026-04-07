@@ -1,4 +1,4 @@
-﻿import L from 'leaflet';
+import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import React, { useEffect, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
@@ -532,11 +532,11 @@ const DeliveryMap = () => {
     
     // Rain, drizzle, etc.
     if ([1063, 1150, 1153, 1180, 1183, 1186, 1189, 1192, 1195, 1240, 1243, 1246].includes(code)) 
-      return <FaCloudRain className="text-blue-500" />;
+      return <FaCloudRain className="text-plum-500" />;
     
     // Snow, sleet, etc.
     if ([1066, 1114, 1117, 1210, 1213, 1216, 1219, 1222, 1225, 1255, 1258].includes(code))
-      return <FaCloudRain className="text-blue-200" />;
+      return <FaCloudRain className="text-plum-300" />;
     
     // Thunderstorm
     if ([1087, 1273, 1276, 1279, 1282].includes(code)) 
@@ -683,7 +683,7 @@ const DeliveryMap = () => {
   if (loading) {
     return (
       <div className="mobile-page-shell flex min-h-[60vh] flex-col items-center justify-center">
-        <FaSpinner className="animate-spin text-4xl text-primary-200 mb-4" />
+        <FaSpinner className="animate-spin text-4xl text-plum-600 mb-4" />
         <p className="text-lg text-gray-700 dark:text-gray-300">Loading map view...</p>
       </div>
     );
@@ -738,7 +738,7 @@ const DeliveryMap = () => {
           <button
             onClick={updateCurrentLocation}
             disabled={updatingLocation}
-            className="bg-primary-200 text-white px-4 py-2 rounded hover:bg-primary-300 flex items-center justify-center disabled:opacity-50"
+            className="bg-plum-700 text-white px-4 py-2 rounded hover:bg-plum-600 flex items-center justify-center disabled:opacity-50"
           >
             {updatingLocation ? (
               <FaSpinner className="animate-spin" size={13} />
@@ -1041,7 +1041,7 @@ const DeliveryMap = () => {
           
           <button
             onClick={centerOnCurrentLocation}
-            className="bg-blue-500 text-white rounded px-3 py-2 text-sm flex items-center justify-center hover:bg-blue-600"
+            className="bg-plum-700 text-white rounded px-3 py-2 text-sm flex items-center justify-center hover:bg-plum-600"
           >
             <FaLocationArrow size={10} /> Center
           </button>
@@ -1367,7 +1367,7 @@ const DeliveryMap = () => {
                       
                       {delivery.status === 'driver_assigned' && (
                         <button 
-                          className="bg-primary-100 hover:bg-primary-200 text-white px-3 py-2 rounded text-xs flex items-center justify-center"
+                          className="bg-plum-700 hover:bg-plum-600 text-white px-3 py-2 rounded text-xs flex items-center justify-center"
                           onClick={(e) => {
                             e.stopPropagation();
                             handleStatusUpdate(delivery._id, 'out_for_delivery');

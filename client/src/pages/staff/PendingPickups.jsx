@@ -141,7 +141,7 @@ const PendingPickups = () => {
           </button>
           <button 
             onClick={fetchPendingPickups}
-            className="bg-primary-100 px-4 py-2 rounded-lg flex items-center justify-center text-white hover:bg-primary-200"
+            className="bg-plum-700 px-4 py-2 rounded-lg flex items-center justify-center text-white hover:bg-plum-600"
           >
             Refresh
           </button>
@@ -150,7 +150,7 @@ const PendingPickups = () => {
 
       {loading ? (
         <div className="flex justify-center items-center p-8">
-          <FaSpinner className="animate-spin text-3xl text-primary-100" />
+          <FaSpinner className="animate-spin text-3xl text-plum-600" />
         </div>
       ) : error ? (
         <div className="bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 p-4 rounded-lg mb-6">
@@ -196,7 +196,7 @@ const PendingPickups = () => {
 
                 <button
                   onClick={() => handleVerifyPickup(pickup.pickupCode)}
-                  className="mt-4 inline-flex w-full items-center justify-center rounded-xl bg-primary-100 px-4 py-2.5 font-medium text-white hover:bg-primary-200"
+                  className="mt-4 inline-flex w-full items-center justify-center rounded-xl bg-plum-700 px-4 py-2.5 font-medium text-white hover:bg-plum-600"
                 >
                   <FaQrcode className="mr-2" /> Verify Pickup
                 </button>
@@ -253,7 +253,7 @@ const PendingPickups = () => {
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                         <button
                           onClick={() => handleVerifyPickup(pickup.pickupCode)}
-                          className="text-primary-100 hover:text-primary-200 dark:text-primary-200 dark:hover:text-primary-100 flex items-center justify-end"
+                          className="text-plum-700 hover:text-plum-600 dark:text-plum-300 dark:hover:text-plum-200 flex items-center justify-end"
                         >
                           <FaQrcode className="mr-1" /> Verify
                         </button>

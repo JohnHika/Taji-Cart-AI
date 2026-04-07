@@ -133,7 +133,7 @@ const Profile = () => {
             case 3:
                 return { label: 'Fair', color: 'bg-yellow-500', width: '60%' };
             case 4:
-                return { label: 'Good', color: 'bg-blue-500', width: '80%' };
+                return { label: 'Good', color: 'bg-plum-500', width: '80%' };
             case 5:
                 return { label: 'Strong', color: 'bg-green-500', width: '100%' };
             default:
@@ -324,7 +324,7 @@ const Profile = () => {
         ) {
             return { 
                 type: 'Delivery Personnel', 
-                color: 'text-blue-600 dark:text-blue-400', 
+                color: 'text-plum-600 dark:text-plum-300', 
                 icon: <FaTruck className="mr-1" /> 
             };
         }
@@ -403,7 +403,7 @@ const Profile = () => {
 
                         {/* Profile avatar section */}
                         <div className="flex flex-col items-center mb-8">
-                            <div className='w-24 h-24 bg-blue-50 dark:bg-gray-700 flex items-center justify-center rounded-full overflow-hidden border-2 border-primary-100 dark:border-primary-300 drop-shadow-sm transition-colors duration-200 relative group'>
+                            <div className='w-24 h-24 bg-plum-50 dark:bg-dm-card-2 flex items-center justify-center rounded-full overflow-hidden border-2 border-plum-200 dark:border-plum-600 drop-shadow-sm transition-colors duration-200 relative group'>
                                 {
                                     user.avatar ? (
                                         <img
@@ -468,7 +468,7 @@ const Profile = () => {
                                 <input
                                     type='text'
                                     placeholder='Enter your name'
-                                    className='p-3 bg-blue-50 dark:bg-gray-700 outline-none border dark:border-gray-600 focus-within:border-primary-200 dark:focus-within:border-primary-300 rounded-md text-gray-800 dark:text-white transition-colors duration-200'
+                                    className='p-3 bg-plum-50/80 dark:bg-dm-card-2 outline-none border dark:border-dm-border focus-within:border-plum-500 dark:focus-within:border-plum-400 rounded-md text-gray-800 dark:text-white transition-colors duration-200'
                                     value={userData.name}
                                     name='name'
                                     onChange={handleOnChange}
@@ -482,7 +482,7 @@ const Profile = () => {
                                     type='email'
                                     id='email'
                                     placeholder='Enter your email'
-                                    className='p-3 bg-blue-50 dark:bg-gray-700 outline-none border dark:border-gray-600 focus-within:border-primary-200 dark:focus-within:border-primary-300 rounded-md text-gray-800 dark:text-white transition-colors duration-200'
+                                    className='p-3 bg-plum-50/80 dark:bg-dm-card-2 outline-none border dark:border-dm-border focus-within:border-plum-500 dark:focus-within:border-plum-400 rounded-md text-gray-800 dark:text-white transition-colors duration-200'
                                     value={userData.email}
                                     name='email'
                                     onChange={handleOnChange}
@@ -496,7 +496,7 @@ const Profile = () => {
                                     type='text'
                                     id='mobile'
                                     placeholder='Enter your mobile number'
-                                    className='p-3 bg-blue-50 dark:bg-gray-700 outline-none border dark:border-gray-600 focus-within:border-primary-200 dark:focus-within:border-primary-300 rounded-md text-gray-800 dark:text-white transition-colors duration-200'
+                                    className='p-3 bg-plum-50/80 dark:bg-dm-card-2 outline-none border dark:border-dm-border focus-within:border-plum-500 dark:focus-within:border-plum-400 rounded-md text-gray-800 dark:text-white transition-colors duration-200'
                                     value={userData.mobile}
                                     name='mobile'
                                     onChange={handleOnChange}
@@ -558,7 +558,7 @@ const Profile = () => {
                                 
                                 <button 
                                     onClick={() => setActiveTab('security')} 
-                                    className='px-4 py-2 border border-blue-600 dark:border-blue-500 text-blue-600 dark:text-blue-500 hover:bg-blue-600 hover:text-white dark:hover:bg-blue-500 dark:hover:text-white rounded-md transition-colors duration-200'
+                                    className='px-4 py-2 border border-plum-600 dark:border-plum-500 text-plum-700 dark:text-plum-300 hover:bg-plum-700 hover:text-white dark:hover:bg-plum-600 dark:hover:text-white rounded-md transition-colors duration-200'
                                 >
                                     Manage Security
                                 </button>
@@ -575,14 +575,14 @@ const Profile = () => {
                         <div className="mobile-surface p-4 sm:p-6 transition-colors duration-200">
                             <h2 className="text-2xl font-bold mb-6 text-gray-800 dark:text-white transition-colors duration-200">Security Settings</h2>
                             
-                            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-gray-700 dark:to-gray-800 p-4 rounded-md mb-6 transition-colors duration-200">
+                            <div className="bg-gradient-to-r from-plum-50 to-blush-50 dark:from-dm-card dark:to-dm-card-2 p-4 rounded-md mb-6 border border-plum-100 dark:border-dm-border transition-colors duration-200">
                                 <div className="flex">
                                     <div className="flex-shrink-0">
-                                        <FaShieldAlt className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                                        <FaShieldAlt className="h-5 w-5 text-plum-600 dark:text-plum-300" />
                                     </div>
                                     <div className="ml-3">
-                                        <h3 className="text-sm font-medium text-blue-800 dark:text-blue-300">Account Security</h3>
-                                        <div className="mt-1 text-sm text-blue-700 dark:text-blue-400">
+                                        <h3 className="text-sm font-medium text-plum-800 dark:text-plum-200">Account Security</h3>
+                                        <div className="mt-1 text-sm text-plum-700 dark:text-plum-300">
                                             <p>Protect your account by using a strong password and changing it regularly.</p>
                                         </div>
                                     </div>
@@ -798,7 +798,7 @@ const Profile = () => {
                                     <div key={tier} className="rounded-2xl border border-gray-200 p-3 dark:border-gray-700">
                                         <div className="flex items-center justify-between gap-3">
                                             <h4 className="font-semibold text-gray-900 dark:text-white">{tier}</h4>
-                                            <span className="rounded-full bg-pink-100 px-2.5 py-1 text-xs font-semibold text-pink-700 dark:bg-pink-900/40 dark:text-pink-300">{discount}</span>
+                                            <span className="rounded-full bg-plum-100 px-2.5 py-1 text-xs font-semibold text-plum-800 dark:bg-plum-900/50 dark:text-plum-200">{discount}</span>
                                         </div>
                                         <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">{benefits}</p>
                                         <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">Required points: {points}</p>

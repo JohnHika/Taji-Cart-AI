@@ -52,7 +52,7 @@ const DeliveryRoleModal = ({ isOpen, onClose, user, onSave }) => {
                   value="regular"
                   checked={!isDelivery}
                   onChange={() => setIsDelivery(false)}
-                  className="h-5 w-5 text-blue-600"
+                  className="h-5 w-5 text-plum-600"
                 />
                 <span className="flex items-center">
                   <FaUserAlt className="mr-2 text-gray-500 dark:text-gray-400" />
@@ -67,10 +67,10 @@ const DeliveryRoleModal = ({ isOpen, onClose, user, onSave }) => {
                   value="delivery"
                   checked={isDelivery}
                   onChange={() => setIsDelivery(true)}
-                  className="h-5 w-5 text-blue-600"
+                  className="h-5 w-5 text-plum-600"
                 />
                 <span className="flex items-center">
-                  <FaTruck className="mr-2 text-blue-500" />
+                  <FaTruck className="mr-2 text-plum-600" />
                   <span className="font-medium text-gray-700 dark:text-gray-300">Delivery Personnel</span>
                 </span>
               </label>
@@ -87,7 +87,7 @@ const DeliveryRoleModal = ({ isOpen, onClose, user, onSave }) => {
             </button>
             <button
               type="submit"
-              className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
+              className="px-4 py-2 bg-plum-700 text-white rounded hover:bg-plum-600 transition-colors"
             >
               Save Changes
             </button>

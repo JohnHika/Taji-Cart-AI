@@ -88,7 +88,7 @@ const ErrorPage = () => {
             <button 
               onClick={testServerConnection}
               disabled={loading}
-              className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 disabled:opacity-50"
+              className="px-4 py-2 bg-plum-700 text-white rounded hover:bg-plum-600 disabled:opacity-50"
             >
               {loading ? "Testing..." : "Test Server Connection"}
             </button>
@@ -127,7 +127,7 @@ const ErrorPage = () => {
       )}
       
       <div className="mt-6">
-        <Link to="/" className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">
+        <Link to="/" className="bg-plum-700 text-white px-4 py-2 rounded hover:bg-plum-600">
           Return to Home
         </Link>
       </div>

@@ -176,7 +176,7 @@ const EditProductAdmin = ({ close ,data : propsData,fetchProductData}) => {
                   value={data.name}
                   onChange={handleChange}
                   required
-                  className='bg-blue-50 p-2 outline-none border focus-within:border-primary-200 rounded'
+                  className='bg-plum-50/80 p-2 outline-none border focus-within:border-plum-500 rounded'
                 />
               </div>
               <div className='grid gap-1'>
@@ -188,7 +188,7 @@ const EditProductAdmin = ({ close ,data : propsData,fetchProductData}) => {
                   name='sku'
                   value={data.sku}
                   onChange={handleChange}
-                  className='bg-blue-50 p-2 outline-none border focus-within:border-primary-200 rounded'
+                  className='bg-plum-50/80 p-2 outline-none border focus-within:border-plum-500 rounded'
                 />
               </div>
               <div className='grid gap-4 md:grid-cols-2'>
@@ -201,7 +201,7 @@ const EditProductAdmin = ({ close ,data : propsData,fetchProductData}) => {
                     name='barcode'
                     value={data.barcode}
                     onChange={handleChange}
-                    className='bg-blue-50 p-2 outline-none border focus-within:border-primary-200 rounded'
+                    className='bg-plum-50/80 p-2 outline-none border focus-within:border-plum-500 rounded'
                   />
                 </div>
                 <div className='grid gap-1'>
@@ -213,7 +213,7 @@ const EditProductAdmin = ({ close ,data : propsData,fetchProductData}) => {
                     name='qrCode'
                     value={data.qrCode}
                     onChange={handleChange}
-                    className='bg-blue-50 p-2 outline-none border focus-within:border-primary-200 rounded'
+                    className='bg-plum-50/80 p-2 outline-none border focus-within:border-plum-500 rounded'
                   />
                 </div>
               </div>
@@ -229,13 +229,13 @@ const EditProductAdmin = ({ close ,data : propsData,fetchProductData}) => {
                   required
                   multiple
                   rows={3}
-                  className='bg-blue-50 p-2 outline-none border focus-within:border-primary-200 rounded resize-none'
+                  className='bg-plum-50/80 p-2 outline-none border focus-within:border-plum-500 rounded resize-none'
                 />
               </div>
               <div>
                 <p className='font-medium'>Image</p>
                 <div>
-                  <label htmlFor='productImage' className='bg-blue-50 h-24 border rounded flex justify-center items-center cursor-pointer'>
+                  <label htmlFor='productImage' className='bg-plum-50/80 h-24 border rounded flex justify-center items-center cursor-pointer'>
                     <div className='text-center flex justify-center items-center flex-col'>
                       {
                         imageLoading ? <Loading /> : (
@@ -259,7 +259,7 @@ const EditProductAdmin = ({ close ,data : propsData,fetchProductData}) => {
                     {
                       data.image.map((img, index) => {
                         return (
-                          <div key={img + index} className='h-20 mt-1 w-20 min-w-20 bg-blue-50 border relative group'>
+                          <div key={img + index} className='h-20 mt-1 w-20 min-w-20 bg-plum-50/80 border relative group'>
                             <img
                               src={img}
                               alt={img}
@@ -281,7 +281,7 @@ const EditProductAdmin = ({ close ,data : propsData,fetchProductData}) => {
                 <label className='font-medium'>Category</label>
                 <div>
                   <select
-                    className='bg-blue-50 border w-full p-2 rounded'
+                    className='bg-plum-50/80 border w-full p-2 rounded'
                     value={selectCategory}
                     onChange={(e) => {
                       const value = e.target.value
@@ -309,7 +309,7 @@ const EditProductAdmin = ({ close ,data : propsData,fetchProductData}) => {
                     {
                       data.category.map((c, index) => {
                         return (
-                          <div key={c._id + index + "productsection"} className='text-sm flex items-center gap-1 bg-blue-50 mt-2'>
+                          <div key={c._id + index + "productsection"} className='text-sm flex items-center gap-1 bg-plum-50/80 mt-2'>
                             <p>{c.name}</p>
                             <div className='hover:text-red-500 cursor-pointer' onClick={() => handleRemoveCategory(index)}>
                               <IoClose size={20} />
@@ -325,7 +325,7 @@ const EditProductAdmin = ({ close ,data : propsData,fetchProductData}) => {
                 <label className='font-medium'>Sub Category</label>
                 <div>
                   <select
-                    className='bg-blue-50 border w-full p-2 rounded'
+                    className='bg-plum-50/80 border w-full p-2 rounded'
                     value={selectSubCategory}
                     onChange={(e) => {
                       const value = e.target.value
@@ -353,7 +353,7 @@ const EditProductAdmin = ({ close ,data : propsData,fetchProductData}) => {
                     {
                       data.subCategory.map((c, index) => {
                         return (
-                          <div key={c._id + index + "productsection"} className='text-sm flex items-center gap-1 bg-blue-50 mt-2'>
+                          <div key={c._id + index + "productsection"} className='text-sm flex items-center gap-1 bg-plum-50/80 mt-2'>
                             <p>{c.name}</p>
                             <div className='hover:text-red-500 cursor-pointer' onClick={() => handleRemoveSubCategory(index)}>
                               <IoClose size={20} />
@@ -376,7 +376,7 @@ const EditProductAdmin = ({ close ,data : propsData,fetchProductData}) => {
                   value={data.unit}
                   onChange={handleChange}
                   required
-                  className='bg-blue-50 p-2 outline-none border focus-within:border-primary-200 rounded'
+                  className='bg-plum-50/80 p-2 outline-none border focus-within:border-plum-500 rounded'
                 />
               </div>
 
@@ -390,7 +390,7 @@ const EditProductAdmin = ({ close ,data : propsData,fetchProductData}) => {
                   value={data.stock}
                   onChange={handleChange}
                   required
-                  className='bg-blue-50 p-2 outline-none border focus-within:border-primary-200 rounded'
+                  className='bg-plum-50/80 p-2 outline-none border focus-within:border-plum-500 rounded'
                 />
               </div>
 
@@ -404,7 +404,7 @@ const EditProductAdmin = ({ close ,data : propsData,fetchProductData}) => {
                   value={data.price}
                   onChange={handleChange}
                   required
-                  className='bg-blue-50 p-2 outline-none border focus-within:border-primary-200 rounded'
+                  className='bg-plum-50/80 p-2 outline-none border focus-within:border-plum-500 rounded'
                 />
               </div>
 
@@ -418,7 +418,7 @@ const EditProductAdmin = ({ close ,data : propsData,fetchProductData}) => {
                   value={data.discount}
                   onChange={handleChange}
                   required
-                  className='bg-blue-50 p-2 outline-none border focus-within:border-primary-200 rounded'
+                  className='bg-plum-50/80 p-2 outline-none border focus-within:border-plum-500 rounded'
                 />
               </div>
 
@@ -446,7 +446,7 @@ const EditProductAdmin = ({ close ,data : propsData,fetchProductData}) => {
                           })
                         }}
                         required
-                        className='bg-blue-50 p-2 outline-none border focus-within:border-primary-200 rounded'
+                        className='bg-plum-50/80 p-2 outline-none border focus-within:border-plum-500 rounded'
                       />
                     </div>
                   )

@@ -295,7 +295,7 @@ const ChatInterface = () => {
     }
 
     if (sessionMetadata.checkoutRequested) {
-      navigate('/checkout');
+      navigate('/dashboard/checkout');
     }
   }, [sessionMetadata, navigate]);
 
@@ -552,7 +552,7 @@ const ChatInterface = () => {
       }
       
       if (response.data && response.data.metadata && response.data.metadata.checkoutRequested) {
-        navigate('/checkout');
+        navigate('/dashboard/checkout');
       }
       
       if (sessionMetadata.cartActionHandled) {
@@ -922,8 +922,8 @@ const ChatInterface = () => {
             
             {/* Cart button */}
             <Link
-              to="/checkout"
-              className="flex items-center bg-blue-50 dark:bg-blue-900 text-blue-800 dark:text-blue-100 text-xs rounded-lg px-3 py-1"
+              to="/dashboard/checkout"
+              className="flex items-center bg-plum-50 dark:bg-plum-900/40 text-plum-800 dark:text-plum-100 text-xs rounded-lg px-3 py-1"
             >
               <FaShoppingCart className="mr-1" />
               <span>{cartItems.length || 0} items</span>
@@ -1026,7 +1026,7 @@ const ChatInterface = () => {
             </button>
             <button
               onClick={() => handleSuggestionClick("Show me specs")}
-              className="text-xs bg-blue-100 dark:bg-blue-800 hover:bg-blue-200 dark:hover:bg-blue-700 text-blue-800 dark:text-blue-100 px-3 py-1 rounded-full"
+              className="text-xs bg-plum-100 dark:bg-plum-800 hover:bg-plum-200 dark:hover:bg-plum-700 text-plum-800 dark:text-plum-100 px-3 py-1 rounded-full"
               disabled={isLoading || isTyping}
             >
               Specs

@@ -35,7 +35,7 @@ const Dashboard = () => {
   const [showDriversMap, setShowDriversMap] = useState(false);
   
   // Colors for visual elements
-  const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d'];
+  const COLORS = ['#4B1E3E', '#7B3D6E', '#C9943A', '#BD7EAF', '#5F2B50', '#9C5A8E'];
   
   // Fetch dashboard data from API
   const fetchDashboardData = useCallback(async () => {
@@ -127,15 +127,15 @@ const Dashboard = () => {
   const getStatusInfo = (status) => {
     switch (status) {
       case 'confirmed':
-        return { icon: <FaClock className="text-blue-500" />, color: 'bg-blue-100 text-blue-800' };
+        return { icon: <FaClock className="text-plum-600" />, color: 'bg-plum-100 text-plum-800 dark:bg-plum-900/40 dark:text-plum-200' };
       case 'dispatched':
-        return { icon: <FaTruck className="text-yellow-500" />, color: 'bg-yellow-100 text-yellow-800' };
+        return { icon: <FaTruck className="text-yellow-600" />, color: 'bg-yellow-100 text-yellow-800' };
       case 'driver_assigned':
-        return { icon: <FaUserCircle className="text-indigo-500" />, color: 'bg-indigo-100 text-indigo-800' };
+        return { icon: <FaUserCircle className="text-plum-700" />, color: 'bg-plum-100 text-plum-800 dark:bg-plum-900/40 dark:text-plum-200' };
       case 'out_for_delivery':
-        return { icon: <BiTargetLock className="text-purple-500" />, color: 'bg-purple-100 text-purple-800' };
+        return { icon: <BiTargetLock className="text-plum-800" />, color: 'bg-plum-200 text-plum-900 dark:bg-plum-800/50 dark:text-plum-100' };
       case 'nearby':
-        return { icon: <FaMapMarkerAlt className="text-pink-500" />, color: 'bg-pink-100 text-pink-800' };
+        return { icon: <FaMapMarkerAlt className="text-blush-500" />, color: 'bg-blush-100 text-blush-800 dark:bg-blush-900/30 dark:text-blush-200' };
       case 'delivered':
         return { icon: <FaCheck className="text-green-500" />, color: 'bg-green-100 text-green-800' };
       default:
@@ -161,14 +161,14 @@ const Dashboard = () => {
     const total = pendingOrders + dispatchedOrders + activeDeliveries;
     
     return [
-      { name: 'Pending', value: pendingOrders, color: '#0088FE', percentage: total > 0 ? Math.round((pendingOrders / total) * 100) : 0 },
-      { name: 'Dispatched', value: dispatchedOrders, color: '#00C49F', percentage: total > 0 ? Math.round((dispatchedOrders / total) * 100) : 0 },
-      { name: 'Active', value: activeDeliveries, color: '#FFBB28', percentage: total > 0 ? Math.round((activeDeliveries / total) * 100) : 0 }
+      { name: 'Pending', value: pendingOrders, color: '#4B1E3E', percentage: total > 0 ? Math.round((pendingOrders / total) * 100) : 0 },
+      { name: 'Dispatched', value: dispatchedOrders, color: '#7B3D6E', percentage: total > 0 ? Math.round((dispatchedOrders / total) * 100) : 0 },
+      { name: 'Active', value: activeDeliveries, color: '#C9943A', percentage: total > 0 ? Math.round((activeDeliveries / total) * 100) : 0 }
     ];
   };
 
   return (
-    <div className="container mx-auto px-4 py-6 dark:bg-gray-900 dark:text-white">
+    <div className="container mx-auto px-4 py-6 dark:bg-dm-surface dark:text-white">
       <div className="mb-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         {/* Header with welcome message */}
         <div>
@@ -182,14 +182,14 @@ const Dashboard = () => {
         <div className="flex gap-3">
           <button
             onClick={fetchDashboardData}
-            className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none"
+            className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-plum-700 hover:bg-plum-600 focus:outline-none"
           >
             <FaRedo className="mr-2 h-4 w-4" />
             Refresh
           </button>
           <Link
             to="/dashboard/staff/delivery"
-            className="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none"
+            className="inline-flex items-center px-4 py-2 border border-brown-200 dark:border-dm-border rounded-md shadow-sm text-sm font-medium text-charcoal dark:text-white/90 bg-white dark:bg-dm-card hover:bg-plum-50 dark:hover:bg-dm-card-2 focus:outline-none"
           >
             <FaTruck className="mr-2 h-4 w-4" />
             Delivery Management
@@ -217,24 +217,24 @@ const Dashboard = () => {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {loading ? (
               Array(4).fill(0).map((_, i) => (
-                <div key={i} className="animate-pulse bg-white dark:bg-gray-800 rounded-lg shadow p-5 h-32">
-                  <div className="h-5 bg-gray-200 dark:bg-gray-700 rounded w-1/2 mb-4"></div>
-                  <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-1/3"></div>
+                <div key={i} className="animate-pulse bg-white dark:bg-dm-card rounded-lg shadow border border-brown-100 dark:border-dm-border p-5 h-32">
+                  <div className="h-5 bg-gray-200 dark:bg-dm-card-2 rounded w-1/2 mb-4"></div>
+                  <div className="h-8 bg-gray-200 dark:bg-dm-card-2 rounded w-1/3"></div>
                 </div>
               ))
             ) : (
               <>
-                <Link to="/dashboard/staff/delivery/pending" className="bg-blue-50 dark:bg-blue-900/20 rounded-lg shadow hover:shadow-lg transition-shadow border border-blue-100 dark:border-blue-800 p-5">
+                <Link to="/dashboard/staff/delivery/pending" className="bg-plum-50 dark:bg-plum-900/20 rounded-lg shadow hover:shadow-lg transition-shadow border border-plum-100 dark:border-plum-800 p-5">
                   <div className="flex justify-between items-start">
                     <div>
-                      <p className="text-sm font-medium text-blue-800 dark:text-blue-300">Pending Orders</p>
-                      <p className="text-3xl font-bold text-blue-900 dark:text-blue-100">{dashboardData.counts.pendingOrders}</p>
+                      <p className="text-sm font-medium text-plum-800 dark:text-plum-200">Pending Orders</p>
+                      <p className="text-3xl font-bold text-plum-900 dark:text-plum-100">{dashboardData.counts.pendingOrders}</p>
                     </div>
-                    <div className="bg-blue-100 dark:bg-blue-800 p-3 rounded-full">
-                      <FaClock className="text-blue-500 dark:text-blue-300 w-6 h-6" />
+                    <div className="bg-plum-100 dark:bg-plum-800 p-3 rounded-full">
+                      <FaClock className="text-plum-600 dark:text-plum-200 w-6 h-6" />
                     </div>
                   </div>
-                  <div className="text-xs text-blue-700 dark:text-blue-300 mt-4">
+                  <div className="text-xs text-plum-700 dark:text-plum-200 mt-4">
                     <span className="font-medium">Action:</span> Dispatch these orders
                   </div>
                 </Link>
@@ -254,17 +254,17 @@ const Dashboard = () => {
                   </div>
                 </Link>
                 
-                <Link to="/dashboard/staff/delivery/active" className="bg-purple-50 dark:bg-purple-900/20 rounded-lg shadow hover:shadow-lg transition-shadow border border-purple-100 dark:border-purple-800 p-5">
+                <Link to="/dashboard/staff/delivery/active" className="bg-blush-50 dark:bg-plum-900/25 rounded-lg shadow hover:shadow-lg transition-shadow border border-blush-200 dark:border-plum-800 p-5">
                   <div className="flex justify-between items-start">
                     <div>
-                      <p className="text-sm font-medium text-purple-800 dark:text-purple-300">Active Deliveries</p>
-                      <p className="text-3xl font-bold text-purple-900 dark:text-purple-100">{dashboardData.counts.activeDeliveries}</p>
+                      <p className="text-sm font-medium text-plum-800 dark:text-plum-200">Active Deliveries</p>
+                      <p className="text-3xl font-bold text-plum-900 dark:text-plum-100">{dashboardData.counts.activeDeliveries}</p>
                     </div>
-                    <div className="bg-purple-100 dark:bg-purple-800 p-3 rounded-full">
-                      <FaBoxOpen className="text-purple-500 dark:text-purple-300 w-6 h-6" />
+                    <div className="bg-blush-100 dark:bg-plum-800 p-3 rounded-full">
+                      <FaBoxOpen className="text-plum-600 dark:text-plum-200 w-6 h-6" />
                     </div>
                   </div>
-                  <div className="text-xs text-purple-700 dark:text-purple-300 mt-4">
+                  <div className="text-xs text-plum-700 dark:text-plum-200 mt-4">
                     <span className="font-medium">Status:</span> {dashboardData.counts.activeDeliveries} orders in transit
                   </div>
                 </Link>
@@ -285,17 +285,17 @@ const Dashboard = () => {
                 </Link>
 
                 {/* POS System Cards */}
-                <Link to="/dashboard/sales-counter" className="bg-indigo-50 dark:bg-indigo-900/20 rounded-lg shadow hover:shadow-lg transition-shadow border border-indigo-100 dark:border-indigo-800 p-5">
+                <Link to="/dashboard/sales-counter" className="bg-gold-50 dark:bg-gold-600/15 rounded-lg shadow hover:shadow-lg transition-shadow border border-gold-200 dark:border-gold-600/40 p-5">
                   <div className="flex justify-between items-start">
                     <div>
-                      <p className="text-sm font-medium text-indigo-800 dark:text-indigo-300">Sales Counter</p>
-                      <p className="text-lg font-bold text-indigo-900 dark:text-indigo-100">Open Counter</p>
+                      <p className="text-sm font-medium text-gold-800 dark:text-gold-200">Sales Counter</p>
+                      <p className="text-lg font-bold text-charcoal dark:text-gold-100">Open Counter</p>
                     </div>
-                    <div className="bg-indigo-100 dark:bg-indigo-800 p-3 rounded-full">
-                      <FaShoppingCart className="text-indigo-500 dark:text-indigo-300 w-6 h-6" />
+                    <div className="bg-gold-100 dark:bg-gold-700/40 p-3 rounded-full">
+                      <FaShoppingCart className="text-gold-600 dark:text-gold-300 w-6 h-6" />
                     </div>
                   </div>
-                  <div className="text-xs text-indigo-700 dark:text-indigo-300 mt-4">
+                  <div className="text-xs text-gold-800 dark:text-gold-200 mt-4">
                     <span className="font-medium">Action:</span> Process in-store sales
                   </div>
                 </Link>
@@ -319,12 +319,12 @@ const Dashboard = () => {
           </div>
           
           {/* Delivery trend chart (simple version) */}
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-5">
+          <div className="bg-white dark:bg-dm-card rounded-lg shadow border border-brown-100 dark:border-dm-border p-5">
             <div className="flex justify-between items-center mb-5">
               <h2 className="text-lg font-medium text-gray-900 dark:text-white">Delivery Performance</h2>
             </div>
             {loading ? (
-              <div className="animate-pulse h-64 bg-gray-200 dark:bg-gray-700 rounded"></div>
+              <div className="animate-pulse h-64 bg-gray-200 dark:bg-dm-card-2 rounded"></div>
             ) : (
               <div className="h-64 flex flex-col">
                 <div className="text-center mb-4">
@@ -341,7 +341,7 @@ const Dashboard = () => {
                       return (
                         <div key={index} className="flex flex-col items-center">
                           <div 
-                            className="w-full bg-indigo-500 dark:bg-indigo-600 rounded-t"
+                            className="w-full bg-plum-600 dark:bg-plum-500 rounded-t"
                             style={{ height: `${heightPercentage}%`, minHeight: '10px' }}
                           ></div>
                           <div className="text-xs mt-1">{day.date.split('-')[2]}</div>
@@ -359,10 +359,10 @@ const Dashboard = () => {
           </div>
           
           {/* Recent orders */}
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
-            <div className="px-5 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+          <div className="bg-white dark:bg-dm-card rounded-lg shadow border border-brown-100 dark:border-dm-border overflow-hidden">
+            <div className="px-5 py-4 border-b border-gray-200 dark:border-dm-border flex items-center justify-between">
               <h2 className="text-lg font-medium text-gray-900 dark:text-white">Recent Orders</h2>
-              <Link to="/dashboard/staff/delivery" className="text-sm font-medium text-blue-600 dark:text-blue-400 hover:text-blue-500">
+              <Link to="/dashboard/staff/delivery" className="text-sm font-medium text-plum-700 dark:text-plum-300 hover:text-plum-600">
                 View all
               </Link>
             </div>
@@ -386,7 +386,7 @@ const Dashboard = () => {
                 {dashboardData.recentOrders.map((order) => {
                   const statusInfo = getStatusInfo(order.status);
                   return (
-                    <div key={order._id} className="px-5 py-4 hover:bg-gray-50 dark:hover:bg-gray-700">
+                    <div key={order._id} className="px-5 py-4 hover:bg-plum-50/50 dark:hover:bg-dm-card-2">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center">
                           <div className="p-2 rounded-full bg-gray-100 dark:bg-gray-700">
@@ -425,10 +425,10 @@ const Dashboard = () => {
         {/* Right column - driver stats and distribution */}
         <div className="lg:col-span-4 space-y-6">
           {/* Driver availability */}
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-5">
+          <div className="bg-white dark:bg-dm-card rounded-lg shadow border border-brown-100 dark:border-dm-border p-5">
             <Link to="/dashboard/staff/delivery/drivers" className="flex justify-between items-center mb-5">
               <h2 className="text-lg font-medium text-gray-900 dark:text-white">Driver Availability</h2>
-              <span className="text-sm text-blue-600 dark:text-blue-400 hover:underline">Manage</span>
+              <span className="text-sm text-plum-700 dark:text-plum-300 hover:underline">Manage</span>
             </Link>
             {loading ? (
               <div className="animate-pulse space-y-4">
@@ -450,7 +450,7 @@ const Dashboard = () => {
                         cy="64"
                       />
                       <circle
-                        className="text-indigo-500"
+                        className="text-plum-600"
                         strokeWidth="10"
                         strokeDasharray={360}
                         strokeDashoffset={360 - (getDriverAvailabilityPercentage() / 100) * 360}
@@ -462,17 +462,17 @@ const Dashboard = () => {
                         cy="64"
                       />
                     </svg>
-                    <span className="absolute text-xl text-indigo-500 font-bold">
+                    <span className="absolute text-xl text-plum-700 dark:text-plum-300 font-bold">
                       {getDriverAvailabilityPercentage()}%
                     </span>
                   </div>
                 </div>
                 <div className="text-center">
-                  <p className="text-indigo-700 dark:text-indigo-300 font-medium text-lg">
+                  <p className="text-plum-800 dark:text-plum-200 font-medium text-lg">
                     {dashboardData.counts.availableDrivers} of {dashboardData.counts.totalDrivers} drivers available
                   </p>
                 </div>
-                <hr className="my-4 border-gray-200 dark:border-gray-700" />
+                <hr className="my-4 border-gray-200 dark:border-dm-border" />
                 <div className="text-sm text-gray-900 dark:text-gray-300">
                   <div className="flex justify-between items-center mb-2">
                     <span>Active Orders Per Driver:</span>
@@ -488,10 +488,10 @@ const Dashboard = () => {
           </div>
           
           {/* Delivery Status Distribution (simple version) */}
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-5">
+          <div className="bg-white dark:bg-dm-card rounded-lg shadow border border-brown-100 dark:border-dm-border p-5">
             <h2 className="text-lg font-medium text-gray-900 dark:text-white mb-5">Delivery Status</h2>
             {loading ? (
-              <div className="animate-pulse h-64 bg-gray-200 dark:bg-gray-700 rounded"></div>
+              <div className="animate-pulse h-64 bg-gray-200 dark:bg-dm-card-2 rounded"></div>
             ) : (
               <div className="h-64 flex flex-col justify-center">
                 {getDeliveryStatusData().map((status, index) => (
@@ -520,12 +520,12 @@ const Dashboard = () => {
           </div>
           
           {/* Active Drivers */}
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-5">
+          <div className="bg-white dark:bg-dm-card rounded-lg shadow border border-brown-100 dark:border-dm-border p-5">
             <div className="flex justify-between items-center mb-5">
               <h2 className="text-lg font-medium text-gray-900 dark:text-white">Active Drivers</h2>
               <button
                 onClick={() => setShowDriversMap(!showDriversMap)}
-                className="text-sm text-blue-600 dark:text-blue-400 hover:underline flex items-center"
+                className="text-sm text-plum-700 dark:text-plum-300 hover:underline flex items-center"
               >
                 <FaMapMarkerAlt className="mr-1" /> {showDriversMap ? 'Hide Map' : 'Show Map'}
               </button>

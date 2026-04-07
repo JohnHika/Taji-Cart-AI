@@ -13,7 +13,7 @@ const StaffDashboard = () => {
         <div className="mt-4 md:mt-0">
           <Link 
             to="/dashboard/staff/delivery"
-            className="bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-md flex items-center transition-colors duration-200"
+            className="bg-plum-700 hover:bg-plum-600 text-white py-2 px-4 rounded-md flex items-center transition-colors duration-200"
           >
             <FaCog className="mr-2" /> 
             Delivery Management
@@ -79,8 +79,8 @@ const StaffDashboard = () => {
             to="/dashboard/staff/delivery/pending"
             className="bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 p-6 rounded-lg shadow-md hover:shadow-lg transition-all flex flex-col items-center text-center border border-gray-100 dark:border-gray-700"
           >
-            <div className="w-16 h-16 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center mb-4">
-              <FaClock className="text-blue-600 dark:text-blue-400 text-2xl" />
+            <div className="w-16 h-16 bg-plum-100 dark:bg-plum-900/30 rounded-full flex items-center justify-center mb-4">
+              <FaClock className="text-plum-600 dark:text-plum-300 text-2xl" />
             </div>
             <h2 className="text-lg font-medium mb-2 text-gray-800 dark:text-white">Pending Orders</h2>
             <p className="text-gray-600 dark:text-gray-400 text-sm">
@@ -146,8 +146,8 @@ const StaffDashboard = () => {
             to="/dashboard"
             className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm hover:shadow-md transition-all flex items-center border border-gray-100 dark:border-gray-700"
           >
-            <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center mr-3">
-              <FaChartBar className="text-blue-600 dark:text-blue-400" />
+            <div className="w-10 h-10 bg-plum-100 dark:bg-plum-900/30 rounded-full flex items-center justify-center mr-3">
+              <FaChartBar className="text-plum-600 dark:text-plum-300" />
             </div>
             <span className="text-gray-800 dark:text-white font-medium">Dashboard Overview</span>
           </Link>

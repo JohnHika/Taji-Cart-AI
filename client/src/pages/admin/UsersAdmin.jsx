@@ -426,7 +426,7 @@ const UsersAdmin = () => {
         
         <button
           onClick={fetchUsersWithCacheBusting}
-          className="px-4 py-2 bg-primary-200 text-white rounded-lg hover:bg-primary-300 flex items-center justify-center"
+          className="px-4 py-2 bg-plum-700 text-white rounded-lg hover:bg-plum-600 flex items-center justify-center"
         >
           <FaUsersCog className="mr-2" /> Refresh Users
         </button>
@@ -439,8 +439,8 @@ const UsersAdmin = () => {
             onClick={() => setRoleFilter(item.filter)}
             className={`min-w-[110px] rounded-2xl border px-4 py-3 text-left transition ${
               roleFilter === item.filter
-                ? 'border-primary-200 bg-primary-50 text-primary-300 dark:border-primary-300 dark:bg-primary-900/20 dark:text-primary-200'
-                : 'border-gray-200 bg-white text-gray-700 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200'
+                ? 'border-plum-300 bg-plum-50 text-plum-800 dark:border-plum-600 dark:bg-plum-900/25 dark:text-plum-200'
+                : 'border-brown-200 bg-white text-brown-700 dark:border-dm-border dark:bg-dm-card dark:text-white/85'
             }`}
           >
             <div className="text-lg font-bold">{item.value}</div>
@@ -450,7 +450,7 @@ const UsersAdmin = () => {
       </div>
       
       {/* Filters and Search */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 mb-6">
+      <div className="bg-white dark:bg-dm-card rounded-lg shadow border border-brown-100 dark:border-dm-border p-4 mb-6">
         <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
           <div className="relative w-full xl:max-w-md">
             <input
@@ -458,7 +458,7 @@ const UsersAdmin = () => {
               placeholder="Search users by name, email or phone..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full p-2 pl-10 pr-4 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+              className="w-full p-2 pl-10 pr-4 border rounded-lg dark:bg-dm-card-2 dark:border-dm-border dark:text-white"
             />
             <FaSearch className="absolute left-3 top-3 text-gray-400 dark:text-gray-300" />
           </div>
@@ -469,7 +469,7 @@ const UsersAdmin = () => {
               <select
                 value={statusFilter}
                 onChange={handleStatusFilterChange}
-                className="min-w-0 flex-1 p-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                className="min-w-0 flex-1 p-2 border rounded-lg dark:bg-dm-card-2 dark:border-dm-border dark:text-white"
               >
                 <option value="all">All Users</option>
                 <option value="Active">Active</option>
@@ -483,7 +483,7 @@ const UsersAdmin = () => {
               <select
                 value={roleFilter}
                 onChange={(e) => setRoleFilter(e.target.value)}
-                className="min-w-0 flex-1 p-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                className="min-w-0 flex-1 p-2 border rounded-lg dark:bg-dm-card-2 dark:border-dm-border dark:text-white"
               >
                 <option value="all">All Roles</option>
                 <option value="admin">Admins</option>
@@ -497,10 +497,10 @@ const UsersAdmin = () => {
       </div>
       
       {/* Users Table */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
+      <div className="bg-white dark:bg-dm-card rounded-lg shadow border border-brown-100 dark:border-dm-border overflow-hidden">
         {loading ? (
           <div className="flex justify-center items-center p-8">
-            <FaSpinner className="animate-spin text-4xl text-primary-200" />
+            <FaSpinner className="animate-spin text-4xl text-plum-600" />
           </div>
         ) : error ? (
           <div className="flex justify-center items-center p-8 text-red-500">

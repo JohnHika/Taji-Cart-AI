@@ -516,7 +516,7 @@ export async function uploadAvatar(request, response) {
 export async function updateUserDetails(request, response) {
     try {
         const userId = request.userId; //auth middleware
-        const { name, email, mobile, password } = request.body;
+        const { name, email, mobile, password, notification_preferences } = request.body;
         const currentUser = await UserModel.findById(userId);
 
         if (!currentUser) {
@@ -601,6 +601,25 @@ export async function updateUserDetails(request, response) {
                 updatePayload.mobile_verified = false;
                 mobileChanged = true;
             }
+        }
+
+        if (notification_preferences && typeof notification_preferences === 'object' && !Array.isArray(notification_preferences)) {
+            const prev = currentUser.notification_preferences
+                ? (typeof currentUser.notification_preferences.toObject === 'function'
+                    ? currentUser.notification_preferences.toObject()
+                    : { ...currentUser.notification_preferences })
+                : { email: true, push: true, sms: false };
+            const next = { ...prev };
+            if (typeof notification_preferences.email === 'boolean') {
+                next.email = notification_preferences.email;
+            }
+            if (typeof notification_preferences.push === 'boolean') {
+                next.push = notification_preferences.push;
+            }
+            if (typeof notification_preferences.sms === 'boolean') {
+                next.sms = notification_preferences.sms;
+            }
+            updatePayload.notification_preferences = next;
         }
 
         await UserModel.updateOne({ _id: userId }, updatePayload);

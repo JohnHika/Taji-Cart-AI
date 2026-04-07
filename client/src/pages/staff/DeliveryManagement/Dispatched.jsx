@@ -271,7 +271,7 @@ const Dispatched = () => {
               placeholder="Search orders..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-8 pr-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+              className="pl-8 pr-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-plum-500 focus:border-plum-500"
             />
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
               <svg className="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
@@ -281,7 +281,7 @@ const Dispatched = () => {
           </div>
           <button
             onClick={fetchDispatchedOrders}
-            className="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+            className="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-plum-500"
           >
             <svg className="mr-2 -ml-1 h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
               <path fillRule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clipRule="evenodd" />
@@ -293,7 +293,7 @@ const Dispatched = () => {
 
       {loading ? (
         <div className="flex justify-center items-center h-64">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-plum-500"></div>
         </div>
       ) : error ? (
         <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-md">
@@ -317,7 +317,7 @@ const Dispatched = () => {
                 type="checkbox"
                 checked={selectedOrders.length === filteredOrders.length && filteredOrders.length > 0}
                 onChange={handleSelectAll}
-                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                className="h-4 w-4 text-plum-600 focus:ring-plum-500 border-gray-300 rounded"
               />
               <span className="ml-2 text-sm text-gray-700">
                 {selectedOrders.length > 0 ? `${selectedOrders.length} selected` : 'Select all'}
@@ -327,7 +327,7 @@ const Dispatched = () => {
               <select
                 value={selectedDeliveryPerson}
                 onChange={(e) => setSelectedDeliveryPerson(e.target.value)}
-                className="block px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                className="block px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-plum-500 focus:border-plum-500 sm:text-sm"
               >
                 <option value="">Select delivery personnel</option>
                 {deliveryPersonnel.map(person => (
@@ -341,7 +341,7 @@ const Dispatched = () => {
                 disabled={selectedOrders.length === 0 || !selectedDeliveryPerson}
                 className={`px-4 py-2 rounded-md text-sm font-medium ${
                   selectedOrders.length > 0 && selectedDeliveryPerson
-                    ? 'bg-blue-600 text-white hover:bg-blue-700'
+                    ? 'bg-plum-700 text-white hover:bg-plum-600'
                     : 'bg-gray-300 text-gray-500 cursor-not-allowed'
                 }`}
               >
@@ -413,7 +413,7 @@ const Dispatched = () => {
                         type="checkbox"
                         checked={selectedOrders.includes(order._id)}
                         onChange={() => handleSelectOrder(order._id)}
-                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                        className="h-4 w-4 text-plum-600 focus:ring-plum-500 border-gray-300 rounded"
                       />
                     </td>
                     <td className="px-4 py-4 whitespace-nowrap">

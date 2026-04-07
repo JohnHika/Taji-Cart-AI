@@ -232,7 +232,7 @@ const DashboardProduct = () => {
           )}
           <Link 
             to="/dashboard/upload-product" 
-            className="bg-blue-600 hover:bg-blue-700 text-white px-3 sm:px-4 py-2 rounded-md flex items-center transition-colors duration-200"
+            className="bg-plum-700 hover:bg-plum-600 text-white px-3 sm:px-4 py-2 rounded-md flex items-center transition-colors duration-200"
           >
             <FaPlus className="mr-2" />
             Add Product
@@ -241,7 +241,7 @@ const DashboardProduct = () => {
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4 mb-4 sm:mb-6">
-        <div className="bg-white dark:bg-gray-800 p-3 sm:p-4 rounded-lg shadow border-l-4 border-blue-500 dark:border-blue-400 transition-colors duration-200">
+        <div className="bg-white dark:bg-gray-800 p-3 sm:p-4 rounded-lg shadow border-l-4 border-plum-600 dark:border-plum-400 transition-colors duration-200">
           <p className="text-gray-500 dark:text-gray-400 text-xs sm:text-sm">Total Products</p>
           <p className="text-xl sm:text-2xl font-bold dark:text-white">{stats.total}</p>
         </div>
@@ -265,7 +265,7 @@ const DashboardProduct = () => {
           <input
             type="text"
             placeholder="Search products..."
-            className="w-full pl-10 pr-4 py-2 border rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors duration-200"
+            className="w-full pl-10 pr-4 py-2 border rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:outline-none focus:ring-2 focus:ring-plum-500 transition-colors duration-200"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
@@ -274,7 +274,7 @@ const DashboardProduct = () => {
         <div className="relative">
           <FaFilter className="absolute left-3 top-3 text-gray-400" />
           <select
-            className="w-full pl-10 pr-4 py-2 border rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none transition-colors duration-200"
+            className="w-full pl-10 pr-4 py-2 border rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:outline-none focus:ring-2 focus:ring-plum-500 appearance-none transition-colors duration-200"
             value={filterCategory}
             onChange={(e) => setFilterCategory(e.target.value)}
           >
@@ -333,7 +333,7 @@ const DashboardProduct = () => {
                           type="checkbox"
                           checked={selectedProducts.includes(product._id)}
                           onChange={() => handleSelectProduct(product._id)}
-                          className="h-5 w-5 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
+                          className="h-5 w-5 text-plum-600 rounded border-gray-300 focus:ring-plum-500"
                         />
                       </div>
                       
@@ -354,7 +354,7 @@ const DashboardProduct = () => {
                         </h3>
                         <div className="flex items-center mt-1">
                           {product.category && product.category.length > 0 && (
-                            <span className="px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+                            <span className="px-2 py-1 text-xs font-medium rounded-full bg-plum-100 text-plum-800 dark:bg-plum-900 dark:text-plum-200">
                               {Array.isArray(product.category) 
                                 ? product.category[0]?.name 
                                 : product.category?.name || 'N/A'}
@@ -387,14 +387,14 @@ const DashboardProduct = () => {
                       <div className="flex justify-between">
                         <Link 
                           to={`/product/${encodeURIComponent(product.name.replace(/\s+/g, '-').toLowerCase())}-${product._id}`}
-                          className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
+                          className="text-plum-600 hover:text-plum-800 dark:text-plum-300 dark:hover:text-plum-200"
                         >
                           <FaEye className="inline mr-1" /> View
                         </Link>
                         <div>
                           <Link 
                             to={`/dashboard/upload-product?edit=${product._id}`}
-                            className="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300 mr-3"
+                            className="text-plum-600 hover:text-plum-900 dark:text-plum-300 dark:hover:text-plum-200 mr-3"
                           >
                             <FaEdit className="inline" />
                           </Link>
@@ -424,7 +424,7 @@ const DashboardProduct = () => {
                           type="checkbox"
                           checked={selectedProducts.length === currentProducts.length && currentProducts.length > 0}
                           onChange={handleSelectAll}
-                          className="h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
+                          className="h-4 w-4 text-plum-600 rounded border-gray-300 focus:ring-plum-500"
                         />
                       </th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider" width="70">
@@ -482,7 +482,7 @@ const DashboardProduct = () => {
                               type="checkbox"
                               checked={selectedProducts.includes(product._id)}
                               onChange={() => handleSelectProduct(product._id)}
-                              className="h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
+                              className="h-4 w-4 text-plum-600 rounded border-gray-300 focus:ring-plum-500"
                             />
                           </td>
                           <td className="px-4 py-4">
@@ -510,7 +510,7 @@ const DashboardProduct = () => {
                           </td>
                           <td className="px-4 py-4">
                             {product.category && product.category.length > 0 ? (
-                              <span className="inline-flex px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+                              <span className="inline-flex px-2 py-1 text-xs font-medium rounded-full bg-plum-100 text-plum-800 dark:bg-plum-900 dark:text-plum-200">
                                 {Array.isArray(product.category) 
                                   ? product.category[0]?.name 
                                   : product.category?.name || 'N/A'}
@@ -549,14 +549,14 @@ const DashboardProduct = () => {
                             <div className="flex justify-end space-x-2">
                               <Link
                                 to={`/product/${encodeURIComponent(product.name.replace(/\s+/g, '-').toLowerCase())}-${product._id}`}
-                                className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
+                                className="text-plum-600 hover:text-plum-800 dark:text-plum-300 dark:hover:text-plum-200"
                                 title="View Product"
                               >
                                 <FaEye />
                               </Link>
                               <Link 
                                 to={`/dashboard/upload-product?edit=${product._id}`}
-                                className="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300"
+                                className="text-plum-600 hover:text-plum-900 dark:text-plum-300 dark:hover:text-plum-200"
                                 title="Edit Product"
                               >
                                 <FaEdit />

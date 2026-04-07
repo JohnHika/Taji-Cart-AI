@@ -337,7 +337,7 @@ const VerificationHistory = () => {
             <div className="px-5 py-3 bg-gray-50 dark:bg-gray-700">
               <button
                 onClick={() => handleViewOrderDetails(item)}
-                className="w-full inline-flex justify-center items-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-blue-700 bg-blue-100 hover:bg-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:hover:bg-blue-800/50"
+                className="w-full inline-flex justify-center items-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-plum-800 bg-plum-100 hover:bg-plum-200 dark:bg-plum-900/30 dark:text-plum-200 dark:hover:bg-plum-800/40"
               >
                 <FaEye className="mr-2" /> View Details
               </button>
@@ -419,7 +419,7 @@ const VerificationHistory = () => {
                     <div className="flex flex-col sm:flex-row gap-2 justify-center items-center">
                       <button
                         onClick={() => handleViewOrderDetails(item)}
-                        className="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-200 flex items-center"
+                        className="text-plum-600 hover:text-plum-800 dark:text-plum-300 dark:hover:text-plum-200 flex items-center"
                         title="View Details"
                       >
                         <FaEye />
@@ -455,7 +455,7 @@ const VerificationHistory = () => {
           </button>
           <button
             onClick={() => setShowFilters(!showFilters)}
-            className="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-lg flex items-center text-white"
+            className="bg-plum-700 hover:bg-plum-600 px-4 py-2 rounded-lg flex items-center text-white"
           >
             <FaFilter className="mr-2" /> {showFilters ? 'Hide Filters' : 'Show Filters'}
           </button>

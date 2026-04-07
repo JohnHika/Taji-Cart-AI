@@ -27,6 +27,7 @@ import { HiOutlineExternalLink } from 'react-icons/hi';
 import { useDispatch, useSelector } from 'react-redux';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import SummaryApi from '../common/SummaryApi';
+import { nawiriBrand } from '../config/brand';
 import { logout } from '../store/userSlice';
 import Axios from '../utils/Axios';
 import AxiosToastError from '../utils/AxiosToastError';
@@ -104,8 +105,34 @@ const AdminMenu = ({ close, forLightPanel = false }) => {
     }
   };
 
+  const backToStoreCardClass = forLightPanel
+    ? 'flex items-center gap-3 rounded-xl border border-brown-100 bg-white/80 px-3 py-2.5 transition hover:border-plum-200 hover:bg-plum-50/80 dark:border-dm-border dark:bg-dm-card-2 dark:hover:border-plum-700 dark:hover:bg-plum-900/20'
+    : 'flex items-center gap-3 rounded-xl border border-plum-600/50 bg-plum-800/40 px-3 py-2.5 transition hover:border-plum-500 hover:bg-plum-800/70';
+
   return (
     <div className={forLightPanel ? 'min-w-0 max-w-full overflow-x-hidden' : 'min-w-0 max-w-full overflow-x-hidden text-white'}>
+      <div className="mb-4 px-2">
+        <Link onClick={() => close?.()} to="/" className={backToStoreCardClass}>
+          <img src={nawiriBrand.logo} alt="" className="h-9 w-9 shrink-0 rounded-lg object-contain" />
+          <div className="min-w-0">
+            <p
+              className={`truncate text-sm font-semibold ${
+                forLightPanel ? 'text-charcoal dark:text-white' : 'text-white'
+              }`}
+            >
+              {nawiriBrand.shortName}
+            </p>
+            <p
+              className={`truncate text-xs ${
+                forLightPanel ? 'text-brown-500 dark:text-white/45' : 'text-white/55'
+              }`}
+            >
+              Back to store
+            </p>
+          </div>
+        </Link>
+      </div>
+
       <div className={`${titleClass} truncate`}>Admin dashboard</div>
       <div className={metaClass}>
         <span className="min-w-0 max-w-full flex-1 truncate">

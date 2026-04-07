@@ -76,10 +76,10 @@ const ProductAdmin = () => {
   },[search])
   
   return (
-    <section className='min-h-screen dark:bg-gray-900'>
-        <div className='p-2 bg-white dark:bg-gray-800 shadow-md flex items-center justify-between gap-4'>
+    <section className='min-h-screen dark:bg-dm-surface'>
+        <div className='p-2 bg-white dark:bg-dm-card border-b border-brown-100 dark:border-dm-border shadow-md flex items-center justify-between gap-4'>
                 <h2 className='font-semibold dark:text-gray-100'>Product</h2>
-                <div className='h-full min-w-24 max-w-56 w-full ml-auto bg-blue-50 dark:bg-gray-700 px-4 flex items-center gap-3 py-2 rounded border focus-within:border-primary-200 dark:border-gray-600 dark:focus-within:border-blue-400'>
+                <div className='h-full min-w-24 max-w-56 w-full ml-auto bg-plum-50 dark:bg-dm-card-2 px-4 flex items-center gap-3 py-2 rounded border focus-within:border-plum-500 dark:border-dm-border dark:focus-within:border-plum-400'>
                   <IoSearchOutline size={25} className="dark:text-gray-300"/>
                   <input
                     type='text'
@@ -97,7 +97,7 @@ const ProductAdmin = () => {
         }
 
 
-        <div className='p-4 bg-blue-50 dark:bg-gray-800/30'>
+        <div className='p-4 bg-plum-50 dark:bg-dm-card/50'>
 
 
             <div className='min-h-[55vh]'>
@@ -119,7 +119,7 @@ const ProductAdmin = () => {
             <div className='flex justify-between my-4'>
               <button 
                 onClick={handlePrevious} 
-                className="border border-primary-200 dark:border-blue-500 px-4 py-1 hover:bg-primary-200 dark:text-gray-200 dark:hover:bg-blue-600/50"
+                className="border border-plum-300 dark:border-plum-600 px-4 py-1 hover:bg-plum-100 dark:text-gray-200 dark:hover:bg-plum-900/40"
               >
                 Previous
               </button>
@@ -128,7 +128,7 @@ const ProductAdmin = () => {
               </button>
               <button 
                 onClick={handleNext} 
-                className="border border-primary-200 dark:border-blue-500 px-4 py-1 hover:bg-primary-200 dark:text-gray-200 dark:hover:bg-blue-600/50"
+                className="border border-plum-300 dark:border-plum-600 px-4 py-1 hover:bg-plum-100 dark:text-gray-200 dark:hover:bg-plum-900/40"
               >
                 Next
               </button>

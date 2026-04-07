@@ -11,6 +11,7 @@ import { setUserDetails } from '../store/userSlice';
 import Axios from '../utils/Axios';
 import AxiosToastError from '../utils/AxiosToastError';
 import fetchUserDetails from '../utils/fetchUserDetails';
+import { getPostLoginPath } from '../utils/postLoginRedirect';
 
 const Login = () => {
     const [data, setData] = useState({ email: "", password: "" });
@@ -48,17 +49,18 @@ const Login = () => {
                 sessionStorage.setItem('refreshToken', response.data.data.refreshToken);
                 if (window.setupRefreshTimer) window.setupRefreshTimer();
                 const userDetails = await fetchUserDetails();
-                dispatch(setUserDetails({
+                const nextUser = {
                     ...userDetails.data,
                     accountType: userDetails.data.role ||
                         (userDetails.data.isAdmin ? 'admin' :
                          userDetails.data.isDelivery ? 'delivery' :
                          userDetails.data.isStaff ? 'staff' : 'customer')
-                }));
+                };
+                dispatch(setUserDetails(nextUser));
                 dispatch(fetchCartItems());
                 setData({ email: "", password: "" });
                 toast.success(response.data.message);
-                navigate("/");
+                navigate(getPostLoginPath(nextUser));
             }
         } catch (error) {
             if (error.response?.status === 403 && error.response?.data?.requiresVerification) {

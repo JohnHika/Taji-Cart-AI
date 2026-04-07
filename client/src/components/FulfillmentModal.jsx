@@ -19,7 +19,7 @@ const FulfillmentModal = ({ isOpen, onClose, pickupLocations = [] }) => {
       pickupInstructions: selectedMethod === 'pickup' ? pickupInstructions : '',
     };
 
-    navigate('/checkout', { state: fulfillmentData });
+    navigate('/dashboard/checkout', { state: fulfillmentData });
     onClose();
   };
 

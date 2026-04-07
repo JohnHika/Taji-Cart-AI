@@ -336,7 +336,7 @@ const UploadProduct = () => {
 
   return (
     <section className='transition-colors duration-200 dark:bg-gray-900'>
-      <div className='p-2 bg-white dark:bg-gray-800 shadow-md flex items-center justify-between transition-colors duration-200'>
+      <div className='p-2 bg-white dark:bg-dm-card border-b border-brown-100 dark:border-dm-border shadow-md flex items-center justify-between transition-colors duration-200'>
         <h2 className='font-semibold dark:text-white'>{isEditMode ? "Edit Product" : "Upload Product"}</h2>
       </div>
       <div className='grid p-3'>
@@ -352,7 +352,7 @@ const UploadProduct = () => {
               value={data.handle}
               onChange={handleChange}
               required
-              className='bg-blue-50 dark:bg-gray-800 p-2 outline-none border dark:border-gray-700 focus-within:border-primary-200 dark:focus-within:border-primary-300 rounded dark:text-white transition-colors duration-200'
+              className='bg-plum-50/90 dark:bg-dm-card p-2 outline-none border dark:border-dm-border focus-within:border-plum-500 dark:focus-within:border-plum-400 rounded dark:text-white transition-colors duration-200'
             />
             <p className='text-xs text-gray-500 dark:text-gray-400 mt-1'>Identifies that all variants belong to the same product</p>
           </div>
@@ -367,7 +367,7 @@ const UploadProduct = () => {
               value={data.name}
               onChange={handleChange}
               required
-              className='bg-blue-50 dark:bg-gray-800 p-2 outline-none border dark:border-gray-700 focus-within:border-primary-200 dark:focus-within:border-primary-300 rounded dark:text-white transition-colors duration-200'
+              className='bg-plum-50/90 dark:bg-dm-card p-2 outline-none border dark:border-dm-border focus-within:border-plum-500 dark:focus-within:border-plum-400 rounded dark:text-white transition-colors duration-200'
             />
           </div>
 
@@ -381,7 +381,7 @@ const UploadProduct = () => {
               value={data.sku}
               onChange={handleChange}
               required
-              className='bg-blue-50 dark:bg-gray-800 p-2 outline-none border dark:border-gray-700 focus-within:border-primary-200 dark:focus-within:border-primary-300 rounded dark:text-white transition-colors duration-200'
+              className='bg-plum-50/90 dark:bg-dm-card p-2 outline-none border dark:border-dm-border focus-within:border-plum-500 dark:focus-within:border-plum-400 rounded dark:text-white transition-colors duration-200'
             />
             <p className='text-xs text-red-500 dark:text-red-400 mt-1'>⚠️ Critical: Must be unique for every row for barcode scanning</p>
           </div>
@@ -396,7 +396,7 @@ const UploadProduct = () => {
                 name='barcode'
                 value={data.barcode}
                 onChange={handleChange}
-                className='bg-blue-50 dark:bg-gray-800 p-2 outline-none border dark:border-gray-700 focus-within:border-primary-200 dark:focus-within:border-primary-300 rounded dark:text-white transition-colors duration-200'
+                className='bg-plum-50/90 dark:bg-dm-card p-2 outline-none border dark:border-dm-border focus-within:border-plum-500 dark:focus-within:border-plum-400 rounded dark:text-white transition-colors duration-200'
               />
               <p className='text-xs text-gray-500 dark:text-gray-400 mt-1'>Enter the exact value encoded in the printed product barcode so staff can scan it at the sales counter.</p>
             </div>
@@ -410,13 +410,13 @@ const UploadProduct = () => {
                 name='qrCode'
                 value={data.qrCode}
                 onChange={handleChange}
-                className='bg-blue-50 dark:bg-gray-800 p-2 outline-none border dark:border-gray-700 focus-within:border-primary-200 dark:focus-within:border-primary-300 rounded dark:text-white transition-colors duration-200'
+                className='bg-plum-50/90 dark:bg-dm-card p-2 outline-none border dark:border-dm-border focus-within:border-plum-500 dark:focus-within:border-plum-400 rounded dark:text-white transition-colors duration-200'
               />
               <p className='text-xs text-gray-500 dark:text-gray-400 mt-1'>If the packaging has a QR label, save its exact value here. Sellers can scan the barcode, QR code, or SKU.</p>
             </div>
           </div>
 
-          <div className='rounded-lg border border-dashed border-primary-200 dark:border-primary-700 bg-primary-50/60 dark:bg-primary-900/20 p-3 text-sm text-gray-700 dark:text-gray-200'>
+          <div className='rounded-lg border border-dashed border-plum-200 dark:border-plum-700 bg-plum-50/60 dark:bg-plum-900/20 p-3 text-sm text-gray-700 dark:text-gray-200'>
             <p className='font-medium'>Scanning flow</p>
             <p className='mt-1'>Product images still upload to Cloudinary. Barcode and QR fields store the scan value itself, so the sales counter can fetch the matching product immediately after scanning without needing a barcode image upload.</p>
           </div>
@@ -431,7 +431,7 @@ const UploadProduct = () => {
               onChange={handleChange}
               required
               rows={3}
-              className='bg-blue-50 dark:bg-gray-800 p-2 outline-none border dark:border-gray-700 focus-within:border-primary-200 dark:focus-within:border-primary-300 rounded resize-none dark:text-white transition-colors duration-200'
+              className='bg-plum-50/90 dark:bg-dm-card p-2 outline-none border dark:border-dm-border focus-within:border-plum-500 dark:focus-within:border-plum-400 rounded resize-none dark:text-white transition-colors duration-200'
             />
           </div>
           <div>
@@ -457,7 +457,7 @@ const UploadProduct = () => {
             
             <div className="flex flex-col gap-4 sm:flex-row">
               {/* Single image upload */}
-              <label htmlFor='productImage' className='bg-blue-50 dark:bg-gray-800 h-24 border dark:border-gray-700 rounded flex justify-center items-center cursor-pointer hover:bg-blue-100 dark:hover:bg-gray-700 transition-colors duration-200 flex-1'>
+              <label htmlFor='productImage' className='bg-plum-50/90 dark:bg-dm-card h-24 border dark:border-dm-border rounded flex justify-center items-center cursor-pointer hover:bg-plum-100 dark:hover:bg-dm-card-2 transition-colors duration-200 flex-1'>
                 <div className='text-center flex justify-center items-center flex-col dark:text-gray-300'>
                   {
                     imageLoading ? <Loading /> : (
@@ -478,7 +478,7 @@ const UploadProduct = () => {
               </label>
 
               {/* Multiple image upload */}
-              <label htmlFor='multipleProductImages' className='bg-blue-50 dark:bg-gray-800 h-24 border dark:border-gray-700 rounded flex justify-center items-center cursor-pointer hover:bg-blue-100 dark:hover:bg-gray-700 transition-colors duration-200 flex-1'>
+              <label htmlFor='multipleProductImages' className='bg-plum-50/90 dark:bg-dm-card h-24 border dark:border-dm-border rounded flex justify-center items-center cursor-pointer hover:bg-plum-100 dark:hover:bg-dm-card-2 transition-colors duration-200 flex-1'>
                 <div className='text-center flex justify-center items-center flex-col dark:text-gray-300'>
                   {
                     imageLoading && uploadProgress.total > 0 ? (
@@ -514,7 +514,7 @@ const UploadProduct = () => {
                 <div className='flex flex-wrap gap-4'>
                   {
                     data.image.map((img, index) => (
-                      <div key={`img-${index}`} className='h-20 w-20 min-w-20 bg-blue-50 dark:bg-gray-800 border dark:border-gray-700 relative group transition-colors duration-200'>
+                      <div key={`img-${index}`} className='h-20 w-20 min-w-20 bg-plum-50/90 dark:bg-dm-card border dark:border-dm-border relative group transition-colors duration-200'>
                         <img
                           src={img}
                           alt={`Product ${index+1}`}
@@ -542,7 +542,7 @@ const UploadProduct = () => {
             </label>
             <div>
               <select
-                className='bg-blue-50 dark:bg-gray-800 border dark:border-gray-700 w-full p-2 rounded dark:text-white transition-colors duration-200'
+                className='bg-plum-50/90 dark:bg-dm-card border dark:border-dm-border w-full p-2 rounded dark:text-white transition-colors duration-200'
                 value={selectCategory}
                 onChange={(e) => {
                   const value = e.target.value;
@@ -571,7 +571,7 @@ const UploadProduct = () => {
               <div className='flex flex-wrap gap-3 mt-2'>
                 {
                   data.category.map((c, index) => (
-                    <div key={`cat-${c._id || index}`} className='text-sm flex items-center gap-1 bg-blue-50 dark:bg-gray-700 dark:text-white p-1 rounded transition-colors duration-200'>
+                    <div key={`cat-${c._id || index}`} className='text-sm flex items-center gap-1 bg-plum-50 dark:bg-dm-card-2 dark:text-white p-1 rounded transition-colors duration-200'>
                       <p>{c.name}</p>
                       <div className='hover:text-red-500 cursor-pointer' onClick={() => handleRemoveCategory(index)}>
                         <IoClose size={20}/>
@@ -588,7 +588,7 @@ const UploadProduct = () => {
             </label>
             <div>
               <select
-                className='bg-blue-50 dark:bg-gray-800 border dark:border-gray-700 w-full p-2 rounded dark:text-white transition-colors duration-200'
+                className='bg-plum-50/90 dark:bg-dm-card border dark:border-dm-border w-full p-2 rounded dark:text-white transition-colors duration-200'
                 value={selectSubCategory}
                 onChange={(e) => {
                   const value = e.target.value;
@@ -617,7 +617,7 @@ const UploadProduct = () => {
               <div className='flex flex-wrap gap-3 mt-2'>
                 {
                   data.subCategory.map((c, index) => (
-                    <div key={`subcat-${c._id || index}`} className='text-sm flex items-center gap-1 bg-blue-50 dark:bg-gray-700 dark:text-white p-1 rounded transition-colors duration-200'>
+                    <div key={`subcat-${c._id || index}`} className='text-sm flex items-center gap-1 bg-plum-50 dark:bg-dm-card-2 dark:text-white p-1 rounded transition-colors duration-200'>
                       <p>{c.name}</p>
                       <div className='hover:text-red-500 cursor-pointer' onClick={() => handleRemoveSubCategory(index)}>
                         <IoClose size={20}/>
@@ -639,13 +639,13 @@ const UploadProduct = () => {
               value={data.unit}
               onChange={handleChange}
               required
-              className='bg-blue-50 dark:bg-gray-800 p-2 outline-none border dark:border-gray-700 focus-within:border-primary-200 dark:focus-within:border-primary-300 rounded dark:text-white transition-colors duration-200'
+              className='bg-plum-50/90 dark:bg-dm-card p-2 outline-none border dark:border-dm-border focus-within:border-plum-500 dark:focus-within:border-plum-400 rounded dark:text-white transition-colors duration-200'
             />
           </div>
 
           {/* Hair Product Variants Section */}
-          <div className='bg-gradient-to-r from-rose-50 to-pink-50 dark:from-gray-800 dark:to-gray-750 border-2 border-rose-200 dark:border-rose-700 rounded-lg p-4 mt-4'>
-            <h3 className='font-semibold text-rose-900 dark:text-rose-300 mb-4 flex items-center gap-2'>
+          <div className='bg-gradient-to-r from-plum-50 to-blush-50 dark:from-dm-card dark:to-dm-card-2 border-2 border-plum-200 dark:border-plum-700 rounded-lg p-4 mt-4'>
+            <h3 className='font-semibold text-plum-900 dark:text-plum-200 mb-4 flex items-center gap-2'>
               <span className='text-lg'>✨</span> Hair Variant Details
             </h3>
             
@@ -659,7 +659,7 @@ const UploadProduct = () => {
                   name='variant_color'
                   value={data.variants.color}
                   onChange={handleChange}
-                  className='bg-white dark:bg-gray-700 p-2 outline-none border border-rose-200 dark:border-rose-700 focus-within:border-rose-400 dark:focus-within:border-rose-500 rounded dark:text-white transition-colors duration-200'
+                  className='bg-white dark:bg-dm-card-2 p-2 outline-none border border-plum-200 dark:border-plum-700 focus-within:border-plum-500 dark:focus-within:border-plum-400 rounded dark:text-white transition-colors duration-200'
                 />
               </div>
 
@@ -672,7 +672,7 @@ const UploadProduct = () => {
                   name='variant_length'
                   value={data.variants.length}
                   onChange={handleChange}
-                  className='bg-white dark:bg-gray-700 p-2 outline-none border border-rose-200 dark:border-rose-700 focus-within:border-rose-400 dark:focus-within:border-rose-500 rounded dark:text-white transition-colors duration-200'
+                  className='bg-white dark:bg-dm-card-2 p-2 outline-none border border-plum-200 dark:border-plum-700 focus-within:border-plum-500 dark:focus-within:border-plum-400 rounded dark:text-white transition-colors duration-200'
                 />
               </div>
 
@@ -685,7 +685,7 @@ const UploadProduct = () => {
                   name='variant_density'
                   value={data.variants.density}
                   onChange={handleChange}
-                  className='bg-white dark:bg-gray-700 p-2 outline-none border border-rose-200 dark:border-rose-700 focus-within:border-rose-400 dark:focus-within:border-rose-500 rounded dark:text-white transition-colors duration-200'
+                  className='bg-white dark:bg-dm-card-2 p-2 outline-none border border-plum-200 dark:border-plum-700 focus-within:border-plum-500 dark:focus-within:border-plum-400 rounded dark:text-white transition-colors duration-200'
                 />
               </div>
 
@@ -698,7 +698,7 @@ const UploadProduct = () => {
                   name='variant_laceSpecification'
                   value={data.variants.laceSpecification}
                   onChange={handleChange}
-                  className='bg-white dark:bg-gray-700 p-2 outline-none border border-rose-200 dark:border-rose-700 focus-within:border-rose-400 dark:focus-within:border-rose-500 rounded dark:text-white transition-colors duration-200'
+                  className='bg-white dark:bg-dm-card-2 p-2 outline-none border border-plum-200 dark:border-plum-700 focus-within:border-plum-500 dark:focus-within:border-plum-400 rounded dark:text-white transition-colors duration-200'
                 />
               </div>
             </div>
@@ -715,7 +715,7 @@ const UploadProduct = () => {
               onChange={handleChange}
               required
               min="0"
-              className='bg-blue-50 dark:bg-gray-800 p-2 outline-none border dark:border-gray-700 focus-within:border-primary-200 dark:focus-within:border-primary-300 rounded dark:text-white transition-colors duration-200'
+              className='bg-plum-50/90 dark:bg-dm-card p-2 outline-none border dark:border-dm-border focus-within:border-plum-500 dark:focus-within:border-plum-400 rounded dark:text-white transition-colors duration-200'
             />
           </div>
 
@@ -733,7 +733,7 @@ const UploadProduct = () => {
                 required
                 min="0"
                 step="0.01"
-                className='bg-blue-50 dark:bg-gray-800 p-2 outline-none border dark:border-gray-700 focus-within:border-primary-200 dark:focus-within:border-primary-300 rounded dark:text-white transition-colors duration-200'
+                className='bg-plum-50/90 dark:bg-dm-card p-2 outline-none border dark:border-dm-border focus-within:border-plum-500 dark:focus-within:border-plum-400 rounded dark:text-white transition-colors duration-200'
               />
               <p className='text-xs text-gray-500 dark:text-gray-400'>What you pay the vendor</p>
             </div>
@@ -750,7 +750,7 @@ const UploadProduct = () => {
                 required
                 min="0"
                 step="0.01"
-                className='bg-blue-50 dark:bg-gray-800 p-2 outline-none border dark:border-gray-700 focus-within:border-primary-200 dark:focus-within:border-primary-300 rounded dark:text-white transition-colors duration-200'
+                className='bg-plum-50/90 dark:bg-dm-card p-2 outline-none border dark:border-dm-border focus-within:border-plum-500 dark:focus-within:border-plum-400 rounded dark:text-white transition-colors duration-200'
               />
               <p className='text-xs text-gray-500 dark:text-gray-400'>What customers pay</p>
             </div>
@@ -768,7 +768,7 @@ const UploadProduct = () => {
                 onChange={handleChange}
                 min="0"
                 max="100"
-                className='bg-blue-50 dark:bg-gray-800 p-2 outline-none border dark:border-gray-700 focus-within:border-primary-200 dark:focus-within:border-primary-300 rounded dark:text-white transition-colors duration-200'
+                className='bg-plum-50/90 dark:bg-dm-card p-2 outline-none border dark:border-dm-border focus-within:border-plum-500 dark:focus-within:border-plum-400 rounded dark:text-white transition-colors duration-200'
               />
             </div>
 
@@ -783,7 +783,7 @@ const UploadProduct = () => {
                 onChange={handleChange}
                 min="0"
                 step="0.1"
-                className='bg-blue-50 dark:bg-gray-800 p-2 outline-none border dark:border-gray-700 focus-within:border-primary-200 dark:focus-within:border-primary-300 rounded dark:text-white transition-colors duration-200'
+                className='bg-plum-50/90 dark:bg-dm-card p-2 outline-none border dark:border-dm-border focus-within:border-plum-500 dark:focus-within:border-plum-400 rounded dark:text-white transition-colors duration-200'
               />
             </div>
           </div>
@@ -795,7 +795,7 @@ const UploadProduct = () => {
               <button
                 type="button"
                 onClick={() => setOpenAddField(true)}
-                className="text-sm hover:bg-primary-200 bg-white dark:bg-gray-800 dark:hover:bg-primary-300 py-1 px-3 text-center font-medium border border-primary-200 dark:border-primary-300 hover:text-neutral-900 dark:text-white dark:hover:text-white cursor-pointer rounded transition-colors duration-200"
+                className="text-sm hover:bg-plum-100 bg-white dark:bg-dm-card dark:hover:bg-plum-900/30 py-1 px-3 text-center font-medium border border-plum-200 dark:border-plum-600 hover:text-charcoal dark:text-white dark:hover:text-white cursor-pointer rounded transition-colors duration-200"
               >
                 Add Field
               </button>
@@ -835,7 +835,7 @@ const UploadProduct = () => {
                           }
                         }));
                       }}
-                      className='bg-blue-50 dark:bg-gray-800 p-2 outline-none border dark:border-gray-700 focus-within:border-primary-200 dark:focus-within:border-primary-300 rounded dark:text-white transition-colors duration-200'
+                      className='bg-plum-50/90 dark:bg-dm-card p-2 outline-none border dark:border-dm-border focus-within:border-plum-500 dark:focus-within:border-plum-400 rounded dark:text-white transition-colors duration-200'
                     />
                   </div>
                 ))
@@ -847,14 +847,14 @@ const UploadProduct = () => {
             <button
               type="button"
               onClick={handleCancel}
-              className="bg-gray-300 hover:bg-gray-400 dark:bg-gray-700 dark:hover:bg-gray-600 px-4 py-2 rounded font-medium text-gray-800 dark:text-white transition-colors duration-200"
+              className="bg-brown-200 hover:bg-brown-300 dark:bg-dm-card-2 dark:hover:bg-dm-border px-4 py-2 rounded font-medium text-charcoal dark:text-white transition-colors duration-200"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={formLoading}
-              className="bg-primary-100 hover:bg-primary-200 dark:bg-primary-300 dark:hover:bg-primary-400 px-6 py-2 rounded font-semibold dark:text-white transition-colors duration-200 disabled:opacity-70 disabled:cursor-not-allowed"
+              className="bg-plum-700 hover:bg-plum-600 text-white px-6 py-2 rounded font-semibold transition-colors duration-200 disabled:opacity-70 disabled:cursor-not-allowed"
             >
               {formLoading ? "Processing..." : (isEditMode ? "Update Product" : "Submit")}
             </button>

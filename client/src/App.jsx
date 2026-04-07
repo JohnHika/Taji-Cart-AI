@@ -1,4 +1,4 @@
-﻿import { Suspense, useEffect, useRef, useState } from 'react';
+import { Suspense, useEffect, useRef, useState } from 'react';
 import { ErrorBoundary } from 'react-error-boundary';
 import { Toaster } from 'react-hot-toast';
 import { useDispatch, useSelector } from 'react-redux';
@@ -284,7 +284,7 @@ function App() {
         {showStoreChrome && <BottomNavigation />}
         <Toaster />
         <ToastContainer position="top-right" autoClose={3000} />
-        {showStoreChrome && location.pathname !== '/checkout' && user?._id && <CartMobileLink />}
+        {showStoreChrome && location.pathname !== '/checkout' && location.pathname !== '/dashboard/checkout' && user?._id && <CartMobileLink />}
         {showStoreChrome && <ChatbotAI />}
       </GlobalProvider>
     </ErrorBoundary>

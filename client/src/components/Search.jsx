@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { FaArrowLeft } from 'react-icons/fa';
 import { IoSearch } from 'react-icons/io5';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
@@ -44,25 +44,25 @@ const Search = () => {
   };
 
   return (
-    <div className='w-full min-w-0 xl:min-w-[360px] 2xl:min-w-[420px] h-11 xl:h-12 rounded-lg border overflow-hidden flex items-center text-neutral-500 bg-slate-50 group focus-within:border-primary-200 '>
-        <div>
+    <div className='flex h-8 w-full min-w-0 max-w-full items-center overflow-hidden rounded-md border border-brown-200/80 bg-slate-50 text-xs text-neutral-500 dark:border-dm-border dark:bg-dm-card-2 sm:h-9 group focus-within:border-primary-200'>
+        <div className="shrink-0">
             {
                 (isMobile && isSearchPage ) ? (
-                    <Link to={"/"} className='flex justify-center items-center h-full p-2 m-1 group-focus-within:text-primary-200 bg-white rounded-full shadow-md'>
-                        <FaArrowLeft size={20}/>
+                    <Link to={"/"} className='m-0.5 flex h-full items-center justify-center rounded-full bg-white p-1.5 shadow-sm group-focus-within:text-primary-200 dark:bg-dm-card'>
+                        <FaArrowLeft size={16}/>
                     </Link>
                 ) :(
-                    <button className='flex justify-center items-center h-full p-3 group-focus-within:text-primary-200'>
-                        <IoSearch size={22}/>
+                    <button type="button" className='flex h-full items-center justify-center px-2 py-1 group-focus-within:text-primary-200' aria-label="Search">
+                        <IoSearch size={17}/>
                     </button>
                 )
             }
         </div>
-        <div className='w-full h-full'>
+        <div className='h-full min-w-0 flex-1 pr-2'>
             {
                 !isSearchPage ? (
                      //not in search page
-                     <div onClick={redirectToSearchPage} className='w-full h-full flex items-center'>
+                     <div onClick={redirectToSearchPage} className='flex h-full w-full cursor-pointer items-center text-xs text-neutral-500 dark:text-white/50'>
                         <TypeAnimation
                                 sequence={[
                                     'Search "HD lace wigs"',
@@ -110,17 +110,18 @@ const Search = () => {
                                 wrapper="span"
                                 speed={50}
                                 repeat={Infinity}
+                                className="truncate"
                             />
                      </div>
                 ) : (
                     //when i was search page
-                    <div className='w-full h-full'>
+                    <div className='h-full w-full'>
                         <input
                             type='text'
-                            placeholder='Search wigs, bundles, care products, and more.'
+                            placeholder='Search products…'
                             autoFocus
                             defaultValue={searchText}
-                            className='bg-transparent w-full h-full outline-none'
+                            className='h-full w-full bg-transparent text-sm text-charcoal outline-none placeholder:text-neutral-400 dark:text-white dark:placeholder:text-white/35'
                             onChange={handleOnChange}
                         />
                     </div>

@@ -105,13 +105,13 @@ const UploadSubCategoryModel = ({close, fetchData}) => {
                             name='name'
                             value={subCategoryData.name}
                             onChange={handleChange}
-                            className='p-3 bg-blue-50 dark:bg-gray-700 border dark:border-gray-600 text-gray-900 outline-none focus-within:border-primary-200 dark:focus-within:border-primary-300 rounded dark:text-white transition-colors duration-200'
+                            className='p-3 bg-plum-50 dark:bg-dm-card-2 border dark:border-gray-600 text-gray-900 outline-none focus-within:border-plum-500 dark:focus-within:border-plum-400 rounded dark:text-white transition-colors duration-200'
                         />
                     </div>
                     <div className='grid gap-1'>
                         <p className="text-gray-800 dark:text-white transition-colors duration-200">Image</p>
                         <div className='flex flex-col lg:flex-row items-center gap-3'>
-                            <div className='border dark:border-gray-600 h-36 w-full lg:w-36 bg-blue-50 dark:bg-gray-700 flex items-center justify-center transition-colors duration-200'>
+                            <div className='border dark:border-gray-600 h-36 w-full lg:w-36 bg-plum-50 dark:bg-dm-card-2 flex items-center justify-center transition-colors duration-200'>
                                 {
                                     !subCategoryData.image ? (
                                         <p className='text-sm text-neutral-500 dark:text-gray-300 transition-colors duration-200'>No Image</p>
@@ -140,7 +140,7 @@ const UploadSubCategoryModel = ({close, fetchData}) => {
                     </div>
                     <div className='grid gap-1'>
                         <label className="text-gray-800 dark:text-white transition-colors duration-200">Select Category</label>
-                        <div className='border dark:border-gray-600 focus-within:border-primary-200 dark:focus-within:border-primary-300 rounded transition-colors duration-200'>
+                        <div className='border dark:border-gray-600 focus-within:border-plum-500 dark:focus-within:border-plum-400 rounded transition-colors duration-200'>
                             {/*display value**/}
                             <div className='flex flex-wrap gap-2'>
                                 {

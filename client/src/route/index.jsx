@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { createBrowserRouter, Navigate } from 'react-router-dom';
+import { createBrowserRouter, Navigate, useLocation } from 'react-router-dom';
 import App from '../App';
 import CategoryFallbackErrorPage from '../components/CategoryFallbackErrorPage';
 import CategorySmartFallback from '../components/CategorySmartFallback';
@@ -17,7 +17,6 @@ import LoyaltyProgramAdmin from '../pages/admin/LoyaltyProgramAdmin';
 import UsersAdmin from '../pages/admin/UsersAdmin';
 import CategoryPage from '../pages/CategoryPage';
 import ChatInterface from '../pages/ChatInterface'; // Import the new ChatInterface component
-import Checkout from '../pages/CheckoutPage';
 import CommunityPerks from '../pages/CommunityPerks';
 import ActiveDeliveries from '../pages/delivery/ActiveDeliveries';
 import CompletedDeliveries from '../pages/delivery/CompletedDeliveries';
@@ -65,7 +64,15 @@ import LoyaltyProgramPage from '../pages/LoyaltyProgramPage';
 import UserProfile from '../pages/UserProfile';
 import UserMenuMobile from '../pages/UserMenuMobile';
 import CartMobile from '../pages/CartMobile';
+import DashboardCart from '../pages/DashboardCart';
+import DashboardCheckout from '../pages/DashboardCheckout';
 import VerifyEmailPage from '../pages/VerifyEmailPage';
+import UserSettings from '../pages/UserSettings';
+
+function LegacyCheckoutRedirect() {
+  const location = useLocation();
+  return <Navigate to="/dashboard/checkout" replace state={location.state} />;
+}
 
 // Add this debugging code near the top of your router configuration
 console.log("==== ROUTER CONFIGURATION ====");
@@ -166,7 +173,7 @@ const router = createBrowserRouter([
         path: 'checkout',
         element: (
           <PrivateRoute>
-            <Checkout />
+            <LegacyCheckoutRedirect />
           </PrivateRoute>
         )
       },
@@ -344,7 +351,19 @@ const router = createBrowserRouter([
             path: 'profile',
             element: <UserProfile />
           },
-          
+          {
+            path: 'cart',
+            element: <DashboardCart />
+          },
+          {
+            path: 'checkout',
+            element: <DashboardCheckout />
+          },
+          {
+            path: 'settings',
+            element: <UserSettings />
+          },
+
           // Admin routes
           {
             path: 'upload-product',

@@ -65,7 +65,7 @@ const DeliveryMenu = ({ close }) => {
       <div className="text-sm flex items-center gap-2">
         <span className="max-w-52 text-ellipsis line-clamp-1">
           {user.name || user.mobile}{" "}
-          <span className="text-medium text-blue-600 dark:text-blue-400">
+          <span className="text-medium text-plum-600 dark:text-plum-300">
             (delivery)
           </span>
         </span>
@@ -86,7 +86,7 @@ const DeliveryMenu = ({ close }) => {
           to="/dashboard/profile"
           className={`px-2 hover:bg-orange-200 dark:hover:bg-orange-900/30 dark:hover:text-white py-1 flex items-center ${isActive('/dashboard/profile')}`}
         >
-          <FaUser className="mr-2 text-blue-400" /> My Profile
+          <FaUser className="mr-2 text-plum-500" /> My Profile
         </Link>
         
         <Link

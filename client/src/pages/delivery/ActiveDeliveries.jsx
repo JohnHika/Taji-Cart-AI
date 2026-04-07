@@ -189,7 +189,7 @@ const ActiveDeliveries = () => {
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh]">
-        <FaSpinner className="animate-spin text-4xl text-primary-200 mb-4" />
+        <FaSpinner className="animate-spin text-4xl text-plum-600 mb-4" />
         <p className="text-lg text-gray-700 dark:text-gray-300">Loading active deliveries...</p>
       </div>
     );
@@ -228,7 +228,7 @@ const ActiveDeliveries = () => {
               className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden"
             >
               <div className={`px-6 py-4 border-b border-gray-200 dark:border-gray-700 ${
-                order.status === 'driver_assigned' ? 'bg-blue-50 dark:bg-blue-900/20' :
+                order.status === 'driver_assigned' ? 'bg-plum-50 dark:bg-plum-900/20' :
                 order.status === 'out_for_delivery' ? 'bg-yellow-50 dark:bg-yellow-900/20' :
                 'bg-green-50 dark:bg-green-900/20'
               }`}>
@@ -242,7 +242,7 @@ const ActiveDeliveries = () => {
                     </p>
                   </div>
                   <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                    order.status === 'driver_assigned' ? 'bg-blue-100 text-blue-800 dark:bg-blue-800 dark:text-blue-200' :
+                    order.status === 'driver_assigned' ? 'bg-plum-100 text-plum-800 dark:bg-plum-800 dark:text-plum-200' :
                     order.status === 'out_for_delivery' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-800 dark:text-yellow-200' :
                     'bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-200'
                   }`}>
@@ -284,7 +284,7 @@ const ActiveDeliveries = () => {
                       href={`https://maps.google.com/?q=${order.deliveryAddress}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="px-3 py-2 border border-primary-200 text-primary-200 rounded hover:bg-primary-100 dark:hover:bg-primary-900/20 flex items-center justify-center"
+                      className="px-3 py-2 border border-plum-300 text-plum-700 rounded hover:bg-plum-50 dark:hover:bg-plum-900/20 flex items-center justify-center"
                     >
                       <FaMapMarkerAlt className="mr-1" />
                       Map
@@ -293,7 +293,7 @@ const ActiveDeliveries = () => {
                     {getNextStatus(order.status) && (
                       <button 
                         onClick={() => handleStatusUpdate(order._id, getNextStatus(order.status))}
-                        className="px-3 py-2 bg-primary-200 text-white rounded hover:bg-primary-300 flex items-center justify-center"
+                        className="px-3 py-2 bg-plum-700 text-white rounded hover:bg-plum-600 flex items-center justify-center"
                       >
                         {order.status === 'nearby' ? (
                           <>

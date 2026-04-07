@@ -171,7 +171,7 @@ const ChatbotAI = () => {
         text: 'Redirecting you to checkout... This will just take a moment.' 
       }]);
       setTimeout(() => {
-        window.location.href = '/checkout';
+        window.location.href = '/dashboard/checkout';
       }, 1500);
     }
   }, [sessionMetadata]);
@@ -550,7 +550,7 @@ const ChatbotAI = () => {
       if (response.data && response.data.metadata && response.data.metadata.checkoutRequested) {
         setIsCheckoutRedirecting(true);
         setTimeout(() => {
-          window.location.href = '/checkout';
+          window.location.href = '/dashboard/checkout';
         }, 1500);
       }
       if (sessionMetadata.cartActionHandled) {

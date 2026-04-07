@@ -159,7 +159,7 @@ const Dashboard = () => {
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen p-4">
-        <FaSpinner className="animate-spin text-4xl text-primary-200 mb-4" />
+        <FaSpinner className="animate-spin text-4xl text-plum-600 mb-4" />
         <p className="text-lg text-gray-700 dark:text-gray-300">Loading delivery dashboard...</p>
       </div>
     );
@@ -172,7 +172,7 @@ const Dashboard = () => {
         <p className="text-lg text-red-600 dark:text-red-400 mb-2">{error}</p>
         <button 
           onClick={() => window.location.reload()}
-          className="px-4 py-2 bg-primary-200 text-white rounded hover:bg-primary-300 transition"
+          className="px-4 py-2 bg-plum-700 text-white rounded hover:bg-plum-600 transition"
         >
           Retry
         </button>
@@ -191,8 +191,8 @@ const Dashboard = () => {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
           <div className="flex items-center">
-            <div className="bg-blue-100 dark:bg-blue-900 p-3 rounded-full">
-              <FaMotorcycle className="text-blue-500 dark:text-blue-300" size={24} />
+            <div className="bg-plum-100 dark:bg-plum-900/40 p-3 rounded-full">
+              <FaMotorcycle className="text-plum-600 dark:text-plum-300" size={24} />
             </div>
             <div className="ml-4">
               <h2 className="text-sm font-medium text-gray-500 dark:text-gray-400">Pending Deliveries</h2>
@@ -259,7 +259,7 @@ const Dashboard = () => {
             {activeOrders.map(order => (
               <div key={order._id} className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
                 <div className={`px-6 py-4 border-b border-gray-200 dark:border-gray-700 ${
-                  order.status === 'driver_assigned' ? 'bg-blue-50 dark:bg-blue-900/20' :
+                  order.status === 'driver_assigned' ? 'bg-plum-50 dark:bg-plum-900/20' :
                   order.status === 'out_for_delivery' ? 'bg-yellow-50 dark:bg-yellow-900/20' :
                   'bg-green-50 dark:bg-green-900/20'
                 }`}>
@@ -273,7 +273,7 @@ const Dashboard = () => {
                       </p>
                     </div>
                     <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                      order.status === 'driver_assigned' ? 'bg-blue-100 text-blue-800 dark:bg-blue-800 dark:text-blue-200' :
+                      order.status === 'driver_assigned' ? 'bg-plum-100 text-plum-800 dark:bg-plum-800 dark:text-plum-200' :
                       order.status === 'out_for_delivery' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-800 dark:text-yellow-200' :
                       'bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-200'
                     }`}>
@@ -317,7 +317,7 @@ const Dashboard = () => {
                       href={`https://maps.google.com/?q=${order.deliveryAddress}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex items-center text-sm font-medium text-primary-200 hover:text-primary-300 dark:text-primary-300 dark:hover:text-primary-400"
+                      className="inline-flex items-center text-sm font-medium text-plum-600 hover:text-plum-500 dark:text-plum-300 dark:hover:text-plum-200"
                     >
                       <FaMapMarkerAlt className="mr-1" />
                       Open in Maps
@@ -326,7 +326,7 @@ const Dashboard = () => {
                     {getNextStatus(order.status) && (
                       <button 
                         onClick={() => handleStatusUpdate(order._id, getNextStatus(order.status))}
-                        className="w-full sm:w-auto px-4 py-2 bg-primary-200 text-white rounded-md hover:bg-primary-300 transition-colors flex items-center justify-center"
+                        className="w-full sm:w-auto px-4 py-2 bg-plum-700 text-white rounded-md hover:bg-plum-600 transition-colors flex items-center justify-center"
                       >
                         {order.status === 'nearby' ? (
                           <>

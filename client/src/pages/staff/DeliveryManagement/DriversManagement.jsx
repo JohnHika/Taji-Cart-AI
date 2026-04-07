@@ -11,7 +11,7 @@ const driverStatusLabel = (driver) => {
 };
 
 const driverStatusTone = (driver) => {
-  if (driver.isActive === false) return 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-200';
+  if (driver.isActive === false) return 'bg-blush-100 text-blush-800 dark:bg-plum-900/30 dark:text-blush-200';
   if (driver.isAvailable === false) return 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-200';
   return 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-200';
 };
@@ -252,7 +252,7 @@ const DriversManagement = () => {
                         className={`inline-flex items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold transition ${
                           driver.isActive === false
                             ? 'bg-emerald-600 text-white hover:bg-emerald-700'
-                            : 'bg-rose-600 text-white hover:bg-rose-700'
+                            : 'bg-plum-700 text-white hover:bg-plum-600'
                         } disabled:opacity-50`}
                       >
                         {isToggling ? (

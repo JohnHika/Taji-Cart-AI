@@ -395,7 +395,7 @@ const SubCategoryPage = () => {
           {/* View mode toggle */}
           <button
             onClick={toggleViewMode}
-            className='px-3 py-2 bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-400 rounded-md hover:bg-blue-200 dark:hover:bg-blue-800/60 flex items-center gap-2 transition-colors duration-200'
+            className='px-3 py-2 bg-plum-100 dark:bg-plum-900/40 text-plum-800 dark:text-plum-200 rounded-md hover:bg-plum-200 dark:hover:bg-plum-800/50 flex items-center gap-2 transition-colors duration-200'
             title={viewMode === 'table' ? "Switch to grid view" : "Switch to table view"}
           >
             {viewMode === 'table' ? (
@@ -508,7 +508,7 @@ const SubCategoryPage = () => {
       <div className="fixed bottom-4 right-4">
         <button 
           onClick={fetchSubCategory}
-          className="bg-blue-500 hover:bg-blue-600 dark:bg-blue-600 dark:hover:bg-blue-700 text-white p-3 rounded-full shadow-lg transition-colors duration-200"
+          className="bg-plum-700 hover:bg-plum-600 dark:bg-plum-600 dark:hover:bg-plum-500 text-white p-3 rounded-full shadow-lg transition-colors duration-200"
           title="Refresh data"
         >
           <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">

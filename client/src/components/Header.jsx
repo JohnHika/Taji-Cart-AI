@@ -5,7 +5,6 @@ import { FiMenu, FiX } from 'react-icons/fi';
 import { useSelector } from 'react-redux';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { nawiriBrand } from '../config/brand';
-import { useTheme } from '../context/ThemeContext';
 import useMobile from '../hooks/useMobile';
 import { useGlobalContext } from '../provider/GlobalProvider';
 import { DisplayPriceInShillings } from '../utils/DisplayPriceInShillings';
@@ -28,7 +27,6 @@ const Header = () => {
   const user = useSelector((state) => state?.user);
   const cart = useSelector((state) => state.cartItem?.cart || []);
   const { totalPrice, totalQty } = useGlobalContext();
-  const { darkMode } = useTheme();
   const [openUserMenu, setOpenUserMenu] = useState(false);
   const [openCartSection, setOpenCartSection] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -42,7 +40,7 @@ const Header = () => {
       return;
     }
 
-    navigate('/mobile/profile');
+    navigate('/dashboard/profile');
   };
 
   const isActive = (path) => location.pathname === path || location.pathname.startsWith(`${path}/`);
@@ -65,28 +63,34 @@ const Header = () => {
 
   return (
     <>
-      <header className="sticky top-0 z-40 bg-white dark:bg-gray-800 dark:text-white shadow-sm transition-colors duration-200">
-        {!isSearchPage || !isMobile ? (
-          <div className="container mx-auto flex min-w-0 items-center justify-between gap-2 px-2 py-2 md:px-4">
-            <Link to="/" className="flex shrink-0 items-center justify-center py-1">
-              <div className={`rounded-2xl p-1.5 ${darkMode ? 'bg-white/95' : 'bg-transparent'}`}>
-                <img
-                  src={nawiriBrand.logo}
-                  alt="Nawiri Hair"
-                  className="h-auto max-h-[50px] max-w-[150px] object-contain md:max-h-[64px] md:max-w-[220px]"
-                />
-              </div>
-            </Link>
-
-            <div className="hidden xl:block flex-1 min-w-0">
+      <header className="sticky top-0 z-40 border-b border-brown-100/80 bg-white dark:border-dm-border dark:bg-dm-card dark:text-white shadow-sm transition-colors duration-200">
+        {isSearchPage && isMobile ? (
+          <div className="container mx-auto flex justify-center px-2 py-2 md:px-4">
+            <div className="w-full max-w-md">
               <Search />
             </div>
+          </div>
+        ) : (
+          <div className="container mx-auto flex min-w-0 items-center gap-2 px-2 py-2 md:gap-3 md:px-4">
+            <Link to="/" className="flex shrink-0 items-center py-1" aria-label={nawiriBrand.shortName}>
+              <img
+                src={nawiriBrand.logo}
+                alt=""
+                className="h-8 w-auto max-h-9 max-w-[120px] object-contain object-left sm:max-w-[140px] md:h-10 md:max-w-[180px]"
+              />
+            </Link>
 
-            <div className="flex items-center gap-2 md:gap-3">
+            <div className="flex min-w-0 flex-1 justify-center px-1">
+              <div className="w-full max-w-[min(100%,14rem)] sm:max-w-[16rem] md:max-w-xs lg:max-w-sm xl:max-w-md">
+                <Search />
+              </div>
+            </div>
+
+            <div className="flex shrink-0 items-center gap-2 md:gap-3">
               <ThemeToggle />
 
               <button
-                className="relative text-neutral-600 dark:text-gray-200 xl:hidden"
+                className="relative text-neutral-600 dark:text-white/80 xl:hidden"
                 onClick={() => navigate('/mobile/cart')}
                 aria-label="Cart"
               >
@@ -99,7 +103,7 @@ const Header = () => {
               </button>
 
               <button
-                className="text-neutral-600 dark:text-gray-200 xl:hidden"
+                className="text-neutral-600 dark:text-white/80 xl:hidden"
                 onClick={handleMobileUser}
                 aria-label="Profile"
               >
@@ -122,7 +126,7 @@ const Header = () => {
                       </button>
 
                       {openUserMenu && (
-                        <div className="absolute right-0 top-12 z-50 min-w-72 rounded-2xl bg-white p-4 shadow-xl dark:bg-gray-700">
+                        <div className="absolute right-0 top-12 z-50 min-w-72 rounded-2xl border border-brown-100 bg-white p-4 shadow-xl dark:border-dm-border dark:bg-dm-card-2">
                           <UserMenu close={() => setOpenUserMenu(false)} />
                         </div>
                       )}
@@ -150,18 +154,14 @@ const Header = () => {
 
               <button
                 onClick={() => setMobileMenuOpen((prev) => !prev)}
-                className="rounded-lg p-1.5 text-charcoal transition-colors hover:bg-plum-50 dark:text-white/80 dark:hover:bg-plum-900/30 xl:hidden"
+                className="rounded-lg p-1.5 text-charcoal transition-colors hover:bg-plum-50 dark:text-white/80 dark:hover:bg-plum-900/30 lg:hidden"
                 aria-label="Menu"
               >
                 {mobileMenuOpen ? <FiX size={20} /> : <FiMenu size={20} />}
               </button>
             </div>
           </div>
-        ) : null}
-
-        <div className="container mx-auto px-2 xl:hidden">
-          <Search />
-        </div>
+        )}
 
         {!user?._id && (
           <nav className="hidden border-t border-brown-100 bg-ivory dark:border-dm-border dark:bg-dm-surface lg:block">
@@ -190,14 +190,16 @@ const Header = () => {
       {mobileMenuOpen && (
         <>
           <div
-            className="fixed inset-0 z-40 bg-plum-900/50 xl:hidden"
+            className="fixed inset-0 z-40 bg-plum-900/50 lg:hidden"
             onClick={() => setMobileMenuOpen(false)}
           />
-          <div className="fixed left-0 top-0 z-50 flex h-full w-72 flex-col bg-white shadow-xl dark:bg-dm-card xl:hidden">
-            <div className="flex items-center justify-between bg-plum-700 px-5 py-4">
-              <div className="rounded-2xl bg-white p-1.5">
-                <img src={nawiriBrand.logo} alt="Nawiri Hair" className="h-9 object-contain" />
-              </div>
+          <div className="fixed left-0 top-0 z-50 flex h-full w-72 flex-col bg-white shadow-xl dark:bg-dm-card lg:hidden">
+            <div className="flex items-center justify-between bg-plum-800/95 px-5 py-4">
+              <img
+                src={nawiriBrand.logo}
+                alt=""
+                className="h-9 max-w-[160px] object-contain object-left drop-shadow-sm"
+              />
               <button
                 onClick={() => setMobileMenuOpen(false)}
                 className="text-white/80 transition-colors hover:text-white"

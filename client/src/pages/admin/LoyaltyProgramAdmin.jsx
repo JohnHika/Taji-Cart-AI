@@ -542,7 +542,7 @@ const LoyaltyProgramAdmin = () => {
             <div className="bg-amber-700 h-4" style={{width: `${(stats.tierDistribution?.Bronze || stats.bronzeMembers || 0) / (stats.totalMembers || 1) * 100}%`}}></div>
             <div className="bg-gray-400 h-4" style={{width: `${(stats.tierDistribution?.Silver || stats.silverMembers || 0) / (stats.totalMembers || 1) * 100}%`}}></div>
             <div className="bg-amber-400 h-4" style={{width: `${(stats.tierDistribution?.Gold || stats.goldMembers || 0) / (stats.totalMembers || 1) * 100}%`}}></div>
-            <div className="bg-blue-600 h-4" style={{width: `${(stats.tierDistribution?.Platinum || stats.platinumMembers || 0) / (stats.totalMembers || 1) * 100}%`}}></div>
+            <div className="bg-plum-700 h-4" style={{width: `${(stats.tierDistribution?.Platinum || stats.platinumMembers || 0) / (stats.totalMembers || 1) * 100}%`}}></div>
           </div>
           <div className="flex text-xs justify-between mt-1 dark:text-gray-300">
             <span>Basic: {stats.tierDistribution?.Basic || 0}</span>
@@ -971,7 +971,7 @@ const LoyaltyProgramAdmin = () => {
                               ${card.tier === 'Bronze' ? 'bg-amber-100 text-amber-800 dark:bg-amber-800 dark:text-amber-100' : 
                                card.tier === 'Silver' ? 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-100' :
                                card.tier === 'Gold' ? 'bg-amber-100 text-amber-800 dark:bg-amber-800 dark:text-amber-100' :
-                               'bg-blue-100 text-blue-800 dark:bg-blue-800 dark:text-blue-100'}`}>
+                               'bg-plum-100 text-plum-800 dark:bg-plum-800 dark:text-plum-100'}`}>
                               {card.tier}
                             </span>
                           </td>
@@ -1092,7 +1092,7 @@ const LoyaltyProgramAdmin = () => {
                         ${card.tier === 'Bronze' ? 'bg-amber-100 text-amber-800 dark:bg-amber-800 dark:text-amber-100' : 
                          card.tier === 'Silver' ? 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-100' :
                          card.tier === 'Gold' ? 'bg-amber-100 text-amber-800 dark:bg-amber-800 dark:text-amber-100' :
-                         'bg-blue-100 text-blue-800 dark:bg-blue-800 dark:text-blue-100'}`}>
+                         'bg-plum-100 text-plum-800 dark:bg-plum-800 dark:text-plum-100'}`}>
                         {card.tier}
                       </span>
                     )}
@@ -1141,7 +1141,7 @@ const LoyaltyProgramAdmin = () => {
                         </button>
                         <div className="relative">
                           <button
-                            className="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300"
+                            className="text-plum-600 hover:text-plum-800 dark:text-plum-300 dark:hover:text-plum-200"
                             title="Refresh points"
                             onClick={() => handleRefreshClick(card, '')}
                           >
@@ -1343,7 +1343,7 @@ const LoyaltyProgramAdmin = () => {
                 <div className="space-y-2">
                   <button
                     onClick={() => setRefreshType('spending')}
-                    className={`w-full text-left px-4 py-2 rounded ${refreshType === 'spending' ? 'bg-blue-100 dark:bg-blue-900' : 'bg-gray-100 dark:bg-gray-700'}`}
+                    className={`w-full text-left px-4 py-2 rounded ${refreshType === 'spending' ? 'bg-plum-100 dark:bg-plum-900/40' : 'bg-gray-100 dark:bg-dm-card-2'}`}
                   >
                     <span className="font-medium dark:text-white">Refresh based on spending</span>
                     <p className="text-xs text-gray-500 dark:text-gray-400">

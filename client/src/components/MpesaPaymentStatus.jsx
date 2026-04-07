@@ -30,7 +30,7 @@ const MpesaPaymentStatus = () => {
         </p>
         <button
           onClick={() => navigate('/orders')}
-          className="w-full py-2 px-4 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-md"
+          className="w-full py-2 px-4 bg-plum-700 hover:bg-plum-600 text-white font-medium rounded-md"
         >
           View My Orders
         </button>
