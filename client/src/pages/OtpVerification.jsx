@@ -107,7 +107,7 @@ const OtpVerification = () => {
                                                 }
                                             }}
                                             maxLength={1}
-                                            className='bg-blue-50 dark:bg-gray-800 w-full max-w-16 p-2 border dark:border-gray-700 rounded outline-none focus:border-primary-200 dark:focus:border-primary-300 text-center font-semibold dark:text-white transition-colors duration-200'
+                                            className='bg-plum-50 dark:bg-dm-card w-full max-w-16 p-2 border dark:border-dm-border rounded outline-none focus:border-plum-500 dark:focus:border-plum-400 text-center font-semibold dark:text-white transition-colors duration-200'
                                         />
                                     )
                                 })
@@ -144,7 +144,7 @@ const OtpVerification = () => {
                                 AxiosToastError(error);
                             }
                         }}
-                        className='text-sm text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 transition-colors duration-200'
+                        className='text-sm text-plum-600 dark:text-plum-300 hover:text-plum-800 dark:hover:text-plum-200 transition-colors duration-200'
                     >
                         Resend OTP
                     </button>

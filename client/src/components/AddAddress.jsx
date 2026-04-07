@@ -66,7 +66,7 @@ const AddAddress = ({close}) => {
                     <input
                         type='text'
                         id='addressline' 
-                        className='border bg-blue-50 p-2 rounded'
+                        className='border bg-plum-50/80 p-2 rounded'
                         {...register("addressline",{required : true})}
                     />
                 </div>
@@ -75,7 +75,7 @@ const AddAddress = ({close}) => {
                     <input
                         type='text'
                         id='city' 
-                        className='border bg-blue-50 p-2 rounded'
+                        className='border bg-plum-50/80 p-2 rounded'
                         {...register("city",{required : true})}
                     />
                 </div>
@@ -84,7 +84,7 @@ const AddAddress = ({close}) => {
                     <input
                         type='text'
                         id='state' 
-                        className='border bg-blue-50 p-2 rounded'
+                        className='border bg-plum-50/80 p-2 rounded'
                         {...register("state",{required : true})}
                     />
                 </div>
@@ -93,7 +93,7 @@ const AddAddress = ({close}) => {
                     <input
                         type='text'
                         id='pincode' 
-                        className='border bg-blue-50 p-2 rounded'
+                        className='border bg-plum-50/80 p-2 rounded'
                         {...register("pincode",{required : true})}
                     />
                 </div>
@@ -102,7 +102,7 @@ const AddAddress = ({close}) => {
                     <input
                         type='text'
                         id='country' 
-                        className='border bg-blue-50 p-2 rounded'
+                        className='border bg-plum-50/80 p-2 rounded'
                         {...register("country",{required : true})}
                     />
                 </div>
@@ -111,7 +111,7 @@ const AddAddress = ({close}) => {
                     <input
                         type='text'
                         id='mobile' 
-                        className='border bg-blue-50 p-2 rounded'
+                        className='border bg-plum-50/80 p-2 rounded'
                         {...register("mobile",{required : true})}
                     />
                 </div>

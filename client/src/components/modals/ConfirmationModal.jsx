@@ -18,7 +18,7 @@ const ConfirmationModal = ({ isOpen, onClose, onConfirm, title, message, confirm
           <FaExclamationTriangle className={`mr-2 ${
             type === "danger" ? "text-red-500" : 
             type === "warning" ? "text-yellow-500" : 
-            "text-blue-500"
+            "text-plum-600"
           }`} />
           {title || "Confirm Action"}
         </h2>
@@ -44,7 +44,7 @@ const ConfirmationModal = ({ isOpen, onClose, onConfirm, title, message, confirm
             className={`px-4 py-2 text-white rounded-lg ${
               type === "danger" ? "bg-red-500 hover:bg-red-600" : 
               type === "warning" ? "bg-yellow-500 hover:bg-yellow-600" : 
-              "bg-blue-500 hover:bg-blue-600"
+              "bg-plum-700 hover:bg-plum-600"
             }`}
           >
             {confirmButtonText || "Confirm"}

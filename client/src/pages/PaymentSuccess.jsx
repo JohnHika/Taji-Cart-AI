@@ -110,7 +110,7 @@ const PaymentSuccess = () => {
         <div className="flex flex-col space-y-3">
           <button 
             onClick={goToOrders}
-            className="bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded transition-colors"
+            className="bg-plum-700 hover:bg-plum-600 text-white py-2 px-4 rounded transition-colors"
           >
             View My Orders
           </button>

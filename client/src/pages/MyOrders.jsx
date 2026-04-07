@@ -9,8 +9,8 @@ import Axios from '../utils/Axios'
 
 const statusColors = {
   pending: 'bg-yellow-100 text-yellow-800 border-yellow-200',
-  processing: 'bg-blue-100 text-blue-800 border-blue-200',
-  shipped: 'bg-indigo-100 text-indigo-800 border-indigo-200',
+  processing: 'bg-plum-100 text-plum-800 border-plum-200',
+  shipped: 'bg-plum-100 text-plum-800 border-plum-200',
   delivered: 'bg-green-100 text-green-800 border-green-200',
   cancelled: 'bg-red-100 text-red-800 border-red-200',
   default: 'bg-gray-100 text-gray-800 border-gray-200'
@@ -125,7 +125,7 @@ const MyOrders = () => {
                       {/* Fulfillment type badge */}
                       <span className={`ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
                         order.fulfillment_type === 'delivery' 
-                          ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
+                          ? 'bg-plum-100 text-plum-800 dark:bg-plum-900 dark:text-plum-200'
                           : 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200'
                       }`}>
                         {order.fulfillment_type === 'delivery' 
@@ -212,7 +212,7 @@ const MyOrders = () => {
                     
                     <div className="bg-plum-50/50 dark:bg-plum-900/15 p-3 rounded-card border border-brown-100/80 dark:border-dm-border">
                       <div className="flex items-center gap-2 mb-2 text-charcoal dark:text-white/85 font-medium">
-                        <FaShoppingBag className="text-blue-600" />
+                        <FaShoppingBag className="text-plum-600" />
                         <span>Order Details</span>
                       </div>
                       <div className="text-brown-600 dark:text-white/55 space-y-1">

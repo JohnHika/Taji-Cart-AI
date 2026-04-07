@@ -212,26 +212,26 @@ const AddToCartButton = ({ data, product: productProp, cartData, selectedVariant
     }
 
     return (
-        <div className='w-full min-w-0 max-w-none sm:max-w-[120px] lg:max-w-[150px]'>
+        <div className='w-full min-w-0 max-w-full'>
             {
                 isAvailableCart ? (
-                    <div className='flex w-full h-full bg-white dark:bg-gray-800 rounded-lg border border-pink-200 dark:border-pink-700 overflow-hidden shadow-sm'>
+                    <div className='flex w-full h-full bg-white dark:bg-dm-card rounded-lg border border-plum-200 dark:border-plum-700 overflow-hidden shadow-sm'>
                         <button 
                             onClick={decreaseQty} 
                             disabled={updateLoading}
                             aria-label="Decrease quantity"
-                            className='bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600 active:from-pink-700 active:to-rose-700 text-white flex-1 w-full p-1.5 sm:p-2 flex items-center justify-center text-xs sm:text-sm touch-manipulation transition-all min-w-[24px]'
+                            className='bg-plum-700 hover:bg-plum-600 active:bg-plum-800 text-white flex-1 w-full p-1.5 sm:p-2 flex items-center justify-center text-xs sm:text-sm touch-manipulation transition-all min-w-[24px]'
                         >
                             {updateLoading ? <Loading /> : <FaMinus size={10} />}
                         </button>
 
-                        <div className='flex-1 w-full font-semibold px-1 sm:px-2 flex items-center justify-center text-xs sm:text-sm bg-pink-50 dark:bg-gray-700 dark:text-white min-w-[28px] border-x border-pink-200 dark:border-pink-700'>{qty}</div>
+                        <div className='flex-1 w-full font-semibold px-1 sm:px-2 flex items-center justify-center text-xs sm:text-sm bg-plum-50 dark:bg-dm-card-2 dark:text-white min-w-[28px] border-x border-plum-200 dark:border-plum-700'>{qty}</div>
 
                         <button
                             onClick={increaseQty}
                             disabled={updateLoading}
                             aria-label="Increase quantity"
-                            className='bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600 active:from-pink-700 active:to-rose-700 text-white flex-1 w-full p-1.5 sm:p-2 flex items-center justify-center text-xs sm:text-sm touch-manipulation transition-all min-w-[24px]'
+                            className='bg-plum-700 hover:bg-plum-600 active:bg-plum-800 text-white flex-1 w-full p-1.5 sm:p-2 flex items-center justify-center text-xs sm:text-sm touch-manipulation transition-all min-w-[24px]'
                         >
                             {updateLoading ? <Loading /> : <FaPlus size={10} />}
                         </button>
@@ -240,7 +240,7 @@ const AddToCartButton = ({ data, product: productProp, cartData, selectedVariant
                     <button
                         onClick={handleAddToCart}
                         disabled={loading || !product?._id}
-                        className='bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600 active:from-pink-700 active:to-rose-700 text-white px-2 sm:px-3 lg:px-4 py-1.5 sm:py-2 rounded-lg text-[11px] sm:text-sm font-semibold w-full touch-manipulation transition-all shadow-sm hover:shadow-md'
+                        className='bg-gold-500 hover:bg-gold-400 active:bg-gold-600 text-charcoal px-2 sm:px-3 lg:px-4 py-1.5 sm:py-2 rounded-lg text-[11px] sm:text-sm font-semibold w-full touch-manipulation transition-all shadow-sm hover:shadow-md ring-1 ring-gold-300/50'
                     >
                         {loading ? <Loading /> : (showText ? 'Add to Cart' : '+')}
                     </button>

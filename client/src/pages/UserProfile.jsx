@@ -221,7 +221,7 @@ const UserProfile = () => {
       case 3:
         return { label: 'Fair', color: 'bg-yellow-500', width: '60%' };
       case 4:
-        return { label: 'Good', color: 'bg-blue-500', width: '80%' };
+        return { label: 'Good', color: 'bg-plum-500', width: '80%' };
       case 5:
         return { label: 'Strong', color: 'bg-green-500', width: '100%' };
       default:
@@ -561,7 +561,7 @@ const UserProfile = () => {
                                 ? 'bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200' 
                                 : user.isDelivery || user.role === 'delivery'
                                   ? 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200'
-                                  : 'bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200'
+                                  : 'bg-plum-100 dark:bg-plum-900 text-plum-800 dark:text-plum-200'
                             }`}>
                               {user.isAdmin || user.role === 'admin' 
                                 ? 'Administrator' 

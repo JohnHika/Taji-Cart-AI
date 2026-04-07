@@ -175,7 +175,7 @@ const UserProfileAvatarEdit = ({close}) => {
                 
                 {!previewUrl ? (
                     <>
-                        <div className='w-24 h-24 bg-blue-50 dark:bg-gray-700 flex items-center justify-center rounded-full overflow-hidden drop-shadow-sm border-2 border-primary-100 dark:border-primary-300 mb-4'>
+                        <div className='w-24 h-24 bg-plum-50 dark:bg-dm-card-2 flex items-center justify-center rounded-full overflow-hidden drop-shadow-sm border-2 border-plum-200 dark:border-plum-600 mb-4'>
                             {user.avatar ? (
                                 <img 
                                     alt={user.name}

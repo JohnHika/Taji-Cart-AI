@@ -105,14 +105,14 @@ const CommunityCampaignProgress = ({
         
         <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1.5 mb-1">
           <div 
-            className="bg-blue-500 h-1.5 rounded-full"
+            className="bg-plum-600 h-1.5 rounded-full"
             style={{ width: `${progressPercentage}%` }}
           />
         </div>
         
         <div className="flex justify-between text-xs">
           <span className="text-gray-600 dark:text-gray-400">{progressPercentage}% Complete</span>
-          <span className="text-blue-600 dark:text-blue-400">
+          <span className="text-plum-600 dark:text-plum-300">
             Reward: {formatReward(rewardType, rewardValue)}
           </span>
         </div>
@@ -220,7 +220,7 @@ const CommunityCampaignProgress = ({
     }
     
     return (
-      <span className="px-2 py-1 bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400 text-xs rounded-full">
+      <span className="px-2 py-1 bg-plum-100 text-plum-800 dark:bg-plum-900/30 dark:text-plum-200 text-xs rounded-full">
         Active
       </span>
     );
@@ -248,7 +248,7 @@ const CommunityCampaignProgress = ({
         </div>
         <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5">
           <div 
-            className={`${isPerk ? 'bg-yellow-500' : 'bg-blue-500'} h-2.5 rounded-full`}
+            className={`${isPerk ? 'bg-yellow-500' : 'bg-plum-600'} h-2.5 rounded-full`}
             style={{ width: `${progressPercentage}%` }}
           />
         </div>
@@ -279,7 +279,7 @@ const CommunityCampaignProgress = ({
         {showLeaderboard && (
           <button
             onClick={handleToggleLeaderboard}
-            className="text-sm text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1"
+            className="text-sm text-plum-600 dark:text-plum-300 hover:underline flex items-center gap-1"
           >
             <FaTrophy className="text-yellow-500" />
             {leaderboardVisible ? 'Hide Leaderboard' : 'View Leaderboard'}

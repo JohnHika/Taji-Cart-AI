@@ -368,11 +368,11 @@ const CommunityPerksAdmin = () => {
                       <div className={`p-2 rounded-full ${
                         isPerk 
                         ? 'bg-yellow-100 dark:bg-yellow-900/50' 
-                        : 'bg-blue-100 dark:bg-blue-900/30'
+                        : 'bg-plum-100 dark:bg-plum-900/30'
                       } mr-3`}>
                         {isPerk 
                           ? <FaGift className="text-yellow-600 dark:text-yellow-400" /> 
-                          : <FaTrophy className="text-blue-600 dark:text-blue-400" />
+                          : <FaTrophy className="text-plum-600 dark:text-plum-300" />
                         }
                       </div>
                       
@@ -421,7 +421,7 @@ const CommunityPerksAdmin = () => {
                     
                     <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5">
                       <div 
-                        className={`${isPerk ? 'bg-yellow-500' : 'bg-blue-500'} h-2.5 rounded-full`}
+                        className={`${isPerk ? 'bg-yellow-500' : 'bg-plum-600'} h-2.5 rounded-full`}
                         style={{ width: `${progress}%` }}
                       />
                     </div>

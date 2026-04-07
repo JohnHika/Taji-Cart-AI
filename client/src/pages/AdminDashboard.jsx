@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { FaBarcode, FaBullhorn, FaCashRegister, FaClipboardList, FaSpinner, FaStore, FaUsers } from 'react-icons/fa';
 import { useSelector } from 'react-redux';
 import { Link, useNavigate } from 'react-router-dom';
@@ -68,7 +68,7 @@ const AdminDashboard = () => {
       { label: 'Total Users', value: users.length, icon: FaUsers, tone: 'bg-slate-100 text-slate-700 dark:bg-slate-800/70 dark:text-slate-200' },
       { label: 'Admins', value: admins, icon: FaUsers, tone: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300' },
       { label: 'Sellers', value: staff, icon: FaStore, tone: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300' },
-      { label: 'Drivers', value: delivery, icon: FaClipboardList, tone: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300' },
+      { label: 'Drivers', value: delivery, icon: FaClipboardList, tone: 'bg-plum-100 text-plum-800 dark:bg-plum-900/30 dark:text-plum-200' },
       { label: 'Customers', value: customers, icon: FaUsers, tone: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300' }
     ];
   }, [users]);
@@ -104,7 +104,7 @@ const AdminDashboard = () => {
 
   return (
     <div className="container mx-auto w-full max-w-full overflow-x-hidden px-3 py-4 sm:px-4 sm:py-6 pb-24 lg:pb-6">
-      <div className="mb-6 rounded-3xl bg-gradient-to-r from-rose-600 via-orange-500 to-amber-500 p-5 text-white shadow-lg sm:p-6">
+      <div className="mb-6 rounded-3xl bg-gradient-to-r from-plum-800 via-plum-600 to-gold-500 p-5 text-white shadow-lg sm:p-6">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div className="min-w-0">
             <p className="text-sm uppercase tracking-[0.2em] text-white/80">Admin overview</p>

@@ -58,7 +58,7 @@ const UserTable = ({ users, onDelete, onChangeRole, onBlockUser, onUnblockUser, 
                 user.isAdmin ? 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200' : 
                 user.isStaff || user.role === 'staff' ? 'bg-teal-100 text-teal-800 dark:bg-teal-900 dark:text-teal-200' :
                 user.isDelivery || user.role === 'delivery' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' :
-                'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
+                'bg-plum-100 text-plum-800 dark:bg-plum-900 dark:text-plum-200'
               }`}>
                 {user.isAdmin ? <FaUserShield className="mr-1" size={12} /> : 
                  user.isStaff || user.role === 'staff' ? <FaIdBadge className="mr-1" size={12} /> :
@@ -82,7 +82,7 @@ const UserTable = ({ users, onDelete, onChangeRole, onBlockUser, onUnblockUser, 
                 {onChangeRole && (
                   <button 
                     onClick={() => onChangeRole(user)}
-                    className="inline-flex items-center rounded-lg bg-blue-100 px-3 py-2 text-xs font-medium text-blue-800 transition-colors hover:bg-blue-200 dark:bg-blue-900 dark:text-blue-300 dark:hover:bg-blue-800"
+                    className="inline-flex items-center rounded-lg bg-plum-100 px-3 py-2 text-xs font-medium text-plum-800 transition-colors hover:bg-plum-200 dark:bg-plum-900 dark:text-plum-200 dark:hover:bg-plum-800"
                     title="Manage Role"
                   >
                     <FaUserCog size={14} className="mr-2" />
@@ -201,7 +201,7 @@ const UserTable = ({ users, onDelete, onChangeRole, onBlockUser, onUnblockUser, 
                   user.isAdmin ? 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200' : 
                   user.isStaff || user.role === 'staff' ? 'bg-teal-100 text-teal-800 dark:bg-teal-900 dark:text-teal-200' :
                   user.isDelivery || user.role === 'delivery' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' :
-                  'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
+                  'bg-plum-100 text-plum-800 dark:bg-plum-900 dark:text-plum-200'
                 }`}>
                   {user.isAdmin ? <FaUserShield className="mr-1" size={12} /> : 
                    user.isStaff || user.role === 'staff' ? <FaIdBadge className="mr-1" size={12} /> :
@@ -219,7 +219,7 @@ const UserTable = ({ users, onDelete, onChangeRole, onBlockUser, onUnblockUser, 
                     {onChangeRole && (
                       <button 
                         onClick={() => onChangeRole(user)}
-                        className="p-1 bg-blue-100 text-blue-800 rounded hover:bg-blue-200 dark:bg-blue-900 dark:text-blue-300 dark:hover:bg-blue-800 transition-colors"
+                        className="p-1 bg-plum-100 text-plum-800 rounded hover:bg-plum-200 dark:bg-plum-900 dark:text-plum-200 dark:hover:bg-plum-800 transition-colors"
                         title="Manage Role"
                       >
                         <FaUserCog size={14} />

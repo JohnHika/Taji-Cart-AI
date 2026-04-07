@@ -116,7 +116,7 @@ const DeliveryHistory = () => {
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh]">
-        <FaSpinner className="animate-spin text-4xl text-primary-200 mb-4" />
+        <FaSpinner className="animate-spin text-4xl text-plum-600 mb-4" />
         <p className="text-lg text-gray-700 dark:text-gray-300">Loading delivery history...</p>
       </div>
     );
@@ -143,7 +143,7 @@ const DeliveryHistory = () => {
         
         <button 
           onClick={exportToCSV} 
-          className="bg-primary-200 text-white px-4 py-2 rounded flex items-center justify-center hover:bg-primary-300"
+          className="bg-plum-700 text-white px-4 py-2 rounded flex items-center justify-center hover:bg-plum-600"
         >
           <FaFileDownload className="mr-2" />
           Export

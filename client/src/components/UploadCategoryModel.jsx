@@ -95,13 +95,13 @@ const UploadCategoryModel = ({close, fetchData}) => {
                         value={data.name}
                         name='name'
                         onChange={handleOnChange}
-                        className='bg-blue-50 p-2 border border-blue-100 focus-within:border-primary-200 outline-none rounded'
+                        className='bg-plum-50 p-2 border border-plum-100 focus-within:border-plum-500 outline-none rounded'
                     />
                 </div>
                 <div className='grid gap-1'>
                     <p>Image</p>
                     <div className='flex gap-4 flex-col lg:flex-row items-center'>
-                        <div className='border bg-blue-50 h-36 w-full lg:w-36 flex items-center justify-center rounded'>
+                        <div className='border border-brown-200 bg-plum-50 h-36 w-full lg:w-36 flex items-center justify-center rounded'>
                             {
                                 data.image ? (
                                     <img

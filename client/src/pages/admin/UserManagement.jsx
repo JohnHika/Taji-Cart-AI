@@ -18,7 +18,7 @@ const UserProfile = ({ user, currentUser, handleRoleChange, selectedRole }) => {
 
         // Check for delivery personnel
         if (user.isDelivery || user.role === 'delivery') {
-            return { type: 'Delivery Personnel', color: 'text-blue-600 dark:text-blue-400', icon: <FaTruck className="mr-1" /> };
+            return { type: 'Delivery Personnel', color: 'text-plum-600 dark:text-plum-300', icon: <FaTruck className="mr-1" /> };
         }
 
         // Default to customer

@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { useSelector } from 'react-redux'
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import SummaryApi from '../common/SummaryApi'
@@ -458,21 +458,21 @@ const ProductListPage = () => {
   }
 
   return (
-    <section className='min-h-screen w-full dark:bg-gray-900'>
+    <section className='min-h-screen w-full bg-ivory dark:bg-dm-surface'>
       <div className='mx-auto max-w-7xl p-2 sm:p-4'>
         {/* Page Header */}
         <div className='mb-6 sm:mb-8'>
-          <h1 className='text-3xl sm:text-4xl font-bold text-gray-900 dark:text-white mb-2'>
+          <h1 className='text-3xl sm:text-4xl font-bold text-charcoal dark:text-white mb-2'>
             {navigationState.categoryName || 'Hair Products'}
           </h1>
-          <p className='text-gray-600 dark:text-gray-400'>Discover premium hair products & extensions</p>
+          <p className='text-brown-600 dark:text-white/60'>Discover premium hair products & extensions</p>
         </div>
 
         <div className='grid grid-cols-1 md:grid-cols-4 gap-4'>
           {/* Sidebar - Sub Categories */}
-          <div className='w-full shadow-sm p-4 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 h-fit sticky top-20'>
-            <h2 className='font-bold text-lg mb-4 text-gray-900 dark:text-white flex items-center'>
-              <span className='w-1 h-6 bg-gradient-to-b from-pink-600 to-rose-600 rounded-full mr-3'></span>
+          <div className='w-full shadow-sm p-4 bg-white dark:bg-dm-card rounded-xl border border-brown-200 dark:border-dm-border h-fit sticky top-20'>
+            <h2 className='font-bold text-lg mb-4 text-charcoal dark:text-white flex items-center'>
+              <span className='w-1 h-6 bg-gradient-to-b from-plum-700 to-plum-500 rounded-full mr-3'></span>
               Hair Types
             </h2>
             <div className='w-full grid gap-2'>
@@ -484,15 +484,15 @@ const ProductListPage = () => {
                       to={`/${derivedParams.categorySlug}-${derivedParams.categoryId}/${valideURLConvert(s.name)}-${s._id}`}
                       className="group"
                     >
-                      <div className='p-3 rounded-lg flex justify-between items-center bg-gray-50 group-hover:bg-pink-100 dark:bg-gray-700 dark:group-hover:bg-pink-900/30 dark:text-gray-300 group-hover:text-pink-700 dark:group-hover:text-pink-400 text-sm font-medium transition-all duration-300 border border-transparent group-hover:border-pink-300 dark:group-hover:border-pink-700'>
+                      <div className='p-3 rounded-lg flex justify-between items-center bg-plum-50/50 group-hover:bg-plum-100 dark:bg-dm-card-2 dark:group-hover:bg-plum-900/30 dark:text-white/80 group-hover:text-plum-800 dark:group-hover:text-plum-200 text-sm font-medium transition-all duration-300 border border-transparent group-hover:border-plum-200 dark:group-hover:border-plum-700'>
                         <p>{s.name}</p>
-                        <p className='text-lg'>{params.subcategoryName && params.subcategoryName.includes(s._id) ? 'âœ“' : ''}</p>
+                        <p className='text-lg'>{params.subcategoryName && params.subcategoryName.includes(s._id) ? '✓' : ''}</p>
                       </div>
                     </Link>
                   ))
                 : (
                   <div className="text-center py-4">
-                    <div className="text-gray-500 dark:text-gray-400 text-sm">
+                    <div className="text-brown-500 dark:text-white/50 text-sm">
                       All Hair Types
                     </div>
                     <p className="mt-2 text-brown-400 dark:text-white/50 text-sm">
@@ -511,14 +511,14 @@ const ProductListPage = () => {
 
           {/* Products Grid */}
           <div className='md:col-span-3'>
-            <div className='bg-gradient-to-r from-pink-50 to-rose-50 dark:from-gray-800 dark:to-gray-900 shadow-sm p-4 rounded-xl border border-pink-200 dark:border-gray-700 mb-4 z-10'>
+            <div className='bg-gradient-to-r from-plum-50 to-blush-50 dark:from-dm-card dark:to-dm-card-2 shadow-sm p-4 rounded-xl border border-plum-100 dark:border-dm-border mb-4 z-10'>
               <div className='flex items-center justify-between'>
-                <h3 className='font-bold text-lg text-gray-900 dark:text-white'>Our Selection</h3>
-                <span className='text-sm text-gray-600 dark:text-gray-400'>{data.length} products</span>
+                <h3 className='font-bold text-lg text-charcoal dark:text-white'>Our Selection</h3>
+                <span className='text-sm text-brown-600 dark:text-white/60'>{data.length} products</span>
               </div>
             </div>
             <div>
-              <div className='min-h-[60vh] dark:bg-gray-900'>
+              <div className='min-h-[60vh] dark:bg-dm-surface'>
                 {loading ? (
                   <Loading />
                 ) : data.length > 0 ? (
@@ -535,14 +535,14 @@ const ProductListPage = () => {
                 ) : (
                   <div className="flex justify-center items-center py-20">
                     <div className="text-center">
-                      <div className='text-6xl mb-4'>âœ¨</div>
-                      <p className="text-gray-600 dark:text-gray-400 font-semibold mb-4 text-lg">No products found in this category</p>
-                      <p className="text-gray-500 dark:text-gray-500 text-sm mb-6">Check back soon for new hair products!</p>
+                      <div className='text-6xl mb-4'>✨</div>
+                      <p className="text-brown-600 dark:text-white/60 font-semibold mb-4 text-lg">No products found in this category</p>
+                      <p className="text-brown-500 dark:text-white/45 text-sm mb-6">Check back soon for new hair products!</p>
                       <Link 
                         to="/"
-                        className="inline-block px-6 py-3 bg-gradient-to-r from-pink-600 to-rose-600 text-white rounded-lg hover:from-pink-700 hover:to-rose-700 font-semibold transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105"
+                        className="inline-block px-6 py-3 bg-plum-700 text-white rounded-lg hover:bg-plum-600 font-semibold transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105"
                       >
-                        â† Browse All Products
+                        ← Browse All Products
                       </Link>
                     </div>
                   </div>

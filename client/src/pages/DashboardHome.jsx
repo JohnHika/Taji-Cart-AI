@@ -2,6 +2,7 @@ import React from 'react';
 import { Navigate } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import AdminDashboard from './AdminDashboard';
+import CustomerDashboard from './CustomerDashboard';
 import StaffDashboard from './staff/Dashboard';
 import isadmin from '../utils/isAdmin';
 import isStaff from '../utils/isStaff';
@@ -21,7 +22,7 @@ const DashboardHome = () => {
     return <StaffDashboard />;
   }
 
-  return <Navigate to="/dashboard/profile" replace />;
+  return <CustomerDashboard />;
 };
 
 export default DashboardHome;

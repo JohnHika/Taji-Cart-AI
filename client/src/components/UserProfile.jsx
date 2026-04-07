@@ -62,7 +62,7 @@ const UserProfile = ({ user }) => {
         if (hasRole(user, 'delivery')) {
             return { 
                 type: 'Delivery Personnel', 
-                color: 'text-blue-600 dark:text-blue-400', 
+                color: 'text-plum-600 dark:text-plum-300', 
                 icon: <FaTruck className="mr-1" /> 
             };
         }

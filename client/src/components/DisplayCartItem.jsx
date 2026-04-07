@@ -1,4 +1,4 @@
-﻿import React, { useState } from 'react'
+import React, { useState } from 'react'
 import toast from 'react-hot-toast'
 import { FaArrowRight, FaCaretRight, FaCrown, FaStore, FaTimes, FaTrash, FaTruck } from "react-icons/fa"
 import { IoClose } from 'react-icons/io5'
@@ -11,7 +11,8 @@ import { DisplayPriceInShillings } from '../utils/DisplayPriceInShillings'
 import { pricewithDiscount } from '../utils/PriceWithDiscount'
 import AddToCartButton from './AddToCartButton'
 
-const DisplayCartItem = ({close}) => {
+const DisplayCartItem = ({ close, variant = 'drawer' }) => {
+    const isEmbedded = variant === 'embedded'
     const { notDiscountTotalPrice, totalPrice, totalQty, royalCardData, royalDiscount, clearCartItems } = useGlobalContext()
     const cartItem = useSelector(state => state.cartItem.cart)
     const user = useSelector(state => state.user)
@@ -38,7 +39,7 @@ const DisplayCartItem = ({close}) => {
     // Handle fulfillment selection and continue to checkout
     const handleFulfillmentSelect = (fulfillmentData) => {
         // Navigate to checkout with fulfillment data
-        navigate("/checkout", { 
+        navigate("/dashboard/checkout", { 
             state: {
                 fulfillmentMethod: fulfillmentData.fulfillment_type,
                 pickupLocation: fulfillmentData.pickup_location,
@@ -63,20 +64,27 @@ const DisplayCartItem = ({close}) => {
         }
     }
 
-    return (
-        <section className='bg-neutral-900 fixed inset-0 bg-opacity-70 z-50'>
-            <div className='bg-white dark:bg-gray-800 w-full max-w-full sm:max-w-sm h-[100dvh] ml-auto transition-colors duration-200 flex flex-col'>
-                <div className='flex items-center p-4 shadow-md gap-3 justify-between bg-white dark:bg-gray-800 border-b dark:border-gray-700 transition-colors duration-200'>
+    const innerShellClass = isEmbedded
+        ? 'flex w-full max-w-4xl mx-auto flex-col overflow-hidden rounded-xl border border-brown-100 dark:border-dm-border bg-white dark:bg-dm-card shadow-sm min-h-[min(70vh,640px)] max-h-[calc(100dvh-10rem)] lg:max-h-[calc(100dvh-6rem)]'
+        : 'bg-white dark:bg-dm-card w-full max-w-full sm:max-w-sm h-[100dvh] ml-auto transition-colors duration-200 flex flex-col'
+
+    const innerBody = (
+            <>
+                <div className='flex items-center p-4 shadow-md gap-3 justify-between bg-white dark:bg-dm-card border-b border-brown-100 dark:border-dm-border transition-colors duration-200'>
                     <h2 className='font-semibold dark:text-white'>Cart</h2>
+                    {!isEmbedded && (
+                      <>
                     <Link to={"/"} className='lg:hidden dark:text-gray-300 hover:dark:text-white'>
                         <IoClose size={25}/>
                     </Link>
                     <button type="button" onClick={close} className="hidden lg:block p-1 rounded-lg text-brown-500 dark:text-white/60 hover:text-plum-700 dark:hover:text-plum-200 transition-colors" aria-label="Close cart">
                         <IoClose size={25}/>
                     </button>
+                      </>
+                    )}
                 </div>
 
-                <div className='flex-1 min-h-0 bg-blue-50 dark:bg-gray-900 p-2 flex flex-col gap-4 transition-colors duration-200 overflow-hidden'>
+                <div className='flex-1 min-h-0 bg-plum-50/60 dark:bg-dm-surface p-2 flex flex-col gap-4 transition-colors duration-200 overflow-hidden'>
                     {/***display items */}
                     {
                         cartItem?.length > 0 ? (
@@ -96,7 +104,7 @@ const DisplayCartItem = ({close}) => {
                                     </div>
                                 )}
                                 
-                                <div className='bg-white dark:bg-gray-800 rounded-lg p-4 grid gap-5 overflow-auto transition-colors duration-200 flex-1 min-h-0 pb-28'>
+                                <div className='bg-white dark:bg-dm-card rounded-lg p-4 grid gap-5 overflow-auto transition-colors duration-200 flex-1 min-h-0 pb-28 border border-brown-100/80 dark:border-dm-border'>
                                     {
                                         cartItem?.length > 0 && (
                                             cartItem.map((item,index)=>{
@@ -221,36 +229,45 @@ const DisplayCartItem = ({close}) => {
                         )
                     }
                 </div>
-            </div>
+            </>
+    )
 
-            {/* Fulfillment Modal */}
+    return (
+        <>
+            {isEmbedded ? (
+                <div className={innerShellClass}>{innerBody}</div>
+            ) : (
+                <section className="fixed inset-0 z-50 bg-neutral-900/70">
+                    <div className={innerShellClass}>{innerBody}</div>
+                </section>
+            )}
+
             {showFulfillmentModal && (
-                <FulfillmentModal 
+                <FulfillmentModal
                     isOpen={showFulfillmentModal}
                     onClose={() => setShowFulfillmentModal(false)}
                     onSelect={handleFulfillmentSelect}
                     pickupLocations={pickupLocations}
                 />
             )}
-            
-            {/* Clear Cart Confirmation Modal */}
+
             {showClearConfirm && (
-                <div className="fixed inset-0 bg-plum-900/50 flex items-center justify-center z-[60] p-4">
-                    <div className="bg-white dark:bg-dm-card rounded-card border border-brown-100 dark:border-dm-border p-6 max-w-sm w-full shadow-hover">
-                        <h3 className="text-lg font-semibold text-charcoal dark:text-white mb-2">Clear cart?</h3>
+                <div className="fixed inset-0 z-[60] flex items-center justify-center bg-plum-900/50 p-4">
+                    <div className="w-full max-w-sm rounded-card border border-brown-100 bg-white p-6 shadow-hover dark:border-dm-border dark:bg-dm-card">
+                        <h3 className="mb-2 text-lg font-semibold text-charcoal dark:text-white">Clear cart?</h3>
                         <p className="mb-5 text-sm text-brown-500 dark:text-white/55">Remove all items from your cart. This cannot be undone.</p>
                         <div className="flex justify-end gap-2">
                             <button
                                 type="button"
                                 onClick={() => setShowClearConfirm(false)}
-                                className="px-4 py-2 rounded-pill border border-brown-200 dark:border-dm-border text-charcoal dark:text-white/80 hover:bg-plum-50 dark:hover:bg-plum-900/30 text-sm font-medium transition-colors"
+                                className="rounded-pill border border-brown-200 px-4 py-2 text-sm font-medium text-charcoal transition-colors hover:bg-plum-50 dark:border-dm-border dark:text-white/80 dark:hover:bg-plum-900/30"
                             >
                                 Cancel
                             </button>
                             <button
                                 type="button"
                                 onClick={handleClearCart}
-                                className="px-4 py-2 rounded-pill bg-plum-700 hover:bg-plum-600 text-white text-sm font-semibold transition-colors"
+                                className="rounded-pill bg-plum-700 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-plum-600"
                             >
                                 Clear all
                             </button>
@@ -258,7 +275,7 @@ const DisplayCartItem = ({close}) => {
                     </div>
                 </div>
             )}
-        </section>
+        </>
     )
 }
 

@@ -125,8 +125,8 @@ const OrderDetailModal = ({ order, onClose, onStatusChange }) => {
           <div className={`p-3 rounded-md mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between ${
             order.status === 'delivered' ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300' :
             order.status === 'cancelled' ? 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300' :
-            order.status === 'shipping' || order.status === 'shipped' ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300' :
-            order.status === 'out_for_delivery' || order.status === 'driver_assigned' ? 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-800 dark:text-indigo-300' :
+            order.status === 'shipping' || order.status === 'shipped' ? 'bg-plum-100 dark:bg-plum-900/30 text-plum-800 dark:text-plum-200' :
+            order.status === 'out_for_delivery' || order.status === 'driver_assigned' ? 'bg-plum-100 dark:bg-plum-900/30 text-plum-800 dark:text-plum-200' :
             'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300'
           }`}>
             <div className="flex items-center">
@@ -168,26 +168,26 @@ const OrderDetailModal = ({ order, onClose, onStatusChange }) => {
           
           {/* Dispatch Order Section - Only show for orders ready for dispatch */}
           {isReadyForDispatch && (
-            <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg">
-              <h3 className="font-medium mb-3 text-blue-900 dark:text-blue-300 flex items-center">
+            <div className="bg-plum-50 dark:bg-plum-900/20 p-4 rounded-lg">
+              <h3 className="font-medium mb-3 text-plum-900 dark:text-plum-200 flex items-center">
                 <FaPaperPlane className="mr-2" /> Dispatch Order
               </h3>
               <div className="space-y-3">
-                <p className="text-sm text-blue-800 dark:text-blue-300">
+                <p className="text-sm text-plum-800 dark:text-plum-200">
                   This order is ready to be dispatched. Assign a delivery driver or dispatch automatically.
                 </p>
                 <div className="flex flex-wrap gap-3 items-end">
                   <div className="flex-grow min-w-[200px]">
-                    <label className="block text-sm font-medium text-blue-800 dark:text-blue-300 mb-1">
+                    <label className="block text-sm font-medium text-plum-800 dark:text-plum-200 mb-1">
                       Select Driver (Optional)
                     </label>
                     {loadingDrivers ? (
-                      <div className="flex items-center text-blue-800 dark:text-blue-300">
+                      <div className="flex items-center text-plum-800 dark:text-plum-200">
                         <FaSpinner className="animate-spin mr-2" /> Loading available drivers...
                       </div>
                     ) : (
                       <select
-                        className="w-full border border-blue-300 dark:border-blue-700 rounded-md p-2 bg-white dark:bg-gray-700 text-gray-800 dark:text-white"
+                        className="w-full border border-plum-300 dark:border-plum-700 rounded-md p-2 bg-white dark:bg-gray-700 text-gray-800 dark:text-white"
                         value={selectedDriver}
                         onChange={(e) => setSelectedDriver(e.target.value)}
                       >
@@ -201,7 +201,7 @@ const OrderDetailModal = ({ order, onClose, onStatusChange }) => {
                     )}
                   </div>
                   <button
-                    className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md flex items-center disabled:opacity-50"
+                    className="px-4 py-2 bg-plum-700 hover:bg-plum-600 text-white rounded-md flex items-center disabled:opacity-50"
                     onClick={handleDispatchOrder}
                     disabled={dispatchingOrder}
                   >
@@ -227,8 +227,8 @@ const OrderDetailModal = ({ order, onClose, onStatusChange }) => {
                         <span className={`w-3 h-3 rounded-full inline-block ${
                           status.status === 'delivered' ? 'bg-green-500' :
                           status.status === 'cancelled' ? 'bg-red-500' :
-                          status.status === 'shipped' || status.status === 'shipping' ? 'bg-blue-500' :
-                          status.status === 'out_for_delivery' || status.status === 'driver_assigned' ? 'bg-indigo-500' :
+                          status.status === 'shipped' || status.status === 'shipping' ? 'bg-plum-500' :
+                          status.status === 'out_for_delivery' || status.status === 'driver_assigned' ? 'bg-plum-700' :
                           'bg-yellow-500'
                         }`}></span>
                       </div>
@@ -316,17 +316,17 @@ const OrderDetailModal = ({ order, onClose, onStatusChange }) => {
           
           {/* Delivery Tracking Section - Enhanced with driver info */}
           {isInDeliveryProcess && (
-            <div className="border dark:border-gray-700 p-4 rounded-lg bg-indigo-50 dark:bg-indigo-900/20">
-              <h3 className="font-medium mb-3 flex items-center text-indigo-900 dark:text-indigo-300">
+            <div className="border dark:border-gray-700 p-4 rounded-lg bg-plum-50 dark:bg-plum-900/20">
+              <h3 className="font-medium mb-3 flex items-center text-plum-900 dark:text-plum-200">
                 <FaMapMarkerAlt className="mr-2" /> Delivery Tracking
               </h3>
               
               {order.deliveryDetails ? (
                 <div className="space-y-4">
                   {/* Driver Information */}
-                  <div className="bg-white dark:bg-gray-800 p-3 rounded-md border border-indigo-200 dark:border-indigo-800">
+                  <div className="bg-white dark:bg-gray-800 p-3 rounded-md border border-plum-200 dark:border-plum-800">
                     <h4 className="font-medium flex items-center mb-2">
-                      <FaUserAlt className="mr-2 text-indigo-600 dark:text-indigo-400" /> Driver Information
+                      <FaUserAlt className="mr-2 text-plum-600 dark:text-plum-300" /> Driver Information
                     </h4>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                       <p><span className="text-gray-600 dark:text-gray-400">Name:</span> {order.deliveryDetails.driver?.name || 'Not assigned yet'}</p>
@@ -337,14 +337,14 @@ const OrderDetailModal = ({ order, onClose, onStatusChange }) => {
                   </div>
                   
                   {/* Location Information */}
-                  <div className="bg-white dark:bg-gray-800 p-3 rounded-md border border-indigo-200 dark:border-indigo-800">
+                  <div className="bg-white dark:bg-gray-800 p-3 rounded-md border border-plum-200 dark:border-plum-800">
                     <h4 className="font-medium flex items-center mb-2">
-                      <FaMotorcycle className="mr-2 text-indigo-600 dark:text-indigo-400" /> Delivery Status
+                      <FaMotorcycle className="mr-2 text-plum-600 dark:text-plum-300" /> Delivery Status
                     </h4>
                     <div className="space-y-2">
                       <p>
                         <span className="text-gray-600 dark:text-gray-400">Current Status:</span> 
-                        <span className="ml-2 px-2 py-1 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800 dark:bg-indigo-800 dark:text-indigo-200">
+                        <span className="ml-2 px-2 py-1 rounded-full text-xs font-medium bg-plum-100 text-plum-800 dark:bg-plum-800 dark:text-plum-200">
                           {order.status.charAt(0).toUpperCase() + order.status.slice(1).replace('_', ' ')}
                         </span>
                       </p>
@@ -361,7 +361,7 @@ const OrderDetailModal = ({ order, onClose, onStatusChange }) => {
                       {order.deliveryDetails.currentLocation && (
                         <div>
                           <p className="text-gray-600 dark:text-gray-400 mb-1">Current Location:</p>
-                          <div className="bg-indigo-50 dark:bg-indigo-900/30 p-2 rounded-md">
+                          <div className="bg-plum-50 dark:bg-plum-900/30 p-2 rounded-md">
                             {order.deliveryDetails.currentLocation.address || 
                              `${order.deliveryDetails.currentLocation.coordinates[1]}, ${order.deliveryDetails.currentLocation.coordinates[0]}`}
                           </div>
@@ -372,9 +372,9 @@ const OrderDetailModal = ({ order, onClose, onStatusChange }) => {
                   
                   {/* Driver Notes */}
                   {order.deliveryDetails.notes && (
-                    <div className="bg-white dark:bg-gray-800 p-3 rounded-md border border-indigo-200 dark:border-indigo-800">
+                    <div className="bg-white dark:bg-gray-800 p-3 rounded-md border border-plum-200 dark:border-plum-800">
                       <h4 className="font-medium flex items-center mb-2">
-                        <FaInfoCircle className="mr-2 text-indigo-600 dark:text-indigo-400" /> Delivery Notes
+                        <FaInfoCircle className="mr-2 text-plum-600 dark:text-plum-300" /> Delivery Notes
                       </h4>
                       <p className="text-gray-700 dark:text-gray-300">{order.deliveryDetails.notes}</p>
                     </div>
@@ -463,13 +463,13 @@ const OrderDetailModal = ({ order, onClose, onStatusChange }) => {
             order.status === 'driver_assigned' || 
             order.status === 'out_for_delivery' || 
             order.status === 'nearby') && (
-            <div className="bg-indigo-50 dark:bg-indigo-900/20 p-4 rounded-lg">
-              <h3 className="font-medium mb-3 text-indigo-900 dark:text-indigo-300">Delivery Tracking</h3>
+            <div className="bg-plum-50 dark:bg-plum-900/20 p-4 rounded-lg">
+              <h3 className="font-medium mb-3 text-plum-900 dark:text-plum-200">Delivery Tracking</h3>
               <div className="flex flex-wrap gap-6">
                 {order.deliveryPersonnel && (
                   <div className="flex-1 min-w-[250px]">
-                    <h4 className="text-sm font-medium mb-1 text-indigo-800 dark:text-indigo-300">Delivery Personnel</h4>
-                    <div className="text-sm text-indigo-700 dark:text-indigo-300 space-y-1">
+                    <h4 className="text-sm font-medium mb-1 text-plum-800 dark:text-plum-200">Delivery Personnel</h4>
+                    <div className="text-sm text-plum-700 dark:text-plum-200 space-y-1">
                       <div>
                         <span>Name: </span>
                         <span className="font-medium">{order.deliveryPersonnel.name || 'Not Assigned'}</span>
@@ -486,8 +486,8 @@ const OrderDetailModal = ({ order, onClose, onStatusChange }) => {
                 
                 {order.estimatedDeliveryTime && (
                   <div className="flex-1 min-w-[250px]">
-                    <h4 className="text-sm font-medium mb-1 text-indigo-800 dark:text-indigo-300">Estimated Delivery</h4>
-                    <div className="text-sm text-indigo-700 dark:text-indigo-300">
+                    <h4 className="text-sm font-medium mb-1 text-plum-800 dark:text-plum-200">Estimated Delivery</h4>
+                    <div className="text-sm text-plum-700 dark:text-plum-200">
                       {typeof format === 'function' 
                         ? format(new Date(order.estimatedDeliveryTime), 'PPP p')
                         : formatDate(order.estimatedDeliveryTime)
@@ -498,8 +498,8 @@ const OrderDetailModal = ({ order, onClose, onStatusChange }) => {
 
                 {order.currentLocation && (
                   <div className="flex-1 min-w-[250px]">
-                    <h4 className="text-sm font-medium mb-1 text-indigo-800 dark:text-indigo-300">Current Location</h4>
-                    <div className="text-sm text-indigo-700 dark:text-indigo-300">
+                    <h4 className="text-sm font-medium mb-1 text-plum-800 dark:text-plum-200">Current Location</h4>
+                    <div className="text-sm text-plum-700 dark:text-plum-200">
                       <div>
                         <span>Last updated: </span>
                         <span>
@@ -510,7 +510,7 @@ const OrderDetailModal = ({ order, onClose, onStatusChange }) => {
                           )}
                         </span>
                       </div>
-                      <button className="mt-1 text-indigo-600 dark:text-indigo-400 hover:underline">
+                      <button className="mt-1 text-plum-600 dark:text-plum-300 hover:underline">
                         View on map
                       </button>
                     </div>
@@ -760,13 +760,13 @@ const OrderStatistics = ({ orders }) => {
   const statItems = [
     { label: 'Total Orders', value: total, color: 'bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-white' },
     { label: 'Pending', value: pending, color: 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300' },
-    { label: 'Processing', value: processing, color: 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300' },
-    { label: 'Shipped', value: shipped, color: 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-800 dark:text-indigo-300' },
+    { label: 'Processing', value: processing, color: 'bg-plum-100 dark:bg-plum-900/30 text-plum-800 dark:text-plum-200' },
+    { label: 'Shipped', value: shipped, color: 'bg-plum-100 dark:bg-plum-900/30 text-plum-800 dark:text-plum-200' },
     { label: 'In Transit', value: inTransit, color: 'bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300' },
     { label: 'Delivered', value: delivered, color: 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300' },
     { label: 'Cancelled', value: cancelled, color: 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300' },
-    { label: 'Counter Sales', value: posOrders, color: 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-800 dark:text-indigo-300', icon: 'pos' },
-    { label: 'Pending Delivery', value: pendingDeliveryOrders, color: 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300', icon: 'truck' },
+    { label: 'Counter Sales', value: posOrders, color: 'bg-plum-100 dark:bg-plum-900/30 text-plum-800 dark:text-plum-200', icon: 'pos' },
+    { label: 'Pending Delivery', value: pendingDeliveryOrders, color: 'bg-plum-100 dark:bg-plum-900/30 text-plum-800 dark:text-plum-200', icon: 'truck' },
     { label: 'Delivered Orders', value: completedDeliveryOrders, color: 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300', icon: 'truck-check' },
     { label: 'Pending Pickup', value: pendingPickupOrders, color: 'bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300', icon: 'store' },
     { label: 'Completed Pickup', value: completedPickupOrders, color: 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300', icon: 'store-check' },
@@ -797,13 +797,13 @@ const OrderStatistics = ({ orders }) => {
           </div>
         </div>
         
-        <div className="min-w-0 bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 rounded-lg p-4 sm:p-6 shadow-sm">
+        <div className="min-w-0 bg-plum-100 dark:bg-plum-900/30 text-plum-800 dark:text-plum-200 rounded-lg p-4 sm:p-6 shadow-sm">
           <div className="flex items-center justify-between">
             <div className="min-w-0">
               <div className="break-words text-xl sm:text-3xl font-bold">KSh {onlineRevenue.toLocaleString()}</div>
               <div className="text-sm">Online Orders</div>
             </div>
-            <FaShoppingCart className="text-blue-600 dark:text-blue-400" size={32} />
+            <FaShoppingCart className="text-plum-600 dark:text-plum-300" size={32} />
           </div>
         </div>
         
@@ -826,7 +826,7 @@ const OrderStatistics = ({ orders }) => {
           <div key={index} className={`${item.color} min-w-0 rounded-lg p-4 shadow-sm`}>
             <div className="flex justify-between items-center mb-1">
               <div className="break-words text-2xl sm:text-3xl font-bold">{item.value}</div>
-              {item.icon === 'truck' && <FaTruck className="text-blue-600 dark:text-blue-400" size={20} />}
+              {item.icon === 'truck' && <FaTruck className="text-plum-600 dark:text-plum-300" size={20} />}
               {item.icon === 'truck-check' && (
                 <div className="relative">
                   <FaTruck className="text-green-600 dark:text-green-400" size={20} />
@@ -840,7 +840,7 @@ const OrderStatistics = ({ orders }) => {
                   <FaCheckCircle className="text-green-500 absolute -top-2 -right-2" size={12} />
                 </div>
               )}
-              {item.icon === 'pos' && <FaCashRegister className="text-indigo-600 dark:text-indigo-400" size={20} />}
+              {item.icon === 'pos' && <FaCashRegister className="text-plum-600 dark:text-plum-300" size={20} />}
             </div>
             <div className="text-sm">{item.label}</div>
           </div>
@@ -1007,9 +1007,9 @@ const AllOrdersAdmin = () => {
       case 'pending':
         return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300';
       case 'processing':
-        return 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300';
+        return 'bg-plum-100 text-plum-800 dark:bg-plum-900/30 dark:text-plum-200';
       case 'shipped':
-        return 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-300';
+        return 'bg-plum-100 text-plum-800 dark:bg-plum-900/30 dark:text-plum-200';
       case 'driver_assigned':
       case 'out_for_delivery':
       case 'nearby':
@@ -1019,7 +1019,7 @@ const AllOrdersAdmin = () => {
       case 'cancelled':
         return 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300';
       case 'POS':
-        return 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-300';
+        return 'bg-plum-100 text-plum-800 dark:bg-plum-900/30 dark:text-plum-200';
       default:
         return 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300';
     }
@@ -1097,7 +1097,7 @@ const AllOrdersAdmin = () => {
     if (type === 'Pickup') {
       return 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300';
     } else {
-      return 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300';
+      return 'bg-plum-100 text-plum-800 dark:bg-plum-900/30 dark:text-plum-200';
     }
   };
   
@@ -1124,7 +1124,7 @@ const AllOrdersAdmin = () => {
         <div className="mb-6">
           <button 
             onClick={() => setShowStatistics(true)}
-            className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 flex items-center"
+            className="text-plum-600 dark:text-plum-300 hover:text-plum-800 dark:hover:text-plum-200 flex items-center"
           >
             <FaChartBar className="mr-1" /> Show Statistics
           </button>
@@ -1138,7 +1138,7 @@ const AllOrdersAdmin = () => {
           <button
             className={`px-3 py-1.5 text-sm font-medium rounded-full 
               ${activeTab === 'all' ? 
-                'bg-blue-600 text-white' : 
+                'bg-plum-700 text-white' : 
                 'bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white hover:bg-gray-300 dark:hover:bg-gray-600'}`}
             onClick={() => { setActiveTab('all'); setCurrentPage(1); }}
           >
@@ -1156,7 +1156,7 @@ const AllOrdersAdmin = () => {
           <button
             className={`px-3 py-1.5 text-sm font-medium rounded-full 
               ${activeTab === 'processing' ? 
-                'bg-blue-500 text-white' : 
+                'bg-plum-500 text-white' : 
                 'bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white hover:bg-gray-300 dark:hover:bg-gray-600'}`}
             onClick={() => { setActiveTab('processing'); setCurrentPage(1); }}
           >
@@ -1165,7 +1165,7 @@ const AllOrdersAdmin = () => {
           <button
             className={`px-3 py-1.5 text-sm font-medium rounded-full 
               ${activeTab === 'shipped' ? 
-                'bg-indigo-500 text-white' : 
+                'bg-plum-700 text-white' : 
                 'bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white hover:bg-gray-300 dark:hover:bg-gray-600'}`}
             onClick={() => { setActiveTab('shipped'); setCurrentPage(1); }}
           >
@@ -1201,7 +1201,7 @@ const AllOrdersAdmin = () => {
           <button
             className={`px-3 py-1.5 text-sm font-medium rounded-full 
               ${activeTab === 'POS' ? 
-                'bg-indigo-600 text-white' : 
+                'bg-plum-700 text-white' : 
                 'bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white hover:bg-gray-300 dark:hover:bg-gray-600'}`}
             onClick={() => { setActiveTab('POS'); setCurrentPage(1); }}
           >
@@ -1218,7 +1218,7 @@ const AllOrdersAdmin = () => {
               disabled={isMobile}
               className={`p-2 rounded-md ${
                 viewMode === 'table' 
-                  ? 'bg-blue-600 text-white' 
+                  ? 'bg-plum-700 text-white' 
                   : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-white'
               }`}
               aria-label="Table view"
@@ -1229,7 +1229,7 @@ const AllOrdersAdmin = () => {
               onClick={() => setViewMode('grid')}
               className={`p-2 rounded-md ${
                 viewMode === 'grid' 
-                  ? 'bg-blue-600 text-white' 
+                  ? 'bg-plum-700 text-white' 
                   : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-white'
               }`}
               aria-label="Grid view"
@@ -1258,7 +1258,7 @@ const AllOrdersAdmin = () => {
               <input
                 type="text"
                 placeholder="Search orders..."
-                className="w-full min-w-0 pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white xl:min-w-[260px]"
+                className="w-full min-w-0 pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-plum-500 dark:bg-gray-700 dark:text-white xl:min-w-[260px]"
                 value={searchTerm}
                 onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
               />
@@ -1266,7 +1266,7 @@ const AllOrdersAdmin = () => {
             
             <button
               onClick={() => { fetchAllOrders(); fetchPOSSales(); }}
-              className="px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md flex items-center justify-center"
+              className="px-3 py-2 bg-plum-700 hover:bg-plum-600 text-white rounded-md flex items-center justify-center"
             >
               <FaSpinner className={`mr-1 ${loading ? 'animate-spin' : 'hidden'}`} />
               Refresh
@@ -1311,7 +1311,7 @@ const AllOrdersAdmin = () => {
                         <div className="flex items-center">
                           <span className={`w-2 h-2 rounded-full mr-2 ${
                             getFulfillmentType(order) === 'Pickup' ? 'bg-purple-500' : 
-                            getFulfillmentType(order) === 'POS' ? 'bg-indigo-500' : 'bg-blue-500'
+                            getFulfillmentType(order) === 'POS' ? 'bg-plum-700' : 'bg-plum-500'
                           }`}></span>
                           <div>
                             <div className="text-sm font-medium dark:text-white">{order.orderId || order._id?.substring(order._id.length - 8)}</div>
@@ -1364,7 +1364,7 @@ const AllOrdersAdmin = () => {
                       {/* Action column */}
                       <td className="px-4 py-3 whitespace-nowrap text-center">
                         <button 
-                          className="px-3 py-1 bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 rounded hover:bg-blue-200 dark:hover:bg-blue-800/60"
+                          className="px-3 py-1 bg-plum-100 text-plum-700 dark:bg-plum-900/30 dark:text-plum-200 rounded hover:bg-plum-200 dark:hover:bg-plum-800/60"
                           onClick={(e) => { e.stopPropagation(); setSelectedOrder(order); }}
                         >
                           View
@@ -1384,7 +1384,7 @@ const AllOrdersAdmin = () => {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {loading ? (
             <div className="col-span-full flex justify-center py-8">
-              <FaSpinner className="animate-spin text-2xl text-blue-600" />
+              <FaSpinner className="animate-spin text-2xl text-plum-600" />
               <span className="ml-2 text-gray-600 dark:text-gray-300">Loading orders...</span>
             </div>
           ) : currentOrders.length === 0 ? (
@@ -1402,18 +1402,18 @@ const AllOrdersAdmin = () => {
                 <div className={`px-4 py-2 ${
                   order.status === 'delivered' ? 'bg-green-100 dark:bg-green-900/30' :
                   order.status === 'cancelled' ? 'bg-red-100 dark:bg-red-900/30' :
-                  order.status === 'shipped' ? 'bg-indigo-100 dark:bg-indigo-900/30' :
-                  order.status === 'POS' ? 'bg-indigo-100 dark:bg-indigo-900/30' :
+                  order.status === 'shipped' ? 'bg-plum-100 dark:bg-plum-900/30' :
+                  order.status === 'POS' ? 'bg-plum-100 dark:bg-plum-900/30' :
                   order.status === 'driver_assigned' || order.status === 'out_for_delivery' || order.status === 'nearby' ? 
                     'bg-purple-100 dark:bg-purple-900/30' :
-                  order.status === 'processing' ? 'bg-blue-100 dark:bg-blue-900/30' :
+                  order.status === 'processing' ? 'bg-plum-100 dark:bg-plum-900/30' :
                   'bg-yellow-100 dark:bg-yellow-900/30'
                 }`}>
                   <div className="flex justify-between items-center">
                     <div className="flex items-center">
                       <span className={`w-2 h-2 rounded-full mr-2 ${
                         getFulfillmentType(order) === 'Pickup' ? 'bg-purple-500' : 
-                        getFulfillmentType(order) === 'POS' ? 'bg-indigo-500' : 'bg-blue-500'
+                        getFulfillmentType(order) === 'POS' ? 'bg-plum-700' : 'bg-plum-500'
                       }`}></span>
                       <span className="text-sm font-medium dark:text-white">
                         {getFulfillmentType(order)}
@@ -1465,7 +1465,7 @@ const AllOrdersAdmin = () => {
                 {/* Card Footer */}
                 <div className="border-t dark:border-gray-700 p-3 bg-gray-50 dark:bg-gray-750 flex justify-end">
                   <button 
-                    className="px-3 py-1 bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 rounded hover:bg-blue-200 dark:hover:bg-blue-800/60 text-sm"
+                    className="px-3 py-1 bg-plum-100 text-plum-700 dark:bg-plum-900/30 dark:text-plum-200 rounded hover:bg-plum-200 dark:hover:bg-plum-800/60 text-sm"
                     onClick={(e) => { e.stopPropagation(); setSelectedOrder(order); }}
                   >
                     View Details
@@ -1510,7 +1510,7 @@ const AllOrdersAdmin = () => {
                     key={pageNumber}
                     className={`px-3 py-1 rounded ${
                       pageNumber === currentPage ? 
-                        'bg-blue-600 text-white' : 
+                        'bg-plum-700 text-white' : 
                         'bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200'
                     }`}
                     onClick={() => setCurrentPage(pageNumber)}

@@ -84,13 +84,13 @@ const EditCategory = ({close, fetchData,data : CategoryData}) => {
                     value={data.name}
                     name='name'
                     onChange={handleOnChange}
-                    className='bg-blue-50 dark:bg-gray-700 p-2 border border-blue-100 dark:border-gray-600 focus-within:border-primary-200 dark:focus-within:border-primary-300 outline-none rounded text-gray-900 dark:text-white transition-colors duration-200'
+                    className='bg-plum-50 dark:bg-dm-card-2 p-2 border border-plum-100 dark:border-dm-border focus-within:border-plum-500 dark:focus-within:border-plum-400 outline-none rounded text-gray-900 dark:text-white transition-colors duration-200'
                 />
             </div>
             <div className='grid gap-1'>
                 <p className="text-gray-800 dark:text-white transition-colors duration-200">Image</p>
                 <div className='flex gap-4 flex-col lg:flex-row items-center'>
-                    <div className='border dark:border-gray-600 bg-blue-50 dark:bg-gray-700 h-36 w-full lg:w-36 flex items-center justify-center rounded transition-colors duration-200'>
+                    <div className='border dark:border-gray-600 bg-plum-50 dark:bg-dm-card-2 h-36 w-full lg:w-36 flex items-center justify-center rounded transition-colors duration-200'>
                         {
                             data.image ? (
                                 <img

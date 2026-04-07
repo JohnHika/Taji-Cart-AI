@@ -496,7 +496,7 @@ const RoyalCard = () => {
               cardData.tier === 'Bronze' ? 'bg-amber-300 text-amber-900' :
               cardData.tier === 'Silver' ? 'bg-gray-300 text-gray-800' :
               cardData.tier === 'Gold' ? 'bg-yellow-300 text-amber-900' :
-              'bg-blue-200 text-blue-800'
+              'bg-plum-200 text-plum-900'
             } px-2 py-0.5 rounded-full font-medium text-xs sm:text-sm`}>
               {cardData.tier}
             </span>
@@ -601,7 +601,7 @@ const RoyalCard = () => {
             
             {/* Points needed overlay */}
             <div className="absolute inset-0 flex items-center justify-center">
-              <span className="text-xs font-medium text-gray-700 dark:text-white px-2 py-0.5 bg-white/70 dark:bg-gray-800/70 rounded">
+              <span className="text-xs font-medium text-gray-700 dark:text-white px-2 py-0.5 bg-white/70 dark:bg-dm-card/70 rounded">
                 {formatNumber(Math.max(0, getNextTierThreshold() - cardData.points))} more to {getNextTierName()}
               </span>
             </div>
@@ -644,8 +644,8 @@ const RoyalCard = () => {
               )}
               
               {cardData.tier === 'Gold' && cardData.points >= getEarlyPlatinumThreshold() && cardData.points < getPlatinumThreshold() && (
-                <div className="p-2 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-900 rounded-md mt-2">
-                  <p className="text-xs text-blue-800 dark:text-blue-300 font-medium flex items-center">
+                <div className="p-2 bg-plum-50 dark:bg-plum-900/25 border border-plum-200 dark:border-plum-800 rounded-md mt-2">
+                  <p className="text-xs text-plum-800 dark:text-plum-200 font-medium flex items-center">
                     <FaInfoCircle className="mr-1" /> Early Platinum Access Available!
                   </p>
                   <p className="text-xs mt-1 text-gray-600 dark:text-gray-300">
@@ -863,8 +863,8 @@ const RoyalCard = () => {
           cardData.tier !== 'Basic' && (
           <div className="mt-2 text-xs text-gray-500 dark:text-gray-400 italic">
             <p className="flex items-center">
-              <FaInfoCircle className="mr-1 text-blue-500" />
-              Your next tier: <span className="ml-1 font-medium text-blue-600 dark:text-blue-400">
+              <FaInfoCircle className="mr-1 text-plum-500" />
+              Your next tier: <span className="ml-1 font-medium text-plum-700 dark:text-plum-300">
                 {getNextTierName()}
               </span>
               <span className="mx-2">•</span>
@@ -872,7 +872,7 @@ const RoyalCard = () => {
                 Standard: {formatNumber(getNextTierThreshold())} pts
               </span>
               <span className="mx-2">•</span>
-              <span className="text-blue-600 dark:text-blue-400">
+              <span className="text-plum-700 dark:text-plum-300">
                 Early Access: {formatNumber(getNextTierEarlyThreshold())} pts
               </span>
             </p>
@@ -894,9 +894,9 @@ const RoyalCard = () => {
 
       {/* Special Platinum Progress Bar for Early Access Users - Only show if in Platinum via early access */}
       {cardData.tier === 'Platinum' && cardData.points < getPlatinumThreshold() && !isAdmin && (
-        <div className="mt-4 bg-white dark:bg-gray-800 rounded-lg shadow-md p-3 text-sm">
+        <div className="mt-4 bg-white dark:bg-dm-card rounded-lg border border-brown-100 dark:border-dm-border shadow-md p-3 text-sm">
           <h3 className="font-medium text-gray-700 dark:text-white mb-2 flex items-center">
-            <FaCrown className="text-blue-500 mr-2" /> 
+            <FaCrown className="text-gold-500 mr-2" /> 
             Platinum Status Progress
           </h3>
           
@@ -913,7 +913,7 @@ const RoyalCard = () => {
                 className="h-full flex items-center justify-end pr-2 text-xs font-semibold text-white"
                 style={{
                   width: `${Math.min(100, (cardData.points / getPlatinumThreshold()) * 100)}%`,
-                  background: 'linear-gradient(90deg, #2563EB, #93C5FD)'
+                  background: 'linear-gradient(90deg, #4B1E3E, #9C5A8E)'
                 }}
               >
                 {cardData.points > 500 && (
@@ -950,7 +950,7 @@ const RoyalCard = () => {
           </div>
           
           <div className="mt-3 text-xs text-gray-700 dark:text-gray-300">
-            <p>You need <span className="font-bold text-blue-600 dark:text-blue-400">{formatNumber(getPlatinumThreshold() - cardData.points)}</span> more points to fully secure your Platinum status.</p>
+            <p>You need <span className="font-bold text-plum-700 dark:text-plum-300">{formatNumber(getPlatinumThreshold() - cardData.points)}</span> more points to fully secure your Platinum status.</p>
             <p className="mt-1">
               {isEarlyAccessEnabled() 
                 ? "Your Platinum benefits are currently active through early access, but we encourage reaching the standard threshold for full status security."
@@ -958,12 +958,12 @@ const RoyalCard = () => {
             </p>
           </div>
           
-          <div className="mt-3 p-2 border border-blue-200 dark:border-blue-900 bg-blue-50 dark:bg-blue-900/20 rounded text-xs">
-            <h4 className="font-medium text-blue-800 dark:text-blue-300 mb-1 flex items-center">
+          <div className="mt-3 p-2 border border-plum-200 dark:border-plum-800 bg-plum-50 dark:bg-plum-900/20 rounded text-xs">
+            <h4 className="font-medium text-plum-800 dark:text-plum-200 mb-1 flex items-center">
               <FaInfoCircle className="mr-1" /> 
               {isEarlyAccessEnabled() ? "Early Access Benefits" : "Platinum Benefits"}
             </h4>
-            <ul className="list-disc pl-5 text-blue-700 dark:text-blue-300 space-y-1">
+            <ul className="list-disc pl-5 text-plum-700 dark:text-plum-200 space-y-1">
               <li>Full 7% discount on all purchases</li>
               <li>Free delivery on all orders</li>
               <li>Early access to sales and exclusive products</li>

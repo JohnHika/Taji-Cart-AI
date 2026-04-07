@@ -59,7 +59,7 @@ const VerificationSuccess = () => {
           </button>
           <button 
             onClick={handlePrint}
-            className="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-lg flex items-center text-white"
+            className="bg-plum-700 hover:bg-plum-600 px-4 py-2 rounded-lg flex items-center text-white"
           >
             <FaPrint className="mr-2" /> Print Receipt
           </button>

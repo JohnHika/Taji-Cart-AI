@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useRef, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { FaAngleLeft, FaAngleRight, FaStar, FaShieldAlt, FaTruck, FaTags } from "react-icons/fa"
 import { FiShoppingBag, FiHeart } from 'react-icons/fi'
 import { useSelector } from 'react-redux'
@@ -16,6 +16,13 @@ import { DisplayPriceInShillings } from '../utils/DisplayPriceInShillings'
 import { pricewithDiscount } from '../utils/PriceWithDiscount'
 
 const TABS = ['Description', 'Details', 'Reviews'];
+
+/** Convert average star rating (0–5) to a 0–100% value for display */
+const getRatingPercentage = (avg) => {
+  const n = Number(avg);
+  if (!Number.isFinite(n) || n <= 0) return 0;
+  return Math.round((Math.min(5, Math.max(0, n)) / 5) * 100);
+};
 
 const StockBadge = ({ stock }) => {
   if (stock === 0) return (
@@ -430,40 +437,40 @@ const ProductDisplayPage = () => {
             
             {/* Hair Product Variant Selector */}
             {data.variants && (Object.values(data.variants).some(v => v)) && (
-              <div className='bg-gradient-to-r from-rose-50 to-pink-50 dark:from-gray-800 dark:to-gray-750 border-2 border-rose-200 dark:border-rose-700 rounded-lg p-4 mt-4 mb-4'>
-                <h3 className='font-semibold text-rose-900 dark:text-rose-300 mb-3 flex items-center gap-2'>
-                  <span className='text-lg'>âœ¨</span> Select Hair Variant
+              <div className='bg-gradient-to-r from-plum-50 to-blush-50 dark:from-dm-card dark:to-dm-card-2 border-2 border-plum-200 dark:border-plum-700 rounded-lg p-4 mt-4 mb-4'>
+                <h3 className='font-semibold text-plum-900 dark:text-plum-200 mb-3 flex items-center gap-2'>
+                  <span className='text-lg'>✨</span> Select Hair Variant
                 </h3>
                 
                 <div className='grid grid-cols-1 md:grid-cols-2 gap-3'>
                   {data.variants.color && (
                     <div>
-                      <label className='text-xs font-semibold text-gray-700 dark:text-gray-300 block mb-1'>Color</label>
-                      <div className='bg-white dark:bg-gray-700 p-2 rounded border border-rose-200 dark:border-rose-700'>
+                      <label className='text-xs font-semibold text-brown-700 dark:text-white/70 block mb-1'>Color</label>
+                      <div className='bg-white dark:bg-dm-card-2 p-2 rounded border border-plum-200 dark:border-plum-700'>
                         <p className='text-sm font-medium dark:text-white'>{data.variants.color}</p>
                       </div>
                     </div>
                   )}
                   {data.variants.length && (
                     <div>
-                      <label className='text-xs font-semibold text-gray-700 dark:text-gray-300 block mb-1'>Length</label>
-                      <div className='bg-white dark:bg-gray-700 p-2 rounded border border-rose-200 dark:border-rose-700'>
+                      <label className='text-xs font-semibold text-brown-700 dark:text-white/70 block mb-1'>Length</label>
+                      <div className='bg-white dark:bg-dm-card-2 p-2 rounded border border-plum-200 dark:border-plum-700'>
                         <p className='text-sm font-medium dark:text-white'>{data.variants.length}</p>
                       </div>
                     </div>
                   )}
                   {data.variants.density && (
                     <div>
-                      <label className='text-xs font-semibold text-gray-700 dark:text-gray-300 block mb-1'>Density</label>
-                      <div className='bg-white dark:bg-gray-700 p-2 rounded border border-rose-200 dark:border-rose-700'>
+                      <label className='text-xs font-semibold text-brown-700 dark:text-white/70 block mb-1'>Density</label>
+                      <div className='bg-white dark:bg-dm-card-2 p-2 rounded border border-plum-200 dark:border-plum-700'>
                         <p className='text-sm font-medium dark:text-white'>{data.variants.density}</p>
                       </div>
                     </div>
                   )}
                   {data.variants.laceSpecification && (
                     <div>
-                      <label className='text-xs font-semibold text-gray-700 dark:text-gray-300 block mb-1'>Lace Type</label>
-                      <div className='bg-white dark:bg-gray-700 p-2 rounded border border-rose-200 dark:border-rose-700'>
+                      <label className='text-xs font-semibold text-brown-700 dark:text-white/70 block mb-1'>Lace Type</label>
+                      <div className='bg-white dark:bg-dm-card-2 p-2 rounded border border-plum-200 dark:border-plum-700'>
                         <p className='text-sm font-medium dark:text-white'>{data.variants.laceSpecification}</p>
                       </div>
                     </div>

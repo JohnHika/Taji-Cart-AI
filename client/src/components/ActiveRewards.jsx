@@ -42,7 +42,7 @@ const ActiveRewards = ({ onSelectReward, selectedRewardId, displayMode = 'full',
       case 'discount':
         return <FaPercent className="text-green-500" />;
       case 'shipping':
-        return <FaTruck className="text-blue-500" />;
+        return <FaTruck className="text-plum-600" />;
       case 'product':
         return <FaGift className="text-purple-500" />;
       default:
@@ -130,17 +130,17 @@ const ActiveRewards = ({ onSelectReward, selectedRewardId, displayMode = 'full',
           {rewards.map((reward) => (
             <div
               key={reward._id}
-              className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden"
+              className="bg-white dark:bg-dm-card rounded-lg shadow-sm border border-brown-100 dark:border-dm-border overflow-hidden"
             >
               <div className={`p-4 flex items-start gap-3 ${
                 reward.type === 'discount' ? 'bg-green-50 dark:bg-green-900/20' :
-                reward.type === 'shipping' ? 'bg-blue-50 dark:bg-blue-900/20' :
-                'bg-purple-50 dark:bg-purple-900/20'
+                reward.type === 'shipping' ? 'bg-plum-50 dark:bg-plum-900/20' :
+                'bg-blush-50 dark:bg-plum-900/25'
               }`}>
                 <div className={`p-3 rounded-full ${
                   reward.type === 'discount' ? 'bg-green-100 dark:bg-green-800/30 text-green-800 dark:text-green-300' : 
-                  reward.type === 'shipping' ? 'bg-blue-100 dark:bg-blue-800/30 text-blue-800 dark:text-blue-300' :
-                  'bg-purple-100 dark:bg-purple-800/30 text-purple-800 dark:text-purple-300'
+                  reward.type === 'shipping' ? 'bg-plum-100 dark:bg-plum-800/30 text-plum-800 dark:text-plum-200' :
+                  'bg-blush-100 dark:bg-plum-800/30 text-plum-800 dark:text-plum-200'
                 }`}>
                   {getRewardIcon(reward.type)}
                 </div>

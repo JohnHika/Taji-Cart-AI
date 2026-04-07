@@ -84,6 +84,18 @@
   }
 }
 
+@layer components {
+  .btn-brand-primary {
+    @apply inline-flex items-center justify-center rounded-pill bg-plum-700 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-plum-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold-500 disabled:opacity-60;
+  }
+  .btn-brand-secondary {
+    @apply inline-flex items-center justify-center rounded-pill bg-gold-500 px-4 py-2 text-sm font-semibold text-charcoal transition-colors hover:bg-gold-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-plum-600 disabled:opacity-60;
+  }
+  .surface-card {
+    @apply rounded-card border border-brown-100 bg-white dark:border-dm-border dark:bg-dm-card;
+  }
+}
+
 @keyframes fadeUp {
   from {
     opacity: 0;

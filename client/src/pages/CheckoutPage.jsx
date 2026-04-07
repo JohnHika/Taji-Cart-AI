@@ -1,4 +1,4 @@
-﻿import { loadStripe } from '@stripe/stripe-js';
+import { loadStripe } from '@stripe/stripe-js';
 import React, { useEffect, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
 import { FaCrown, FaStore } from 'react-icons/fa';
@@ -19,7 +19,7 @@ import Axios from '../utils/Axios';
 import AxiosToastError from '../utils/AxiosToastError';
 import { DisplayPriceInShillings } from '../utils/DisplayPriceInShillings';
 
-const CheckoutPage = ({ isCutView = false, onClose = null }) => {
+const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) => {
   const { notDiscountTotalPrice, totalPrice, totalQty, fetchCartItem, fetchOrder, royalCardData, royalDiscount } = useGlobalContext();
   const { darkMode } = useTheme();
   const location = useLocation();
@@ -791,7 +791,7 @@ const CheckoutPage = ({ isCutView = false, onClose = null }) => {
             
             <button 
               onClick={() => navigate(-1)} // Go back to previous page
-              className="mt-4 px-4 py-2 bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300 rounded hover:bg-purple-200 dark:hover:bg-purple-800/40"
+              className="mt-4 px-4 py-2 bg-plum-100 text-plum-800 dark:bg-plum-900/40 dark:text-plum-200 rounded hover:bg-plum-200 dark:hover:bg-plum-800/50"
             >
               Change Pickup Location
             </button>
@@ -801,16 +801,24 @@ const CheckoutPage = ({ isCutView = false, onClose = null }) => {
     }
   };
 
+  const sectionShell = embedded
+    ? 'w-full max-w-full bg-transparent'
+    : 'bg-ivory dark:bg-dm-surface transition-colors duration-200';
+  const containerShell = embedded
+    ? 'flex w-full max-w-full flex-col gap-5 px-2 py-3 sm:px-3 lg:flex-row lg:justify-between'
+    : 'container mx-auto flex w-full flex-col gap-5 px-2 py-4 sm:px-4 lg:flex-row lg:px-6 lg:justify-between';
+  const summarySticky = embedded ? 'lg:sticky lg:top-4' : 'lg:sticky lg:top-24';
+
   // Full page render (original implementation)
   return (
-    <section className='bg-blue-50 dark:bg-gray-800 transition-colors duration-200'>
-      <div className='container mx-auto px-2 sm:px-4 lg:px-6 py-4 flex flex-col lg:flex-row w-full gap-5 justify-between'>
+    <section className={sectionShell}>
+      <div className={containerShell}>
         <div className='w-full'>
           {/* Address or Pickup Section */}
           {renderAddressOrPickupSection()}
         </div>
 
-        <div className='w-full lg:max-w-md xl:max-w-lg bg-white dark:bg-gray-700 py-4 px-2 rounded shadow transition-colors duration-200 self-start lg:sticky lg:top-24'>
+        <div className={`w-full self-start rounded border border-brown-100 bg-white px-2 py-4 shadow transition-colors duration-200 dark:border-dm-border dark:bg-dm-card lg:max-w-md xl:max-w-lg ${summarySticky}`}>
           {/**summary**/}
           <h3 className='text-lg font-semibold text-charcoal dark:text-white px-1 mb-3'>Order Summary</h3>
           

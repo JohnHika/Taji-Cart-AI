@@ -189,8 +189,8 @@ const POSDashboard = () => {
 
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
             <div className="flex items-center">
-              <div className="p-3 rounded-full bg-blue-100 dark:bg-blue-900/20">
-                <FaShoppingCart className="text-blue-600 dark:text-blue-400" />
+              <div className="p-3 rounded-full bg-plum-100 dark:bg-plum-900/20">
+                <FaShoppingCart className="text-plum-600 dark:text-plum-300" />
               </div>
               <div className="ml-4">
                 <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Transactions</p>
@@ -359,7 +359,7 @@ const POSDashboard = () => {
               <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
                 <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
                   sale.paymentMethod === 'cash' ? 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400' :
-                  sale.paymentMethod === 'card' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-400' :
+                  sale.paymentMethod === 'card' ? 'bg-gold-100 text-gold-800 dark:bg-gold-900/25 dark:text-gold-300' :
                   'bg-purple-100 text-purple-800 dark:bg-purple-900/20 dark:text-purple-400'
                 }`}>
                   {sale.paymentMethod.charAt(0).toUpperCase() + sale.paymentMethod.slice(1)}
@@ -438,7 +438,7 @@ const POSDashboard = () => {
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
                       sale.paymentMethod === 'cash' ? 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400' :
-                      sale.paymentMethod === 'card' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-400' :
+                      sale.paymentMethod === 'card' ? 'bg-gold-100 text-gold-800 dark:bg-gold-900/25 dark:text-gold-300' :
                       'bg-purple-100 text-purple-800 dark:bg-purple-900/20 dark:text-purple-400'
                     }`}>
                       {sale.paymentMethod.charAt(0).toUpperCase() + sale.paymentMethod.slice(1)}
@@ -502,7 +502,7 @@ const POSDashboard = () => {
             </div>
             <div className="mt-3 space-y-1 text-sm">
               <div className="flex justify-between"><span className="text-gray-600 dark:text-gray-400">Subtotal</span><span className="text-gray-900 dark:text-white">{DisplayPriceInShillings(selectedSale.subtotal || ((selectedSale.items||[]).reduce((s,i)=>s+(i.price*i.quantity),0)))}</span></div>
-              {selectedSale.discount > 0 && <div className="flex justify-between"><span className="text-gray-600 dark:text-gray-400">Discount</span><span className="text-pink-600">-{DisplayPriceInShillings(selectedSale.discount)}</span></div>}
+              {selectedSale.discount > 0 && <div className="flex justify-between"><span className="text-gray-600 dark:text-gray-400">Discount</span><span className="text-plum-600">-{DisplayPriceInShillings(selectedSale.discount)}</span></div>}
               <div className="flex justify-between"><span className="text-gray-600 dark:text-gray-400">Tax</span><span className="text-gray-900 dark:text-white">{DisplayPriceInShillings(selectedSale.tax || 0)}</span></div>
               <div className="flex justify-between text-base font-semibold"><span>Total</span><span>{DisplayPriceInShillings(selectedSale.total)}</span></div>
             </div>
