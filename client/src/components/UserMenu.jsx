@@ -41,6 +41,7 @@ const UserMenu = ({ close, variant = 'dropdown' }) => {
   const isDelivery = user?.role === 'delivery' || user?.isDelivery === true;
   const showStaffFunctions = isStaff(user) && !isAdmin;
   const isSidebar = variant === 'sidebar';
+  const useSlimDashboardNav = showStaffFunctions || isDelivery;
 
   const sectionClass = 'min-w-0 px-4 py-1 mt-3 mb-0.5 text-xs font-semibold uppercase tracking-[0.14em] leading-tight text-brown-500 dark:text-white/45 whitespace-normal break-words';
 
@@ -146,42 +147,53 @@ const UserMenu = ({ close, variant = 'dropdown' }) => {
       <div className={dividerClass} />
 
       <nav className="mt-2 flex min-w-0 flex-col gap-0.5 overflow-x-hidden text-sm">
-        <p className={sectionClass}>Shop</p>
-        <MenuLink to="/dashboard/cart" icon={FaShoppingCart} label="Cart" />
-        <MenuLink to="/dashboard/checkout" icon={FaCreditCard} label="Checkout" />
-
-        <p className={sectionClass}>Account</p>
-        <MenuLink to="/dashboard/profile" icon={FaUser} label="My profile" />
-        <MenuLink to="/dashboard/myorders" icon={FaShoppingBag} label="My orders" />
-        <MenuLink to="/dashboard/address" icon={FaMapMarkerAlt} label="My addresses" />
-        <MenuLink to="/dashboard/settings" icon={FaCog} label="Settings" />
-
-        <p className={sectionClass}>Rewards & community</p>
-        <MenuLink to="/dashboard/loyalty-program" icon={FaCrown} label="Loyalty program" />
-        <MenuLink to="/dashboard/community-perks" icon={FaGift} label="Community perks" />
-        <MenuLink to="/dashboard/active-campaigns" icon={FaBullhorn} label="Active campaigns" />
-        <MenuLink to="/dashboard/profile#royal" icon={FaStar} label="Royal card" />
-
-        {showStaffFunctions && (
+        {useSlimDashboardNav ? (
           <>
-            <p className={sectionClass}>Staff functions</p>
-            <MenuLink to="/dashboard/staff/dashboard" icon={FaUserTie} label="Staff dashboard" />
-            <MenuLink to="/dashboard/sales-counter" icon={FaShoppingBag} label="Sales counter" />
-            <MenuLink to="/dashboard/sales-history" icon={FaHistory} label="Sales history" />
-            <MenuLink to="/dashboard/staff/verify-pickup" icon={FaQrcode} label="Verify pickup" />
-            <MenuLink to="/dashboard/staff/pending-pickups" icon={FaBoxes} label="Pending pickups" />
-            <MenuLink to="/dashboard/staff/completed-verifications" icon={FaClipboardCheck} label="Verification history" />
+            <p className={sectionClass}>Account</p>
+            <MenuLink to="/dashboard/profile" icon={FaUser} label="My profile" />
+            <MenuLink to="/dashboard/settings" icon={FaCog} label="Settings" />
+
+            {showStaffFunctions && (
+              <>
+                <p className={sectionClass}>Staff functions</p>
+                <MenuLink to="/dashboard/staff/dashboard" icon={FaUserTie} label="Staff dashboard" />
+                <MenuLink to="/dashboard/sales-counter" icon={FaShoppingBag} label="Sales counter" />
+                <MenuLink to="/dashboard/sales-history" icon={FaHistory} label="Sales history" />
+                <MenuLink to="/dashboard/staff/verify-pickup" icon={FaQrcode} label="Verify pickup" />
+                <MenuLink to="/dashboard/staff/pending-pickups" icon={FaBoxes} label="Pending pickups" />
+                <MenuLink to="/dashboard/staff/completed-verifications" icon={FaClipboardCheck} label="Verification history" />
+                <MenuLink to="/dashboard/staff/delivery" icon={FaCog} label="Delivery management" />
+              </>
+            )}
+
+            {isDelivery && (
+              <>
+                <p className={sectionClass}>Delivery</p>
+                <MenuLink to="/dashboard/delivery/dashboard" icon={FaTachometerAlt} label="Delivery dashboard" />
+                <MenuLink to="/dashboard/delivery/active" icon={FaTruck} label="Active deliveries" />
+                <MenuLink to="/dashboard/delivery/completed" icon={FaShoppingBag} label="Completed deliveries" />
+                <MenuLink to="/dashboard/delivery/history" icon={FaHistory} label="Delivery history" />
+                <MenuLink to="/dashboard/delivery/map" icon={FaMapMarkedAlt} label="Map view" />
+              </>
+            )}
           </>
-        )}
-
-        {isDelivery && (
+        ) : (
           <>
-            <p className={sectionClass}>Delivery</p>
-            <MenuLink to="/dashboard/delivery/dashboard" icon={FaTachometerAlt} label="Delivery dashboard" />
-            <MenuLink to="/dashboard/delivery/active" icon={FaTruck} label="Active deliveries" />
-            <MenuLink to="/dashboard/delivery/completed" icon={FaShoppingBag} label="Completed deliveries" />
-            <MenuLink to="/dashboard/delivery/history" icon={FaHistory} label="Delivery history" />
-            <MenuLink to="/dashboard/delivery/map" icon={FaMapMarkedAlt} label="Map view" />
+            <p className={sectionClass}>Shop</p>
+            <MenuLink to="/dashboard/cart" icon={FaShoppingCart} label="Cart" />
+            <MenuLink to="/dashboard/checkout" icon={FaCreditCard} label="Checkout" />
+
+            <p className={sectionClass}>Account</p>
+            <MenuLink to="/dashboard/profile" icon={FaUser} label="My profile" />
+            <MenuLink to="/dashboard/myorders" icon={FaShoppingBag} label="My orders" />
+            <MenuLink to="/dashboard/address" icon={FaMapMarkerAlt} label="My addresses" />
+            <MenuLink to="/dashboard/settings" icon={FaCog} label="Settings" />
+
+            <p className={sectionClass}>Rewards & community</p>
+            <MenuLink to="/dashboard/loyalty-program" icon={FaCrown} label="Loyalty program" />
+            <MenuLink to="/dashboard/community-perks" icon={FaGift} label="Community perks" />
+            <MenuLink to="/dashboard/active-campaigns" icon={FaBullhorn} label="Active campaigns" />
+            <MenuLink to="/dashboard/profile#royal" icon={FaStar} label="Royal card" />
           </>
         )}
 

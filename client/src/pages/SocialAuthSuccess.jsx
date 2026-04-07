@@ -5,6 +5,7 @@ import { useDispatch } from 'react-redux';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { fetchCartItems } from '../redux/slice/cartSlice';
 import { setUserDetails } from '../store/userSlice';
+import { getPostLoginPath } from '../utils/postLoginRedirect';
 
 const SocialAuthSuccess = () => {
   const dispatch = useDispatch();
@@ -70,7 +71,7 @@ const SocialAuthSuccess = () => {
         dispatch(fetchCartItems());
 
         toast.success('Successfully logged in with social account!');
-        navigate('/');
+        navigate(getPostLoginPath(userObject));
       } catch (error) {
         console.error('Social authentication error:', error);
         toast.error('Authentication failed. Please try again.');
