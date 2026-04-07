@@ -373,7 +373,7 @@ export async function loginController(request, response) {
             }
 
             return response.status(403).json({
-                message: "Please verify your email before signing in. If you do not see the link, use resend verification from the verify email screen.",
+                message: "Please verify your email before signing in. If you do not see the link, request another verification email from the verify email screen.",
                 error: true,
                 success: false,
                 requiresVerification: true,
@@ -619,7 +619,7 @@ export async function updateUserDetails(request, response) {
         return response.json({
             message: emailChanged
                 ? verificationEmailFailed
-                    ? "Profile updated, but we could not send the verification email yet. Please use resend verification from your profile."
+                    ? "Profile updated, but we could not send the verification email yet. Please request another verification email from your profile."
                     : "Profile updated. Please verify your new email address before your next sign-in."
                 : mobileChanged
                     ? "Profile updated. Your phone number will need verification."

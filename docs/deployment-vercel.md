@@ -67,7 +67,11 @@ Set these environment variables on the backend host:
 - `PESAPAL_NOTIFICATION_ID`
 - `GOOGLE_CLIENT_ID`
 - `GOOGLE_CLIENT_SECRET`
-- `RESEND_API`
+- `SMTP_SERVICE` or `SMTP_HOST`
+- `SMTP_PORT`
+- `SMTP_SECURE`
+- `SMTP_USER`
+- `SMTP_PASS`
 - `EMAIL_FROM`
 - `EMAIL_REPLY_TO`
 - `FRONTEND_URL=https://nawirihairke.com`
@@ -159,7 +163,7 @@ Example:
 
 To make your account, order, dispatch, and verification emails look fully professional:
 
-1. Verify `nawirihairke.com` in your email provider, such as Resend
+1. Verify `nawirihairke.com` in your chosen email provider
 2. Add the DNS records that email provider gives you in Porkbun
 3. Set:
    - `EMAIL_FROM=Nawiri Hair Kenya <noreply@nawirihairke.com>`
