@@ -3,12 +3,67 @@ import jwt from 'jsonwebtoken'
 import sendEmail from '../config/sendEmail.js'
 import LoyaltyCard from '../models/loyaltycard.model.js'
 import UserModel from '../models/user.model.js'
+import { nawiriBrand } from '../utils/brand.js'
+import { renderAccountNoticeEmail } from '../utils/emailTemplates.js'
+import { normalizeEmail, validateEmailAddress } from '../utils/emailValidation.js'
 import forgotPasswordTemplate from '../utils/forgotPasswordTemplate.js'
 import generatedAccessToken from '../utils/generatedAccessToken.js'
 import generatedOtp from '../utils/generatedOtp.js'
 import genertedRefreshToken from '../utils/generatedRefreshToken.js'
+import { sendVerificationEmail } from '../utils/sendVerificationEmail.js'
 import uploadImageClodinary from '../utils/uploadImageClodinary.js'
-import verifyEmailTemplate from '../utils/verifyEmailTemplate.js'
+
+const passwordRegex = /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d@$!%*#?&]{8,}$/
+
+const normalizePhoneNumber = (value = '') => {
+    const digits = String(value).replace(/\D/g, '')
+
+    if (!digits) {
+        return ''
+    }
+
+    if (digits.startsWith('254') && digits.length === 12) {
+        return `0${digits.slice(3)}`
+    }
+
+    if (digits.length === 9 && (digits.startsWith('7') || digits.startsWith('1'))) {
+        return `0${digits}`
+    }
+
+    return digits
+}
+
+const isValidKenyanPhone = (value = '') => /^(07|01)\d{8}$/.test(normalizePhoneNumber(value))
+
+const maskPhoneNumber = (value = '') => {
+    const normalized = normalizePhoneNumber(value)
+
+    if (normalized.length < 4) {
+        return normalized
+    }
+
+    return `${normalized.slice(0, 4)} ${'*'.repeat(Math.max(normalized.length - 7, 1))}${normalized.slice(-3)}`
+}
+
+const sendPhoneVerificationCodeEmail = async ({ user, phoneNumber, otp }) =>
+    sendEmail({
+        sendTo: user.email,
+        subject: 'Verify your Nawiri Hair Kenya phone number',
+        html: renderAccountNoticeEmail({
+            name: user.name,
+            title: 'Confirm your phone number',
+            intro: 'Use the one-time code below to verify the phone number linked to your Nawiri Hair Kenya account.',
+            infoRows: [
+                { label: 'Phone number', value: phoneNumber },
+                { label: 'Verification code', value: otp },
+                { label: 'Validity', value: '10 minutes' },
+            ],
+            highlights: [
+                'For now, the verification code is delivered to your email so your team can keep testing securely.',
+                'Once an SMS provider is configured, the same verification flow can send the code directly to the phone number.',
+            ],
+        }),
+    })
 
 export async function registerUserController(request,response){
     try {
@@ -22,7 +77,35 @@ export async function registerUserController(request,response){
             })
         }
 
-        const user = await UserModel.findOne({ email })
+        const trimmedName = name.trim()
+
+        if (!trimmedName) {
+            return response.status(400).json({
+                message: 'Name is required.',
+                error: true,
+                success: false
+            })
+        }
+
+        const emailValidation = await validateEmailAddress(email)
+
+        if (!emailValidation.valid) {
+            return response.status(400).json({
+                message: emailValidation.message,
+                error: true,
+                success: false
+            })
+        }
+
+        if (!passwordRegex.test(password)) {
+            return response.status(400).json({
+                message: 'Password must be at least 8 characters and include letters and numbers.',
+                error: true,
+                success: false
+            })
+        }
+
+        const user = await UserModel.findOne({ email: emailValidation.normalizedEmail })
 
         if(user){
             return response.json({
@@ -36,30 +119,25 @@ export async function registerUserController(request,response){
         const hashPassword = await bcryptjs.hash(password,salt)
 
         const payload = {
-            name,
-            email,
+            name: trimmedName,
+            email: emailValidation.normalizedEmail,
             password : hashPassword
         }
 
         const newUser = new UserModel(payload)
         const save = await newUser.save()
-
-        const VerifyEmailUrl = `${process.env.FRONTEND_URL}/verify-email?code=${save?._id}`
-
-        const verifyEmail = await sendEmail({
-            sendTo : email,
-            subject : "Verify email from NAWIRI HAIR",
-            html : verifyEmailTemplate({
-                name,
-                url : VerifyEmailUrl
-            })
-        })
+        await sendVerificationEmail(save)
 
         return response.json({
-            message : "User register successfully",
+            message : "Account created. Please verify your email before signing in.",
             error : false,
             success : true,
-            data : save
+            data : {
+                _id: save._id,
+                name: save.name,
+                email: save.email,
+                verify_email: save.verify_email
+            }
         })
 
     } catch (error) {
@@ -124,32 +202,123 @@ export async function getAllUsersController(request, response) {
 
 export async function verifyEmailController(request,response){
     try {
-        const { code } = request.body
+        const { token } = request.body
 
-        const user = await UserModel.findOne({ _id : code})
+        if (!token) {
+            return response.status(400).json({
+                message: "Verification token is required",
+                error: true,
+                success: false
+            })
+        }
+
+        const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback-secret')
+
+        if (decoded?.purpose !== 'verify-email') {
+            return response.status(400).json({
+                message: "Invalid verification token",
+                error: true,
+                success: false
+            })
+        }
+
+        const user = await UserModel.findOne({
+            _id: decoded.userId,
+            email: normalizeEmail(decoded.email)
+        })
 
         if(!user){
             return response.status(400).json({
-                message : "Invalid code",
+                message : "Invalid verification request",
                 error : true,
                 success : false
             })
         }
 
-        const updateUser = await UserModel.updateOne({ _id : code },{
+        if (user.verify_email) {
+            return response.json({
+                message : "Email already verified",
+                success : true,
+                error : false
+            })
+        }
+
+        await UserModel.updateOne({ _id : user._id },{
             verify_email : true
         })
 
         return response.json({
-            message : "Verify email done",
+            message : "Email verified successfully",
             success : true,
             error : false
         })
     } catch (error) {
+        if (error instanceof jwt.TokenExpiredError) {
+            return response.status(400).json({
+                message: "This verification link has expired. Please request a new one.",
+                error: true,
+                success: false
+            })
+        }
+
+        if (error instanceof jwt.JsonWebTokenError) {
+            return response.status(400).json({
+                message: "Invalid verification link. Please request a new one.",
+                error: true,
+                success: false
+            })
+        }
+
         return response.status(500).json({
             message : error.message || error,
             error : true,
-            success : true
+            success : false
+        })
+    }
+}
+
+export async function sendVerificationEmailController(request, response) {
+    try {
+        const requestedEmail = normalizeEmail(request.body?.email)
+
+        if (!requestedEmail) {
+            return response.status(400).json({
+                message: 'Email address is required',
+                error: true,
+                success: false
+            })
+        }
+
+        const user = await UserModel.findOne({ email: requestedEmail })
+
+        if (!user) {
+            return response.json({
+                message: 'If that account exists, a verification email is on the way.',
+                error: false,
+                success: true
+            })
+        }
+
+        if (user.verify_email) {
+            return response.json({
+                message: 'This email address is already verified.',
+                error: false,
+                success: true
+            })
+        }
+
+        await sendVerificationEmail(user)
+
+        return response.json({
+            message: 'Verification email sent. Please check your inbox.',
+            error: false,
+            success: true
+        })
+    } catch (error) {
+        return response.status(500).json({
+            message: error.message || error,
+            error: true,
+            success: false
         })
     }
 }
@@ -167,7 +336,8 @@ export async function loginController(request, response) {
             });
         }
 
-        const user = await UserModel.findOne({ email });
+        const normalizedEmail = normalizeEmail(email)
+        const user = await UserModel.findOne({ email: normalizedEmail });
 
         if (!user) {
             return response.status(400).json({
@@ -195,11 +365,28 @@ export async function loginController(request, response) {
             });
         }
 
+        if (!user.verify_email && user.authType !== 'google') {
+            try {
+                await sendVerificationEmail(user);
+            } catch (verificationEmailError) {
+                console.error('Error sending login verification email:', verificationEmailError);
+            }
+
+            return response.status(403).json({
+                message: "Please verify your email before signing in. If you do not see the link, request another verification email from the verify email screen.",
+                error: true,
+                success: false,
+                requiresVerification: true,
+                email: user.email
+            });
+        }
+
         const accesstoken = await generatedAccessToken(user._id);
         const refreshToken = await genertedRefreshToken(user._id);
 
         await UserModel.findByIdAndUpdate(user._id, {
-            last_login_date: new Date()
+            last_login_date: new Date(),
+            lastLogin: new Date()
         });
 
         // Fetch loyalty points and class
@@ -330,26 +517,116 @@ export async function updateUserDetails(request, response) {
     try {
         const userId = request.userId; //auth middleware
         const { name, email, mobile, password } = request.body;
+        const currentUser = await UserModel.findById(userId);
 
-        let hashPassword = "";
-
-        if (password) {
-            const salt = await bcryptjs.genSalt(10);
-            hashPassword = await bcryptjs.hash(password, salt);
+        if (!currentUser) {
+            return response.status(404).json({
+                message: "User not found",
+                error: true,
+                success: false
+            });
         }
 
-        const updateUser = await UserModel.updateOne({ _id: userId }, {
-            ...(name && { name: name }),
-            ...(email && { email: email }),
-            ...(mobile && { mobile: mobile }),
-            ...(password && { password: hashPassword })
-        });
+        let hashPassword = "";
+        const updatePayload = {};
+        let emailChanged = false;
+        let mobileChanged = false;
+        let verificationEmailFailed = false;
+
+        if (password) {
+            if (!passwordRegex.test(password)) {
+                return response.status(400).json({
+                    message: 'Password must be at least 8 characters and include letters and numbers.',
+                    error: true,
+                    success: false
+                });
+            }
+
+            const salt = await bcryptjs.genSalt(10);
+            hashPassword = await bcryptjs.hash(password, salt);
+            updatePayload.password = hashPassword;
+            updatePayload.passwordLastChanged = new Date();
+        }
+
+        if (name?.trim()) {
+            updatePayload.name = name.trim();
+        }
+
+        if (email) {
+            const normalizedNewEmail = normalizeEmail(email);
+
+            if (normalizedNewEmail !== currentUser.email) {
+                const emailValidation = await validateEmailAddress(normalizedNewEmail);
+
+                if (!emailValidation.valid) {
+                    return response.status(400).json({
+                        message: emailValidation.message,
+                        error: true,
+                        success: false
+                    });
+                }
+
+                const existingUser = await UserModel.findOne({
+                    email: emailValidation.normalizedEmail,
+                    _id: { $ne: userId }
+                });
+
+                if (existingUser) {
+                    return response.status(400).json({
+                        message: 'That email address is already in use.',
+                        error: true,
+                        success: false
+                    });
+                }
+
+                updatePayload.email = emailValidation.normalizedEmail;
+                updatePayload.verify_email = false;
+                emailChanged = true;
+            }
+        }
+
+        if (typeof mobile === 'string') {
+            const normalizedMobile = normalizePhoneNumber(mobile);
+
+            if (normalizedMobile && !isValidKenyanPhone(normalizedMobile)) {
+                return response.status(400).json({
+                    message: 'Please use a valid Kenyan mobile number.',
+                    error: true,
+                    success: false
+                });
+            }
+
+            if (normalizedMobile !== (currentUser.mobile || '')) {
+                updatePayload.mobile = normalizedMobile;
+                updatePayload.mobile_verified = false;
+                mobileChanged = true;
+            }
+        }
+
+        await UserModel.updateOne({ _id: userId }, updatePayload);
+
+        const updatedUser = await UserModel.findById(userId).select('-password -refresh_token');
+
+        if (emailChanged && updatedUser) {
+            try {
+                await sendVerificationEmail(updatedUser);
+            } catch (verificationError) {
+                console.error('Error sending updated email verification:', verificationError);
+                verificationEmailFailed = true;
+            }
+        }
 
         return response.json({
-            message: "Updated successfully",
+            message: emailChanged
+                ? verificationEmailFailed
+                    ? "Profile updated, but we could not send the verification email yet. Please request another verification email from your profile."
+                    : "Profile updated. Please verify your new email address before your next sign-in."
+                : mobileChanged
+                    ? "Profile updated. Your phone number will need verification."
+                    : "Updated successfully",
             error: false,
             success: true,
-            data: updateUser
+            data: updatedUser
         });
 
     } catch (error) {
@@ -361,12 +638,127 @@ export async function updateUserDetails(request, response) {
     }
 }
 
+export async function requestPhoneVerificationOtpController(request, response) {
+    try {
+        const user = await UserModel.findById(request.userId)
+
+        if (!user) {
+            return response.status(404).json({
+                message: 'User not found',
+                error: true,
+                success: false
+            })
+        }
+
+        const requestedMobile = normalizePhoneNumber(request.body?.mobile || user.mobile)
+
+        if (!requestedMobile || !isValidKenyanPhone(requestedMobile)) {
+            return response.status(400).json({
+                message: 'Please provide a valid Kenyan mobile number first.',
+                error: true,
+                success: false
+            })
+        }
+
+        const otp = String(generatedOtp())
+        const expiry = new Date(Date.now() + 10 * 60 * 1000)
+
+        user.mobile = requestedMobile
+        user.mobile_verified = false
+        user.mobile_verification_otp = otp
+        user.mobile_verification_expiry = expiry
+        await user.save()
+
+        await sendPhoneVerificationCodeEmail({
+            user,
+            phoneNumber: requestedMobile,
+            otp,
+        })
+
+        return response.json({
+            message: `Verification code sent for ${maskPhoneNumber(requestedMobile)}. Check your email inbox.`,
+            error: false,
+            success: true
+        })
+    } catch (error) {
+        return response.status(500).json({
+            message: error.message || error,
+            error: true,
+            success: false
+        })
+    }
+}
+
+export async function verifyPhoneOtpController(request, response) {
+    try {
+        const { otp } = request.body
+        const user = await UserModel.findById(request.userId)
+
+        if (!user) {
+            return response.status(404).json({
+                message: 'User not found',
+                error: true,
+                success: false
+            })
+        }
+
+        if (!otp) {
+            return response.status(400).json({
+                message: 'Verification code is required',
+                error: true,
+                success: false
+            })
+        }
+
+        if (!user.mobile_verification_otp || !user.mobile_verification_expiry) {
+            return response.status(400).json({
+                message: 'No active phone verification code found. Please request a new one.',
+                error: true,
+                success: false
+            })
+        }
+
+        if (user.mobile_verification_expiry < new Date()) {
+            return response.status(400).json({
+                message: 'This phone verification code has expired. Please request a new one.',
+                error: true,
+                success: false
+            })
+        }
+
+        if (String(otp).trim() !== user.mobile_verification_otp) {
+            return response.status(400).json({
+                message: 'Invalid phone verification code',
+                error: true,
+                success: false
+            })
+        }
+
+        user.mobile_verified = true
+        user.mobile_verification_otp = null
+        user.mobile_verification_expiry = null
+        await user.save()
+
+        return response.json({
+            message: 'Phone number verified successfully',
+            error: false,
+            success: true
+        })
+    } catch (error) {
+        return response.status(500).json({
+            message: error.message || error,
+            error: true,
+            success: false
+        })
+    }
+}
+
 //forgot password not login
 export async function forgotPasswordController(request,response) {
     try {
-        const { email } = request.body 
+        const normalizedEmail = normalizeEmail(request.body?.email)
 
-        const user = await UserModel.findOne({ email })
+        const user = await UserModel.findOne({ email: normalizedEmail })
 
         if(!user){
             return response.status(400).json({
@@ -385,8 +777,8 @@ export async function forgotPasswordController(request,response) {
         })
 
         await sendEmail({
-            sendTo : email,
-            subject : "Forgot password from NAWIRI HAIR",
+            sendTo : normalizedEmail,
+            subject : "Reset your Nawiri Hair Kenya password",
             html : forgotPasswordTemplate({
                 name : user.name,
                 otp : otp
@@ -411,7 +803,8 @@ export async function forgotPasswordController(request,response) {
 //verify forgot password otp
 export async function verifyForgotPasswordOtp(request,response){
     try {
-        const { email , otp }  = request.body
+        const { otp }  = request.body
+        const email = normalizeEmail(request.body?.email)
 
         if(!email || !otp){
             return response.status(400).json({
@@ -475,7 +868,8 @@ export async function verifyForgotPasswordOtp(request,response){
 //reset the password
 export async function resetpassword(request,response){
     try {
-        const { email , newPassword, confirmPassword } = request.body 
+        const { newPassword, confirmPassword } = request.body 
+        const email = normalizeEmail(request.body?.email)
 
         if(!email || !newPassword || !confirmPassword){
             return response.status(400).json({
@@ -501,12 +895,39 @@ export async function resetpassword(request,response){
             })
         }
 
+        if (!passwordRegex.test(newPassword)) {
+            return response.status(400).json({
+                message: 'Password must be at least 8 characters and include letters and numbers.',
+                error: true,
+                success: false,
+            })
+        }
+
         const salt = await bcryptjs.genSalt(10)
         const hashPassword = await bcryptjs.hash(newPassword,salt)
 
-        const update = await UserModel.findOneAndUpdate(user._id,{
-            password : hashPassword
+        await UserModel.findByIdAndUpdate(user._id,{
+            password : hashPassword,
+            passwordLastChanged: new Date()
         })
+
+        try {
+            await sendEmail({
+                sendTo: user.email,
+                subject: 'Password reset completed - Nawiri Hair Kenya',
+                html: renderAccountNoticeEmail({
+                    name: user.name,
+                    title: 'Your password was reset',
+                    intro: 'Your Nawiri Hair Kenya password has just been reset successfully.',
+                    highlights: [
+                        'You can now sign in with your new password.',
+                        `If this reset was not made by you, contact ${nawiriBrand.supportEmail} immediately.`,
+                    ],
+                })
+            })
+        } catch (emailError) {
+            console.error('Error sending password reset confirmation:', emailError)
+        }
 
         return response.json({
             message : "Password updated successfully.",
@@ -641,6 +1062,8 @@ export async function userDetails(request,response){
             loyaltyClass: loyaltyInfo.tier,
             isAdmin: Boolean(user.isAdmin),  // Ensure boolean type
             isDelivery: Boolean(user.isDelivery),
+            isStaff: Boolean(user.isStaff),
+            mobile_verified: Boolean(user.mobile_verified),
             role: user.role || 'user'        // Provide default if missing
         };
 
@@ -697,6 +1120,7 @@ export const getUserDetails = async (req, res) => {
             name: user.name,
             email: user.email,
             mobile: user.mobile,
+            mobile_verified: Boolean(user.mobile_verified),
             isAdmin: Boolean(user.isAdmin), // Force boolean conversion
             role: user.role,
             avatar: user.avatar,
@@ -779,16 +1203,16 @@ export async function changePassword(request, response) {
         try {
             await sendEmail({
                 sendTo: user.email,
-                subject: "Password Changed - Nawiri Hair",
-                html: `
-                    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 5px;">
-                        <h2 style="color: #333;">Password Changed</h2>
-                        <p>Hello ${user.name},</p>
-                        <p>Your password was recently changed. If you made this change, you can ignore this email.</p>
-                        <p>If you did not change your password, please contact us immediately.</p>
-                        <p>Thank you,<br>Nawiri Hair Team</p>
-                    </div>
-                `
+                subject: "Password changed - Nawiri Hair Kenya",
+                html: renderAccountNoticeEmail({
+                    name: user.name,
+                    title: 'Your password was changed',
+                    intro: 'This is a security confirmation that your Nawiri Hair Kenya password was updated successfully.',
+                    highlights: [
+                        'If you made this change, no further action is needed.',
+                        `If this was not you, contact us immediately at ${nawiriBrand.supportEmail}.`,
+                    ],
+                })
             });
         } catch (emailError) {
             console.error("Error sending password change notification:", emailError);
@@ -1191,16 +1615,16 @@ export async function updateUserRoleController(req, res) {
         try {
             await sendEmail({
                 sendTo: updatedUser.email,
-                subject: `Role Update - Nawiri Hair`,
-                html: `
-                    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 5px;">
-                        <h2 style="color: #333;">Account Role Updated</h2>
-                        <p>Hello ${updatedUser.name},</p>
-                        <p>Your account role has been updated. You are now ${updatedUser.isAdmin ? 'an admin' : 'a regular user'}.</p>
-                        <p>If you have any questions, please contact support.</p>
-                        <p>Thank you,<br>Nawiri Hair Team</p>
-                    </div>
-                `
+                subject: `Account role updated - Nawiri Hair Kenya`,
+                html: renderAccountNoticeEmail({
+                    name: updatedUser.name,
+                    title: 'Your account role changed',
+                    intro: `Your Nawiri Hair Kenya account role is now ${updatedUser.isAdmin ? 'Administrator' : 'Customer'}.`,
+                    highlights: [
+                        'This change controls the tools and dashboards available on your account.',
+                        `If you were not expecting this update, contact ${nawiriBrand.supportEmail}.`,
+                    ],
+                })
             });
         } catch (emailError) {
             console.error("Error sending role update notification:", emailError);
@@ -1277,17 +1701,16 @@ export async function blockUserController(req, res) {
         try {
             await sendEmail({
                 sendTo: user.email,
-                subject: `Account Suspended - Nawiri Hair`,
-                html: `
-                    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 5px;">
-                        <h2 style="color: #ff0000;">Account Suspended</h2>
-                        <p>Hello ${user.name},</p>
-                        <p>Your account has been suspended ${suspensionEndDate ? 'until ' + suspensionEndDate.toDateString() : 'permanently'}.</p>
-                        <p><strong>Reason:</strong> ${reason}</p>
-                        <p>If you believe this is a mistake, please contact our support team.</p>
-                        <p>Thank you,<br>Nawiri Hair Team</p>
-                    </div>
-                `
+                subject: `Account suspended - Nawiri Hair Kenya`,
+                html: renderAccountNoticeEmail({
+                    name: user.name,
+                    title: 'Your account has been suspended',
+                    intro: `Your Nawiri Hair Kenya account has been suspended ${suspensionEndDate ? `until ${suspensionEndDate.toDateString()}` : 'until further notice'}.`,
+                    infoRows: [
+                        { label: 'Reason', value: reason },
+                        { label: 'Support', value: nawiriBrand.supportEmail },
+                    ],
+                })
             });
         } catch (emailError) {
             console.error("Error sending suspension notification:", emailError);
@@ -1346,15 +1769,12 @@ export async function unblockUserController(req, res) {
         try {
             await sendEmail({
                 sendTo: user.email,
-                subject: `Account Reactivated - Nawiri Hair`,
-                html: `
-                    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 5px;">
-                        <h2 style="color: #00aa00;">Account Reactivated</h2>
-                        <p>Hello ${user.name},</p>
-                        <p>Your account has been reactivated. You can now log in and use our services again.</p>
-                        <p>Thank you,<br>Nawiri Hair Team</p>
-                    </div>
-                `
+                subject: `Account reactivated - Nawiri Hair Kenya`,
+                html: renderAccountNoticeEmail({
+                    name: user.name,
+                    title: 'Your account is active again',
+                    intro: 'Your Nawiri Hair Kenya account has been reactivated and you can now sign in normally.',
+                })
             });
         } catch (emailError) {
             console.error("Error sending reactivation notification:", emailError);
@@ -1407,16 +1827,16 @@ export async function deleteUserController(req, res) {
         try {
             await sendEmail({
                 sendTo: user.email,
-                subject: `Account Deleted - Nawiri Hair`,
-                html: `
-                    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 5px;">
-                        <h2 style="color: #ff0000;">Account Deleted</h2>
-                        <p>Hello ${user.name},</p>
-                        <p>Your account has been deleted from our system.</p>
-                        <p>If you believe this is a mistake or if you want to create a new account, please contact our support team.</p>
-                        <p>Thank you,<br>Nawiri Hair Team</p>
-                    </div>
-                `
+                subject: `Account deleted - Nawiri Hair Kenya`,
+                html: renderAccountNoticeEmail({
+                    name: user.name,
+                    title: 'Your account was deleted',
+                    intro: 'Your Nawiri Hair Kenya account has been removed from our system.',
+                    highlights: [
+                        `If you believe this was done in error, contact ${nawiriBrand.supportEmail}.`,
+                        'You can always create a fresh account later if needed.',
+                    ],
+                })
             });
         } catch (emailError) {
             console.error("Error sending account deletion notification:", emailError);

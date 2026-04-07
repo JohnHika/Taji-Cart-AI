@@ -13,6 +13,8 @@ import {
 } from 'react-icons/fa';
 
 const UserTable = ({ users, onDelete, onChangeRole, onBlockUser, onUnblockUser, onSetDelivery }) => {
+  const canManageUsers = Boolean(onDelete || onChangeRole || onBlockUser || onUnblockUser || onSetDelivery);
+
   const formatDate = (dateString) => {
     if (!dateString) return 'N/A';
     return new Date(dateString).toLocaleDateString('en-US', {
@@ -23,8 +25,121 @@ const UserTable = ({ users, onDelete, onChangeRole, onBlockUser, onUnblockUser, 
   };
 
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full bg-white dark:bg-gray-800 dark:text-gray-200">
+    <div className="w-full max-w-full overflow-x-hidden md:overflow-x-auto">
+      <div className="divide-y divide-gray-200 dark:divide-gray-700 md:hidden">
+        {users.map((user) => (
+          <div key={user._id} className="p-4">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <div className="text-base font-semibold text-gray-900 dark:text-white truncate">
+                  {user.name || 'Not Set'}
+                </div>
+                <div className="mt-1 text-sm text-gray-500 dark:text-gray-400 break-all">
+                  {user.email || 'Not Set'}
+                </div>
+                <div className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                  {user.mobile || 'No phone'}
+                </div>
+              </div>
+
+              <span className={`shrink-0 inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium ${
+                user.status === 'Active'
+                  ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300'
+                  : user.status === 'Inactive'
+                  ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300'
+                  : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300'
+              }`}>
+                {user.status || 'Unknown'}
+              </span>
+            </div>
+
+            <div className="mt-3 flex flex-wrap gap-2">
+              <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${
+                user.isAdmin ? 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200' : 
+                user.isStaff || user.role === 'staff' ? 'bg-teal-100 text-teal-800 dark:bg-teal-900 dark:text-teal-200' :
+                user.isDelivery || user.role === 'delivery' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' :
+                'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
+              }`}>
+                {user.isAdmin ? <FaUserShield className="mr-1" size={12} /> : 
+                 user.isStaff || user.role === 'staff' ? <FaIdBadge className="mr-1" size={12} /> :
+                 user.isDelivery || user.role === 'delivery' ? <FaTruck className="mr-1" size={12} /> : 
+                 <FaUser className="mr-1" size={12} />}
+                {user.isAdmin ? 'Admin' : 
+                 user.isStaff || user.role === 'staff' ? 'Staff' :
+                 user.isDelivery || user.role === 'delivery' ? 'Driver' : 
+                 'Customer'}
+              </span>
+              <span className="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-700 dark:bg-gray-700 dark:text-gray-200">
+                Joined {formatDate(user.createdAt)}
+              </span>
+              <span className="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-700 dark:bg-gray-700 dark:text-gray-200">
+                Last login {user.last_login_date ? formatDate(user.last_login_date) : 'Never'}
+              </span>
+            </div>
+
+            {canManageUsers && (
+              <div className="mt-4 flex flex-wrap gap-2">
+                {onChangeRole && (
+                  <button 
+                    onClick={() => onChangeRole(user)}
+                    className="inline-flex items-center rounded-lg bg-blue-100 px-3 py-2 text-xs font-medium text-blue-800 transition-colors hover:bg-blue-200 dark:bg-blue-900 dark:text-blue-300 dark:hover:bg-blue-800"
+                    title="Manage Role"
+                  >
+                    <FaUserCog size={14} className="mr-2" />
+                    Role
+                  </button>
+                )}
+
+                {onSetDelivery && (
+                  <button 
+                    onClick={() => onSetDelivery(user)}
+                    className="inline-flex items-center rounded-lg bg-green-100 px-3 py-2 text-xs font-medium text-green-800 transition-colors hover:bg-green-200 dark:bg-green-900 dark:text-green-300 dark:hover:bg-green-800"
+                    title="Delivery Status"
+                  >
+                    <FaTruck size={14} className="mr-2" />
+                    Delivery
+                  </button>
+                )}
+
+                {user.status !== 'Suspended' && onBlockUser && (
+                  <button 
+                    onClick={() => onBlockUser(user)}
+                    className="inline-flex items-center rounded-lg bg-yellow-100 px-3 py-2 text-xs font-medium text-yellow-800 transition-colors hover:bg-yellow-200 dark:bg-yellow-900 dark:text-yellow-300 dark:hover:bg-yellow-800"
+                    title="Block User"
+                  >
+                    <FaBan size={14} className="mr-2" />
+                    Block
+                  </button>
+                )}
+
+                {user.status === 'Suspended' && onUnblockUser && (
+                  <button 
+                    onClick={() => onUnblockUser(user)}
+                    className="inline-flex items-center rounded-lg bg-green-100 px-3 py-2 text-xs font-medium text-green-800 transition-colors hover:bg-green-200 dark:bg-green-900 dark:text-green-300 dark:hover:bg-green-800"
+                    title="Unblock User"
+                  >
+                    <FaUnlock size={14} className="mr-2" />
+                    Unblock
+                  </button>
+                )}
+
+                {onDelete && (
+                  <button 
+                    onClick={() => onDelete(user)}
+                    className="inline-flex items-center rounded-lg bg-red-100 px-3 py-2 text-xs font-medium text-red-800 transition-colors hover:bg-red-200 dark:bg-red-900 dark:text-red-300 dark:hover:bg-red-800"
+                    title="Delete User"
+                  >
+                    <FaTrash size={14} className="mr-2" />
+                    Delete
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+
+      <table className="hidden md:table w-full bg-white dark:bg-gray-800 dark:text-gray-200">
         <thead>
           <tr className="bg-gray-100 dark:bg-gray-700">
             <th className="py-2 px-3 border-b dark:border-gray-600 text-left">Name</th>
@@ -34,7 +149,9 @@ const UserTable = ({ users, onDelete, onChangeRole, onBlockUser, onUnblockUser, 
             <th className="py-2 px-3 border-b dark:border-gray-600 text-left">Last Login</th>
             <th className="py-2 px-3 border-b dark:border-gray-600 text-left">Status</th>
             <th className="py-2 px-3 border-b dark:border-gray-600 text-left">Role</th>
-            <th className="py-2 px-3 border-b dark:border-gray-600 text-left">Actions</th>
+            {canManageUsers && (
+              <th className="py-2 px-3 border-b dark:border-gray-600 text-left">Actions</th>
+            )}
           </tr>
         </thead>
         <tbody>
@@ -96,51 +213,61 @@ const UserTable = ({ users, onDelete, onChangeRole, onBlockUser, onUnblockUser, 
                    'Customer'}
                 </span>
               </td>
-              <td className="py-2 px-3 border-b dark:border-gray-600">
-                <div className="flex space-x-1">
-                  <button 
-                    onClick={() => onChangeRole(user)}
-                    className="p-1 bg-blue-100 text-blue-800 rounded hover:bg-blue-200 dark:bg-blue-900 dark:text-blue-300 dark:hover:bg-blue-800 transition-colors"
-                    title="Manage Role"
-                  >
-                    <FaUserCog size={14} />
-                  </button>
-                  
-                  <button 
-                    onClick={() => onSetDelivery(user)}
-                    className="p-1 bg-green-100 text-green-800 rounded hover:bg-green-200 dark:bg-green-900 dark:text-green-300 dark:hover:bg-green-800 transition-colors"
-                    title="Delivery Status"
-                  >
-                    <FaTruck size={14} />
-                  </button>
-                  
-                  {user.status !== 'Suspended' ? (
-                    <button 
-                      onClick={() => onBlockUser(user)}
-                      className="p-1 bg-yellow-100 text-yellow-800 rounded hover:bg-yellow-200 dark:bg-yellow-900 dark:text-yellow-300 dark:hover:bg-yellow-800 transition-colors"
-                      title="Block User"
-                    >
-                      <FaBan size={14} />
-                    </button>
-                  ) : (
-                    <button 
-                      onClick={() => onUnblockUser(user)}
-                      className="p-1 bg-green-100 text-green-800 rounded hover:bg-green-200 dark:bg-green-900 dark:text-green-300 dark:hover:bg-green-800 transition-colors"
-                      title="Unblock User"
-                    >
-                      <FaUnlock size={14} />
-                    </button>
-                  )}
-                  
-                  <button 
-                    onClick={() => onDelete(user)}
-                    className="p-1 bg-red-100 text-red-800 rounded hover:bg-red-200 dark:bg-red-900 dark:text-red-300 dark:hover:bg-red-800 transition-colors"
-                    title="Delete User"
-                  >
-                    <FaTrash size={14} />
-                  </button>
-                </div>
-              </td>
+              {canManageUsers && (
+                <td className="py-2 px-3 border-b dark:border-gray-600">
+                  <div className="flex space-x-1">
+                    {onChangeRole && (
+                      <button 
+                        onClick={() => onChangeRole(user)}
+                        className="p-1 bg-blue-100 text-blue-800 rounded hover:bg-blue-200 dark:bg-blue-900 dark:text-blue-300 dark:hover:bg-blue-800 transition-colors"
+                        title="Manage Role"
+                      >
+                        <FaUserCog size={14} />
+                      </button>
+                    )}
+                    
+                    {onSetDelivery && (
+                      <button 
+                        onClick={() => onSetDelivery(user)}
+                        className="p-1 bg-green-100 text-green-800 rounded hover:bg-green-200 dark:bg-green-900 dark:text-green-300 dark:hover:bg-green-800 transition-colors"
+                        title="Delivery Status"
+                      >
+                        <FaTruck size={14} />
+                      </button>
+                    )}
+                    
+                    {user.status !== 'Suspended' && onBlockUser ? (
+                      <button 
+                        onClick={() => onBlockUser(user)}
+                        className="p-1 bg-yellow-100 text-yellow-800 rounded hover:bg-yellow-200 dark:bg-yellow-900 dark:text-yellow-300 dark:hover:bg-yellow-800 transition-colors"
+                        title="Block User"
+                      >
+                        <FaBan size={14} />
+                      </button>
+                    ) : null}
+
+                    {user.status === 'Suspended' && onUnblockUser ? (
+                      <button 
+                        onClick={() => onUnblockUser(user)}
+                        className="p-1 bg-green-100 text-green-800 rounded hover:bg-green-200 dark:bg-green-900 dark:text-green-300 dark:hover:bg-green-800 transition-colors"
+                        title="Unblock User"
+                      >
+                        <FaUnlock size={14} />
+                      </button>
+                    ) : null}
+                    
+                    {onDelete && (
+                      <button 
+                        onClick={() => onDelete(user)}
+                        className="p-1 bg-red-100 text-red-800 rounded hover:bg-red-200 dark:bg-red-900 dark:text-red-300 dark:hover:bg-red-800 transition-colors"
+                        title="Delete User"
+                      >
+                        <FaTrash size={14} />
+                      </button>
+                    )}
+                  </div>
+                </td>
+              )}
             </tr>
           ))}
         </tbody>

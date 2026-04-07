@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+﻿import React, { useEffect, useState } from 'react'
 import InfiniteScroll from 'react-infinite-scroll-component'
 import { useLocation } from 'react-router-dom'
 import noDataImage from '../assets/nothing here yet.webp'
@@ -86,26 +86,13 @@ const SearchPage = () => {
   }
 
   return (
-    <section className="bg-ivory dark:bg-dm-surface min-h-[80vh] transition-colors duration-200">
-      <div className="container mx-auto px-4 py-6 sm:py-8">
-        <div className="mb-6 pb-4 border-b border-brown-100 dark:border-dm-border">
-          <h1 className="text-xl sm:text-2xl font-semibold text-charcoal dark:text-white">
-            {searchText ? (
-              <>Results for &ldquo;{searchText}&rdquo;</>
-            ) : (
-              <>Search the shop</>
-            )}
-          </h1>
-          {searchText && (
-            <p className="text-sm text-brown-400 dark:text-white/50 mt-1">
-              {loading ? 'Searching…' : `${data.length} product${data.length !== 1 ? 's' : ''} found`}
-            </p>
-          )}
-          {!searchText && (
-            <p className="text-sm text-brown-400 dark:text-white/50 mt-1">
-              Use the search bar above to find wigs, care, and accessories.
-            </p>
-          )}
+    <section className='bg-white dark:bg-gray-900 min-h-[80vh]'>
+      <div className='mobile-page-shell container mx-auto'>
+        <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <p className='font-semibold text-gray-800 dark:text-gray-200 text-sm sm:text-base'>
+            {searchText ? `Search Results for "${searchText}": ${data.length}` : 'Enter search term'}
+          </p>
+          {loading && <p className="text-sm text-gray-500 dark:text-gray-400">Loading...</p>}
         </div>
 
         <InfiniteScroll
@@ -114,11 +101,11 @@ const SearchPage = () => {
           next={handleFetchMore}
           loader={
             <div className="text-center py-6 text-sm text-brown-400 dark:text-white/45">
-              Loading more…
+              Loading moreâ€¦
             </div>
           }
         >
-        <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 py-2 gap-3 sm:gap-4">
+        <div className='grid grid-cols-2 gap-3 py-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 lg:gap-4'>
               {
                 data.map((p,index)=>{
                   return(
@@ -140,21 +127,21 @@ const SearchPage = () => {
         </div>
         </InfiniteScroll>
 
-              {!data[0] && !loading && (
-                <div className="flex flex-col justify-center items-center w-full mx-auto py-12">
-                  <img
-                    src={noDataImage}
-                    className="w-full max-w-[220px] h-auto object-contain opacity-90"
-                    alt=""
-                  />
-                  <p className="font-semibold text-charcoal dark:text-white mt-4 text-center max-w-sm">
-                    {searchText ? 'No products match your search' : 'Type a search to see products'}
-                  </p>
-                  <p className="text-sm text-brown-400 dark:text-white/45 mt-2 text-center max-w-sm">
-                    Try different keywords or browse categories from the home page.
-                  </p>
-                </div>
-              )}
+              {
+                //no data 
+                !data[0] && !loading && (
+                  <div className='flex flex-col justify-center items-center w-full mx-auto rounded-3xl border border-dashed border-gray-200 px-4 py-8 dark:border-gray-700'>
+                    <img
+                      src={noDataImage} 
+                      className='w-full h-full max-w-xs max-h-xs block'
+                      alt="No results found"
+                    />
+                    <p className='font-semibold my-2 text-gray-800 dark:text-gray-200'>
+                      {searchText ? 'No products match your search' : 'Please enter a search term'}
+                    </p>
+                  </div>
+                )
+              }
       </div>
     </section>
   )

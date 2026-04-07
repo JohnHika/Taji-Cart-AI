@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { FaCheckCircle } from 'react-icons/fa';
 import { useDispatch } from 'react-redux';
 import { useLocation, useNavigate } from 'react-router-dom';
+import { buildApiUrl } from '../common/apiBaseUrl';
 import SummaryApi from '../common/SummaryApi';
 import { useGlobalContext } from '../provider/GlobalProvider';
 import { clearCartItems, fetchCartItems } from '../redux/slice/cartSlice';
@@ -64,7 +65,7 @@ const PaymentSuccess = () => {
         if (sessionId) {
           try {
             const sessionResponse = await Axios({
-              url: `${SummaryApi.baseURL}/api/order/details?session_id=${sessionId}`,
+              url: buildApiUrl(`/api/order/details?session_id=${sessionId}`),
               method: 'GET'
             });
             console.log("Session details response:", sessionResponse.data);

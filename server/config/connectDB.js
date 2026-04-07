@@ -13,6 +13,7 @@ let isConnected = false;
 let connectionAttempts = 0;
 const MAX_CONNECTION_ATTEMPTS = 3;
 let usingLocalMongoDB = false;
+const ALLOW_DB_FALLBACK_IN_PRODUCTION = process.env.ALLOW_DB_FALLBACK_IN_PRODUCTION === 'true';
 
 // Set up mongoose event listeners for connection management
 mongoose.connection.on('connected', () => {
@@ -71,8 +72,6 @@ async function connectDB() {
         
         // Optimized connection options for faster startup
         const connectionOptions = {
-            useNewUrlParser: true,
-            useUnifiedTopology: true,
             serverSelectionTimeoutMS: 2000, // Fast timeout
             socketTimeoutMS: 30000,
             family: 4,
@@ -91,7 +90,42 @@ async function connectDB() {
             return;
         } catch (error) {
             console.log("MongoDB Atlas connection error:", error.message);
-            throw new Error(`Cannot connect to MongoDB Atlas: ${error.message}. Check your MONGODB_URI and network connectivity.`);
+
+            // Optional fallback for local/dev machines that run with NODE_ENV=production.
+            if (ALLOW_DB_FALLBACK_IN_PRODUCTION) {
+                console.log('⚠️ ALLOW_DB_FALLBACK_IN_PRODUCTION=true detected. Trying local fallback databases...');
+
+                try {
+                    const localStarted = await localMongoDB.startLocalMongoDB();
+                    if (localStarted) {
+                        const localConnected = await localMongoDB.connectToLocalMongoDB();
+                        if (localConnected) {
+                            usingLocalMongoDB = true;
+                            console.log('⚠️ Connected to LOCAL MongoDB fallback (Docker).');
+                            return;
+                        }
+                    }
+                } catch (localError) {
+                    console.log('Local MongoDB fallback failed:', localError.message);
+                }
+
+                try {
+                    const memoryConnected = await memoryMongoDB.connectToMemoryServer();
+                    if (memoryConnected) {
+                        usingLocalMongoDB = true;
+                        console.log('⚠️ Connected to IN-MEMORY MongoDB fallback. Data is ephemeral.');
+                        return;
+                    }
+                } catch (memoryError) {
+                    console.log('In-memory MongoDB fallback failed:', memoryError.message);
+                }
+            }
+
+            throw new Error(
+                `Cannot connect to MongoDB Atlas: ${error.message}. ` +
+                'One common reason is Atlas IP whitelist restrictions. ' +
+                'Check your MONGODB_URI, network connectivity, and whitelist: https://www.mongodb.com/docs/atlas/security-whitelist/'
+            );
         }
     }
     
@@ -131,7 +165,11 @@ async function connectDB() {
             
             // In production, fail hard without fallbacks
             if (process.env.NODE_ENV === 'production') {
-                throw new Error(`Cannot connect to MongoDB Atlas after ${MAX_CONNECTION_ATTEMPTS} attempts. Check your MONGODB_URI and network connectivity.`);
+                throw new Error(
+                    `Cannot connect to MongoDB Atlas after ${MAX_CONNECTION_ATTEMPTS} attempts. ` +
+                    'Check your MONGODB_URI, network connectivity, and Atlas IP whitelist: ' +
+                    'https://www.mongodb.com/docs/atlas/security-whitelist/'
+                );
             }
             
             // Development: Try in-memory MongoDB as quick fallback

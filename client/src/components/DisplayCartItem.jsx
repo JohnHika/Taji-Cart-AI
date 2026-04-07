@@ -1,10 +1,11 @@
-import React, { useState } from 'react'
+﻿import React, { useState } from 'react'
 import toast from 'react-hot-toast'
 import { FaArrowRight, FaCaretRight, FaCrown, FaStore, FaTimes, FaTrash, FaTruck } from "react-icons/fa"
 import { IoClose } from 'react-icons/io5'
 import { useSelector } from 'react-redux'
 import { Link, useNavigate } from 'react-router-dom'
 import imageEmpty from '../assets/empty_cart.webp'
+import { nawiriBrand } from '../config/brand'
 import { useGlobalContext } from '../provider/GlobalProvider'
 import { DisplayPriceInShillings } from '../utils/DisplayPriceInShillings'
 import { pricewithDiscount } from '../utils/PriceWithDiscount'
@@ -20,7 +21,7 @@ const DisplayCartItem = ({close}) => {
     
     // Pickup locations data
     const pickupLocations = [
-        { name: 'Main Store', address: 'Nawiri Hair HQ, 123 Main Street, Nairobi' },
+        { name: 'Main Store', address: nawiriBrand.location },
         { name: 'Westlands Branch', address: '456 Westlands Road, Westlands, Nairobi' },
         { name: 'Mombasa Road Store', address: '789 Mombasa Road, Nairobi' }
     ];
@@ -63,11 +64,11 @@ const DisplayCartItem = ({close}) => {
     }
 
     return (
-        <section className="fixed inset-0 z-50 bg-plum-900/60 backdrop-blur-[2px]">
-            <div className="bg-ivory dark:bg-dm-surface w-full max-w-sm min-h-screen max-h-screen ml-auto transition-colors duration-200 border-l border-brown-100 dark:border-dm-border shadow-hover flex flex-col">
-                <div className="flex items-center p-4 gap-3 justify-between bg-white dark:bg-dm-card border-b border-brown-100 dark:border-dm-border shrink-0">
-                    <h2 className="font-semibold text-charcoal dark:text-white">Cart</h2>
-                    <Link to="/" className="lg:hidden p-1 rounded-lg text-brown-500 dark:text-white/60 hover:text-plum-700 dark:hover:text-plum-200 hover:bg-plum-50 dark:hover:bg-plum-900/30 transition-colors" aria-label="Close cart">
+        <section className='bg-neutral-900 fixed inset-0 bg-opacity-70 z-50'>
+            <div className='bg-white dark:bg-gray-800 w-full max-w-full sm:max-w-sm h-[100dvh] ml-auto transition-colors duration-200 flex flex-col'>
+                <div className='flex items-center p-4 shadow-md gap-3 justify-between bg-white dark:bg-gray-800 border-b dark:border-gray-700 transition-colors duration-200'>
+                    <h2 className='font-semibold dark:text-white'>Cart</h2>
+                    <Link to={"/"} className='lg:hidden dark:text-gray-300 hover:dark:text-white'>
                         <IoClose size={25}/>
                     </Link>
                     <button type="button" onClick={close} className="hidden lg:block p-1 rounded-lg text-brown-500 dark:text-white/60 hover:text-plum-700 dark:hover:text-plum-200 transition-colors" aria-label="Close cart">
@@ -75,7 +76,7 @@ const DisplayCartItem = ({close}) => {
                     </button>
                 </div>
 
-                <div className="flex-1 min-h-0 flex flex-col gap-3 p-3 bg-ivory dark:bg-dm-surface overflow-hidden">
+                <div className='flex-1 min-h-0 bg-blue-50 dark:bg-gray-900 p-2 flex flex-col gap-4 transition-colors duration-200 overflow-hidden'>
                     {/***display items */}
                     {
                         cartItem?.length > 0 ? (
@@ -95,7 +96,7 @@ const DisplayCartItem = ({close}) => {
                                     </div>
                                 )}
                                 
-                                <div className="bg-white dark:bg-dm-card rounded-card border border-brown-100 dark:border-dm-border p-4 grid gap-5 flex-1 min-h-0 overflow-y-auto shadow-card">
+                                <div className='bg-white dark:bg-gray-800 rounded-lg p-4 grid gap-5 overflow-auto transition-colors duration-200 flex-1 min-h-0 pb-28'>
                                     {
                                         cartItem?.length > 0 && (
                                             cartItem.map((item,index)=>{
@@ -159,8 +160,8 @@ const DisplayCartItem = ({close}) => {
                                     }
                                 </div>
 
-                                <div className="shrink-0 w-full max-w-sm ml-auto bg-white dark:bg-dm-card border-t border-brown-100 dark:border-dm-border p-3 shadow-[0_-4px_20px_rgba(45,11,36,0.08)] dark:shadow-none">
-                                    <div className="flex justify-between px-1 mb-2 text-sm text-charcoal dark:text-white">
+                                <div className='mt-auto w-full bg-white dark:bg-gray-800 border-t-2 dark:border-gray-700 p-3 transition-colors duration-200 safe-area-bottom'>
+                                    <div className='flex justify-between px-1 mb-2 text-sm dark:text-white'>
                                         <p>{totalQty} items</p>
                                         <p className="font-price font-semibold">Total: {DisplayPriceInShillings(totalPrice)}</p>
                                     </div>
@@ -214,7 +215,7 @@ const DisplayCartItem = ({close}) => {
                                 />
                                 <h1 className="font-semibold text-charcoal dark:text-white mt-4">Your cart is empty</h1>
                                 <p className="text-sm text-brown-400 dark:text-white/50 mx-2 text-center mt-2 max-w-xs">
-                                    Add something beautiful — browse categories from the shop.
+                                    Add something beautiful â€” browse categories from the shop.
                                 </p>
                             </div>
                         )
@@ -353,7 +354,7 @@ const FulfillmentModal = ({ isOpen, onClose, onSelect, pickupLocations = [] }) =
                             <option value="">Select a location</option>
                             {pickupLocations.map((location, index) => (
                                 <option key={index} value={location.address}>
-                                    {location.name} — {location.address}
+                                    {location.name} â€” {location.address}
                                 </option>
                             ))}
                         </select>
@@ -364,7 +365,7 @@ const FulfillmentModal = ({ isOpen, onClose, onSelect, pickupLocations = [] }) =
                         <textarea
                             value={pickupInstructions}
                             onChange={(e) => setPickupInstructions(e.target.value)}
-                            placeholder="Any special instructions…"
+                            placeholder="Any special instructionsâ€¦"
                             className="w-full p-3 rounded-lg border border-brown-200 dark:border-dm-border bg-ivory dark:bg-dm-surface text-charcoal dark:text-white text-sm placeholder:text-brown-300 dark:placeholder:text-white/30"
                             rows={3}
                         />

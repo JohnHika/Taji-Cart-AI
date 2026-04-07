@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import { toast } from 'react-toastify';
+import { socketBaseUrl } from '../common/apiBaseUrl';
 import Axios from '../utils/Axios';
 import L from 'leaflet';
 import io from 'socket.io-client';
@@ -51,7 +52,7 @@ const DeliverySimulator = () => {
   
   // Connect to socket server
   useEffect(() => {
-    const newSocket = io(import.meta.env.VITE_BACKEND_URL || 'http://localhost:8080', {
+    const newSocket = io(socketBaseUrl, {
       withCredentials: true
     });
     
@@ -66,7 +67,10 @@ const DeliverySimulator = () => {
   useEffect(() => {
     const fetchOrders = async () => {
       try {
-        const response = await Axios.get('/api/order/delivery-assigned');
+        const response = await Axios({
+          url: '/api/order/delivery-assigned',
+          method: 'GET'
+        });
         if (response.data.success) {
           setOrders(response.data.data);
         }
@@ -96,13 +100,17 @@ const DeliverySimulator = () => {
     }
     
     try {
-      const response = await Axios.post('/api/order/update-location', {
-        orderId,
-        location: {
-          lat: position.lat,
-          lng: position.lng
-        },
-        status
+      const response = await Axios({
+        url: '/api/order/update-location',
+        method: 'POST',
+        data: {
+          orderId,
+          location: {
+            lat: position.lat,
+            lng: position.lng
+          },
+          status
+        }
       });
       
       if (response.data.success) {

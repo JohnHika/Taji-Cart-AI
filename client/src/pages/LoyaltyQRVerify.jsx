@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { FaCrown, FaSpinner } from 'react-icons/fa';
 import Axios from '../utils/Axios';
 import toast from 'react-hot-toast';
+import { nawiriBrand } from '../config/brand';
 
 const LoyaltyQRVerify = () => {
   const { cardNumber } = useParams();
@@ -100,7 +101,7 @@ const LoyaltyQRVerify = () => {
             className="h-24 mx-auto mb-4"
             onError={(e) => {
               e.target.onerror = null;
-              e.target.src = "/assets/hair-logo.png";
+              e.target.src = nawiriBrand.logo;
             }}
           />
           <h1 className="text-2xl font-bold text-gray-800 dark:text-white">{cardData.storeInfo.brandName}</h1>

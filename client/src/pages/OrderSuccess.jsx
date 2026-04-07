@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
 import { FaArrowRight, FaCheckCircle, FaMapMarkerAlt, FaQrcode, FaStore, FaTruck } from 'react-icons/fa';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { nawiriBrand } from '../config/brand';
 
 const OrderSuccess = () => {
   const location = useLocation();
@@ -26,7 +27,7 @@ const OrderSuccess = () => {
   // Map pickup location ID to human-readable name
   const getPickupLocationName = (locationId) => {
     const locations = {
-      'main-store': 'Main Store - 123 Main Street, Nairobi',
+      'main-store': `Main Store - ${nawiriBrand.location}`,
       'westlands-branch': 'Westlands Branch - 456 Westlands Avenue, Nairobi',
       'mombasa-store': 'Mombasa Store - 789 Beach Road, Mombasa'
     };

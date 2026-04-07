@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
 import { FaCalendarCheck, FaMapMarkerAlt, FaSpinner, FaTruck, FaUser } from 'react-icons/fa';
 import io from 'socket.io-client';
+import { socketBaseUrl } from '../../common/apiBaseUrl';
 import Axios from '../../utils/Axios';
 import AxiosToastError from '../../utils/AxiosToastError';
 
@@ -16,7 +17,7 @@ const ActiveDeliveries = () => {
     const connectSocket = () => {
       try {
         // Connect to the socket server
-        const socket = io(process.env.REACT_APP_API_URL || '', {
+        const socket = io(socketBaseUrl, {
           path: '/socket.io',
           transports: ['websocket'],
           auth: {
@@ -209,7 +210,7 @@ const ActiveDeliveries = () => {
   }
   
   return (
-    <div>
+    <div className="mobile-page-shell px-0 py-0 sm:px-0 sm:py-0 lg:px-0">
       <h1 className="text-2xl font-bold mb-6 dark:text-white">Active Deliveries</h1>
       
       {activeOrders.length === 0 ? (
@@ -231,7 +232,7 @@ const ActiveDeliveries = () => {
                 order.status === 'out_for_delivery' ? 'bg-yellow-50 dark:bg-yellow-900/20' :
                 'bg-green-50 dark:bg-green-900/20'
               }`}>
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <div>
                     <h3 className="text-lg font-semibold text-gray-800 dark:text-white">
                       Order #{order.orderId}
@@ -272,18 +273,18 @@ const ActiveDeliveries = () => {
                   </div>
                 </div>
                 
-                <div className="flex justify-between items-center border-t dark:border-gray-700 pt-4 mt-4">
+                <div className="mt-4 flex flex-col gap-3 border-t pt-4 dark:border-gray-700 sm:flex-row sm:items-center sm:justify-between">
                   <div className="font-medium">
                     <span className="text-gray-500 dark:text-gray-400">Total: </span>
                     <span className="text-gray-800 dark:text-white">KSh {order.total.toFixed(2)}</span>
                   </div>
                   
-                  <div className="flex space-x-3">
+                  <div className="flex flex-col gap-2 sm:flex-row sm:space-x-3">
                     <a
                       href={`https://maps.google.com/?q=${order.deliveryAddress}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="px-3 py-1 border border-primary-200 text-primary-200 rounded hover:bg-primary-100 dark:hover:bg-primary-900/20 flex items-center"
+                      className="px-3 py-2 border border-primary-200 text-primary-200 rounded hover:bg-primary-100 dark:hover:bg-primary-900/20 flex items-center justify-center"
                     >
                       <FaMapMarkerAlt className="mr-1" />
                       Map
@@ -292,7 +293,7 @@ const ActiveDeliveries = () => {
                     {getNextStatus(order.status) && (
                       <button 
                         onClick={() => handleStatusUpdate(order._id, getNextStatus(order.status))}
-                        className="px-3 py-1 bg-primary-200 text-white rounded hover:bg-primary-300 flex items-center"
+                        className="px-3 py-2 bg-primary-200 text-white rounded hover:bg-primary-300 flex items-center justify-center"
                       >
                         {order.status === 'nearby' ? (
                           <>

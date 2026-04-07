@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import toast from 'react-hot-toast';
 import { FaEnvelope, FaRegEye, FaRegEyeSlash, FaUser } from "react-icons/fa";
 import { Link, useNavigate } from 'react-router-dom';
 import SummaryApi from '../common/SummaryApi';
 import SocialAuth from '../components/SocialAuth';
+import { nawiriBrand } from '../config/brand';
 import Axios from '../utils/Axios';
 import AxiosToastError from '../utils/AxiosToastError';
 
@@ -13,6 +14,7 @@ const Register = () => {
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     const [errors, setErrors] = useState({ name: "", email: "", password: "", confirmPassword: "" });
     const [isLoading, setIsLoading] = useState(false);
+    const submitLockRef = useRef(false);
     const navigate = useNavigate();
 
     const validateField = (name, value) => {
@@ -43,7 +45,7 @@ const Register = () => {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        setIsLoading(true);
+        if (submitLockRef.current || isLoading) return;
         const validationErrors = [];
         if (!/^[a-zA-Z\s'.,-]{1,50}$/.test(data.name)) validationErrors.push("Name can only contain letters, spaces, and basic punctuation");
         if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email)) validationErrors.push("Please enter a valid email address");
@@ -52,21 +54,27 @@ const Register = () => {
         if (!/^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d@$!%*#?&]{8,}$/.test(data.password)) validationErrors.push("Password must include letters and numbers");
         if (validationErrors.length > 0) {
             validationErrors.forEach(err => toast.error(err));
-            setIsLoading(false);
             return;
         }
+        submitLockRef.current = true;
+        setIsLoading(true);
         try {
-            const response = await Axios({ ...SummaryApi.register, data });
+            const response = await Axios({
+                ...SummaryApi.register,
+                data,
+                requestLockKey: `auth:register:${data.email.trim().toLowerCase()}`
+            });
             if (response.data.error) toast.error(response.data.message);
             if (response.data.success) {
                 toast.success(response.data.message);
                 setData({ name: "", email: "", password: "", confirmPassword: "" });
-                navigate("/login");
+                navigate(`/verify-email?email=${encodeURIComponent(response.data?.data?.email || data.email.trim())}&sent=1`);
             }
         } catch (error) {
             AxiosToastError(error);
         } finally {
             setIsLoading(false);
+            submitLockRef.current = false;
         }
     };
 
@@ -79,12 +87,14 @@ const Register = () => {
                 <div className="absolute -top-20 -right-20 w-64 h-64 rounded-full bg-plum-700/40" />
                 <div className="absolute -bottom-16 -left-16 w-48 h-48 rounded-full bg-plum-800/60" />
                 <div className="relative z-10">
-                    <h2 className="font-display text-gold-300 text-3xl font-semibold italic mb-1">Nawiri Hair</h2>
-                    <p className="text-white/50 text-sm">Premium Hair Collections</p>
+                    <div className="inline-flex rounded-3xl bg-white p-3 shadow-lg">
+                        <img src={nawiriBrand.logo} alt={nawiriBrand.shortName} className="h-20 w-auto object-contain" />
+                    </div>
+                    <p className="mt-4 text-white/70 text-sm">{nawiriBrand.companyName}</p>
                 </div>
                 <div className="relative z-10 space-y-4">
                     <blockquote className="font-display text-white text-3xl xl:text-4xl font-semibold italic leading-tight">
-                        "Join the Nawiri<br />family today."
+                        {nawiriBrand.motto}
                     </blockquote>
                     <ul className="text-white/50 text-sm space-y-1.5">
                         <li className="flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-gold-500 flex-shrink-0" /> Earn loyalty points on every purchase</li>

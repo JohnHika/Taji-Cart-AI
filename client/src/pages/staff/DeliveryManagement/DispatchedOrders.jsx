@@ -1,66 +1,41 @@
-import axios from 'axios';
-import React, { useEffect, useState } from 'react';
-import { toast } from 'react-hot-toast';
-import { FaMapMarkerAlt, FaSpinner, FaUserCircle } from 'react-icons/fa';
+import React, { useEffect, useMemo, useState } from 'react';
+import toast from 'react-hot-toast';
+import { FaMapMarkerAlt, FaRedo, FaSearch, FaSpinner, FaTruck, FaUserTie } from 'react-icons/fa';
+import Axios from '../../../utils/Axios';
+import AxiosToastError from '../../../utils/AxiosToastError';
+
+const formatDate = (dateString) => {
+  if (!dateString) return 'N/A';
+
+  return new Intl.DateTimeFormat('en-KE', {
+    dateStyle: 'medium',
+    timeStyle: 'short'
+  }).format(new Date(dateString));
+};
 
 const DispatchedOrders = () => {
   const [orders, setOrders] = useState([]);
   const [drivers, setDrivers] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [assigningOrder, setAssigningOrder] = useState(false);
+  const [assigning, setAssigning] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [selectedDriver, setSelectedDriver] = useState('');
   const [assignmentNote, setAssignmentNote] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
 
-  useEffect(() => {
-    fetchDispatchedOrders();
-    fetchAvailableDrivers();
-  }, []);
-
   const fetchDispatchedOrders = async () => {
     try {
       setLoading(true);
-      const token = localStorage.getItem('token');
-      
-      // Using a query that specifically looks for dispatched delivery orders
-      const response = await axios.get(
-        `${import.meta.env.VITE_SERVER_URL}/api/order/list`, 
-        {
-          params: { 
-            status: 'dispatched',
-            fulfillment_type: 'delivery',
-            limit: 50
-          },
-          headers: { Authorization: `Bearer ${token}` }
-        }
-      );
-      
-      if (response.data.success && response.data.data) {
-        setOrders(response.data.data);
-      } else {
-        // If direct API fails, try the backup endpoint
-        const backupResponse = await axios.get(
-          `${import.meta.env.VITE_SERVER_URL}/api/order/by-status`,
-          {
-            params: { status: 'dispatched' },
-            headers: { Authorization: `Bearer ${token}` }
-          }
-        );
-        
-        if (backupResponse.data.data) {
-          // Filter to only include delivery orders
-          const deliveryOrders = backupResponse.data.data.filter(
-            order => order.fulfillment_type === 'delivery' || order.deliveryMethod === 'delivery'
-          );
-          setOrders(deliveryOrders);
-        } else {
-          setOrders([]);
-        }
+      const response = await Axios({
+        url: '/api/delivery/dispatched-orders',
+        method: 'GET'
+      });
+
+      if (response.data?.success) {
+        setOrders(response.data.data || []);
       }
     } catch (error) {
-      console.error('Error fetching dispatched orders:', error);
-      toast.error('Failed to fetch dispatched orders');
+      AxiosToastError(error);
     } finally {
       setLoading(false);
     }
@@ -68,357 +43,362 @@ const DispatchedOrders = () => {
 
   const fetchAvailableDrivers = async () => {
     try {
-      const token = localStorage.getItem('token');
-      const response = await axios.get(
-        `${import.meta.env.VITE_SERVER_URL}/api/delivery/available-drivers`,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      
-      if (response.data.success) {
+      const response = await Axios({
+        url: '/api/delivery/available-drivers',
+        method: 'GET'
+      });
+
+      if (response.data?.success) {
         setDrivers(response.data.data || []);
-      } else {
-        toast.error('Failed to fetch available drivers');
-        setDrivers([]);
       }
     } catch (error) {
-      console.error('Error fetching available drivers:', error);
-      toast.error('Failed to fetch available drivers');
+      AxiosToastError(error);
       setDrivers([]);
     }
   };
 
+  useEffect(() => {
+    fetchDispatchedOrders();
+    fetchAvailableDrivers();
+  }, []);
+
+  const filteredOrders = useMemo(() => {
+    const search = searchTerm.trim().toLowerCase();
+    if (!search) return orders;
+
+    return orders.filter((order) =>
+      order.orderId?.toLowerCase().includes(search) ||
+      order.customer?.name?.toLowerCase().includes(search) ||
+      order.customer?.email?.toLowerCase().includes(search) ||
+      order.customer?.phone?.toLowerCase().includes(search)
+    );
+  }, [orders, searchTerm]);
+
   const handleAssignDriver = async () => {
     if (!selectedOrder || !selectedDriver) {
-      toast.error('Please select an order and a driver');
+      toast.error('Choose both an order and a driver');
       return;
     }
-    
+
     try {
-      setAssigningOrder(true);
-      const token = localStorage.getItem('token');
-      
-      const response = await axios.post(
-        `${import.meta.env.VITE_SERVER_URL}/api/delivery/assign-driver`,
-        { 
+      setAssigning(true);
+      const response = await Axios({
+        url: '/api/delivery/assign-driver',
+        method: 'POST',
+        data: {
           orderId: selectedOrder._id,
           driverId: selectedDriver,
           notes: assignmentNote
-        },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      
-      if (response.data.success) {
-        toast.success('Driver assigned successfully!');
-        // Close the modal and reset form
+        }
+      });
+
+      if (response.data?.success) {
+        toast.success('Driver assigned successfully');
         setSelectedOrder(null);
         setSelectedDriver('');
         setAssignmentNote('');
-        
-        // Refresh both lists
         fetchDispatchedOrders();
         fetchAvailableDrivers();
-      } else {
-        toast.error(response.data.message || 'Failed to assign driver');
       }
     } catch (error) {
-      console.error('Error assigning driver:', error);
-      toast.error(error.response?.data?.message || 'Failed to assign driver');
+      AxiosToastError(error);
     } finally {
-      setAssigningOrder(false);
+      setAssigning(false);
     }
   };
 
-  const filteredOrders = orders.filter(order => {
-    if (!searchTerm) return true;
-    
-    const orderId = order.orderId?.toLowerCase() || '';
-    const customerName = order.userId?.name?.toLowerCase() || '';
-    const customerEmail = order.userId?.email?.toLowerCase() || '';
-    const searchLower = searchTerm.toLowerCase();
-    
-    return orderId.includes(searchLower) || 
-           customerName.includes(searchLower) || 
-           customerEmail.includes(searchLower);
-  });
-
-  const getDriverDetails = (driverId) => {
-    const driver = drivers.find(d => d._id === driverId);
-    return driver || {};
-  };
+  const selectedDriverDetails = drivers.find((driver) => driver._id === selectedDriver);
 
   return (
-    <div className="container mx-auto px-4">
-      <h2 className="text-xl font-semibold mb-6">Dispatched Orders</h2>
-      
-      {/* Search and refresh controls */}
-      <div className="flex flex-col md:flex-row justify-between mb-6 gap-4">
-        <div className="relative flex-grow">
-          <input
-            type="text"
-            placeholder="Search by order ID or customer..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full px-4 py-2 pl-10 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-            <svg className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-            </svg>
+    <section className="flex flex-col gap-4 lg:gap-5">
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="mobile-surface p-4">
+          <p className="text-xs uppercase tracking-[0.16em] text-gray-500">Dispatched</p>
+          <p className="mt-2 text-3xl font-bold text-gray-900 dark:text-white">{orders.length}</p>
+        </div>
+        <div className="mobile-surface p-4">
+          <p className="text-xs uppercase tracking-[0.16em] text-gray-500">Available drivers</p>
+          <p className="mt-2 text-3xl font-bold text-gray-900 dark:text-white">{drivers.filter((driver) => driver.isAvailable !== false).length}</p>
+        </div>
+        <div className="mobile-surface p-4">
+          <p className="text-xs uppercase tracking-[0.16em] text-gray-500">Busy drivers</p>
+          <p className="mt-2 text-3xl font-bold text-gray-900 dark:text-white">{drivers.filter((driver) => driver.isAvailable === false && driver.isActive !== false).length}</p>
+        </div>
+        <div className="mobile-surface p-4">
+          <p className="text-xs uppercase tracking-[0.16em] text-gray-500">Next step</p>
+          <p className="mt-2 flex items-center gap-2 text-sm font-medium text-amber-700 dark:text-amber-300">
+            <FaUserTie />
+            Assign drivers
+          </p>
+        </div>
+      </div>
+
+      <div className="mobile-surface p-4 sm:p-5">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+          <div>
+            <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Dispatched Orders</h2>
+            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+              These orders are ready and waiting for manual driver assignment.
+            </p>
+          </div>
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <div className="relative min-w-0 sm:min-w-[280px]">
+              <FaSearch className="pointer-events-none absolute left-3 top-3.5 text-gray-400" />
+              <input
+                type="text"
+                placeholder="Search order or customer..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full rounded-xl border border-gray-200 bg-white py-3 pl-10 pr-4 text-sm outline-none transition focus:border-cyan-500 focus:ring-2 focus:ring-cyan-100 dark:border-gray-700 dark:bg-gray-900 dark:text-white"
+              />
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                fetchDispatchedOrders();
+                fetchAvailableDrivers();
+              }}
+              disabled={loading}
+              className="inline-flex items-center justify-center gap-2 rounded-xl border border-gray-200 px-4 py-3 text-sm font-medium text-gray-700 transition hover:bg-gray-50 disabled:opacity-60 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-900"
+            >
+              {loading ? <FaSpinner className="animate-spin" /> : <FaRedo />}
+              Refresh
+            </button>
           </div>
         </div>
-        <button 
-          onClick={fetchDispatchedOrders}
-          className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition flex items-center justify-center"
-          disabled={loading}
-        >
-          {loading ? (
-            <>
-              <FaSpinner className="animate-spin mr-2" />
-              Loading...
-            </>
-          ) : (
-            'Refresh Orders'
-          )}
-        </button>
       </div>
-      
-      {/* Orders display */}
+
       {loading && orders.length === 0 ? (
-        <div className="flex flex-col justify-center items-center h-64">
-          <FaSpinner className="animate-spin h-8 w-8 text-blue-500 mb-4" />
-          <p>Loading dispatched orders...</p>
+        <div className="mobile-surface flex min-h-[220px] items-center justify-center p-8">
+          <div className="flex items-center gap-3 text-gray-500 dark:text-gray-300">
+            <FaSpinner className="animate-spin" />
+            Loading dispatched orders...
+          </div>
         </div>
       ) : filteredOrders.length === 0 ? (
-        <div className="bg-white rounded-lg shadow p-8 text-center">
-          <div className="mx-auto h-12 w-12 text-gray-400 mb-4">
-            <FaMapMarkerAlt className="h-full w-full" />
+        <div className="mobile-surface p-8 text-center">
+          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-200">
+            <FaMapMarkerAlt />
           </div>
-          <h3 className="text-lg font-medium text-gray-900 mb-2">No dispatched orders found</h3>
-          <p className="text-gray-500 mb-6">
-            There are no orders waiting for driver assignment at the moment.
+          <h3 className="mt-4 text-lg font-semibold text-gray-900 dark:text-white">No dispatched orders waiting</h3>
+          <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
+            Every dispatched delivery is either already assigned or your search did not match.
           </p>
-          <button
-            onClick={fetchDispatchedOrders}
-            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition"
-          >
-            Refresh List
-          </button>
         </div>
       ) : (
-        <div className="bg-white rounded-lg shadow overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Order ID
-                  </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Customer
-                  </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Dispatch Date
-                  </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Delivery Address
-                  </th>
-                  <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {filteredOrders.map((order) => (
-                  <tr key={order._id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className="text-sm font-medium text-gray-900">{order.orderId}</span>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center">
-                        <div className="flex-shrink-0 h-10 w-10 bg-gray-200 rounded-full flex items-center justify-center">
-                          <FaUserCircle className="h-6 w-6 text-gray-400" />
-                        </div>
-                        <div className="ml-4">
-                          <div className="text-sm font-medium text-gray-900">{order.userId?.name || 'Unknown Customer'}</div>
-                          <div className="text-sm text-gray-500">{order.userId?.email || 'No email'}</div>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">
-                        {order.dispatchInfo?.dispatchedAt ? (
-                          new Date(order.dispatchInfo.dispatchedAt).toLocaleDateString()
-                        ) : (
-                          new Date(order.updatedAt || order.createdAt).toLocaleDateString()
-                        )}
-                      </div>
-                      <div className="text-xs text-gray-500">
-                        {order.dispatchInfo?.dispatchedAt ? (
-                          new Date(order.dispatchInfo.dispatchedAt).toLocaleTimeString()
-                        ) : (
-                          new Date(order.updatedAt || order.createdAt).toLocaleTimeString()
-                        )}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      {order.delivery_address ? (
-                        <div className="text-sm text-gray-900">
-                          <div>{order.delivery_address.street || order.delivery_address.address}</div>
-                          <div className="text-xs text-gray-500">
-                            {order.delivery_address.city}
-                            {order.delivery_address.neighborhood && `, ${order.delivery_address.neighborhood}`}
-                          </div>
-                        </div>
-                      ) : (
-                        <span className="text-sm text-gray-500">No address details</span>
-                      )}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                      <button
-                        onClick={() => setSelectedOrder(order)}
-                        className="text-blue-600 hover:text-blue-900 px-4 py-2 border border-blue-600 rounded-md hover:bg-blue-50 transition"
-                      >
-                        Assign Driver
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+        <>
+          <div className="grid gap-3 lg:hidden">
+            {filteredOrders.map((order) => (
+              <article key={order._id} className="mobile-surface p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-xs uppercase tracking-[0.16em] text-gray-500">Order</p>
+                    <h3 className="mt-1 text-lg font-semibold text-gray-900 dark:text-white">{order.orderId}</h3>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedOrder(order)}
+                    className="rounded-lg bg-cyan-600 px-3 py-2 text-sm font-medium text-white"
+                  >
+                    Assign
+                  </button>
+                </div>
+
+                <div className="mt-4 grid gap-3 text-sm text-gray-600 dark:text-gray-300">
+                  <div>
+                    <p className="font-medium text-gray-900 dark:text-white">{order.customer?.name}</p>
+                    <p>{order.customer?.phone}</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">{order.customer?.email}</p>
+                  </div>
+                  <div>
+                    <p className="font-medium text-gray-900 dark:text-white">Address</p>
+                    <p>{order.deliveryAddress?.street}</p>
+                    <p>{[order.deliveryAddress?.city, order.deliveryAddress?.neighborhood].filter(Boolean).join(', ')}</p>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span>{order.items?.length || 0} item(s)</span>
+                    <span className="text-xs text-gray-500 dark:text-gray-400">{formatDate(order.dispatchedAt || order.updatedAt)}</span>
+                  </div>
+                </div>
+              </article>
+            ))}
           </div>
-        </div>
-      )}
-      
-      {/* Driver Assignment Modal */}
-      {selectedOrder && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50 p-4">
-          <div className="bg-white rounded-lg p-6 max-w-lg w-full max-h-[90vh] overflow-y-auto">
-            <h3 className="text-xl font-semibold mb-4">Assign Driver to Order</h3>
-            
-            <div className="mb-4 p-3 bg-gray-50 rounded-md">
-              <p className="mb-2">
-                <span className="font-semibold">Order ID:</span> {selectedOrder.orderId}
-              </p>
-              <p className="mb-2">
-                <span className="font-semibold">Customer:</span> {selectedOrder.userId?.name || 'Unknown'}
-              </p>
-              <p className="mb-2">
-                <span className="font-semibold">Delivery Address:</span> {
-                  selectedOrder.delivery_address 
-                    ? `${selectedOrder.delivery_address.street || selectedOrder.delivery_address.address}, ${selectedOrder.delivery_address.city}`
-                    : 'No address details'
-                }
-              </p>
-              {selectedOrder.items && (
-                <div>
-                  <span className="font-semibold">Items:</span> {selectedOrder.items.length} items
-                  <div className="text-sm text-gray-500 mt-1">
-                    {selectedOrder.items.slice(0, 3).map((item, idx) => (
-                      <div key={idx}>{item.quantity || 1}x {item.name || item.productName || 'Item'}</div>
-                    ))}
-                    {selectedOrder.items.length > 3 && (
-                      <div>+{selectedOrder.items.length - 3} more items</div>
-                    )}
-                  </div>
-                </div>
-              )}
-            </div>
-            
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Select Driver
-              </label>
-              {drivers.length === 0 ? (
-                <div className="p-3 bg-yellow-50 text-yellow-700 rounded-md mb-2">
-                  No delivery drivers available. Please add drivers to the system first.
-                </div>
-              ) : (
-                <select
-                  value={selectedDriver}
-                  onChange={(e) => setSelectedDriver(e.target.value)}
-                  className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="">-- Select a Driver --</option>
-                  {drivers.map((driver) => (
-                    <option key={driver._id} value={driver._id}>
-                      {driver.name} ({driver.isAvailable ? 'Available' : 'Busy'}) - 
-                      {driver.activeOrdersCount || 0} active orders
-                    </option>
+
+          <div className="mobile-surface hidden overflow-hidden lg:block">
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                <thead className="bg-gray-50 dark:bg-gray-900">
+                  <tr>
+                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.16em] text-gray-500">Order</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.16em] text-gray-500">Customer</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.16em] text-gray-500">Dispatched</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.16em] text-gray-500">Address</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.16em] text-gray-500">Items</th>
+                    <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-[0.16em] text-gray-500">Action</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100 bg-white dark:divide-gray-800 dark:bg-gray-800">
+                  {filteredOrders.map((order) => (
+                    <tr key={order._id} className="align-top hover:bg-gray-50/70 dark:hover:bg-gray-900/40">
+                      <td className="px-4 py-4">
+                        <p className="font-semibold text-gray-900 dark:text-white">{order.orderId}</p>
+                        <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">{order.paymentStatus}</p>
+                      </td>
+                      <td className="px-4 py-4">
+                        <p className="font-medium text-gray-900 dark:text-white">{order.customer?.name}</p>
+                        <p className="text-sm text-gray-600 dark:text-gray-300">{order.customer?.phone}</p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">{order.customer?.email}</p>
+                      </td>
+                      <td className="px-4 py-4 text-sm text-gray-600 dark:text-gray-300">
+                        {formatDate(order.dispatchedAt || order.updatedAt)}
+                      </td>
+                      <td className="px-4 py-4 text-sm text-gray-600 dark:text-gray-300">
+                        <p>{order.deliveryAddress?.street}</p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                          {[order.deliveryAddress?.city, order.deliveryAddress?.neighborhood].filter(Boolean).join(', ')}
+                        </p>
+                      </td>
+                      <td className="px-4 py-4 text-sm text-gray-600 dark:text-gray-300">
+                        <p>{order.items?.length || 0} item(s)</p>
+                        <div className="mt-1 space-y-1 text-xs text-gray-500 dark:text-gray-400">
+                          {(order.items || []).slice(0, 2).map((item, index) => (
+                            <p key={`${order._id}-${index}`}>{item.quantity}x {item.name}</p>
+                          ))}
+                        </div>
+                      </td>
+                      <td className="px-4 py-4 text-right">
+                        <button
+                          type="button"
+                          onClick={() => setSelectedOrder(order)}
+                          className="inline-flex items-center gap-2 rounded-lg bg-cyan-600 px-3 py-2 text-sm font-medium text-white transition hover:bg-cyan-700"
+                        >
+                          <FaUserTie />
+                          Assign Driver
+                        </button>
+                      </td>
+                    </tr>
                   ))}
-                </select>
-              )}
-              
-              {selectedDriver && (
-                <div className="mt-3 p-3 bg-blue-50 rounded-md">
-                  <h4 className="font-medium text-blue-800">Selected Driver Details</h4>
-                  <div className="mt-2 text-sm">
-                    <p><span className="font-medium">Name:</span> {getDriverDetails(selectedDriver).name}</p>
-                    <p><span className="font-medium">Contact:</span> {getDriverDetails(selectedDriver).contact?.mobile || 'N/A'}</p>
-                    <p>
-                      <span className="font-medium">Rating:</span> {
-                        typeof getDriverDetails(selectedDriver).efficiencyScore === 'object' 
-                          ? getDriverDetails(selectedDriver).efficiencyScore.avgRating
-                          : 'N/A'
-                      }
-                    </p>
-                    <p>
-                      <span className="font-medium">Completed Deliveries:</span> {
-                        typeof getDriverDetails(selectedDriver).efficiencyScore === 'object'
-                          ? getDriverDetails(selectedDriver).efficiencyScore.completedOrders
-                          : 'N/A'
-                      }
-                    </p>
-                  </div>
-                </div>
-              )}
+                </tbody>
+              </table>
             </div>
-            
-            <div className="mb-6">
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Assignment Notes (optional)
-              </label>
-              <textarea
-                value={assignmentNote}
-                onChange={(e) => setAssignmentNote(e.target.value)}
-                rows={3}
-                className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="Add any special instructions for the driver..."
-              ></textarea>
-            </div>
-            
-            <div className="flex justify-end gap-4">
+          </div>
+        </>
+      )}
+
+      {selectedOrder && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+          <div className="w-full max-w-2xl rounded-2xl bg-white p-5 shadow-xl dark:bg-gray-800">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h3 className="text-xl font-semibold text-gray-900 dark:text-white">Assign Driver</h3>
+                <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                  Order {selectedOrder.orderId} for {selectedOrder.customer?.name}
+                </p>
+              </div>
               <button
+                type="button"
                 onClick={() => {
                   setSelectedOrder(null);
                   setSelectedDriver('');
                   setAssignmentNote('');
                 }}
-                className="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-100 transition"
-                disabled={assigningOrder}
+                className="rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-600 dark:border-gray-700 dark:text-gray-300"
+              >
+                Close
+              </button>
+            </div>
+
+            <div className="mt-5 grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+              <div className="rounded-2xl bg-gray-50 p-4 dark:bg-gray-900">
+                <p className="text-xs uppercase tracking-[0.16em] text-gray-500">Delivery details</p>
+                <div className="mt-3 space-y-3 text-sm text-gray-600 dark:text-gray-300">
+                  <div>
+                    <p className="font-medium text-gray-900 dark:text-white">Customer</p>
+                    <p>{selectedOrder.customer?.name}</p>
+                    <p>{selectedOrder.customer?.phone}</p>
+                  </div>
+                  <div>
+                    <p className="font-medium text-gray-900 dark:text-white">Address</p>
+                    <p>{selectedOrder.deliveryAddress?.street}</p>
+                    <p>{[selectedOrder.deliveryAddress?.city, selectedOrder.deliveryAddress?.neighborhood].filter(Boolean).join(', ')}</p>
+                  </div>
+                  <div>
+                    <p className="font-medium text-gray-900 dark:text-white">Items</p>
+                    {(selectedOrder.items || []).map((item, index) => (
+                      <p key={`${selectedOrder._id}-item-${index}`}>{item.quantity}x {item.name}</p>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-200">Choose driver</label>
+                  <select
+                    value={selectedDriver}
+                    onChange={(e) => setSelectedDriver(e.target.value)}
+                    className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-cyan-500 focus:ring-2 focus:ring-cyan-100 dark:border-gray-700 dark:bg-gray-900 dark:text-white"
+                  >
+                    <option value="">Select a driver</option>
+                    {drivers.map((driver) => (
+                      <option key={driver._id} value={driver._id}>
+                        {driver.name} • {driver.isAvailable !== false ? 'Available' : 'Busy'} • {driver.activeOrdersCount || 0} active
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {selectedDriverDetails && (
+                  <div className="rounded-2xl border border-cyan-100 bg-cyan-50 p-4 text-sm dark:border-cyan-900/40 dark:bg-cyan-900/10">
+                    <p className="font-medium text-cyan-900 dark:text-cyan-100">{selectedDriverDetails.name}</p>
+                    <p className="mt-1 text-cyan-700 dark:text-cyan-200">{selectedDriverDetails.contact?.mobile || 'No phone saved'}</p>
+                    <p className="text-cyan-700 dark:text-cyan-200">{selectedDriverDetails.contact?.email || 'No email saved'}</p>
+                    <p className="mt-2 text-cyan-700 dark:text-cyan-200">
+                      {selectedDriverDetails.isAvailable !== false ? 'Available now' : 'Currently busy'} • {selectedDriverDetails.activeOrdersCount || 0} active orders
+                    </p>
+                  </div>
+                )}
+
+                <div>
+                  <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-200">Assignment note</label>
+                  <textarea
+                    value={assignmentNote}
+                    onChange={(e) => setAssignmentNote(e.target.value)}
+                    rows={4}
+                    placeholder="Optional instruction for the driver"
+                    className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-cyan-500 focus:ring-2 focus:ring-cyan-100 dark:border-gray-700 dark:bg-gray-900 dark:text-white"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedOrder(null);
+                  setSelectedDriver('');
+                  setAssignmentNote('');
+                }}
+                className="rounded-xl border border-gray-200 px-4 py-3 text-sm font-medium text-gray-700 dark:border-gray-700 dark:text-gray-200"
+                disabled={assigning}
               >
                 Cancel
               </button>
               <button
+                type="button"
                 onClick={handleAssignDriver}
-                disabled={!selectedDriver || assigningOrder || drivers.length === 0}
-                className={`px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition flex items-center justify-center ${
-                  (!selectedDriver || assigningOrder || drivers.length === 0) ? 'opacity-50 cursor-not-allowed' : ''
-                }`}
+                disabled={!selectedDriver || assigning}
+                className="inline-flex items-center justify-center gap-2 rounded-xl bg-cyan-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-cyan-700 disabled:cursor-not-allowed disabled:opacity-50"
               >
-                {assigningOrder ? (
-                  <>
-                    <FaSpinner className="animate-spin mr-2" />
-                    Assigning...
-                  </>
-                ) : (
-                  'Assign Driver'
-                )}
+                {assigning ? <FaSpinner className="animate-spin" /> : <FaTruck />}
+                Assign Driver
               </button>
             </div>
           </div>
         </div>
       )}
-    </div>
+    </section>
   );
 };
 

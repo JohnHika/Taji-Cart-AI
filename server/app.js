@@ -44,6 +44,8 @@ const allowedOriginsApp = [
   'http://localhost:5174',
   'http://localhost:3000',
   'https://nawiri-hair-client.onrender.com',
+  'https://nawirihairke.com',
+  'https://www.nawirihairke.com',
   'https://www.nawirihair.com', 
   'https://admin.nawirihair.com'
 ];

@@ -19,8 +19,21 @@ const userSchema = new mongoose.Schema({
         default : ""
     },
     mobile : {
-        type : Number,
-        default : null
+        type : String,
+        default : "",
+        trim: true
+    },
+    mobile_verified: {
+        type: Boolean,
+        default: false
+    },
+    mobile_verification_otp: {
+        type: String,
+        default: null
+    },
+    mobile_verification_expiry: {
+        type: Date,
+        default: null
     },
     refresh_token : {
         type : String,

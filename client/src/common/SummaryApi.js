@@ -1,17 +1,20 @@
-const configuredBaseURL = import.meta.env.VITE_SERVER_URL || import.meta.env.VITE_BACKEND_URL;
-const localBaseURL = import.meta.env.VITE_LOCAL_BACKEND_URL || 'http://localhost:5000';
-const isLocalBrowser =
-  typeof window !== 'undefined' &&
-  ['localhost', '127.0.0.1'].includes(window.location.hostname);
+﻿import { apiBaseUrl } from './apiBaseUrl';
 
-export const baseURL = (import.meta.env.DEV && isLocalBrowser)
-  ? localBaseURL
-  : (configuredBaseURL || localBaseURL);
+export const baseURL = apiBaseUrl;
 
 // Define SummaryApi first before trying to use it
 const SummaryApi = {
+    baseURL,
     register: {
         url: `${baseURL}/api/user/register`,
+        method: 'POST'
+    },
+    verifyEmail: {
+        url: `${baseURL}/api/user/verify-email`,
+        method: 'POST'
+    },
+    sendVerificationEmail: {
+        url: `${baseURL}/api/user/send-verification-email`,
         method: 'POST'
     },
     login: {
@@ -49,6 +52,14 @@ const SummaryApi = {
     updateUserDetails: {
         url: `${baseURL}/api/user/update-user`,
         method: 'put'
+    },
+    requestPhoneVerificationOtp: {
+        url: `${baseURL}/api/user/request-phone-verification-otp`,
+        method: 'POST'
+    },
+    verifyPhoneOtp: {
+        url: `${baseURL}/api/user/verify-phone-otp`,
+        method: 'POST'
     },
     addCategory: {
         url: `${baseURL}/api/category/add-category`,
@@ -284,6 +295,30 @@ const SummaryApi = {
     posMpesaSTK: {
         url: `${baseURL}/api/pos/mpesa/stk-push`,
         method: 'POST'
+    },
+    // Admin
+    getUsers: {
+        url: `${baseURL}/api/user/admin/users`,
+        method: 'GET'
+    },
+    // Cart aliases (some files use addToCart / getCartItems)
+    addToCart: {
+        url: `${baseURL}/api/cart/create`,
+        method: 'POST'
+    },
+    getCartItems: {
+        url: `${baseURL}/api/cart/get`,
+        method: 'GET'
+    },
+    // Category alias
+    getAllCategory: {
+        url: `${baseURL}/api/category/get`,
+        method: 'GET'
+    },
+    // Resend forgot-password OTP (re-triggers the same flow)
+    resend_otp: {
+        url: `${baseURL}/api/user/forgot-password`,
+        method: 'PUT'
     }
 };
 
@@ -301,9 +336,9 @@ const REQUIRED_ENDPOINTS = [
 
 REQUIRED_ENDPOINTS.forEach(endpoint => {
   if (!SummaryApi[endpoint]) {
-    console.error(`❌ CRITICAL ERROR: Missing required API endpoint: ${endpoint}`);
+    console.error(`âŒ CRITICAL ERROR: Missing required API endpoint: ${endpoint}`);
   } else {
-    console.log(`✅ Found API endpoint: ${endpoint}`, SummaryApi[endpoint]);
+    console.log(`âœ… Found API endpoint: ${endpoint}`, SummaryApi[endpoint]);
   }
 });
 

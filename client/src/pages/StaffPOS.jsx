@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+﻿import React, { useEffect, useMemo, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
 import QRCode from 'qrcode';
 import { 
@@ -28,14 +28,35 @@ import { useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import SummaryApi from '../common/SummaryApi';
 import LoadingSpinner from '../components/LoadingSpinner';
+import { nawiriBrand } from '../config/brand';
 import Axios from '../utils/Axios';
 import AxiosToastError from '../utils/AxiosToastError';
 import { DisplayPriceInShillings } from '../utils/DisplayPriceInShillings';
+import isStaff from '../utils/isStaff';
+
+const SALES_COUNTER_TITLE = 'Branch Sales Counter';
+const SALES_RECORDS_LABEL = 'Sales Records';
+const BARCODE_SCAN_FORMATS = ['ean_13', 'ean_8', 'upc_a', 'upc_e', 'code_128', 'code_39', 'code_93', 'codabar', 'itf'];
+const QR_SCAN_FORMATS = ['qr_code'];
+const PRODUCT_SCAN_FORMATS = [...BARCODE_SCAN_FORMATS, ...QR_SCAN_FORMATS];
 
 const StaffPOS = () => {
   const user = useSelector(state => state.user);
   const navigate = useNavigate();
   const searchRef = useRef(null);
+  const loyaltyScannerVideoRef = useRef(null);
+  const productScannerVideoRef = useRef(null);
+  const scannerStreamRef = useRef(null);
+  const scannerIntervalRef = useRef(null);
+  const scannerBusyRef = useRef(false);
+  const hasStoredSession = Boolean(
+    sessionStorage.getItem('accesstoken') ||
+    sessionStorage.getItem('refreshToken') ||
+    localStorage.getItem('accesstoken') ||
+    localStorage.getItem('refreshToken') ||
+    localStorage.getItem('token')
+  );
+  const canAccessSalesCounter = isStaff(user);
 
   // Core POS state
   const [cart, setCart] = useState([]);
@@ -47,6 +68,11 @@ const StaffPOS = () => {
   const [showHelp, setShowHelp] = useState(false);
   const [orderNote, setOrderNote] = useState('');
   const [applyTax, setApplyTax] = useState(false);
+  const [showProductScanner, setShowProductScanner] = useState(false);
+  const [productScannerError, setProductScannerError] = useState('');
+  const [productScannerStatus, setProductScannerStatus] = useState('');
+  const [loyaltyScannerStatus, setLoyaltyScannerStatus] = useState('');
+  const [cameraDetectionAvailable, setCameraDetectionAvailable] = useState(false);
   const TAX_RATE = 0.16; // 16%
   
   // Customer state
@@ -97,18 +123,65 @@ const StaffPOS = () => {
   const [loading, setLoading] = useState(false);
   const [productsLoading, setProductsLoading] = useState(true);
 
-  // Check if user is staff
+  // Wait for session hydration before deciding access, and allow admins to use the counter.
   useEffect(() => {
-    if (!user || (!user.isStaff && user.role !== 'staff' && !user.isAdmin && user.role !== 'admin')) {
-      toast.error('Access denied. Staff privileges required.');
-      navigate('/login');
+    if (!user?._id) {
+      if (!hasStoredSession) {
+        toast.error('Please log in to continue.');
+        navigate('/login');
+      }
+      return;
     }
-  }, [user, navigate]);
+
+    if (!canAccessSalesCounter) {
+      toast.error('Access denied. Staff privileges required.');
+      navigate('/dashboard/profile');
+    }
+  }, [user?._id, hasStoredSession, canAccessSalesCounter, navigate]);
 
   // Load initial data
   useEffect(() => {
     loadProducts();
     loadCategories();
+  }, []);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const detectBarcodeSupport = async () => {
+      if (typeof window === 'undefined' || !('BarcodeDetector' in window)) {
+        if (isMounted) {
+          setCameraDetectionAvailable(false);
+        }
+        return;
+      }
+
+      try {
+        if (typeof window.BarcodeDetector.getSupportedFormats === 'function') {
+          const supportedFormats = await window.BarcodeDetector.getSupportedFormats();
+          if (isMounted) {
+            setCameraDetectionAvailable(
+              supportedFormats.some((format) => [...BARCODE_SCAN_FORMATS, ...QR_SCAN_FORMATS].includes(format))
+            );
+          }
+          return;
+        }
+
+        if (isMounted) {
+          setCameraDetectionAvailable(true);
+        }
+      } catch {
+        if (isMounted) {
+          setCameraDetectionAvailable(true);
+        }
+      }
+    };
+
+    detectBarcodeSupport();
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   // Load customers when modal opens
@@ -123,17 +196,13 @@ const StaffPOS = () => {
     if (showQRScanner) {
       initializeScanner();
     }
-    
-    // Cleanup when component unmounts or scanner is closed
-    return () => {
-      if (showQRScanner) {
-        const video = document.getElementById('scanner-video');
-        if (video && video.srcObject) {
-          video.srcObject.getTracks().forEach(track => track.stop());
-        }
-      }
-    };
   }, [showQRScanner]);
+
+  useEffect(() => {
+    return () => {
+      stopActiveScanner();
+    };
+  }, []);
 
   // Auto-apply loyalty discount when customer is selected and cart has items
   useEffect(() => {
@@ -184,7 +253,10 @@ const StaffPOS = () => {
     return products.filter(product => {
       const matchesSearch = !s || product.name?.toLowerCase().includes(s) ||
         product.description?.toLowerCase().includes(s) ||
-        product.brand?.toLowerCase().includes(s);
+        product.brand?.toLowerCase().includes(s) ||
+        product.sku?.toLowerCase().includes(s) ||
+        product.barcode?.toLowerCase().includes(s) ||
+        product.qrCode?.toLowerCase().includes(s);
       // Normalize category IDs from various shapes
       const catIds = (() => {
         const ids = [];
@@ -208,9 +280,21 @@ const StaffPOS = () => {
     });
   }, [products, searchTerm, selectedCategory]);
 
+  const getProductScanLabel = (product) => {
+    if (product.barcode) return { label: 'Barcode', value: product.barcode };
+    if (product.qrCode) return { label: 'QR', value: product.qrCode };
+    if (product.sku) return { label: 'SKU', value: product.sku };
+    return null;
+  };
+
   // Add product to cart
   const addToCart = (product) => {
     const existingItem = cart.find(item => item._id === product._id);
+
+    if ((existingItem?.quantity || 0) >= Number(product.stock || 0)) {
+      toast.error(`${product.name} has no more stock available for this sale`);
+      return;
+    }
     
     if (existingItem) {
       setCart(cart.map(item => 
@@ -229,6 +313,12 @@ const StaffPOS = () => {
   const updateQuantity = (productId, newQuantity) => {
     if (newQuantity <= 0) {
       removeFromCart(productId);
+      return;
+    }
+
+    const matchingItem = cart.find(item => item._id === productId);
+    if (matchingItem && newQuantity > Number(matchingItem.stock || 0)) {
+      toast.error(`Only ${matchingItem.stock} unit(s) of ${matchingItem.name} are available`);
       return;
     }
     
@@ -444,8 +534,152 @@ const StaffPOS = () => {
     return tierDiscounts[loyaltyCard.tier] || 0;
   };
 
+  const stopActiveScanner = () => {
+    if (scannerIntervalRef.current) {
+      window.clearInterval(scannerIntervalRef.current);
+      scannerIntervalRef.current = null;
+    }
+
+    scannerBusyRef.current = false;
+
+    if (scannerStreamRef.current) {
+      scannerStreamRef.current.getTracks().forEach((track) => track.stop());
+      scannerStreamRef.current = null;
+    }
+
+    [loyaltyScannerVideoRef.current, productScannerVideoRef.current].forEach((video) => {
+      if (video) {
+        video.pause?.();
+        video.srcObject = null;
+      }
+    });
+  };
+
+  const resolveScannerFormats = async (mode) => {
+    const requestedFormats =
+      mode === 'qr'
+        ? QR_SCAN_FORMATS
+        : mode === 'product'
+          ? PRODUCT_SCAN_FORMATS
+          : BARCODE_SCAN_FORMATS;
+
+    if (typeof window === 'undefined' || !('BarcodeDetector' in window)) {
+      return null;
+    }
+
+    if (typeof window.BarcodeDetector.getSupportedFormats === 'function') {
+      const supportedFormats = await window.BarcodeDetector.getSupportedFormats();
+      const matchingFormats = requestedFormats.filter((format) => supportedFormats.includes(format));
+      return matchingFormats.length > 0 ? matchingFormats : null;
+    }
+
+    return requestedFormats;
+  };
+
+  const startCameraScanner = async ({
+    videoRef,
+    mode,
+    onDetected,
+    setError,
+    setStatus,
+    subjectLabel
+  }) => {
+    stopActiveScanner();
+    setError('');
+    setStatus('Preparing camera...');
+
+    const videoElement = videoRef.current;
+    if (!videoElement) {
+      setError('Camera preview could not be created. Please reopen the scanner.');
+      setStatus('');
+      return;
+    }
+
+    if (!navigator.mediaDevices?.getUserMedia) {
+      setError('This browser does not support camera access. You can still type or paste the barcode, QR code, or SKU.');
+      setStatus('');
+      return;
+    }
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: false,
+        video: {
+          facingMode: { ideal: 'environment' },
+          width: { ideal: 1280 },
+          height: { ideal: 720 }
+        }
+      });
+
+      scannerStreamRef.current = stream;
+      videoElement.srcObject = stream;
+      await videoElement.play();
+
+      const detectorFormats = await resolveScannerFormats(mode);
+      if (!detectorFormats) {
+        setStatus('Camera is ready. Automatic detection is not available in this browser, so use manual entry if needed.');
+        return;
+      }
+
+      const detector = new window.BarcodeDetector({ formats: detectorFormats });
+      const readableLabel =
+        mode === 'qr'
+          ? 'QR code'
+          : mode === 'product'
+            ? 'barcode or QR code'
+            : 'barcode';
+      setStatus(`Camera is ready. Point it at the ${subjectLabel} ${readableLabel} and hold steady.`);
+
+      scannerIntervalRef.current = window.setInterval(async () => {
+        if (scannerBusyRef.current || !videoRef.current || videoRef.current.readyState < 2) {
+          return;
+        }
+
+        scannerBusyRef.current = true;
+
+        try {
+          const detectedCodes = await detector.detect(videoRef.current);
+          const detectedValue = detectedCodes.find((entry) => entry.rawValue?.trim())?.rawValue?.trim();
+
+          if (detectedValue) {
+            stopActiveScanner();
+            onDetected(detectedValue);
+          }
+        } catch (detectionError) {
+          console.error('Scanner detection error:', detectionError);
+        } finally {
+          scannerBusyRef.current = false;
+        }
+      }, 350);
+    } catch (error) {
+      console.error('Camera access error:', error);
+
+      if (error?.name === 'NotAllowedError') {
+        setError('Camera permission was denied. Allow camera access in your browser or use manual code entry.');
+      } else if (error?.name === 'NotFoundError') {
+        setError('No camera was found on this device. You can still type or paste the barcode, QR code, or SKU.');
+      } else {
+        setError('Could not start the camera scanner. Please try again or use manual entry.');
+      }
+
+      setStatus('');
+      stopActiveScanner();
+    }
+  };
+
   // Initialize Scanner (QR/Barcode)
   const initializeScanner = async () => {
+    await startCameraScanner({
+      videoRef: loyaltyScannerVideoRef,
+      mode: scanMode,
+      onDetected: handleCodeDetected,
+      setError: setQrScannerError,
+      setStatus: setLoyaltyScannerStatus,
+      subjectLabel: 'loyalty card'
+    });
+  };
+
+  const initializeScannerLegacy = async () => {
     try {
       setQrScannerError('');
       const video = document.getElementById('scanner-video');
@@ -461,7 +695,7 @@ const StaffPOS = () => {
       video.addEventListener('loadedmetadata', () => {
         const scanType = scanMode === 'barcode' ? 'barcode' : 'QR code';
         toast(`${scanType.charAt(0).toUpperCase() + scanType.slice(1)} scanner active! Point camera at loyalty card ${scanType}`, {
-          icon: scanMode === 'barcode' ? '📊' : '📸',
+          icon: scanMode === 'barcode' ? 'ðŸ“Š' : 'ðŸ“¸',
           duration: 3000,
         });
       });
@@ -479,12 +713,8 @@ const StaffPOS = () => {
       // Set the detected code as loyalty card number
       setLoyaltyCardNumber(codeData);
       setShowQRScanner(false);
-      
-      // Stop camera
-      const video = document.getElementById('scanner-video');
-      if (video && video.srcObject) {
-        video.srcObject.getTracks().forEach(track => track.stop());
-      }
+      setLoyaltyScannerStatus('');
+      stopActiveScanner();
       
       // Automatically scan the card
       setTimeout(() => scanLoyaltyCard(), 100); // Small delay to ensure state is updated
@@ -494,21 +724,85 @@ const StaffPOS = () => {
     }
   };
 
+  const handleProductCodeDetected = async (codeData) => {
+    try {
+      setBarcode(codeData);
+      setShowProductScanner(false);
+      setProductScannerStatus('');
+      stopActiveScanner();
+      await addByBarcode(codeData);
+    } catch (error) {
+      console.error('Product code processing error:', error);
+      toast.error('Unable to use that scanned product code');
+    }
+  };
+
+  const openProductScanner = async () => {
+    setShowProductScanner(true);
+    setProductScannerError('');
+    setProductScannerStatus('');
+    setTimeout(() => {
+      startCameraScanner({
+        videoRef: productScannerVideoRef,
+        mode: 'product',
+        onDetected: handleProductCodeDetected,
+        setError: setProductScannerError,
+        setStatus: setProductScannerStatus,
+        subjectLabel: 'product'
+      });
+    }, 100);
+  };
+
+  const findProductLocally = (code) => {
+    const normalizedCode = code.trim().toLowerCase();
+    if (!normalizedCode) return null;
+
+    return products.find(product =>
+      product.barcode?.toLowerCase() === normalizedCode ||
+      product.qrCode?.toLowerCase() === normalizedCode ||
+      product.sku?.toLowerCase() === normalizedCode ||
+      String(product._id).toLowerCase() === normalizedCode ||
+      product.name?.toLowerCase() === normalizedCode ||
+      product.name?.toLowerCase().includes(normalizedCode)
+    ) || null;
+  };
+
   // Add product by barcode
-  const addByBarcode = async () => {
-    if (!barcode.trim()) return;
+  const addByBarcode = async (inputCode = barcode.trim()) => {
+    const code = String(inputCode || '').trim();
+    if (!code) return;
     
     try {
       setLoading(true);
-      // In a real implementation, you'd have a barcode field in your product model
-      const product = products.find(p => p._id === barcode || p.name.toLowerCase().includes(barcode.toLowerCase()));
+      let product = findProductLocally(code);
+
+      if (!product) {
+        const response = await Axios({
+          url: `/api/pos/products/lookup?code=${encodeURIComponent(code)}`,
+          method: 'GET'
+        });
+
+        if (response.data.success) {
+          product = response.data.data;
+          setProducts(prev => {
+            const exists = prev.some(item => item._id === product._id);
+            return exists ? prev.map(item => item._id === product._id ? { ...item, ...product } : item) : [product, ...prev];
+          });
+        }
+      }
       
       if (product) {
         addToCart(product);
         setBarcode('');
-        toast.success('Product added by barcode');
+        if (showProductScanner) {
+          setShowProductScanner(false);
+          setProductScannerStatus('');
+          setProductScannerError('');
+          stopActiveScanner();
+        }
+        toast.success(`${product.name} added from scan`);
       } else {
-        toast.error('Product not found');
+        toast.error('No product matched that barcode, QR code, SKU, or item name');
       }
     } catch (error) {
       AxiosToastError(error);
@@ -613,6 +907,7 @@ const StaffPOS = () => {
       const saleData = {
         items: cart.map(item => ({
           product: item._id,
+          sku: item.sku || '',
           name: item.name,
           price: item.price,
           quantity: item.quantity,
@@ -707,7 +1002,7 @@ const StaffPOS = () => {
   // Generate QR code for transaction verification
   const generateQRCode = async (saleData) => {
     try {
-      const verificationUrl = `https://nawirihair.com/verify?txn=${saleData.saleNumber}&date=${new Date(saleData.saleDate).toISOString().slice(0,10)}&amount=${saleData.total}`;
+      const verificationUrl = `${nawiriBrand.websiteUrl}/verify?txn=${saleData.saleNumber}&date=${new Date(saleData.saleDate).toISOString().slice(0,10)}&amount=${saleData.total}`;
       const qrDataUrl = await QRCode.toDataURL(verificationUrl, {
         width: 200,
         margin: 1,
@@ -754,7 +1049,7 @@ const StaffPOS = () => {
       const right = fmt(it.total);
       // Compose as: left | mid | right with basic spacing
       const maxLeft = 28;
-      const l = left.length > maxLeft ? left.slice(0, maxLeft - 1) + '…' : left.padEnd(maxLeft, ' ');
+      const l = left.length > maxLeft ? left.slice(0, maxLeft - 1) + 'â€¦' : left.padEnd(maxLeft, ' ');
       const m = mid.padEnd(12, ' ');
       return `${l} | ${m} | ${right}`;
     });
@@ -784,7 +1079,7 @@ const StaffPOS = () => {
       'Returns accepted within 7 days with receipt',
       line,
       'Thank you for shopping at NAWIRI HAIR!',
-      'Contact: support@nawirihair.com | www.nawirihair.com',
+      `Contact: ${nawiriBrand.email} | ${nawiriBrand.websiteUrl.replace(/^https?:\/\//, '')}`,
       line,
     ].filter(Boolean);
     return [...header, ...cust, ...items, ...totalsBlock, ...paymentLines, ...extra].join('\n');
@@ -1112,42 +1407,42 @@ const StaffPOS = () => {
         </div>
       )}
       {/* Header / Toolbar */}
-      <div className="bg-ivory/95 backdrop-blur dark:bg-dm-card sticky top-0 z-30 border-b border-brown-100 dark:border-dm-border">
-        <div className="px-4 py-3 flex items-center justify-between">
-          <div>
-            <h1 className="font-display text-2xl italic text-plum-900 dark:text-white">Nawiri POS</h1>
-            <p className="text-xs text-brown-400 dark:text-white/40">Cashier: {user.name} • {user.staff_branch || 'Main Store'}</p>
+      <div className="bg-white/90 backdrop-blur dark:bg-gray-800 sticky top-0 z-30 border-b border-gray-200 dark:border-gray-700">
+        <div className="px-3 sm:px-4 py-3 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+          <div className="min-w-0">
+            <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">NAWIRI Hair Sales Counter</h1>
+            <p className="text-xs text-gray-600 dark:text-gray-400">{SALES_COUNTER_TITLE} â€¢ Seller: {user.name} â€¢ Branch: {user.staff_branch || 'Main Store'}</p>
           </div>
-          <div className="flex items-center gap-3">
-            <button onClick={() => setShowParkedDrawer(true)} className="hidden md:flex items-center gap-2 px-3 py-2 rounded-pill border border-brown-200 dark:border-dm-border hover:bg-plum-50 dark:hover:bg-dm-card-2 text-sm text-charcoal dark:text-white/80">
-              <FaListUl size={12} /> Held
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+            <button onClick={() => setShowParkedDrawer(true)} className="flex items-center justify-center gap-2 px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 text-sm">
+              <FaListUl /> <span className="hidden sm:inline">Held</span>
             </button>
-            <button onClick={() => setShowHelp(true)} className="hidden md:flex items-center gap-2 px-3 py-2 rounded-pill border border-brown-200 dark:border-dm-border hover:bg-plum-50 dark:hover:bg-dm-card-2 text-sm text-charcoal dark:text-white/80">
-              <FaQuestionCircle size={12} /> Help
+            <button onClick={() => setShowHelp(true)} className="flex items-center justify-center gap-2 px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 text-sm">
+              <FaQuestionCircle /> <span className="hidden sm:inline">Help</span>
             </button>
-            <div className="text-right">
-              <div className="text-2xl font-price font-extrabold text-gold-600 dark:text-gold-400">{DisplayPriceInShillings(calculateTotals().total)}</div>
-              <div className="text-xs text-brown-400 dark:text-white/40">{calculateTotals().itemCount} items</div>
+            <div className="min-w-0 flex-1 sm:flex-none text-left sm:text-right">
+              <div className="text-xl sm:text-2xl font-extrabold text-gray-900 dark:text-white">{DisplayPriceInShillings(calculateTotals().total)}</div>
+              <div className="text-xs text-gray-600 dark:text-gray-400">{calculateTotals().itemCount} items</div>
             </div>
-            <button onClick={() => setShowPaymentModal(true)} disabled={cart.length===0} className="px-4 py-2 rounded-pill bg-gold-500 hover:bg-gold-400 text-charcoal font-semibold disabled:opacity-50 press transition-colors">
+            <button onClick={() => setShowPaymentModal(true)} disabled={cart.length===0} className="w-full sm:w-auto px-4 py-2 rounded-lg bg-primary-600 hover:bg-primary-700 text-white font-semibold disabled:opacity-50">
               Charge (F4)
             </button>
           </div>
         </div>
       </div>
 
-      <div className="flex h-[calc(100vh-72px)]">
+      <div className="flex min-h-[calc(100dvh-72px)] flex-col xl:flex-row">
         {/* Left Panel - Products */}
-        <div className="flex-1 p-4 overflow-hidden">
+        <div className="flex-1 min-w-0 p-3 sm:p-4 xl:overflow-hidden">
           {/* Search and Scan Row */}
-          <div className="bg-white dark:bg-dm-card rounded-card shadow-card p-4 mb-4">
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 items-center">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-3 sm:p-4 mb-4">
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-3 items-start">
               {/* Product Search */}
               <div className="relative">
                 <FaSearch className="absolute left-3 top-3 text-brown-300" />
                 <input
                   type="text"
-                  placeholder="Search products..."
+                  placeholder="Search products, SKU, barcode, or QR..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   ref={searchRef}
@@ -1155,30 +1450,45 @@ const StaffPOS = () => {
                 />
               </div>
               {/* Barcode Scanner */}
-              <div className="flex">
-                <div className="relative flex-1">
-                  <FaBarcode className="absolute left-3 top-3 text-brown-300" />
-                  <input
-                    type="text"
-                    placeholder="Scan barcode..."
-                    value={barcode}
-                    onChange={(e) => setBarcode(e.target.value)}
-                    onKeyPress={(e) => e.key === 'Enter' && addByBarcode()}
-                    className="w-full pl-10 pr-4 py-2 border border-blush-200 dark:border-dm-border rounded-l-full bg-blush-100 dark:bg-dm-card-2 focus:ring-2 focus:ring-plum-500 text-charcoal dark:text-white placeholder:text-brown-300 outline-none"
-                  />
+              <div className="grid grid-cols-1 sm:grid-cols-[minmax(0,1fr)_auto] gap-2">
+                <div className="flex">
+                  <div className="relative flex-1">
+                    <FaBarcode className="absolute left-3 top-3 text-gray-400" />
+                    <input
+                      type="text"
+                      placeholder="Scan barcode / QR or enter SKU..."
+                      value={barcode}
+                      onChange={(e) => setBarcode(e.target.value)}
+                      onKeyPress={(e) => e.key === 'Enter' && addByBarcode()}
+                      className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-l-lg focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+                    />
+                  </div>
+                  <button
+                    onClick={() => addByBarcode()}
+                    className="px-4 py-2 bg-primary-500 text-white rounded-r-lg hover:bg-primary-600"
+                  >
+                    Add
+                  </button>
                 </div>
                 <button
-                  onClick={addByBarcode}
-                  className="px-4 py-2 bg-plum-700 text-white rounded-r-full hover:bg-plum-800 transition-colors"
+                  type="button"
+                  onClick={openProductScanner}
+                  className="w-full sm:w-auto px-4 py-2 border border-primary-500 text-primary-600 dark:text-primary-300 dark:border-primary-400 rounded-lg hover:bg-primary-50 dark:hover:bg-gray-700 flex items-center justify-center gap-2"
                 >
-                  Add
+                  <FaQrcode />
+                  Use Camera
                 </button>
               </div>
             </div>
 
-            {/* Category Filter */}
-            <div className="mt-4 flex items-center gap-2 overflow-x-auto scrollbar-hide">
-              <button onClick={() => setSelectedCategory('all')} className={`px-3 py-1.5 rounded-pill text-sm whitespace-nowrap border transition-colors ${selectedCategory==='all' ? 'bg-plum-700 text-white border-plum-700' : 'bg-blush-50 dark:bg-dm-card-2 text-charcoal dark:text-white/70 border-blush-200 dark:border-dm-border hover:bg-plum-50'}`}>All</button>
+            <div className="mt-3 flex flex-wrap items-start justify-between gap-2 text-xs text-gray-500 dark:text-gray-400">
+              <p>Search products, type the SKU, or scan a product barcode or QR code directly with the device camera.</p>
+              <p>{cameraDetectionAvailable ? 'Live barcode and QR detection are available in supported mobile browsers.' : 'If live detection is unavailable, manual barcode or QR entry still works.'}</p>
+            </div>
+
+            {/* Category Filter moved below */}
+            <div className="mt-4 flex items-center gap-2 overflow-x-auto no-scrollbar">
+              <button onClick={() => setSelectedCategory('all')} className={`px-3 py-2 rounded-full text-sm whitespace-nowrap border ${selectedCategory==='all' ? 'bg-primary-600 text-white border-primary-600' : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-600'}`}>All</button>
               {categories.map(c => (
                 <button key={c._id} onClick={() => setSelectedCategory(c._id)} className={`px-3 py-1.5 rounded-pill text-sm whitespace-nowrap border transition-colors ${selectedCategory===c._id ? 'bg-plum-700 text-white border-plum-700' : 'bg-blush-50 dark:bg-dm-card-2 text-charcoal dark:text-white/70 border-blush-200 dark:border-dm-border hover:bg-plum-50'}`}>{c.name}</button>
               ))}
@@ -1186,8 +1496,8 @@ const StaffPOS = () => {
           </div>
 
           {/* Products Grid */}
-          <div className="bg-white dark:bg-dm-card rounded-card shadow-card p-4 h-[calc(100%-120px)] overflow-y-auto scrollbar-hide">
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-3 sm:p-4 min-h-[320px] max-h-[55dvh] xl:h-[calc(100dvh-250px)] xl:max-h-none overflow-y-auto">
+            <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3 sm:gap-4">
               {filteredProducts.map(product => (
                 <div key={product._id} className="group border border-brown-100 dark:border-dm-border rounded-card p-3 hover-lift bg-white dark:bg-dm-card transition-all">
                   <div className="relative aspect-square mb-2 bg-blush-50 dark:bg-dm-card-2 rounded-lg overflow-hidden">
@@ -1196,10 +1506,15 @@ const StaffPOS = () => {
                     ) : (
                       <div className="w-full h-full flex items-center justify-center text-brown-200"><FaShoppingCart size={24} /></div>
                     )}
-                    <button onClick={() => addToCart(product)} className="absolute bottom-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity px-3 py-1.5 rounded-pill bg-gold-500 text-charcoal text-xs font-semibold press">Add</button>
-                    <div className="absolute left-2 top-2 bg-white/90 dark:bg-dm-card/90 text-xs px-2 py-0.5 rounded-pill border border-brown-100 dark:border-dm-border text-brown-500 dark:text-white/60">Stock: {product.stock}</div>
+                    <button onClick={() => addToCart(product)} className="absolute bottom-2 right-2 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity px-3 py-1.5 rounded-lg bg-primary-600 text-white text-xs font-medium">Add</button>
+                    <div className="absolute left-2 top-2 bg-white/90 dark:bg-gray-800/80 text-xs px-2 py-1 rounded-md border border-gray-200 dark:border-gray-600">Stock: {product.stock}</div>
                   </div>
-                  <h3 className="font-medium text-sm text-charcoal dark:text-white line-clamp-2 min-h-[36px]">{product.name}</h3>
+                  <h3 className="font-medium text-sm text-gray-900 dark:text-white line-clamp-2 min-h-[36px]">{product.name}</h3>
+                  {getProductScanLabel(product) && (
+                    <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                      {getProductScanLabel(product).label}: {getProductScanLabel(product).value}
+                    </p>
+                  )}
                   <div className="flex items-center justify-between mt-1">
                     <p className="font-price text-gold-600 dark:text-gold-400 font-semibold text-sm">{DisplayPriceInShillings(product.price)}</p>
                     <button onClick={() => addToCart(product)} className="w-7 h-7 rounded-full border border-plum-200 dark:border-plum-700 hover:bg-plum-50 dark:hover:bg-plum-900/30 text-plum-700 dark:text-plum-300 text-sm flex items-center justify-center font-bold">+</button>
@@ -1211,7 +1526,7 @@ const StaffPOS = () => {
         </div>
 
         {/* Right Panel - Cart & Customer */}
-        <div className="w-[360px] bg-ivory dark:bg-dm-card border-l border-brown-100 dark:border-dm-border flex flex-col">
+        <div className="w-full xl:w-[360px] xl:min-w-[360px] bg-white dark:bg-gray-800 border-t xl:border-t-0 xl:border-l border-gray-200 dark:border-gray-700 flex flex-col xl:max-h-[calc(100dvh-72px)]">
           {/* Customer Section */}
           <div className="p-4 border-b border-brown-100 dark:border-dm-border">
             <div className="flex items-center justify-between mb-2">
@@ -1233,13 +1548,13 @@ const StaffPOS = () => {
                       <p className="font-semibold text-charcoal dark:text-white">{customer.name}</p>
                       {scannedCustomer?.scanMethod && (
                         <span className="text-xs bg-plum-100 dark:bg-plum-900 text-plum-700 dark:text-plum-200 px-2 py-0.5 rounded-pill">
-                          {scannedCustomer.scanMethod === 'barcode' ? '📊' : '📸'} Scanned
+                          {scannedCustomer.scanMethod === 'barcode' ? 'ðŸ“Š' : 'ðŸ“¸'} Scanned
                         </span>
                       )}
                     </div>
                     <p className="text-sm text-brown-400 dark:text-white/50">{customer.email}</p>
                     {customer.mobile && (
-                      <p className="text-sm text-brown-400 dark:text-white/50">📞 {customer.mobile}</p>
+                      <p className="text-sm text-brown-400 dark:text-white/50">ðŸ“ž {customer.mobile}</p>
                     )}
                     {customer.loyaltyCard && (
                       <div className="mt-2 space-y-1">
@@ -1252,12 +1567,12 @@ const StaffPOS = () => {
                           </span>
                         </div>
                         <div className="flex items-center gap-4 text-xs text-brown-400 dark:text-white/40">
-                          <span>💳 {customer.loyaltyCard.cardNumber}</span>
-                          <span>⭐ {customer.loyaltyCard.pointsEarned || 0} pts</span>
+                          <span>ðŸ’³ {customer.loyaltyCard.cardNumber}</span>
+                          <span>â­ {customer.loyaltyCard.pointsEarned || 0} pts</span>
                         </div>
                         {discount > 0 && (
                           <div className="text-xs text-green-600 dark:text-green-400 font-medium">
-                            ✅ {discount}% loyalty discount applied to cart
+                            âœ… {discount}% loyalty discount applied to cart
                           </div>
                         )}
                       </div>
@@ -1305,7 +1620,7 @@ const StaffPOS = () => {
           </div>
 
           {/* Cart Items */}
-          <div className="flex-1 overflow-y-auto p-4">
+          <div className="flex-1 overflow-y-auto p-4 min-h-0 max-h-[38dvh] xl:max-h-none">
             <h3 className="font-semibold text-gray-900 dark:text-white mb-3">Cart Items</h3>
             {cart.length === 0 ? (
               <div className="text-center py-8 text-brown-300 dark:text-white/30">
@@ -1327,6 +1642,11 @@ const StaffPOS = () => {
                           <h4 className="font-medium text-sm text-charcoal dark:text-white truncate pr-2" title={item.name}>{item.name}</h4>
                           <button onClick={() => removeFromCart(item._id)} className="text-blush-400 hover:text-red-500 flex-shrink-0 transition-colors"><FaTrash size={13} /></button>
                         </div>
+                        {getProductScanLabel(item) && (
+                          <p className="mb-2 text-xs text-gray-500 dark:text-gray-400">
+                            {getProductScanLabel(item).label}: {getProductScanLabel(item).value}
+                          </p>
+                        )}
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-1.5">
                             <button onClick={() => updateQuantity(item._id, item.quantity - 1)} className="w-6 h-6 rounded-full bg-blush-100 dark:bg-dm-card-2 flex items-center justify-center text-plum-600 dark:text-plum-300"><FaMinus size={9} /></button>
@@ -1337,7 +1657,7 @@ const StaffPOS = () => {
                             <p className="font-price text-sm font-semibold text-gold-600 dark:text-gold-400 truncate">{DisplayPriceInShillings(item.price * item.quantity)}</p>
                             <div className="flex items-center justify-end gap-1.5 text-xs text-brown-400 dark:text-white/40">
                               <span className="truncate">{DisplayPriceInShillings(item.price)} ea</span>
-                              <span>•</span>
+                              <span>â€¢</span>
                               <span className="flex items-center gap-0.5"><FaPercent size={9} />
                                 <input type="number" min="0" max="100" value={item.discountPct || ''} onChange={(e)=> setCart(prev=>prev.map(it => it._id===item._id ? { ...it, discountPct: Math.max(0, Math.min(100, parseFloat(e.target.value || '0'))) } : it))} className="w-10 text-right border border-blush-200 dark:border-dm-border rounded px-1 bg-white dark:bg-dm-card text-charcoal dark:text-white" placeholder="0" />
                               </span>
@@ -1445,6 +1765,88 @@ const StaffPOS = () => {
         </div>
       </div>
 
+      {showProductScanner && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl w-full max-w-xl overflow-hidden">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-700">
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Scan Product Code</h3>
+                <p className="text-xs text-gray-500 dark:text-gray-400">Use the back camera for the fastest scan.</p>
+              </div>
+              <button
+                onClick={() => {
+                  setShowProductScanner(false);
+                  setProductScannerError('');
+                  setProductScannerStatus('');
+                  stopActiveScanner();
+                }}
+                className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+              >
+                <FaTimes />
+              </button>
+            </div>
+
+            <div className="p-4 space-y-4">
+              <div className="aspect-[4/3] rounded-xl overflow-hidden bg-gray-100 dark:bg-gray-700 relative">
+                <video
+                  ref={productScannerVideoRef}
+                  className="w-full h-full object-cover"
+                  autoPlay
+                  playsInline
+                  muted
+                />
+                <div className="absolute inset-4 border-2 border-primary-500 rounded-2xl pointer-events-none" />
+                <div className="absolute bottom-3 left-3 right-3 text-center">
+                  <span className="inline-flex items-center rounded-full bg-black/60 px-3 py-1 text-xs text-white">
+                    Center the product barcode or QR code inside the frame
+                  </span>
+                </div>
+              </div>
+
+              {productScannerStatus && (
+                <p className="text-sm text-blue-700 dark:text-blue-300">{productScannerStatus}</p>
+              )}
+
+              {productScannerError && (
+                <p className="text-sm text-red-600 dark:text-red-400">{productScannerError}</p>
+              )}
+
+              <div className="grid grid-cols-1 sm:grid-cols-[minmax(0,1fr)_auto_auto] gap-2">
+                <input
+                  type="text"
+                  value={barcode}
+                  onChange={(e) => setBarcode(e.target.value)}
+                  onKeyPress={(e) => e.key === 'Enter' && addByBarcode()}
+                  placeholder="Type or paste barcode / QR / SKU"
+                  className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white"
+                />
+                <button
+                  onClick={() => addByBarcode()}
+                  className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700"
+                >
+                  Add Product
+                </button>
+                <button
+                  onClick={() => {
+                    setShowProductScanner(false);
+                    setProductScannerError('');
+                    setProductScannerStatus('');
+                    stopActiveScanner();
+                  }}
+                  className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
+                >
+                  Close
+                </button>
+              </div>
+
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                Camera scanning works best on HTTPS or localhost and may depend on browser barcode support. Manual entry is always available.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Customer Modal */}
       {showCustomerModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
@@ -1459,10 +1861,8 @@ const StaffPOS = () => {
                   setLoyaltyCardNumber('');
                   setShowQRScanner(false);
                   setQrScannerError('');
-                  const video = document.getElementById('qr-video');
-                  if (video && video.srcObject) {
-                    video.srcObject.getTracks().forEach(track => track.stop());
-                  }
+                  setLoyaltyScannerStatus('');
+                  stopActiveScanner();
                 }}
                 className="text-brown-300 hover:text-charcoal dark:text-white/40 dark:hover:text-white transition-colors"
               >
@@ -1499,7 +1899,7 @@ const StaffPOS = () => {
                         : 'bg-white dark:bg-dm-card text-charcoal dark:text-white/70 border-brown-200 dark:border-dm-border hover:bg-plum-50'
                     }`}
                   >
-                    📊 Barcode
+                    ðŸ“Š Barcode
                   </button>
                   <button
                     onClick={() => setScanMode('qr')}
@@ -1509,7 +1909,7 @@ const StaffPOS = () => {
                         : 'bg-white dark:bg-dm-card text-charcoal dark:text-white/70 border-brown-200 dark:border-dm-border hover:bg-plum-50'
                     }`}
                   >
-                    📸 QR Code
+                    ðŸ“¸ QR Code
                   </button>
                 </div>
               </div>
@@ -1532,16 +1932,20 @@ const StaffPOS = () => {
                   <p className="text-xs text-brown-400 dark:text-white/40 mt-2">
                     Activate camera to scan customer's loyalty card
                   </p>
+                  <p className="mt-1 text-[11px] text-gray-500 dark:text-gray-400">
+                    Allow camera access when prompted. On unsupported browsers, you can still paste the barcode or QR value below.
+                  </p>
                 </div>
               ) : (
                 <div className="space-y-3">
-                  <div className="bg-white dark:bg-dm-card p-3 rounded-card">
-                    <div className="aspect-square bg-blush-50 dark:bg-dm-card-2 rounded-lg flex items-center justify-center relative">
-                      <video
-                        id="scanner-video"
+                  <div className="bg-white dark:bg-gray-700 p-4 rounded-lg">
+                    <div className="aspect-square bg-gray-100 dark:bg-gray-600 rounded-lg flex items-center justify-center relative">
+                      <video 
+                        ref={loyaltyScannerVideoRef}
                         className="w-full h-full object-cover rounded-lg"
                         autoPlay
                         playsInline
+                        muted
                       ></video>
                       <div className="absolute inset-0 border-2 border-plum-500 rounded-lg"></div>
                       <div className="absolute top-2 left-2 right-2">
@@ -1549,25 +1953,20 @@ const StaffPOS = () => {
                           Position {scanMode} within frame
                         </p>
                       </div>
-                      <button
-                        onClick={() => handleCodeDetected('NAWIRI001234567')}
-                        className="absolute bottom-2 right-2 px-2 py-1 bg-gold-500 text-charcoal text-xs rounded-pill press"
-                      >
-                        Test
-                      </button>
                     </div>
                   </div>
                   
-                  <div className="flex gap-2">
+                  {loyaltyScannerStatus && (
+                    <p className="text-xs text-blue-700 dark:text-blue-300">{loyaltyScannerStatus}</p>
+                  )}
+                  
+                  <div className="flex flex-col sm:flex-row gap-2">
                     <button
                       onClick={() => {
                         setShowQRScanner(false);
                         setQrScannerError('');
-                        // Stop camera stream
-                        const video = document.getElementById('scanner-video');
-                        if (video && video.srcObject) {
-                          video.srcObject.getTracks().forEach(track => track.stop());
-                        }
+                        setLoyaltyScannerStatus('');
+                        stopActiveScanner();
                       }}
                       className="flex-1 px-3 py-2 bg-gray-600 text-white rounded hover:bg-gray-700"
                     >
@@ -1641,7 +2040,7 @@ const StaffPOS = () => {
                         <p className="font-medium text-gray-900 dark:text-white">{customerResult.name}</p>
                         <p className="text-sm text-gray-600 dark:text-gray-400">{customerResult.email}</p>
                         {customerResult.mobile && (
-                          <p className="text-sm text-gray-600 dark:text-gray-400">📞 {customerResult.mobile}</p>
+                          <p className="text-sm text-gray-600 dark:text-gray-400">ðŸ“ž {customerResult.mobile}</p>
                         )}
                       </div>
                       <div className="flex flex-col items-end gap-1">
@@ -1722,7 +2121,7 @@ const StaffPOS = () => {
                     <div className="col-span-3 flex items-center gap-2">
                       <input type="tel" value={row.phone || ''} onChange={e=>updateSplitRow(idx,'phone', e.target.value)} placeholder="07XXXXXXXX" className="flex-1 px-3 py-2 border border-blush-200 dark:border-dm-border rounded-pill bg-white dark:bg-dm-card text-charcoal dark:text-white" />
                       <button onClick={()=>requestMpesaSTKForRow(idx)} disabled={row.mpesaRequesting} className="px-3 py-2 bg-plum-700 hover:bg-plum-800 text-white rounded-pill disabled:opacity-50 transition-colors text-sm">
-                        {row.mpesaRequesting ? 'Sending…' : (row.mpesaStatus === 'pending' ? 'Resend' : 'Send')}
+                        {row.mpesaRequesting ? 'Sendingâ€¦' : (row.mpesaStatus === 'pending' ? 'Resend' : 'Send')}
                       </button>
                     </div>
                   ) : <div className="col-span-3" />}
@@ -1733,7 +2132,7 @@ const StaffPOS = () => {
                   </div>
                   {row.method === 'mobile' && (
                     <div className="col-span-6 text-xs text-brown-400 dark:text-white/40">
-                      {row.mpesaStatus === 'pending' && 'Waiting for customer approval…'}
+                      {row.mpesaStatus === 'pending' && 'Waiting for customer approvalâ€¦'}
                       {row.mpesaStatus === 'success' && `Payment confirmed${row.allocatedAmount ? `: KSh ${row.allocatedAmount.toFixed(2)}` : ''}.`}
                       {row.mpesaStatus === 'failed' && 'Payment failed. Try again.'}
                     </div>
@@ -1771,7 +2170,7 @@ const StaffPOS = () => {
                 disabled={loading || anyMobilePending}
                 className="flex-1 px-4 py-2 bg-gold-500 hover:bg-gold-400 text-charcoal font-semibold rounded-pill disabled:opacity-50 press transition-colors"
               >
-                {loading ? <LoadingSpinner size="small" /> : (anyMobilePending ? 'Awaiting M-Pesa…' : 'Complete Sale')}
+                {loading ? <LoadingSpinner size="small" /> : (anyMobilePending ? 'Awaiting M-Pesaâ€¦' : 'Complete Sale')}
               </button>
               )})()}
             </div>
@@ -1784,7 +2183,7 @@ const StaffPOS = () => {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white dark:bg-dm-card rounded-card shadow-hover p-6 w-[420px] max-w-full mx-4 print:w-[80mm]">
             <div className="flex justify-between items-center mb-4">
-              <h3 className="font-display text-lg italic text-plum-900 dark:text-white">Receipt</h3>
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Sales Receipt</h3>
               <button
                 onClick={() => setShowReceiptModal(false)}
                 className="text-brown-300 hover:text-charcoal dark:text-white/40 dark:hover:text-white transition-colors"
@@ -1796,7 +2195,7 @@ const StaffPOS = () => {
               {/* Header with Logo and Brand */}
               <div className="logo-container">
                 <img 
-                  src="/assets/hair-logo.png" 
+                  src={nawiriBrand.logo} 
                   alt="Nawiri Hair" 
                   style={{ 
                     width: '80px', 
@@ -1815,8 +2214,8 @@ const StaffPOS = () => {
               <div className="receipt-section">
                 <div className="section-title">Store Information</div>
                 <div className="store-info">
-                  <div>{user.staff_branch || 'Main Store'}, Nairobi</div>
-                  <div>Tel: +254 712 345 678</div>
+                  <div>{user.staff_branch || 'Main Store'}, {nawiriBrand.location}</div>
+                  <div>Tel: {nawiriBrand.phoneDisplay}</div>
                   <div>Receipt No: {currentSale.saleNumber}</div>
                   <div>{new Date(currentSale.saleDate).toLocaleString('en-KE', { hour12: true })}</div>
                   <div>Cashier: {currentSale.cashierName || user.name}</div>
@@ -1853,6 +2252,11 @@ const StaffPOS = () => {
                       <div style={{ fontSize: '8px', color: '#718096' }}>
                         @ {DisplayPriceInShillings(item.price)} each
                       </div>
+                      {item.sku && (
+                        <div style={{ fontSize: '8px', color: '#718096' }}>
+                          Barcode: {item.sku}
+                        </div>
+                      )}
                     </div>
                     <div style={{ fontWeight: '600' }}>
                       {DisplayPriceInShillings(item.total)}
@@ -1903,7 +2307,7 @@ const StaffPOS = () => {
                   </div>
                   <div className="totals-row">
                     <span>Status:</span>
-                    <span className="payment-status">✓ CONFIRMED</span>
+                    <span className="payment-status">âœ“ CONFIRMED</span>
                   </div>
                   {currentSale.paymentMethod === 'split' && Array.isArray(currentSale.payments) && 
                     currentSale.payments.map((payment, idx) => (
@@ -1944,7 +2348,7 @@ const StaffPOS = () => {
                   )}
                 </div>
                 <div style={{ textAlign: 'center', fontSize: '7px', color: '#718096' }}>
-                  Scan to verify transaction or visit nawirihair.com
+                  Scan to verify transaction or visit {nawiriBrand.websiteUrl.replace(/^https?:\/\//, '')}
                 </div>
               </div>
 
@@ -1963,16 +2367,16 @@ const StaffPOS = () => {
               {/* Policies Box */}
               <div className="policies-box">
                 <div className="policy-item">
-                  <span className="policy-icon">✅</span>
+                  <span className="policy-icon">âœ…</span>
                   <span>Warranty: Refer to product manual for details</span>
                 </div>
                 <div className="policy-item">
-                  <span className="policy-icon">🔄</span>
+                  <span className="policy-icon">ðŸ”„</span>
                   <span>Returns accepted within 7 days with receipt</span>
                 </div>
                 <div className="policy-item">
-                  <span className="policy-icon">📞</span>
-                  <span>Customer Support: +254 712 345 678</span>
+                  <span className="policy-icon">ðŸ“ž</span>
+                  <span>Customer Support: {nawiriBrand.phoneDisplay}</span>
                 </div>
               </div>
 
@@ -1990,8 +2394,8 @@ const StaffPOS = () => {
               {/* Footer */}
               <div className="footer-info">
                 <div style={{ marginBottom: '4px' }}>
-                  <div>support@nawirihair.com</div>
-                  <div>www.nawirihair.com</div>
+                  <div>{nawiriBrand.email}</div>
+                  <div>{nawiriBrand.websiteUrl.replace(/^https?:\/\//, '')}</div>
                 </div>
                 <div style={{ fontSize: '7px', color: '#a0aec0', marginTop: '4px' }}>
                   Receipt generated on {new Date().toLocaleDateString('en-KE')}
@@ -2024,8 +2428,8 @@ const StaffPOS = () => {
           <div className="absolute inset-0 bg-black/50" onClick={()=>setShowParkedDrawer(false)} />
           <div className="absolute right-0 top-0 h-full w-[380px] bg-ivory dark:bg-dm-card p-4 overflow-y-auto scrollbar-hide shadow-hover">
             <div className="flex items-center justify-between mb-3">
-              <h3 className="font-display text-lg italic text-plum-900 dark:text-white">Held Sales</h3>
-              <button onClick={()=>setShowParkedDrawer(false)} className="text-brown-300 hover:text-charcoal dark:text-white/40 transition-colors"><FaTimes/></button>
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{SALES_RECORDS_LABEL} on Hold</h3>
+              <button onClick={()=>setShowParkedDrawer(false)} className="text-gray-500"><FaTimes/></button>
             </div>
             <div className="mb-3">
               <input
@@ -2046,7 +2450,7 @@ const StaffPOS = () => {
                       <div className="min-w-0">
                         <p className="text-sm font-medium text-charcoal dark:text-white truncate">{new Date(p.when).toLocaleString()}</p>
                         <p className="text-xs text-brown-400 dark:text-white/50">
-                          {p.cart.length} items • {p.customer?.name || 'Walk-in'} • <span className="font-price text-gold-600">{DisplayPriceInShillings(parkedTotal(p))}</span>
+                          {p.cart.length} items â€¢ {p.customer?.name || 'Walk-in'} â€¢ <span className="font-price text-gold-600">{DisplayPriceInShillings(parkedTotal(p))}</span>
                         </p>
                         {p.orderNote && <p className="text-xs text-brown-300 dark:text-white/30 truncate">Note: {p.orderNote}</p>}
                       </div>
@@ -2074,7 +2478,7 @@ const StaffPOS = () => {
                             </div>
                           ))}
                           {(p.cart || []).length > 3 && (
-                            <div className="text-xs text-brown-300 dark:text-white/30">+ {(p.cart || []).length - 3} more…</div>
+                            <div className="text-xs text-brown-300 dark:text-white/30">+ {(p.cart || []).length - 3} moreâ€¦</div>
                           )}
                         </div>
                       )}
@@ -2106,13 +2510,13 @@ const StaffPOS = () => {
               <button onClick={()=>setShowHelp(false)} className="text-brown-300 hover:text-charcoal dark:text-white/40 transition-colors"><FaTimes/></button>
             </div>
             <div className="grid grid-cols-2 gap-3 text-sm text-charcoal dark:text-white/70">
-              <div>F2 – Focus Search</div>
-              <div>F4 – Open Payment</div>
-              <div>F6 – Increase Discount</div>
-              <div>F7 – Hold Sale</div>
-              <div>F8 – Show Held</div>
-              <div>+ / - – Change Quantity</div>
-              <div>Del – Remove Item</div>
+              <div>F2 â€“ Focus Search</div>
+              <div>F4 â€“ Open Payment</div>
+              <div>F6 â€“ Increase Discount</div>
+              <div>F7 â€“ Hold Sale</div>
+              <div>F8 â€“ Show Held</div>
+              <div>+ / - â€“ Change Quantity</div>
+              <div>Del â€“ Remove Item</div>
             </div>
           </div>
         </div>

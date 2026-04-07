@@ -1,6 +1,7 @@
 import axios from 'axios';
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { buildApiUrl } from '../../../common/apiBaseUrl';
 
 const Dispatched = () => {
   const [dispatchedOrders, setDispatchedOrders] = useState([]);
@@ -24,7 +25,7 @@ const Dispatched = () => {
       setLoading(true);
       const token = localStorage.getItem('token');
       const response = await axios.get(
-        `${import.meta.env.VITE_SERVER_URL}/api/delivery/dispatched-orders?sort=${sortBy}&direction=${sortDirection}`,
+        buildApiUrl(`/api/delivery/dispatched-orders?sort=${sortBy}&direction=${sortDirection}`),
         { headers: { Authorization: `Bearer ${token}` } }
       );
       
@@ -117,7 +118,7 @@ const Dispatched = () => {
     try {
       const token = localStorage.getItem('token');
       const response = await axios.get(
-        `${import.meta.env.VITE_SERVER_URL}/api/delivery/personnel/available`,
+        buildApiUrl('/api/delivery/personnel/available'),
         { headers: { Authorization: `Bearer ${token}` } }
       );
       
@@ -198,7 +199,7 @@ const Dispatched = () => {
     try {
       const token = localStorage.getItem('token');
       const response = await axios.post(
-        `${import.meta.env.VITE_SERVER_URL}/api/delivery/assign-orders`,
+        buildApiUrl('/api/delivery/assign-orders'),
         { 
           orderIds: selectedOrders,
           deliveryPersonnelId: selectedDeliveryPerson

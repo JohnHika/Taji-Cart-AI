@@ -1,4 +1,4 @@
-import L from 'leaflet';
+﻿import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import React, { useEffect, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
@@ -682,16 +682,17 @@ const DeliveryMap = () => {
 
   if (loading) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh]">
-        <FaSpinner className="animate-spin text-4xl text-plum-500 mb-4" />
-        <p className="text-lg text-charcoal dark:text-white/70">Loading map view...</p>
+      <div className="mobile-page-shell flex min-h-[60vh] flex-col items-center justify-center">
+        <FaSpinner className="animate-spin text-4xl text-primary-200 mb-4" />
+        <p className="text-lg text-gray-700 dark:text-gray-300">Loading map view...</p>
       </div>
     );
   }
   
   if (error) {
     return (
-      <div className="bg-blush-100 dark:bg-blush-500/10 text-blush-500 dark:text-blush-300 p-4 rounded-card border border-blush-200 dark:border-blush-500/20">
+      <div className="mobile-page-shell">
+        <div className="mobile-surface bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 p-4 rounded-lg">
         <p>{error}</p>
         <button
           onClick={() => window.location.reload()}
@@ -699,36 +700,37 @@ const DeliveryMap = () => {
         >
           Try Again
         </button>
+        </div>
       </div>
     );
   }
   
   return (
-    <div>
-      <div className="flex flex-wrap justify-between items-center mb-6">
-        <div>
-          <h1 className="font-display text-2xl italic text-plum-900 dark:text-white mb-1">Delivery Map</h1>
+    <div className="mobile-page-shell gap-4 md:gap-6">
+      <div className="mobile-surface flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0">
+          <h1 className="text-2xl font-bold dark:text-white mb-1">Delivery Map</h1>
           
           {/* Weather widget */}
           {weatherData && (
-            <div className="flex items-center text-sm text-brown-400 dark:text-white/50 bg-blush-50 dark:bg-dm-card rounded-pill px-3 py-1 mt-1">
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-gray-600 dark:text-gray-300">
               {getWeatherIcon(weatherData.current.condition)}
               <span className="ml-1">{weatherData.current.condition.text}</span>
-              <FaThermometerHalf className="ml-3 mr-1 text-gold-500" />
-              <span>{Math.round(weatherData.current.temp_c)}°C</span>
-              <FaWind className="ml-3 mr-1 text-plum-400" />
+              <FaThermometerHalf className="mr-1" />
+              <span>{Math.round(weatherData.current.temp_c)}Â°C</span>
+              <FaWind className="mr-1" />
               <span>{Math.round(weatherData.current.wind_kph)} km/h</span>
             </div>
           )}
         </div>
         
-        <div className="flex flex-wrap gap-2">
+        <div className="grid w-full grid-cols-1 gap-2 sm:w-auto sm:grid-cols-2">
           <button
             onClick={() => {
               setShowPerformance(true);
               fetchPerformanceData();
             }}
-            className="bg-plum-700 hover:bg-plum-800 text-white px-4 py-2 rounded-pill flex items-center gap-2 transition-colors text-sm"
+            className="bg-indigo-500 text-white px-4 py-2 rounded hover:bg-indigo-600 flex items-center justify-center"
           >
             <FaChartLine size={13} />
             Performance
@@ -736,7 +738,7 @@ const DeliveryMap = () => {
           <button
             onClick={updateCurrentLocation}
             disabled={updatingLocation}
-            className="bg-gold-500 hover:bg-gold-400 text-charcoal font-medium px-4 py-2 rounded-pill flex items-center gap-2 disabled:opacity-50 transition-colors text-sm press"
+            className="bg-primary-200 text-white px-4 py-2 rounded hover:bg-primary-300 flex items-center justify-center disabled:opacity-50"
           >
             {updatingLocation ? (
               <FaSpinner className="animate-spin" size={13} />
@@ -750,10 +752,10 @@ const DeliveryMap = () => {
       
       {/* Performance Metrics Modal */}
       {showPerformance && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <div className="bg-ivory dark:bg-dm-card rounded-card shadow-hover p-6 max-w-lg w-full animate-scale-in">
-            <div className="flex justify-between items-center mb-5">
-              <h3 className="font-display text-xl italic text-plum-900 dark:text-white">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-lg p-4 sm:p-6 max-w-lg w-full max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-xl font-bold dark:text-white">
                 Delivery Performance
               </h3>
               <button
@@ -826,8 +828,8 @@ const DeliveryMap = () => {
       
       {/* Order details modal */}
       {showOrderDetails && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <div className="bg-ivory dark:bg-dm-card rounded-card shadow-hover p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto animate-scale-in">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-lg p-4 sm:p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center mb-4">
               <h3 className="font-display text-xl italic text-plum-900 dark:text-white">
                 Order #{selectedOrderDetails?.orderId}
@@ -873,7 +875,7 @@ const DeliveryMap = () => {
                         <div className="flex-1">
                           <p className="font-medium dark:text-white">{item.name}</p>
                           <p className="text-sm text-gray-600 dark:text-gray-400">
-                            Qty: {item.quantity} × KSh {item.price?.toFixed(2)}
+                            Qty: {item.quantity} Ã— KSh {item.price?.toFixed(2)}
                           </p>
                         </div>
                       </div>
@@ -893,10 +895,10 @@ const DeliveryMap = () => {
                   </div>
                 </div>
                 
-                <div className="flex justify-end gap-2 mt-6">
+                <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
                   <button
                     onClick={() => setShowOrderDetails(false)}
-                    className="px-4 py-2 bg-blush-50 dark:bg-dm-card-2 text-charcoal dark:text-white/70 rounded-pill hover:bg-blush-100 transition-colors text-sm"
+                    className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-white rounded hover:bg-gray-300 dark:hover:bg-gray-600"
                   >
                     Close
                   </button>
@@ -931,8 +933,8 @@ const DeliveryMap = () => {
       
       {/* Route optimizer modal */}
       {showOptimizeModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <div className="bg-ivory dark:bg-dm-card rounded-card shadow-hover p-6 max-w-lg w-full max-h-[90vh] overflow-y-auto animate-scale-in">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-lg p-4 sm:p-6 max-w-lg w-full max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center mb-4">
               <h3 className="font-display text-xl italic text-plum-900 dark:text-white">
                 Optimize Delivery Route
@@ -973,7 +975,7 @@ const DeliveryMap = () => {
                         <div className="flex-1">
                           <p className="font-medium text-charcoal dark:text-white text-sm">Order #{delivery.orderId}</p>
                           <p className="text-xs text-brown-400 dark:text-white/40">
-                            {delivery.customer.name} • {delivery.deliveryAddress.substring(0, 30)}
+                            {delivery.customer.name} â€¢ {delivery.deliveryAddress.substring(0, 30)}
                             {delivery.deliveryAddress.length > 30 ? '...' : ''}
                           </p>
                         </div>
@@ -991,15 +993,15 @@ const DeliveryMap = () => {
               )}
             </div>
             
-            <div className="flex flex-wrap justify-between gap-2">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
               <button
                 onClick={clearSelectedDeliveries}
-                className="px-3 py-1.5 bg-blush-50 dark:bg-dm-card-2 text-charcoal dark:text-white/70 rounded-pill hover:bg-blush-100 transition-colors text-sm"
+                className="px-3 py-1.5 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-white rounded hover:bg-gray-300 dark:hover:bg-gray-600"
               >
                 Clear
               </button>
               
-              <div className="flex gap-2">
+              <div className="grid grid-cols-1 gap-2 sm:flex sm:flex-wrap sm:justify-end">
                 <button
                   onClick={() => setShowOptimizeModal(false)}
                   className="px-3 py-1.5 bg-blush-50 dark:bg-dm-card-2 text-charcoal dark:text-white/70 rounded-pill hover:bg-blush-100 transition-colors text-sm"
@@ -1025,12 +1027,12 @@ const DeliveryMap = () => {
       )}
       
       {/* Map controls */}
-      <div className="bg-white dark:bg-dm-card rounded-card shadow-card p-2 mb-2 flex flex-wrap justify-between items-center">
-        <div className="flex flex-wrap gap-2 mb-2 sm:mb-0">
+      <div className="mobile-surface flex flex-col gap-3 p-3">
+        <div className="flex flex-wrap gap-2">
           <select
             value={selectedTileLayer}
             onChange={(e) => setSelectedTileLayer(e.target.value)}
-            className="bg-white dark:bg-dm-card border border-blush-200 dark:border-dm-border rounded-pill px-3 py-1 text-sm text-charcoal dark:text-white outline-none"
+            className="w-full sm:w-auto bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded px-3 py-2 text-sm"
           >
             {Object.keys(tileLayers).map(key => (
               <option key={key} value={key}>{tileLayers[key].name}</option>
@@ -1039,18 +1041,18 @@ const DeliveryMap = () => {
           
           <button
             onClick={centerOnCurrentLocation}
-            className="bg-plum-100 dark:bg-plum-900/30 text-plum-700 dark:text-plum-200 rounded-pill px-2.5 py-1 text-xs flex items-center gap-1 hover:bg-plum-200 transition-colors"
+            className="bg-blue-500 text-white rounded px-3 py-2 text-sm flex items-center justify-center hover:bg-blue-600"
           >
             <FaLocationArrow size={10} /> Center
           </button>
           
           <button
             onClick={toggleTrafficLayer}
-            className={`rounded-pill px-2.5 py-1 text-xs flex items-center gap-1 transition-colors ${
-              trafficLayer
-                ? 'bg-blush-500 text-white'
-                : 'bg-blush-50 dark:bg-dm-card text-charcoal dark:text-white/70 hover:bg-blush-100'
-            }`}
+            className={`rounded px-2 py-1 text-sm flex items-center ${
+              trafficLayer 
+                ? 'bg-red-500 text-white hover:bg-red-600' 
+                : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-600'
+              } px-3 py-2`}
           >
             <FaTrafficLight size={10} />
             {trafficLayer ? 'Hide Traffic' : 'Traffic'}
@@ -1058,11 +1060,11 @@ const DeliveryMap = () => {
           
           <button
             onClick={toggleWeatherMode}
-            className={`rounded-pill px-2.5 py-1 text-xs flex items-center gap-1 transition-colors ${
-              weatherMode
-                ? 'bg-plum-700 text-white'
-                : 'bg-blush-50 dark:bg-dm-card text-charcoal dark:text-white/70 hover:bg-blush-100'
-            }`}
+            className={`rounded px-2 py-1 text-sm flex items-center ${
+              weatherMode 
+                ? 'bg-cyan-500 text-white hover:bg-cyan-600' 
+                : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-600'
+              } px-3 py-2`}
           >
             <FaCloud size={10} />
             {weatherMode ? 'Exit Weather' : 'Weather'}
@@ -1070,7 +1072,7 @@ const DeliveryMap = () => {
           
           <button
             onClick={() => setShowOptimizeModal(true)}
-            className="bg-plum-700 hover:bg-plum-800 text-white rounded-pill px-2.5 py-1 text-xs flex items-center gap-1 transition-colors"
+            className="bg-purple-500 text-white rounded px-3 py-2 text-sm flex items-center justify-center hover:bg-purple-600"
           >
             <FaRoute size={10} /> Optimize
             {selectedDeliveries.length > 0 && (
@@ -1081,23 +1083,23 @@ const DeliveryMap = () => {
           </button>
           
           {loadingWeather ? (
-            <div className="bg-blush-50 dark:bg-dm-card rounded-pill px-2.5 py-1 text-xs flex items-center gap-1 text-brown-400 dark:text-white/40">
-              <FaSpinner className="animate-spin" size={10} /> Weather...
+            <div className="bg-gray-100 dark:bg-gray-700 rounded px-3 py-2 text-sm flex items-center">
+              <FaSpinner className="animate-spin mr-1" /> Loading weather...
             </div>
           ) : weatherData ? (
-            <div className="bg-blush-50 dark:bg-dm-card rounded-pill px-2.5 py-1 text-xs flex items-center gap-1 text-charcoal dark:text-white/70">
+            <div className="bg-gray-100 dark:bg-gray-700 rounded px-3 py-2 text-sm flex items-center">
               {getWeatherIcon(weatherData.current.condition)}
-              <span>{Math.round(weatherData.current.temp_c)}°C</span>
+              <span>{Math.round(weatherData.current.temp_c)}Â°C</span>
             </div>
           ) : null}
         </div>
         
-        <div className="flex items-center gap-2">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
           {selectedDelivery && currentLocation && (
             <button
               onClick={() => getDetailedDirections(currentLocation, selectedDelivery.coordinates)}
               disabled={isRouteFetching}
-              className="bg-plum-50 dark:bg-plum-900/30 text-plum-700 dark:text-plum-200 rounded-pill px-2.5 py-1 text-xs flex items-center gap-1 hover:bg-plum-100 disabled:opacity-50 transition-colors"
+              className="bg-green-500 text-white rounded px-3 py-2 text-sm flex items-center justify-center hover:bg-green-600 disabled:opacity-50"
             >
               {isRouteFetching ? <FaSpinner className="animate-spin" size={10} /> : <FaRoute size={10} />}
               Route
@@ -1106,7 +1108,7 @@ const DeliveryMap = () => {
           
           <button
             onClick={toggleFullscreen}
-            className="bg-brown-50 dark:bg-dm-card text-charcoal dark:text-white/70 rounded-pill px-2.5 py-1 text-xs flex items-center gap-1 hover:bg-brown-100 transition-colors"
+            className="bg-gray-500 text-white rounded px-3 py-2 text-sm flex items-center justify-center hover:bg-gray-600"
           >
             {isFullscreen ? <FaCompressAlt size={10} /> : <FaExpandAlt size={10} />}
             {isFullscreen ? 'Exit' : 'Fullscreen'}
@@ -1115,9 +1117,9 @@ const DeliveryMap = () => {
       </div>
       
       {/* Map container with sidebar layout */}
-      <div
-        ref={mapContainerRef}
-        className={`bg-white dark:bg-dm-card rounded-card shadow-card overflow-hidden flex flex-col ${isFullscreen ? '' : 'md:flex-row'}`}
+      <div 
+        ref={mapContainerRef} 
+        className={`bg-white dark:bg-gray-800 rounded-xl shadow overflow-hidden flex flex-col ${isFullscreen ? '' : 'md:flex-row'}`}
       >
         {/* Map */}
         <div 
@@ -1243,7 +1245,7 @@ const DeliveryMap = () => {
         
         {/* Active deliveries sidebar - hide in fullscreen mode */}
         {!isFullscreen && (
-          <div className="p-4 border-t md:border-t-0 md:border-l border-brown-100 dark:border-dm-border md:w-80 lg:w-96">
+          <div className="p-4 border-t md:border-t-0 md:border-l border-gray-200 dark:border-gray-700 md:w-80 lg:w-96 max-h-[70vh] md:max-h-none overflow-y-auto">
             {selectedDeliveries.length > 0 && (
               <div className="mb-4 p-3 bg-plum-50 dark:bg-plum-900/20 rounded-card border border-plum-100 dark:border-plum-800/30">
                 <div className="flex justify-between items-center mb-2">
@@ -1261,7 +1263,7 @@ const DeliveryMap = () => {
                 <ol className="list-decimal list-inside text-xs text-plum-700 dark:text-plum-200 pl-2 space-y-1">
                   {selectedDeliveries.map((delivery, index) => (
                     <li key={delivery._id}>
-                      {delivery.customer.name} • #{delivery.orderId}
+                      {delivery.customer.name} â€¢ #{delivery.orderId}
                     </li>
                   ))}
                 </ol>
@@ -1337,8 +1339,8 @@ const DeliveryMap = () => {
                     <p className="text-xs text-brown-400 dark:text-white/50 truncate">
                       <FaMapMarkerAlt className="inline mr-1" size={9} /> {delivery.deliveryAddress}
                     </p>
-                    <div className="mt-2 flex justify-between">
-                      <div className="flex gap-1.5">
+                    <div className="mt-3 flex flex-col gap-2 xl:flex-row xl:items-center xl:justify-between">
+                      <div className="flex flex-wrap gap-2">
                         <a
                           href={`https://maps.google.com/?q=${delivery.deliveryAddress}`}
                           target="_blank"
@@ -1364,8 +1366,8 @@ const DeliveryMap = () => {
                       </div>
                       
                       {delivery.status === 'driver_assigned' && (
-                        <button
-                          className="bg-gold-500 hover:bg-gold-400 text-charcoal font-medium px-2 py-0.5 rounded-pill text-xs flex items-center gap-1 transition-colors press"
+                        <button 
+                          className="bg-primary-100 hover:bg-primary-200 text-white px-3 py-2 rounded text-xs flex items-center justify-center"
                           onClick={(e) => {
                             e.stopPropagation();
                             handleStatusUpdate(delivery._id, 'out_for_delivery');
@@ -1375,8 +1377,8 @@ const DeliveryMap = () => {
                         </button>
                       )}
                       {delivery.status === 'out_for_delivery' && (
-                        <button
-                          className="bg-plum-700 hover:bg-plum-800 text-white px-2 py-0.5 rounded-pill text-xs flex items-center gap-1 transition-colors press"
+                        <button 
+                          className="bg-green-500 hover:bg-green-600 text-white px-3 py-2 rounded text-xs flex items-center justify-center"
                           onClick={(e) => {
                             e.stopPropagation();
                             handleStatusUpdate(delivery._id, 'delivered');
@@ -1396,8 +1398,8 @@ const DeliveryMap = () => {
       
       {/* Weather info modal for clicked locations */}
       {showLocationWeather && locationWeatherData && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <div className="bg-ivory dark:bg-dm-card rounded-card shadow-hover p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto animate-scale-in">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-lg p-4 sm:p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center mb-4">
               <h3 className="font-display text-xl italic text-plum-900 dark:text-white">
                 {locationWeatherData.location.name}, {locationWeatherData.location.region}
@@ -1420,7 +1422,7 @@ const DeliveryMap = () => {
                     className="w-24 h-24 mb-2"
                   />
                 )}
-                <p className="font-price text-3xl font-bold text-charcoal dark:text-white">{Math.round(locationWeatherData.current.temp_c)}°C</p>
+                <p className="font-price text-3xl font-bold text-charcoal dark:text-white">{Math.round(locationWeatherData.current.temp_c)}Â°C</p>
                 <p className="text-brown-400 dark:text-white/50 text-sm">{locationWeatherData.current.condition.text}</p>
               </div>
               
@@ -1430,7 +1432,7 @@ const DeliveryMap = () => {
                     <FaThermometerHalf className="mr-1 text-gold-500" />
                     <span>Feels Like</span>
                   </div>
-                  <p className="font-semibold text-charcoal dark:text-white">{Math.round(locationWeatherData.current.feelslike_c)}°C</p>
+                  <p className="font-semibold text-charcoal dark:text-white">{Math.round(locationWeatherData.current.feelslike_c)}Â°C</p>
                 </div>
                 
                 <div className="bg-white/70 dark:bg-dm-card/70 p-2 rounded-card border border-brown-100 dark:border-dm-border">
@@ -1481,7 +1483,7 @@ const DeliveryMap = () => {
                         <div>
                           <p className="font-medium text-charcoal dark:text-white text-sm">{day.day.condition.text}</p>
                           <p className="text-xs text-brown-400 dark:text-white/50">
-                            {Math.round(day.day.maxtemp_c)}° / {Math.round(day.day.mintemp_c)}°
+                            {Math.round(day.day.maxtemp_c)}Â° / {Math.round(day.day.mintemp_c)}Â°
                           </p>
                         </div>
                       </div>
@@ -1512,7 +1514,7 @@ const DeliveryMap = () => {
                       <p className="font-semibold text-blush-500 dark:text-blush-300 text-sm">{alert.headline || 'Weather Alert'}</p>
                       <p className="text-xs text-blush-500 dark:text-blush-400 mb-1">{alert.event}</p>
                       <p className="text-xs text-brown-400 dark:text-white/40">
-                        {new Date(alert.effective).toLocaleString()} — {new Date(alert.expires).toLocaleString()}
+                        {new Date(alert.effective).toLocaleString()} â€” {new Date(alert.expires).toLocaleString()}
                       </p>
                     </div>
                   ))}

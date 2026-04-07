@@ -137,13 +137,13 @@ const DeliveryHistory = () => {
   }
   
   return (
-    <div>
-      <div className="flex justify-between items-center mb-6">
+    <div className="mobile-page-shell px-0 py-0 sm:px-0 sm:py-0 lg:px-0">
+      <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-2xl font-bold dark:text-white">Delivery History</h1>
         
         <button 
           onClick={exportToCSV} 
-          className="bg-primary-200 text-white px-4 py-2 rounded flex items-center hover:bg-primary-300"
+          className="bg-primary-200 text-white px-4 py-2 rounded flex items-center justify-center hover:bg-primary-300"
         >
           <FaFileDownload className="mr-2" />
           Export
@@ -209,7 +209,38 @@ const DeliveryHistory = () => {
           </p>
         </div>
       ) : (
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
+        <>
+          <div className="grid gap-4 md:hidden">
+            {filteredHistory.map(order => (
+              <div key={order._id} className="mobile-surface p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-base font-semibold text-gray-900 dark:text-white">#{order.orderId}</p>
+                    <p className="mt-1 text-sm text-gray-600 dark:text-gray-300">{order.customer.name}</p>
+                  </div>
+                  <p className="text-sm font-semibold text-gray-900 dark:text-white">KSh {order.total.toFixed(2)}</p>
+                </div>
+                <p className="mt-3 text-sm text-gray-600 dark:text-gray-300">{order.deliveryAddress}</p>
+                <div className="mt-3 flex items-center justify-between gap-3 text-xs text-gray-500 dark:text-gray-400">
+                  <span>{formatDate(order.deliveredAt)}</span>
+                  <div className="flex">
+                    {[...Array(5)].map((_, i) => (
+                      <svg 
+                        key={i}
+                        className={`w-4 h-4 ${i < order.rating ? 'text-yellow-400' : 'text-gray-300 dark:text-gray-600'}`}
+                        fill="currentColor"
+                        viewBox="0 0 20 20"
+                      >
+                        <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                      </svg>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="hidden md:block bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
           <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
             <thead className="bg-gray-50 dark:bg-gray-700">
               <tr>
@@ -270,6 +301,7 @@ const DeliveryHistory = () => {
             </tbody>
           </table>
         </div>
+        </>
       )}
     </div>
   );

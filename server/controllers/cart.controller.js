@@ -1,10 +1,54 @@
 import CartProductModel from "../models/cartproduct.model.js";
 import UserModel from "../models/user.model.js";
 
+const VARIANT_FIELDS = ['color', 'length', 'density', 'laceSpecification'];
+
+const normalizeText = (value) => {
+    if (typeof value !== 'string') {
+        return '';
+    }
+
+    return value.trim();
+};
+
+const normalizeSelectedVariant = (selectedVariant) => {
+    if (!selectedVariant || typeof selectedVariant !== 'object') {
+        return null;
+    }
+
+    const normalizedVariant = VARIANT_FIELDS.reduce((accumulator, field) => {
+        const value = normalizeText(selectedVariant[field]);
+
+        if (value) {
+            accumulator[field] = value;
+        }
+
+        return accumulator;
+    }, {});
+
+    return Object.keys(normalizedVariant).length ? normalizedVariant : null;
+};
+
+const buildSelectedVariantKey = (selectedVariant) => {
+    if (!selectedVariant) {
+        return '';
+    }
+
+    return JSON.stringify(
+        VARIANT_FIELDS.reduce((accumulator, field) => {
+            accumulator[field] = selectedVariant[field] || '';
+            return accumulator;
+        }, {})
+    );
+};
+
 export const addToCartItemController = async(request,response)=>{
     try {
         const  userId = request.userId
-        const { productId } = request.body
+        const { productId, sku, selectedVariant } = request.body
+        const normalizedSku = normalizeText(sku)
+        const normalizedSelectedVariant = normalizeSelectedVariant(selectedVariant)
+        const selectedVariantKey = buildSelectedVariantKey(normalizedSelectedVariant)
         
         if(!productId){
             return response.status(402).json({
@@ -14,21 +58,41 @@ export const addToCartItemController = async(request,response)=>{
             })
         }
 
-        const checkItemCart = await CartProductModel.findOne({
+        // For products with SKU, check uniqueness in cart (same product with same variant)
+        const skuCandidates = normalizedSku ? [normalizedSku] : ['', null]
+        const variantKeyCandidates = selectedVariantKey ? [selectedVariantKey] : ['', null]
+
+        let checkItemCart = await CartProductModel.findOne({
             userId : userId,
-            productId : productId
+            productId : productId,
+            sku : { $in : skuCandidates },
+            selectedVariantKey : { $in : variantKeyCandidates }
         })
+
+        if(!checkItemCart && normalizedSelectedVariant){
+            checkItemCart = await CartProductModel.findOne({
+                userId : userId,
+                productId : productId,
+                sku : { $in : skuCandidates },
+                selectedVariant : normalizedSelectedVariant
+            })
+        }
 
         if(checkItemCart){
             return response.status(400).json({
-                message : "Item already in cart"
+                message : "Item already in cart",
+                error : true,
+                success : false
             })
         }
 
         const cartItem = new CartProductModel({
             quantity : 1,
             userId : userId,
-            productId : productId
+            productId : productId,
+            sku : normalizedSku,
+            selectedVariant : normalizedSelectedVariant,
+            selectedVariantKey
         })
         const save = await cartItem.save()
 
@@ -47,6 +111,14 @@ export const addToCartItemController = async(request,response)=>{
 
         
     } catch (error) {
+        if (error?.code === 11000) {
+            return response.status(400).json({
+                message : "Item already in cart",
+                error : true,
+                success : false
+            })
+        }
+
         return response.status(500).json({
             message : error.message || error,
             error : true,

@@ -18,6 +18,7 @@ import {
 } from 'react-icons/fa';
 import { useDispatch, useSelector } from 'react-redux';
 import { useLocation } from 'react-router-dom';
+import SummaryApi from '../common/SummaryApi';
 import RoyalCard from '../components/RoyalCard';
 import UserProfileAvatarEdit from '../components/UserProfileAvatarEdit';
 import { setUserDetails } from '../store/userSlice'; // Changed from setUser to setUserDetails
@@ -61,6 +62,10 @@ const UserProfile = () => {
 
   const [verifyingEmail, setVerifyingEmail] = useState(false);
   const [emailSent, setEmailSent] = useState(false);
+  const [phoneOtp, setPhoneOtp] = useState('');
+  const [phoneOtpSent, setPhoneOtpSent] = useState(false);
+  const [verifyingPhone, setVerifyingPhone] = useState(false);
+  const [confirmingPhone, setConfirmingPhone] = useState(false);
 
   // Password validation
   const validatePassword = (password) => {
@@ -117,20 +122,25 @@ const UserProfile = () => {
       setLoading(true);
       // Fix: Use the correct API endpoint that matches the server route
       const response = await Axios({
-        url: '/api/user/update-user',
-        method: 'PUT',
+        ...SummaryApi.updateUserDetails,
         data: formData
       });
       
       if (response.data.success) {
-        toast.success('Profile updated successfully');
-        // Update user data in Redux store - Changed setUser to setUserDetails
-        dispatch(setUserDetails({ 
-          ...user, 
-          name: formData.name,
-          email: formData.email,
-          mobile: formData.mobile 
-        }));
+        toast.success(response.data.message || 'Profile updated successfully');
+        if (response.data.data) {
+          dispatch(setUserDetails(response.data.data));
+        } else {
+          dispatch(setUserDetails({ 
+            ...user, 
+            name: formData.name,
+            email: formData.email,
+            mobile: formData.mobile 
+          }));
+        }
+        setEmailSent(false);
+        setPhoneOtpSent(false);
+        setPhoneOtp('');
         setIsEditing(false);
       } else {
         toast.error(response.data.message || 'Failed to update profile');
@@ -255,23 +265,15 @@ const UserProfile = () => {
     try {
       setVerifyingEmail(true);
       const response = await Axios({
-        url: '/api/user/verify-email',
-        method: 'POST',
+        ...SummaryApi.sendVerificationEmail,
         data: { 
           email: user.email,
-          code: user._id // The server expects a code parameter
         }
       });
       
       if (response.data.success) {
         setEmailSent(true);
-        toast.success('Email verified successfully!');
-        
-        // Update user state to reflect verified status
-        dispatch(setUserDetails({
-          ...user,
-          verify_email: true
-        }));
+        toast.success(response.data.message || 'Verification email sent.');
       } else {
         toast.error(response.data.message || 'Failed to verify email');
       }
@@ -280,6 +282,64 @@ const UserProfile = () => {
       toast.error(error.response?.data?.message || 'Failed to verify email');
     } finally {
       setVerifyingEmail(false);
+    }
+  };
+
+  const handleSendPhoneOtp = async () => {
+    const targetPhone = (formData.mobile || user.mobile || '').trim();
+
+    if (!targetPhone) {
+      toast.error('Add your phone number first.');
+      return;
+    }
+
+    try {
+      setVerifyingPhone(true);
+      const response = await Axios({
+        ...SummaryApi.requestPhoneVerificationOtp,
+        data: { mobile: targetPhone }
+      });
+
+      if (response.data.success) {
+        toast.success(response.data.message || 'Phone verification code sent.');
+        setPhoneOtpSent(true);
+      } else {
+        toast.error(response.data.message || 'Unable to send phone verification code.');
+      }
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Unable to send phone verification code.');
+    } finally {
+      setVerifyingPhone(false);
+    }
+  };
+
+  const handleVerifyPhoneOtp = async () => {
+    if (!phoneOtp.trim()) {
+      toast.error('Enter the phone verification code first.');
+      return;
+    }
+
+    try {
+      setConfirmingPhone(true);
+      const response = await Axios({
+        ...SummaryApi.verifyPhoneOtp,
+        data: { otp: phoneOtp.trim() }
+      });
+
+      if (response.data.success) {
+        toast.success(response.data.message || 'Phone number verified.');
+        dispatch(setUserDetails({
+          ...user,
+          mobile_verified: true
+        }));
+        setPhoneOtp('');
+      } else {
+        toast.error(response.data.message || 'Unable to verify phone code.');
+      }
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Unable to verify phone code.');
+    } finally {
+      setConfirmingPhone(false);
     }
   };
 
@@ -553,6 +613,57 @@ const UserProfile = () => {
                                       </>
                                     )}
                                   </button>
+                                )}
+                              </>
+                            )}
+                          </div>
+                        </div>
+
+                        <div>
+                          <p className="text-sm text-brown-500 dark:text-white/50">Phone Verified</p>
+                          <div className="flex flex-col">
+                            {user.mobile_verified ? (
+                              <span className="text-green-600 dark:text-green-400 flex items-center">
+                                <FaCheck className="mr-1" /> Verified
+                              </span>
+                            ) : (
+                              <>
+                                <span className="text-orange-600 dark:text-orange-400 flex items-center mb-1">
+                                  <FaExclamationTriangle className="mr-1" /> Not Verified
+                                </span>
+                                <button
+                                  onClick={handleSendPhoneOtp}
+                                  disabled={verifyingPhone}
+                                  className="mt-1 text-sm flex items-center font-semibold text-plum-700 hover:text-plum-600 dark:text-plum-300 dark:hover:text-plum-200"
+                                >
+                                  {verifyingPhone ? (
+                                    <>
+                                      <FaSpinner className="animate-spin mr-1" /> Sending code...
+                                    </>
+                                  ) : (
+                                    'Send phone code'
+                                  )}
+                                </button>
+                                {phoneOtpSent && (
+                                  <div className="mt-3 flex flex-col gap-2 sm:max-w-xs">
+                                    <input
+                                      type="text"
+                                      value={phoneOtp}
+                                      onChange={(event) => setPhoneOtp(event.target.value.replace(/\D/g, '').slice(0, 6))}
+                                      placeholder="Enter 6-digit code"
+                                      className="w-full rounded-lg border border-brown-200 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-plum-500/30 dark:border-dm-border dark:bg-dm-card dark:text-white"
+                                    />
+                                    <button
+                                      onClick={handleVerifyPhoneOtp}
+                                      disabled={confirmingPhone}
+                                      className="inline-flex items-center justify-center rounded-pill bg-plum-700 px-4 py-2 text-sm font-semibold text-white transition hover:bg-plum-600 disabled:opacity-60"
+                                    >
+                                      {confirmingPhone ? 'Verifying...' : 'Confirm phone code'}
+                                    </button>
+                                    <p className="text-xs text-brown-500 dark:text-white/45">
+                                      The verification code is sent to your email inbox for now, then linked back to your phone number.
+                                    </p>
+                                  </div>
                                 )}
                               </>
                             )}

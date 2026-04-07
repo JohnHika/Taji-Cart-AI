@@ -1,8 +1,10 @@
 import mongoose from 'mongoose';
+import sendEmail from '../config/sendEmail.js';
 import LoyaltyCardModel from '../models/loyaltycard.model.js';
 import LoyaltyThresholdModel from '../models/loyaltythreshold.model.js';
 import OrderModel from '../models/order.model.js';
 import UserModel from '../models/user.model.js';
+import { renderAccountNoticeEmail } from '../utils/emailTemplates.js';
 import { createSecurityCode, verifySecurityCode } from '../utils/securityUtils.js';
 
 // Generate a unique card number
@@ -1430,25 +1432,22 @@ export const requestSecurityCode = async (req, res) => {
     }
     
     try {
-      const sendEmailModule = await import('../config/sendEmail.js');
-      const sendEmail = sendEmailModule.default;
-      
       await sendEmail({
         sendTo: user.email,
-        subject: "Security Code for Loyalty Program Operation",
-        html: `
-          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 5px;">
-            <h2 style="color: #333;">Security Verification Code</h2>
-            <p>Hello ${user.name},</p>
-            <p>Your security code for performing a loyalty program operation is:</p>
-            <div style="background-color: #f2f2f2; padding: 15px; text-align: center; font-size: 24px; letter-spacing: 5px; font-weight: bold; margin: 20px 0;">
-              ${securityCode}
-            </div>
-            <p>This code will expire in 15 minutes.</p>
-            <p>If you did not request this code, please contact the system administrator immediately.</p>
-            <p>Thank you,<br>Nawiri Hair Team</p>
-          </div>
-        `
+        subject: "Security code for Nawiri Hair Kenya loyalty actions",
+        html: renderAccountNoticeEmail({
+          name: user.name,
+          title: 'Your security verification code',
+          intro: 'Use the code below to approve this sensitive loyalty program action.',
+          infoRows: [
+            { label: 'Verification code', value: securityCode },
+            { label: 'Validity', value: '15 minutes' },
+          ],
+          highlights: [
+            'Only enter this code on an official Nawiri Hair Kenya admin screen.',
+            'If you did not request this code, contact the system administrator immediately.',
+          ],
+        })
       });
     } catch (emailError) {
       console.error("Error sending security code email:", emailError);

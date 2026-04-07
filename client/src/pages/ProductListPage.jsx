@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+﻿import React, { useEffect, useState } from 'react'
 import { useSelector } from 'react-redux'
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import SummaryApi from '../common/SummaryApi'
@@ -19,7 +19,7 @@ class ProductListPageErrorLogger extends React.Component {
   }
 
   componentDidCatch(error, errorInfo) {
-    console.error("🔴 ProductListPage ERROR:", error);
+    console.error("ðŸ”´ ProductListPage ERROR:", error);
     console.error("Error details:", errorInfo);
   }
 
@@ -177,7 +177,7 @@ const ProductListPage = () => {
   };
 
   const testServerConnection = async (categoryId) => {
-    console.log("🔍 Testing direct server connection for category:", categoryId);
+    console.log("ðŸ” Testing direct server connection for category:", categoryId);
     
     try {
       // Try a direct server API call bypassing routes
@@ -187,37 +187,37 @@ const ProductListPage = () => {
         data: { id: categoryId }
       });
       
-      console.log("📊 Direct API test response:", testResponse.data);
+      console.log("ðŸ“Š Direct API test response:", testResponse.data);
       
       if (testResponse.data && testResponse.data.success) {
-        console.log(`✅ Server connection successful! Found ${testResponse.data.data.length} products.`);
+        console.log(`âœ… Server connection successful! Found ${testResponse.data.data.length} products.`);
         return {
           success: true,
           products: testResponse.data.data
         };
       } else {
-        console.error("❌ Server returned success:false");
+        console.error("âŒ Server returned success:false");
         return {
           success: false,
           message: testResponse.data.message || "Unknown server error" 
         };
       }
     } catch (error) {
-      console.error("❌ Direct API call failed:", error);
+      console.error("âŒ Direct API call failed:", error);
       
       // Try fallback endpoints
       try {
-        console.log("🔄 Trying alternative API endpoint...");
+        console.log("ðŸ”„ Trying alternative API endpoint...");
         const fallbackResponse = await Axios({
           url: '/api/products/by-category', // Alternative path
           method: 'post',
           data: { categoryId: categoryId }
         });
         
-        console.log("📊 Fallback response:", fallbackResponse.data);
+        console.log("ðŸ“Š Fallback response:", fallbackResponse.data);
         
         if (fallbackResponse.data && fallbackResponse.data.success) {
-          console.log(`✅ Fallback successful! Found ${fallbackResponse.data.data.length} products.`);
+          console.log(`âœ… Fallback successful! Found ${fallbackResponse.data.data.length} products.`);
           return {
             success: true,
             products: fallbackResponse.data.data,
@@ -225,7 +225,7 @@ const ProductListPage = () => {
           };
         }
       } catch (fallbackError) {
-        console.error("❌ Fallback also failed:", fallbackError);
+        console.error("âŒ Fallback also failed:", fallbackError);
       }
       
       return {
@@ -291,7 +291,7 @@ const ProductListPage = () => {
     
     try {
       const { categoryId, subCategoryId } = parseParams();
-      console.log("🔄 Fetching products for category:", categoryId);
+      console.log("ðŸ”„ Fetching products for category:", categoryId);
       
       if (!categoryId) {
         setError("Category ID could not be determined from the URL");
@@ -330,7 +330,7 @@ const ProductListPage = () => {
           
           // Try fallback approach
           try {
-            console.log("🔄 Trying alternative API endpoint...");
+            console.log("ðŸ”„ Trying alternative API endpoint...");
             const fallbackResponse = await Axios({
               url: '/api/products/by-category',
               method: 'post',
@@ -458,89 +458,98 @@ const ProductListPage = () => {
   }
 
   return (
-    <section className="min-h-screen w-full bg-ivory dark:bg-dm-surface transition-colors duration-200">
-      <div className="mx-auto max-w-7xl px-3 sm:px-4 py-4 sm:py-6">
-        <div className="grid grid-cols-1 md:grid-cols-[220px_1fr] gap-4">
+    <section className='min-h-screen w-full dark:bg-gray-900'>
+      <div className='mx-auto max-w-7xl p-2 sm:p-4'>
+        {/* Page Header */}
+        <div className='mb-6 sm:mb-8'>
+          <h1 className='text-3xl sm:text-4xl font-bold text-gray-900 dark:text-white mb-2'>
+            {navigationState.categoryName || 'Hair Products'}
+          </h1>
+          <p className='text-gray-600 dark:text-gray-400'>Discover premium hair products & extensions</p>
+        </div>
 
-          {/* ── Subcategory sidebar ─────────────────────────────── */}
-          <aside className="md:sticky md:top-20 md:self-start">
-            <div className="bg-white dark:bg-dm-card rounded-card border border-brown-100 dark:border-dm-border shadow-card p-4">
-              <h2 className="text-sm font-semibold text-charcoal dark:text-white mb-3 uppercase tracking-wide">
-                Sub Categories
-              </h2>
-              <div className="flex flex-col gap-1">
-                {DisplaySubCatory.length > 0
-                  ? DisplaySubCatory.map(s => {
-                      const isActive = params.subcategoryName && params.subcategoryName.includes(s._id);
-                      return (
-                        <Link
-                          key={s._id}
-                          to={`/${derivedParams.categorySlug}-${derivedParams.categoryId}/${valideURLConvert(s.name)}-${s._id}`}
-                          className={`flex items-center justify-between px-3 py-2 rounded-lg text-sm transition-colors ${
-                            isActive
-                              ? 'bg-plum-50 dark:bg-plum-900/30 text-plum-700 dark:text-plum-200 font-medium'
-                              : 'text-charcoal dark:text-white/70 hover:bg-plum-50 dark:hover:bg-plum-900/20 hover:text-plum-700 dark:hover:text-plum-200'
-                          }`}
-                        >
-                          <span>{s.name}</span>
-                          {isActive && <span className="w-1.5 h-1.5 rounded-full bg-plum-700 dark:bg-plum-300 flex-shrink-0" />}
-                        </Link>
-                      );
-                    })
-                  : (
-                    <p className="text-sm text-brown-400 dark:text-white/40 px-2 py-1">
-                      No subcategories available
+        <div className='grid grid-cols-1 md:grid-cols-4 gap-4'>
+          {/* Sidebar - Sub Categories */}
+          <div className='w-full shadow-sm p-4 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 h-fit sticky top-20'>
+            <h2 className='font-bold text-lg mb-4 text-gray-900 dark:text-white flex items-center'>
+              <span className='w-1 h-6 bg-gradient-to-b from-pink-600 to-rose-600 rounded-full mr-3'></span>
+              Hair Types
+            </h2>
+            <div className='w-full grid gap-2'>
+              {
+                DisplaySubCatory.length > 0 ? 
+                  DisplaySubCatory.map(s => (
+                    <Link 
+                      key={s._id}
+                      to={`/${derivedParams.categorySlug}-${derivedParams.categoryId}/${valideURLConvert(s.name)}-${s._id}`}
+                      className="group"
+                    >
+                      <div className='p-3 rounded-lg flex justify-between items-center bg-gray-50 group-hover:bg-pink-100 dark:bg-gray-700 dark:group-hover:bg-pink-900/30 dark:text-gray-300 group-hover:text-pink-700 dark:group-hover:text-pink-400 text-sm font-medium transition-all duration-300 border border-transparent group-hover:border-pink-300 dark:group-hover:border-pink-700'>
+                        <p>{s.name}</p>
+                        <p className='text-lg'>{params.subcategoryName && params.subcategoryName.includes(s._id) ? 'âœ“' : ''}</p>
+                      </div>
+                    </Link>
+                  ))
+                : (
+                  <div className="text-center py-4">
+                    <div className="text-gray-500 dark:text-gray-400 text-sm">
+                      All Hair Types
+                    </div>
+                    <p className="mt-2 text-brown-400 dark:text-white/50 text-sm">
+                      No products found in this category
                     </p>
-                  )
-                }
-              </div>
-            </div>
-          </aside>
-
-          {/* ── Products grid ───────────────────────────────────── */}
-          <div>
-            <div className="bg-white dark:bg-dm-card rounded-card border border-brown-100 dark:border-dm-border shadow-card px-4 py-3 mb-4">
-              <h3 className="font-semibold text-charcoal dark:text-white">
-                {navigationState.categoryName || 'Products'}
-              </h3>
-              {data.length > 0 && (
-                <p className="text-xs text-brown-400 dark:text-white/40 mt-0.5">
-                  {data.length} product{data.length !== 1 ? 's' : ''} found
-                </p>
-              )}
-            </div>
-
-            <div className="min-h-[60vh]">
-              {loading ? (
-                <Loading />
-              ) : data.length > 0 ? (
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
-                  {data.map((p, index) => (
-                    <CardProduct
-                      data={p}
-                      key={p._id + "productSubCategory" + index}
-                    />
-                  ))}
-                </div>
-              ) : (
-                <div className="flex flex-col items-center justify-center py-20 gap-4 text-center">
-                  <div className="w-16 h-16 rounded-full bg-plum-50 dark:bg-plum-900/20 flex items-center justify-center">
-                    <span className="text-2xl">🛍️</span>
+                    <Link
+                      to="/"
+                      className="mt-4 inline-block px-5 py-2.5 bg-gold-500 hover:bg-gold-400 text-charcoal font-semibold rounded-pill text-sm transition-colors press"
+                    >
+                      Browse All Categories
+                    </Link>
                   </div>
-                  <p className="text-brown-400 dark:text-white/50 text-sm">
-                    No products found in this category
-                  </p>
-                  <Link
-                    to="/"
-                    className="px-5 py-2.5 bg-gold-500 hover:bg-gold-400 text-charcoal font-semibold rounded-pill text-sm transition-colors press"
-                  >
-                    Browse All Categories
-                  </Link>
-                </div>
               )}
             </div>
           </div>
 
+          {/* Products Grid */}
+          <div className='md:col-span-3'>
+            <div className='bg-gradient-to-r from-pink-50 to-rose-50 dark:from-gray-800 dark:to-gray-900 shadow-sm p-4 rounded-xl border border-pink-200 dark:border-gray-700 mb-4 z-10'>
+              <div className='flex items-center justify-between'>
+                <h3 className='font-bold text-lg text-gray-900 dark:text-white'>Our Selection</h3>
+                <span className='text-sm text-gray-600 dark:text-gray-400'>{data.length} products</span>
+              </div>
+            </div>
+            <div>
+              <div className='min-h-[60vh] dark:bg-gray-900'>
+                {loading ? (
+                  <Loading />
+                ) : data.length > 0 ? (
+                  <div className='grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-3 lg:gap-4'>
+                    {
+                      data.map((p, index) => (
+                        <CardProduct
+                          data={p}
+                          key={p._id + "productSubCategory" + index}
+                        />
+                      ))
+                    }
+                  </div>
+                ) : (
+                  <div className="flex justify-center items-center py-20">
+                    <div className="text-center">
+                      <div className='text-6xl mb-4'>âœ¨</div>
+                      <p className="text-gray-600 dark:text-gray-400 font-semibold mb-4 text-lg">No products found in this category</p>
+                      <p className="text-gray-500 dark:text-gray-500 text-sm mb-6">Check back soon for new hair products!</p>
+                      <Link 
+                        to="/"
+                        className="inline-block px-6 py-3 bg-gradient-to-r from-pink-600 to-rose-600 text-white rounded-lg hover:from-pink-700 hover:to-rose-700 font-semibold transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105"
+                      >
+                        â† Browse All Products
+                      </Link>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </section>

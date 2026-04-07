@@ -14,10 +14,19 @@ import LoadingSpinner from '../components/LoadingSpinner';
 import Axios from '../utils/Axios';
 import AxiosToastError from '../utils/AxiosToastError';
 import { DisplayPriceInShillings } from '../utils/DisplayPriceInShillings';
+import isStaff from '../utils/isStaff';
 
 const POSDashboard = () => {
   const user = useSelector(state => state.user);
   const navigate = useNavigate();
+  const hasStoredSession = Boolean(
+    sessionStorage.getItem('accesstoken') ||
+    sessionStorage.getItem('refreshToken') ||
+    localStorage.getItem('accesstoken') ||
+    localStorage.getItem('refreshToken') ||
+    localStorage.getItem('token')
+  );
+  const canAccessSalesTools = isStaff(user);
 
   const [loading, setLoading] = useState(true);
   const [dailySummary, setDailySummary] = useState(null);
@@ -28,13 +37,21 @@ const POSDashboard = () => {
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [analyticsPeriod, setAnalyticsPeriod] = useState('7d');
 
-  // Check if user is staff
+  // Wait for session hydration before deciding access, and allow admins to use sales tools.
   useEffect(() => {
-    if (!user || (!user.isStaff && user.role !== 'staff' && !user.isAdmin && user.role !== 'admin')) {
-      toast.error('Access denied. Staff privileges required.');
-      navigate('/login');
+    if (!user?._id) {
+      if (!hasStoredSession) {
+        toast.error('Please log in to continue.');
+        navigate('/login');
+      }
+      return;
     }
-  }, [user, navigate]);
+
+    if (!canAccessSalesTools) {
+      toast.error('Access denied. Staff privileges required.');
+      navigate('/dashboard/profile');
+    }
+  }, [user?._id, hasStoredSession, canAccessSalesTools, navigate]);
 
   useEffect(() => {
     loadDashboardData();
@@ -109,23 +126,23 @@ const POSDashboard = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-100 dark:bg-gray-900 p-4">
+    <div className="min-h-screen w-full max-w-full overflow-x-hidden bg-gray-100 dark:bg-gray-900 p-4 pb-24 lg:pb-6">
       {/* Header */}
       <div className="mb-6">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">POS Dashboard</h1>
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Sales Hub</h1>
             <p className="text-gray-600 dark:text-gray-400">
               Welcome back, {user.name} | {user.staff_branch || 'Main Store'}
             </p>
           </div>
-          <div className="mt-4 sm:mt-0 flex space-x-3">
+          <div className="mt-4 sm:mt-0 flex flex-col sm:flex-row gap-3">
             <button
-              onClick={() => navigate('/staff-pos')}
-              className="px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 flex items-center"
+              onClick={() => navigate('/dashboard/sales-counter')}
+              className="px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 flex items-center justify-center"
             >
               <FaShoppingCart className="mr-2" />
-              Open POS
+              Open Sales Counter
             </button>
           </div>
         </div>
@@ -281,7 +298,7 @@ const POSDashboard = () => {
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 sm:mb-0">
               Sales Analytics
             </h3>
-            <div className="flex space-x-2">
+            <div className="flex flex-wrap gap-2">
               {['24h', '7d', '30d', '90d'].map(period => (
                 <button
                   key={period}
@@ -307,7 +324,65 @@ const POSDashboard = () => {
         <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
           Recent Sales
         </h3>
-        <div className="overflow-x-auto">
+        <div className="space-y-3 md:hidden">
+          {recentSales.map((sale) => (
+            <div key={sale._id} className="rounded-2xl border border-gray-200 p-4 dark:border-gray-700">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <div className="text-base font-semibold text-gray-900 dark:text-white">
+                    #{sale.saleNumber}
+                  </div>
+                  <div className="text-sm text-gray-500 dark:text-gray-400">
+                    {new Date(sale.saleDate).toLocaleDateString()}
+                  </div>
+                  <div className="mt-1 text-sm text-gray-700 dark:text-gray-300 truncate">
+                    {sale.customer?.name || sale.customerName || 'Walk-in'}
+                  </div>
+                </div>
+                <span className="text-sm font-semibold text-gray-900 dark:text-white">
+                  {DisplayPriceInShillings(sale.total)}
+                </span>
+              </div>
+
+              <div className="mt-3 text-sm text-gray-600 dark:text-gray-300">
+                {(sale.items && sale.items.length > 0)
+                  ? (
+                    <div className="line-clamp-2">
+                      {(sale.items || []).slice(0, 3).map((item) => `${item.quantity} x ${item.name}`).join(', ')}
+                      {sale.items.length > 3 ? ` +${sale.items.length - 3} more` : ''}
+                    </div>
+                  ) : (
+                    <span className="italic text-gray-400">No items</span>
+                  )}
+              </div>
+
+              <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
+                <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                  sale.paymentMethod === 'cash' ? 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400' :
+                  sale.paymentMethod === 'card' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-400' :
+                  'bg-purple-100 text-purple-800 dark:bg-purple-900/20 dark:text-purple-400'
+                }`}>
+                  {sale.paymentMethod.charAt(0).toUpperCase() + sale.paymentMethod.slice(1)}
+                </span>
+
+                <button
+                  onClick={() => { setSelectedSale(sale); setShowReceiptModal(true); }}
+                  className="px-3 py-1.5 rounded-md border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 text-sm"
+                >
+                  View Receipt
+                </button>
+              </div>
+            </div>
+          ))}
+
+          {recentSales.length === 0 && (
+            <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+              No sales found
+            </div>
+          )}
+        </div>
+
+        <div className="hidden md:block overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
             <thead className="bg-gray-50 dark:bg-gray-700">
               <tr>
@@ -417,6 +492,9 @@ const POSDashboard = () => {
                   <div className="pr-2">
                     <div className="font-medium text-gray-900 dark:text-white">{it.quantity} x {it.name}</div>
                     <div className="text-xs text-gray-500 dark:text-gray-400">@ {DisplayPriceInShillings(it.price)}</div>
+                    {it.sku && (
+                      <div className="text-xs text-gray-500 dark:text-gray-400">Barcode: {it.sku}</div>
+                    )}
                   </div>
                   <div className="font-semibold text-gray-900 dark:text-white">{DisplayPriceInShillings(it.total || (it.price * it.quantity))}</div>
                 </div>

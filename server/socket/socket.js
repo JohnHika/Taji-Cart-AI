@@ -5,6 +5,21 @@ import UserModel from '../models/user.model.js';
 
 let io;
 
+const isPrivateNetworkOrigin = (origin) => {
+    try {
+        const { protocol, hostname } = new URL(origin);
+        if (!['http:', 'https:'].includes(protocol)) return false;
+        if (hostname === 'localhost' || hostname === '127.0.0.1') return true;
+
+        const is10 = /^10\./.test(hostname);
+        const is192 = /^192\.168\./.test(hostname);
+        const is172 = /^172\.(1[6-9]|2\d|3[0-1])\./.test(hostname);
+        return is10 || is192 || is172;
+    } catch (error) {
+        return false;
+    }
+};
+
 export const initializeSocket = (server) => {
     io = new Server(server, {
         cors: {
@@ -13,12 +28,15 @@ export const initializeSocket = (server) => {
                     'http://localhost:5173',
                     'http://localhost:5174',
                     'https://nawiri-hair-client.onrender.com',
+                    'https://nawirihairke.com',
+                    'https://www.nawirihairke.com',
                     'https://www.nawirihair.com',
                     'https://admin.nawirihair.com',
                 ];
                 const envOrigin = process.env.FRONTEND_URL;
                 if (envOrigin && !allowed.includes(envOrigin)) allowed.push(envOrigin);
                 if (!origin || allowed.includes(origin)) return callback(null, true);
+                if (isPrivateNetworkOrigin(origin)) return callback(null, true);
                 return callback(new Error(`Socket CORS: Origin ${origin} not allowed`));
             },
             methods: ["GET", "POST"],

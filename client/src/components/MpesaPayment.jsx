@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import toast from 'react-hot-toast';
 import SummaryApi from '../common/SummaryApi';
 import Axios from '../utils/Axios';
@@ -17,9 +17,14 @@ const MpesaPayment = ({
 }) => {
   const [phoneNumber, setPhoneNumber] = useState('');
   const [loading, setLoading] = useState(false);
+  const submitLockRef = useRef(false);
   
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    if (submitLockRef.current || loading) {
+      return;
+    }
     
     // Basic validation
     if (!phoneNumber.match(/^(?:254|\+254|0)?(7\d{8})$/)) {
@@ -27,6 +32,7 @@ const MpesaPayment = ({
       return;
     }
     
+    submitLockRef.current = true;
     setLoading(true);
     
     try {
@@ -45,7 +51,8 @@ const MpesaPayment = ({
           fulfillment_type,
           pickup_location,
           pickup_instructions
-        }
+        },
+        requestLockKey: `payment:mpesa:${phoneNumber}:${totalAmount}:${addressId || pickup_location || 'pickup'}`
       });
       
       if (response.data.success) {
@@ -58,6 +65,7 @@ const MpesaPayment = ({
       onError && onError(error.response?.data?.message || 'Payment failed');
     } finally {
       setLoading(false);
+      submitLockRef.current = false;
     }
   };
   

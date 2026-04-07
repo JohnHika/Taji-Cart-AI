@@ -2,6 +2,9 @@
 
 This project uses .env files for configuration under `server/.env` and `client/.env`.
 
+## MongoDB Configuration
+- `MONGODB_URI`: MongoDB Atlas connection string (format: `mongodb+srv://username:password@cluster.mongodb.net/`)
+
 ## Pesapal Configuration
 - `PESAPAL_CONSUMER_KEY`: Pesapal API consumer key
 - `PESAPAL_CONSUMER_SECRET`: Pesapal API consumer secret

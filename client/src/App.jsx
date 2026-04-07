@@ -1,4 +1,4 @@
-import { Suspense, useEffect, useState } from 'react';
+﻿import { Suspense, useEffect, useRef, useState } from 'react';
 import { ErrorBoundary } from 'react-error-boundary';
 import { Toaster } from 'react-hot-toast';
 import { useDispatch, useSelector } from 'react-redux';
@@ -59,9 +59,16 @@ function App() {
   const user = useSelector(state => state.user);
   const [isLoading, setIsLoading] = useState(true);
   const categories = useSelector(state => state.product.allCategory);
+  const isFetchingProductsRef = useRef(false);
 
   // Product/category fetching function
   const fetchProductData = async () => {
+    if (isFetchingProductsRef.current) {
+      return false;
+    }
+
+    isFetchingProductsRef.current = true;
+
     try {
       console.log("Fetching product data...");
       dispatch(setLoadingCategory(true));
@@ -111,6 +118,7 @@ function App() {
     } finally {
       console.log("Setting loading to false in fetchProductData");
       dispatch(setLoadingCategory(false));
+      isFetchingProductsRef.current = false;
     }
   };
 
@@ -187,10 +195,7 @@ function App() {
 
   // Ensure categories and products are fetched on initial load
   useEffect(() => {
-    // Fetch product data on initial load and whenever the app becomes active
-    fetchProductData();
-    
-    // Add an event listener for when the page becomes visible again
+    // Refresh product data when the page becomes visible again
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
         console.log("Page is visible again, refreshing product data");
@@ -232,7 +237,7 @@ function App() {
     // Check if we're on a category page strictly matching slug-id pattern
     const isCategoryRoute = /\/[^/]+-[a-f0-9]{8,}$/.test(location.pathname);
     if (isCategoryRoute) {
-      console.log("🚨 Direct navigation to category route detected:", location.pathname);
+      console.log("ðŸš¨ Direct navigation to category route detected:", location.pathname);
       
       // Force data loading for direct URL navigation
       if (!categories || categories.length === 0) {
@@ -242,7 +247,7 @@ function App() {
       
       // Check if state is missing (happens with direct URL navigation)
       if (!location.state) {
-        console.log("⚠️ No state available for category route - this likely means direct URL access");
+        console.log("âš ï¸ No state available for category route - this likely means direct URL access");
         
         // Try to extract category/subcategory IDs from URL
         const pathParts = location.pathname.split('/').filter(Boolean);
@@ -260,7 +265,7 @@ function App() {
     }
   }, [location.pathname, categories, location.state]);
 
-  const isAuthPage = ['/login', '/register', '/forgot-password'].includes(location.pathname);
+  const isAuthPage = ['/login', '/register', '/forgot-password', '/verification-otp', '/reset-password', '/verify-email'].includes(location.pathname);
   const isDashboardShell = location.pathname.startsWith('/dashboard');
 
   const showStoreChrome = !isAuthPage && !isDashboardShell;
@@ -270,7 +275,8 @@ function App() {
       <GlobalProvider>
         {showStoreChrome && <Header />}
         <CartSynchronizer />
-        <main className={isAuthPage ? '' : 'min-h-[78vh]'}>
+        <main className='min-h-[78vh] max-w-full overflow-x-hidden'>
+          {/* Add suspense to catch lazy-loaded component errors */}
           <Suspense fallback={<div className="p-5 text-center">Loading...</div>}>
             <Outlet key={location.pathname} />
           </Suspense>

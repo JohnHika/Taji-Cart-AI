@@ -10,7 +10,8 @@ export const addToCartProduct = async(productId,qty)=>{
             data : {
                 quantity : qty,
                 productId : productId
-            }
+            },
+            requestLockKey : `cart:add:${productId}:${qty}`
         })
 
         const { data : responseData} = response

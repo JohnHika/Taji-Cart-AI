@@ -1,40 +1,115 @@
 import mongoose from "mongoose";
 import ProductModel from "../models/product.model.js";
 
+const normalizeScanValue = (value) => {
+    if (value === null || value === undefined) {
+        return "";
+    }
+
+    return String(value).trim();
+};
+
+const ensureUniqueProductField = async ({ field, value, excludeId }) => {
+    const normalizedValue = normalizeScanValue(value);
+
+    if (!normalizedValue) {
+        return null;
+    }
+
+    const filter = {
+        [field]: normalizedValue
+    };
+
+    if (excludeId) {
+        filter._id = { $ne: excludeId };
+    }
+
+    return ProductModel.findOne(filter);
+};
+
 export const createProductController = async(request,response)=>{
     try {
         const { 
+            handle,
             name ,
+            sku,
+            barcode,
+            qrCode,
+            variants,
             image ,
+            imageFilename,
             category,
             subCategory,
             unit,
             stock,
+            costPrice,
             price,
             discount,
             description,
             more_details,
+            weight
         } = request.body 
 
-        if(!name || !image[0] || !category[0] || !subCategory[0] || !unit || !price || !description ){
+        const normalizedSku = normalizeScanValue(sku);
+        const normalizedBarcode = normalizeScanValue(barcode);
+        const normalizedQrCode = normalizeScanValue(qrCode);
+
+        // Validate required fields for hair products
+        if(!handle || !name || !normalizedSku || !image?.[0] || !category?.[0] || !subCategory?.[0] || !unit || !costPrice || !price || !description ){
             return response.status(400).json({
-                message : "Enter required fields",
+                message : "Enter required fields (handle, name, SKU, image, category, subcategory, unit, costPrice, price, description)",
                 error : true,
                 success : false
             })
         }
 
+        // Check for SKU uniqueness
+        const existingSKU = await ensureUniqueProductField({ field: 'sku', value: normalizedSku })
+        if(existingSKU) {
+            return response.status(400).json({
+                message : "SKU already exists. SKU must be unique for barcode scanning",
+                error : true,
+                success : false
+            })
+        }
+
+        const existingBarcode = await ensureUniqueProductField({ field: 'barcode', value: normalizedBarcode });
+        if (existingBarcode) {
+            return response.status(400).json({
+                message: "Barcode already exists. Each product barcode must be unique",
+                error: true,
+                success: false
+            });
+        }
+
+        const existingQrCode = await ensureUniqueProductField({ field: 'qrCode', value: normalizedQrCode });
+        if (existingQrCode) {
+            return response.status(400).json({
+                message: "QR code already exists. Each product QR value must be unique",
+                error: true,
+                success: false
+            });
+        }
+
         const product = new ProductModel({
+            handle,
             name ,
+            sku: normalizedSku,
+            barcode: normalizedBarcode || undefined,
+            qrCode: normalizedQrCode || undefined,
+            variants,
             image ,
+            imageFilename,
             category,
             subCategory,
             unit,
             stock,
+            costPrice,
             price,
             discount,
             description,
             more_details,
+            weight
         })
         const saveProduct = await product.save()
 
@@ -357,8 +432,11 @@ export const getProductDetailsController = async (request, response) => {
 export const updateProductDetails = async(request,response)=>{
     try {
         // Accept both _id and productId parameters for better API compatibility
-        const { _id, productId } = request.body;
+        const { _id, productId, sku, barcode, qrCode } = request.body;
         const productIdToUse = _id || productId;
+        const normalizedSku = normalizeScanValue(sku);
+        const normalizedBarcode = normalizeScanValue(barcode);
+        const normalizedQrCode = normalizeScanValue(qrCode);
 
         if(!productIdToUse){
             return response.status(400).json({
@@ -368,9 +446,91 @@ export const updateProductDetails = async(request,response)=>{
             })
         }
 
-        const updateProduct = await ProductModel.updateOne({ _id : productIdToUse },{
-            ...request.body
-        })
+        // If SKU is being updated, check for uniqueness
+        if(normalizedSku) {
+            const existingSKU = await ensureUniqueProductField({
+                field: 'sku',
+                value: normalizedSku,
+                excludeId: productIdToUse
+            });
+            if(existingSKU) {
+                return response.status(400).json({
+                    message : "SKU already exists. SKU must be unique for barcode scanning",
+                    error : true,
+                    success : false
+                })
+            }
+        }
+
+        if (normalizedBarcode) {
+            const existingBarcode = await ensureUniqueProductField({
+                field: 'barcode',
+                value: normalizedBarcode,
+                excludeId: productIdToUse
+            });
+            if (existingBarcode) {
+                return response.status(400).json({
+                    message: "Barcode already exists. Each product barcode must be unique",
+                    error: true,
+                    success: false
+                });
+            }
+        }
+
+        if (normalizedQrCode) {
+            const existingQrCode = await ensureUniqueProductField({
+                field: 'qrCode',
+                value: normalizedQrCode,
+                excludeId: productIdToUse
+            });
+            if (existingQrCode) {
+                return response.status(400).json({
+                    message: "QR code already exists. Each product QR value must be unique",
+                    error: true,
+                    success: false
+                });
+            }
+        }
+
+        const updatePayload = {
+            ...request.body,
+            sku: normalizedSku || request.body.sku
+        };
+        const unsetPayload = {};
+        delete updatePayload._id;
+        delete updatePayload.productId;
+
+        if ('barcode' in request.body) {
+            if (normalizedBarcode) {
+                updatePayload.barcode = normalizedBarcode;
+            } else {
+                delete updatePayload.barcode;
+                unsetPayload.barcode = 1;
+            }
+        }
+
+        if ('qrCode' in request.body) {
+            if (normalizedQrCode) {
+                updatePayload.qrCode = normalizedQrCode;
+            } else {
+                delete updatePayload.qrCode;
+                unsetPayload.qrCode = 1;
+            }
+        }
+
+        const updateQuery = { $set: updatePayload };
+        if (Object.keys(unsetPayload).length > 0) {
+            updateQuery.$unset = unsetPayload;
+        }
+
+        const updateProduct = await ProductModel.findByIdAndUpdate(
+            productIdToUse,
+            updateQuery,
+            {
+                new: true,
+                runValidators: true
+            }
+        );
 
         return response.json({
             message : "updated successfully",

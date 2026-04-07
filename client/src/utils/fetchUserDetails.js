@@ -21,6 +21,13 @@ const fetchUserDetails = async() => {
                 console.log("STAFF ROLE DETECTED in fetchUserDetails");
                 userData.isStaff = true;
                 userData.accountType = 'staff';
+            } else if (userRole === 'admin') {
+                userData.isAdmin = true;
+                userData.isStaff = true;
+                userData.accountType = 'admin';
+            } else if (userRole === 'delivery') {
+                userData.isDelivery = true;
+                userData.accountType = 'delivery';
             }
             
             console.log("Processed user data:", userData);

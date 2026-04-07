@@ -1,5 +1,6 @@
 import mongoose from "mongoose";
 import util from 'util';
+import sendEmail from "../config/sendEmail.js";
 import Stripe from "../config/stripe.js";
 import CartProductModel from "../models/cartproduct.model.js";
 import DeliveryPersonnelModel from "../models/deliverypersonnel.model.js"; // Add this import
@@ -10,14 +11,51 @@ import ProductModel from "../models/product.model.js"; // Add this import
 import UserModel from "../models/user.model.js";
 import { getIO } from '../socket/socket.js'; // Add this import
 import { processOrderContribution } from './communitycampaign.controller.js'; // Add this import
+import { nawiriBrand } from "../utils/brand.js";
+import { renderOrderNoticeEmail } from "../utils/emailTemplates.js";
 
 // Add this helper function to better log objects
 const inspectObject = (obj) => util.inspect(obj, {depth: 3, colors: true});
+
+const formatCurrency = (amount = 0) => `KES ${Number(amount || 0).toLocaleString()}`;
+
+const sendOrderLifecycleEmail = async ({
+    user,
+    title,
+    intro,
+    orderId,
+    totalAmt,
+    fulfillmentType,
+    pickupLocation,
+    verificationCode
+}) => {
+    if (!user?.email) {
+        return;
+    }
+
+    await sendEmail({
+        sendTo: user.email,
+        subject: `${title} - ${nawiriBrand.shortName}`,
+        html: renderOrderNoticeEmail({
+            name: user.name,
+            title,
+            intro,
+            orderId,
+            total: formatCurrency(totalAmt),
+            fulfillmentType: fulfillmentType === 'pickup' ? 'Store pickup' : 'Delivery',
+            pickupLocation,
+            verificationCode,
+            ctaLabel: 'Visit Nawiri Hair Kenya',
+            ctaUrl: nawiriBrand.websiteUrl,
+        })
+    });
+}
 
 export async function CashOnDeliveryOrderController(request, response) {
     try {
         const userId = request.userId // auth middleware 
         const { list_items, totalAmt, addressId, subTotalAmt, fulfillment_type, pickup_location, pickup_instructions } = request.body 
+        const customer = await UserModel.findById(userId).select('name email')
 
         // Validate inputs based on fulfillment type
         if (fulfillment_type === 'delivery' && !addressId) {
@@ -148,6 +186,25 @@ export async function CashOnDeliveryOrderController(request, response) {
         };
 
         await NotificationModel.create(orderNotification);
+
+        if (customer) {
+            try {
+                await sendOrderLifecycleEmail({
+                    user: customer,
+                    title: fulfillment_type === 'pickup' ? 'Your pickup order is ready to track' : 'Your order has been placed',
+                    intro: fulfillment_type === 'pickup'
+                        ? `Your order is confirmed for pickup at ${pickup_location}. Keep the verification code below ready when collecting it.`
+                        : 'Thank you for shopping with Nawiri Hair Kenya. Your order is confirmed and our team is preparing it now.',
+                    orderId: payload[0].orderId,
+                    totalAmt,
+                    fulfillmentType: fulfillment_type || 'delivery',
+                    pickupLocation: pickup_location,
+                    verificationCode: pickupVerificationCode,
+                });
+            } catch (emailError) {
+                console.error('Error sending order confirmation email:', emailError);
+            }
+        }
 
         return response.json({
             message: "Order successfully",
@@ -404,6 +461,20 @@ export async function webhookStripe(request, response) {
 
                 // Process community campaign contributions
                 await processOrderContribution(userId, Number(lineItems.data.reduce((acc, item) => acc + item.amount_total, 0) / 100), orderProduct[0].orderId);
+
+                try {
+                    const customer = await UserModel.findById(userId).select('name email');
+                    await sendOrderLifecycleEmail({
+                        user: customer,
+                        title: 'Your order has been placed',
+                        intro: 'Thank you for shopping with Nawiri Hair Kenya. Your payment was received successfully and we are preparing your order.',
+                        orderId: orderProduct[0].orderId,
+                        totalAmt: Number(lineItems.data.reduce((acc, item) => acc + item.amount_total, 0) / 100),
+                        fulfillmentType: 'delivery',
+                    });
+                } catch (emailError) {
+                    console.error('Error sending paid order confirmation email:', emailError);
+                }
             }
             break;
         default:

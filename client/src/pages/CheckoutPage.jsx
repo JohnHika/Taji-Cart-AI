@@ -1,11 +1,12 @@
-import { loadStripe } from '@stripe/stripe-js';
-import React, { useEffect, useState } from 'react';
+﻿import { loadStripe } from '@stripe/stripe-js';
+import React, { useEffect, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
 import { FaCrown, FaStore } from 'react-icons/fa';
 import { FaXmark } from 'react-icons/fa6';
 import { useDispatch, useSelector } from 'react-redux';
 import { useLocation, useNavigate } from 'react-router-dom';
 import SummaryApi from '../common/SummaryApi';
+import { nawiriBrand } from '../config/brand';
 import ActiveRewards from '../components/ActiveRewards'; // Import the ActiveRewards component
 import AddAddress from '../components/AddAddress';
 import CommunityCampaignProgress from '../components/CommunityCampaignProgress'; // Import the CommunityCampaignProgress component
@@ -56,6 +57,8 @@ const CheckoutPage = ({ isCutView = false, onClose = null }) => {
 
   // Check if payments should be enabled
   const isPaymentEnabled = selectAddress !== null && addressList[selectAddress] && addressList[selectAddress].status;
+  const checkoutLockRef = useRef(false);
+  const [checkoutAction, setCheckoutAction] = useState('');
 
   useEffect(() => {
     // Clear address error when address is selected
@@ -139,10 +142,31 @@ const CheckoutPage = ({ isCutView = false, onClose = null }) => {
   const finalPrice = usePoints 
     ? Math.max(0, priceAfterCommunityDiscount - pointsValue) 
     : priceAfterCommunityDiscount;
+  const isCheckoutBusy = checkoutAction !== '';
+  const cartFingerprint = cartItemsList
+    .map((item) => `${item?._id || item?.productId?._id}:${item?.quantity || 0}`)
+    .join('|');
+  const checkoutScope = `${user?._id || 'guest'}:${fulfillmentMethod}:${selectAddress ?? 'pickup'}:${pickupLocation}:${cartFingerprint}:${finalPrice}`;
+
+  const runCheckoutAction = async (actionName, callback) => {
+    if (checkoutLockRef.current) {
+      return;
+    }
+
+    checkoutLockRef.current = true;
+    setCheckoutAction(actionName);
+
+    try {
+      await callback();
+    } finally {
+      checkoutLockRef.current = false;
+      setCheckoutAction('');
+    }
+  };
 
   // Pickup locations (in a real app, these would likely come from an API)
   const pickupLocations = [
-    { name: 'Main Store', address: 'Nawiri Hair HQ, 123 Main Street, Nairobi' },
+    { name: 'Main Store', address: nawiriBrand.location },
     { name: 'Westlands Branch', address: '456 Westlands Road, Westlands, Nairobi' },
     { name: 'Mombasa Road Store', address: '789 Mombasa Road, Nairobi' }
   ];
@@ -164,121 +188,126 @@ const CheckoutPage = ({ isCutView = false, onClose = null }) => {
 
   const handleCashOnDelivery = async() => {
     if (!validateAddress()) return;
-    
-    try {
-      const response = await Axios({
-        ...SummaryApi.CashOnDeliveryOrder,
-        data : {
-          list_items : cartItemsList,
-          addressId : fulfillmentMethod === 'delivery' ? addressList[selectAddress]._id : null,
-          subTotalAmt : totalPrice,
-          totalAmt : finalPrice,
-          usePoints: usePoints,
-          pointsUsed: usePoints ? pointsValue : 0,
-          communityRewardId: selectedReward ? selectedReward._id : null,
-          communityDiscountAmount: selectedReward && selectedReward.type === 'discount' ? communityDiscount : 0,
-          fulfillment_type: fulfillmentMethod,
-          pickup_location: pickupLocation,
-          pickup_instructions: pickupInstructions
-        }
-      });
 
-      const { data: responseData } = response;
+    await runCheckoutAction('cash', async () => {
+      try {
+        const response = await Axios({
+          ...SummaryApi.CashOnDeliveryOrder,
+          data : {
+            list_items : cartItemsList,
+            addressId : fulfillmentMethod === 'delivery' ? addressList[selectAddress]._id : null,
+            subTotalAmt : totalPrice,
+            totalAmt : finalPrice,
+            usePoints: usePoints,
+            pointsUsed: usePoints ? pointsValue : 0,
+            communityRewardId: selectedReward ? selectedReward._id : null,
+            communityDiscountAmount: selectedReward && selectedReward.type === 'discount' ? communityDiscount : 0,
+            fulfillment_type: fulfillmentMethod,
+            pickup_location: pickupLocation,
+            pickup_instructions: pickupInstructions
+          },
+          requestLockKey: `checkout:cash:${checkoutScope}`
+        });
 
-      if(responseData.success){
-          // Clear cart state immediately after successful order
-          dispatch(clearCartItems());
-          
-          toast.success(responseData.message);
-          if(fetchCartItem){
-            fetchCartItem();
-          }
-          if(fetchOrder){
-            fetchOrder();
-          }
-          
-          // Handle navigation based on view mode
-          if (isCutView && onClose) {
-            onClose();
-          }
-          navigate('/success', {
-            state: {
-              text: "Order",
-              receipt: responseData.data.map(order => order.invoice_receipt) // Pass the receipt details
+        const { data: responseData } = response;
+
+        if(responseData.success){
+            dispatch(clearCartItems());
+            toast.success(responseData.message);
+
+            if(fetchCartItem){
+              fetchCartItem();
             }
-          });
-      }
 
-    } catch (error) {
-      AxiosToastError(error);
-    }
+            if(fetchOrder){
+              fetchOrder();
+            }
+
+            if (isCutView && onClose) {
+              onClose();
+            }
+
+            navigate('/success', {
+              state: {
+                text: "Order",
+                receipt: responseData.data.map(order => order.invoice_receipt)
+              }
+            });
+        }
+      } catch (error) {
+        AxiosToastError(error);
+      }
+    });
   }
 
   const handleOnlinePayment = async() => {
     if (!validateAddress()) return;
-    
-    try {
-        toast.loading("Loading...");
-        const stripePublicKey = import.meta.env.VITE_STRIPE_PUBLIC_KEY;
-        const stripePromise = await loadStripe(stripePublicKey);
-       
-        // First, attempt to clear the cart before redirecting to Stripe
-        try {
-          console.log("Clearing cart before Stripe payment");
-          
-          // Clear the Redux state immediately
-          dispatch(clearCartItems());
-          
-          // Also clear on the server
-          const clearResponse = await Axios({
-            ...SummaryApi.clearCart
-          });
-          console.log("Pre-emptive cart clear response:", clearResponse.data);
-        } catch (clearError) {
-          console.error("Failed to clear cart before payment:", clearError);
-          // Continue anyway - don't block the payment flow
-        }
-        
-        const response = await Axios({
-            ...SummaryApi.payment_url,
-            data: {
-              list_items: cartItemsList,
-              addressId: fulfillmentMethod === 'delivery' ? addressList[selectAddress]._id : null,
-              subTotalAmt: totalPrice,
-              totalAmt: finalPrice,
-              royalDiscount: royalDiscount,
-              communityRewardId: selectedReward ? selectedReward._id : null,
-              communityDiscountAmount: selectedReward && selectedReward.type === 'discount' ? communityDiscount : 0,
-              fulfillment_type: fulfillmentMethod,
-              pickup_location: pickupLocation,
-              pickup_instructions: pickupInstructions
-            }
-        });
 
-        const { data: responseData } = response;
-        
-        // Store cart clear time in localStorage
-        localStorage.setItem('cartClearedAt', new Date().toISOString());
-        
-        // Refresh cart data
-        if(fetchCartItem){
-          fetchCartItem();
-        }
-        
-        // Close cut view if applicable
-        if (isCutView && onClose) {
-          onClose();
-        }
-        
-        // Redirect to Stripe Checkout
-        stripePromise.redirectToCheckout({ sessionId: responseData.id });
-    } catch (error) {
-        toast.dismiss(); // Dismiss the loading toast
-        AxiosToastError(error);
-    }
+    await runCheckoutAction('card', async () => {
+      const loadingToastId = toast.loading("Loading...");
+
+      try {
+          const stripePublicKey = import.meta.env.VITE_STRIPE_PUBLIC_KEY;
+          const stripe = await loadStripe(stripePublicKey);
+
+          if (!stripe) {
+            throw new Error('Stripe failed to initialize.');
+          }
+
+          try {
+            dispatch(clearCartItems());
+
+            await Axios({
+              ...SummaryApi.clearCart,
+              requestLockKey: `checkout:clear:${checkoutScope}`
+            });
+          } catch (clearError) {
+            console.error("Failed to clear cart before payment:", clearError);
+          }
+
+          const response = await Axios({
+              ...SummaryApi.payment_url,
+              data: {
+                list_items: cartItemsList,
+                addressId: fulfillmentMethod === 'delivery' ? addressList[selectAddress]._id : null,
+                subTotalAmt: totalPrice,
+                totalAmt: finalPrice,
+                royalDiscount: royalDiscount,
+                communityRewardId: selectedReward ? selectedReward._id : null,
+                communityDiscountAmount: selectedReward && selectedReward.type === 'discount' ? communityDiscount : 0,
+                fulfillment_type: fulfillmentMethod,
+                pickup_location: pickupLocation,
+                pickup_instructions: pickupInstructions
+              },
+              requestLockKey: `checkout:stripe:${checkoutScope}`
+          });
+
+          const { data: responseData } = response;
+          localStorage.setItem('cartClearedAt', new Date().toISOString());
+
+          if(fetchCartItem){
+            fetchCartItem();
+          }
+
+          if (isCutView && onClose) {
+            onClose();
+          }
+
+          toast.dismiss(loadingToastId);
+          const stripeRedirectResult = await stripe.redirectToCheckout({ sessionId: responseData.id });
+
+          if (stripeRedirectResult?.error) {
+            throw stripeRedirectResult.error;
+          }
+      } catch (error) {
+          toast.dismiss(loadingToastId);
+          AxiosToastError(error);
+      }
+    });
   }
 
   const handleShowMpesaForm = () => {
+    if (isCheckoutBusy) return;
     if (!validateAddress()) return;
     setShowMpesaForm(true);
   };
@@ -309,70 +338,72 @@ const CheckoutPage = ({ isCutView = false, onClose = null }) => {
     setShowMpesaForm(false);
   }
 
-  // Add PesaPal button state and handler
-  const [isPesapalLoading, setIsPesapalLoading] = useState(false);
-
   const handlePesapalPayment = async () => {
     if (!validateAddress()) return;
-    try {
-      setIsPesapalLoading(true);
-      // Create a local order id
-      const orderId = `ORD-${Date.now()}-${Math.floor(Math.random()*1000)}`;
-      const token = localStorage.getItem('accesstoken') || localStorage.getItem('token');
 
-      const baseUrl = import.meta.env.VITE_API_URL || '';
-      const res = await Axios({
-        url: `${baseUrl}/api/pesapal/initiate`,
-        method: 'POST',
-        headers: { Authorization: `Bearer ${token}` },
-        data: {
-          orderId,
-          amount: finalPrice,
-          currency: 'KES',
-          description: `Nawiri Hair checkout ${orderId}`,
-          customer: {
-            email: user?.email,
-            firstName: user?.name?.split(' ')[0] || 'Customer',
-            lastName: user?.name?.split(' ').slice(1).join(' ') || 'User',
-            phone: user?.mobile,
-            countryCode: 'KE'
-          }
-        }
-      });
+    await runCheckoutAction('pesapal', async () => {
+      try {
+        const orderId = `ORD-${Date.now()}-${Math.floor(Math.random()*1000)}`;
+        const token = localStorage.getItem('accesstoken') || localStorage.getItem('token');
+        const baseUrl = import.meta.env.VITE_API_URL || '';
 
-      const { data } = res;
-      if (data?.success && data.redirect_url) {
-        // Open popup to Pesapal redirect_url
-        const width = 480, height = 720;
-        const left = window.screenX + (window.innerWidth - width) / 2;
-        const top = window.screenY + (window.innerHeight - height) / 2;
-        const popup = window.open(data.redirect_url, 'pesapalPopup', `width=${width},height=${height},left=${left},top=${top}`);
-
-        // Poll the popup location for callback completion (best-effort)
-        const poll = setInterval(() => {
-          try {
-            if (popup && popup.closed) {
-              clearInterval(poll);
-              // After close, navigate to success page and let it fetch latest order
-              navigate('/success', { state: { orderId, paymentMethod: 'PesaPal', amount: finalPrice } });
+        const res = await Axios({
+          url: `${baseUrl}/api/pesapal/initiate`,
+          method: 'POST',
+          headers: { Authorization: `Bearer ${token}` },
+          data: {
+            orderId,
+            amount: finalPrice,
+            currency: 'KES',
+            description: `Nawiri Hair checkout ${orderId}`,
+            customer: {
+              email: user?.email,
+              firstName: user?.name?.split(' ')[0] || 'Customer',
+              lastName: user?.name?.split(' ').slice(1).join(' ') || 'User',
+              phone: user?.mobile,
+              countryCode: 'KE'
             }
-          } catch (_) {
-            // Cross-origin while on Pesapal - ignore
+          },
+          requestLockKey: `checkout:pesapal:${checkoutScope}`
+        });
+
+        const { data } = res;
+
+        if (data?.success && data.redirect_url) {
+          const width = 480;
+          const height = 720;
+          const left = window.screenX + (window.innerWidth - width) / 2;
+          const top = window.screenY + (window.innerHeight - height) / 2;
+          const popup = window.open(data.redirect_url, 'pesapalPopup', `width=${width},height=${height},left=${left},top=${top}`);
+
+          if (!popup) {
+            throw new Error('Popup blocked. Please allow popups and try again.');
           }
-        }, 800);
-      } else {
-        throw new Error('Failed to start Pesapal payment');
+
+          await new Promise((resolve) => {
+            const poll = setInterval(() => {
+              try {
+                if (popup.closed) {
+                  clearInterval(poll);
+                  navigate('/success', { state: { orderId, paymentMethod: 'PesaPal', amount: finalPrice } });
+                  resolve();
+                }
+              } catch (_) {
+                // Ignore cross-origin popup access while the gateway is open.
+              }
+            }, 800);
+          });
+        } else {
+          throw new Error('Failed to start Pesapal payment');
+        }
+      } catch (err) {
+        console.error('Pesapal init error:', err.response?.data || err.message);
+        const raw = err.response?.data;
+        const detail = raw?.details || raw?.message || err.message || 'Failed to initiate PesaPal';
+        const guidance = /invalid\s*ipn/i.test(detail) ? ' - Please register your IPN in the Pesapal dashboard and set PESAPAL_NOTIFICATION_ID.' : '';
+        toast.error(`PesaPal Payment Error: ${detail}${guidance}`);
       }
-    } catch (err) {
-      console.error('Pesapal init error:', err.response?.data || err.message);
-      const raw = err.response?.data;
-      const detail = raw?.details || raw?.message || err.message || 'Failed to initiate PesaPal';
-      // Special-case Invalid IPN messaging from backend
-      const guidance = /invalid\s*ipn/i.test(detail) ? ' — Please register your IPN in the Pesapal dashboard and set PESAPAL_NOTIFICATION_ID.' : '';
-      toast.error(`PesaPal Payment Error: ${detail}${guidance}`);
-    } finally {
-      setIsPesapalLoading(false);
-    }
+    });
   };
 
   // Handle fulfillment method selection
@@ -620,47 +651,47 @@ const CheckoutPage = ({ isCutView = false, onClose = null }) => {
             <div className='space-y-4'>
               <button 
                 className={`w-full py-2 px-4 rounded text-white font-semibold transition-colors duration-200 ${
-                  isPaymentEnabled 
+                  isPaymentEnabled && !isCheckoutBusy
                     ? 'bg-gold-500 hover:bg-gold-400 text-charcoal dark:text-charcoal' 
                     : 'bg-brown-200 dark:bg-dm-border text-brown-400 dark:text-white/35 cursor-not-allowed'
                 }`}
                 onClick={handleOnlinePayment}
-                disabled={!isPaymentEnabled}
+                disabled={!isPaymentEnabled || isCheckoutBusy}
               >
-                Pay with Card {!isPaymentEnabled && '(Select Address First)'}
+                {checkoutAction === 'card' ? 'Processing card payment...' : `Pay with Card ${!isPaymentEnabled ? '(Select Address First)' : ''}`}
               </button>
               <button 
                 className={`w-full py-2 px-4 rounded text-white font-semibold transition-colors duration-200 ${
-                  isPaymentEnabled 
+                  isPaymentEnabled && !isCheckoutBusy
                     ? 'bg-plum-700 hover:bg-plum-600 dark:bg-plum-600 dark:hover:bg-plum-500' 
                     : 'bg-brown-200 dark:bg-dm-border text-brown-400 dark:text-white/35 cursor-not-allowed'
                 }`}
                 onClick={handleShowMpesaForm}
-                disabled={!isPaymentEnabled}
+                disabled={!isPaymentEnabled || isCheckoutBusy}
               >
                 Pay with M-Pesa {!isPaymentEnabled && '(Select Address First)'}
               </button>
               <button 
                 className={`w-full py-2 px-4 border-2 font-semibold transition-colors duration-200 ${
-                  isPaymentEnabled 
+                  isPaymentEnabled && !isCheckoutBusy
                     ? 'border-plum-600 text-plum-700 hover:bg-plum-50 hover:text-plum-900 dark:border-plum-500 dark:text-plum-200 dark:hover:bg-plum-900/40 dark:hover:text-white' 
                     : 'border-brown-200 text-brown-300 dark:border-dm-border dark:text-white/30 cursor-not-allowed'
                 }`}
                 onClick={handleCashOnDelivery}
-                disabled={!isPaymentEnabled}
+                disabled={!isPaymentEnabled || isCheckoutBusy}
               >
-                Cash on Delivery {!isPaymentEnabled && '(Select Address First)'}
+                {checkoutAction === 'cash' ? 'Placing order...' : `Cash on Delivery ${!isPaymentEnabled ? '(Select Address First)' : ''}`}
               </button>
               <button 
                 className={`w-full py-2 px-4 rounded text-white font-semibold transition-colors duration-200 ${
-                  isPaymentEnabled 
+                  isPaymentEnabled && !isCheckoutBusy
                     ? 'bg-charcoal hover:bg-plum-900 text-white dark:bg-plum-800 dark:hover:bg-plum-700' 
                     : 'bg-brown-200 dark:bg-dm-border text-brown-400 dark:text-white/35 cursor-not-allowed'
                 }`}
                 onClick={handlePesapalPayment}
-                disabled={!isPaymentEnabled}
+                disabled={!isPaymentEnabled || isCheckoutBusy}
               >
-                {isPesapalLoading ? 'Processing...' : 'Pay with PesaPal'} {!isPaymentEnabled && '(Select Address First)'}
+                {checkoutAction === 'pesapal' ? 'Processing...' : `Pay with PesaPal ${!isPaymentEnabled ? '(Select Address First)' : ''}`}
               </button>
             </div>
           </div>
@@ -717,7 +748,7 @@ const CheckoutPage = ({ isCutView = false, onClose = null }) => {
                       <div className="text-sm text-charcoal dark:text-white/80 leading-relaxed">
                         <p className="font-medium">{address.address_line}</p>
                         <p className="text-brown-400 dark:text-white/50">{address.city}, {address.state}</p>
-                        <p className="text-brown-400 dark:text-white/50">{address.country} — {address.pincode}</p>
+                        <p className="text-brown-400 dark:text-white/50">{address.country} â€” {address.pincode}</p>
                         <p className="text-brown-400 dark:text-white/50 text-xs mt-0.5">{address.mobile}</p>
                       </div>
                     </div>
@@ -772,14 +803,14 @@ const CheckoutPage = ({ isCutView = false, onClose = null }) => {
 
   // Full page render (original implementation)
   return (
-    <section className='bg-ivory dark:bg-dm-surface transition-colors duration-200 min-h-screen'>
-      <div className='container mx-auto px-3 sm:px-5 py-6 sm:py-8 flex flex-col lg:flex-row w-full gap-6 justify-between items-start'>
+    <section className='bg-blue-50 dark:bg-gray-800 transition-colors duration-200'>
+      <div className='container mx-auto px-2 sm:px-4 lg:px-6 py-4 flex flex-col lg:flex-row w-full gap-5 justify-between'>
         <div className='w-full'>
           {/* Address or Pickup Section */}
           {renderAddressOrPickupSection()}
         </div>
 
-        <div className='w-full max-w-md bg-gold-100 dark:bg-dm-card rounded-card shadow-card py-5 px-4 lg:sticky lg:top-24 transition-colors duration-200'>
+        <div className='w-full lg:max-w-md xl:max-w-lg bg-white dark:bg-gray-700 py-4 px-2 rounded shadow transition-colors duration-200 self-start lg:sticky lg:top-24'>
           {/**summary**/}
           <h3 className='text-lg font-semibold text-charcoal dark:text-white px-1 mb-3'>Order Summary</h3>
           
@@ -921,25 +952,25 @@ const CheckoutPage = ({ isCutView = false, onClose = null }) => {
             <p className="text-xs font-semibold uppercase tracking-widest text-brown-300 dark:text-white/30 mb-1">Choose Payment Method</p>
             <button
               className={`flex items-center justify-between w-full py-3 px-4 rounded-card border-2 font-semibold text-sm transition-all duration-200 press ${
-                (fulfillmentMethod === 'delivery' && isPaymentEnabled) || (fulfillmentMethod === 'pickup')
+                (((fulfillmentMethod === 'delivery' && isPaymentEnabled) || (fulfillmentMethod === 'pickup')) && !isCheckoutBusy)
                   ? 'border-plum-700 text-plum-700 dark:border-plum-400 dark:text-plum-200 bg-plum-50 dark:bg-plum-900/20 hover:bg-plum-100 dark:hover:bg-plum-900/40'
                   : 'border-brown-100 dark:border-dm-border text-brown-300 dark:text-white/20 cursor-not-allowed'
               }`}
               onClick={handleOnlinePayment}
-              disabled={fulfillmentMethod === 'delivery' && !isPaymentEnabled}
+              disabled={(fulfillmentMethod === 'delivery' && !isPaymentEnabled) || isCheckoutBusy}
             >
-              <span>Pay with Card (Stripe)</span>
+              <span>{checkoutAction === 'card' ? 'Processing card payment...' : 'Pay with Card (Stripe)'}</span>
               {fulfillmentMethod === 'delivery' && !isPaymentEnabled && <span className="text-xs font-normal opacity-60">Select address first</span>}
             </button>
 
             <button
               className={`flex items-center justify-between w-full py-3 px-4 rounded-card border-2 font-semibold text-sm transition-all duration-200 press ${
-                (fulfillmentMethod === 'delivery' && isPaymentEnabled) || (fulfillmentMethod === 'pickup')
+                (((fulfillmentMethod === 'delivery' && isPaymentEnabled) || (fulfillmentMethod === 'pickup')) && !isCheckoutBusy)
                   ? 'border-plum-600 text-plum-800 dark:border-plum-400 dark:text-plum-200 bg-plum-50 dark:bg-plum-900/25 hover:bg-plum-100 dark:hover:bg-plum-900/40'
                   : 'border-brown-100 dark:border-dm-border text-brown-300 dark:text-white/20 cursor-not-allowed'
               }`}
               onClick={handleShowMpesaForm}
-              disabled={fulfillmentMethod === 'delivery' && !isPaymentEnabled}
+              disabled={(fulfillmentMethod === 'delivery' && !isPaymentEnabled) || isCheckoutBusy}
             >
               <span>Pay with M-Pesa</span>
               {fulfillmentMethod === 'delivery' && !isPaymentEnabled && <span className="text-xs font-normal opacity-60">Select address first</span>}
@@ -947,40 +978,40 @@ const CheckoutPage = ({ isCutView = false, onClose = null }) => {
 
             <button
               className={`flex items-center justify-between w-full py-3 px-4 rounded-card border-2 font-semibold text-sm transition-all duration-200 press ${
-                (fulfillmentMethod === 'delivery' && isPaymentEnabled) || (fulfillmentMethod === 'pickup')
+                (((fulfillmentMethod === 'delivery' && isPaymentEnabled) || (fulfillmentMethod === 'pickup')) && !isCheckoutBusy)
                   ? 'border-brown-400 text-brown-500 dark:border-brown-500 dark:text-brown-300 bg-brown-50 dark:bg-brown-900/10 hover:bg-brown-100 dark:hover:bg-brown-900/20'
                   : 'border-brown-100 dark:border-dm-border text-brown-300 dark:text-white/20 cursor-not-allowed'
               }`}
               onClick={handleCashOnDelivery}
-              disabled={fulfillmentMethod === 'delivery' && !isPaymentEnabled}
+              disabled={(fulfillmentMethod === 'delivery' && !isPaymentEnabled) || isCheckoutBusy}
             >
-              <span>Cash on {fulfillmentMethod === 'delivery' ? 'Delivery' : 'Pickup'}</span>
+              <span>{checkoutAction === 'cash' ? 'Placing order...' : `Cash on ${fulfillmentMethod === 'delivery' ? 'Delivery' : 'Pickup'}`}</span>
               {fulfillmentMethod === 'delivery' && !isPaymentEnabled && <span className="text-xs font-normal opacity-60">Select address first</span>}
             </button>
 
             <button
               className={`flex items-center justify-between w-full py-3 px-4 rounded-card border-2 font-semibold text-sm transition-all duration-200 press ${
-                isPaymentEnabled
+                isPaymentEnabled && !isCheckoutBusy
                   ? 'border-plum-500 text-plum-700 dark:border-plum-400 dark:text-plum-200 bg-plum-50 dark:bg-plum-900/20 hover:bg-plum-100 dark:hover:bg-plum-900/40'
                   : 'border-brown-100 dark:border-dm-border text-brown-300 dark:text-white/20 cursor-not-allowed'
               }`}
               onClick={handlePesapalPayment}
-              disabled={!isPaymentEnabled}
+              disabled={!isPaymentEnabled || isCheckoutBusy}
             >
-              <span>{isPesapalLoading ? 'Processing...' : 'Pay with PesaPal'}</span>
+              <span>{checkoutAction === 'pesapal' ? 'Processing...' : 'Pay with PesaPal'}</span>
               {!isPaymentEnabled && <span className="text-xs font-normal opacity-60">Select address first</span>}
             </button>
 
             <button
               className={`w-full py-3.5 rounded-pill font-bold text-sm mt-1 transition-all duration-200 press shadow-sm ${
-                (fulfillmentMethod === 'delivery' && isPaymentEnabled) || (fulfillmentMethod === 'pickup')
+                (((fulfillmentMethod === 'delivery' && isPaymentEnabled) || (fulfillmentMethod === 'pickup')) && !isCheckoutBusy)
                   ? 'bg-gold-500 hover:bg-gold-400 text-charcoal hover:shadow-gold'
                   : 'bg-brown-100 dark:bg-dm-card-2 text-brown-300 dark:text-white/20 cursor-not-allowed'
               }`}
               onClick={handleOnlinePayment}
-              disabled={fulfillmentMethod === 'delivery' && !isPaymentEnabled}
+              disabled={(fulfillmentMethod === 'delivery' && !isPaymentEnabled) || isCheckoutBusy}
             >
-              Confirm &amp; Pay — KES {finalPrice?.toLocaleString()}
+              {checkoutAction === 'card' ? 'Processing card payment...' : `Confirm & Pay - KES ${finalPrice?.toLocaleString()}`}
             </button>
           </div>
         </div>
@@ -996,7 +1027,7 @@ const CheckoutPage = ({ isCutView = false, onClose = null }) => {
                 onClick={() => setShowMpesaForm(false)}
                 className="text-brown-400 hover:text-charcoal dark:text-white/50 dark:hover:text-white"
               >
-                ✕
+                âœ•
               </button>
             </div>
             <MpesaPayment
