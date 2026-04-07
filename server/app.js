@@ -21,7 +21,6 @@ import mpesaRouter from './route/mpesa.route.js';
 import orderRouter from './route/order.route.js';
 import pesapalRouter from './route/pesapal.route.js';
 import productRouter from './route/product.route.js';
-import recommendRouter from './route/recommendation.route.js';
 import stripeRouter from './route/stripe.route.js';
 import subCategoryRouter from './route/subCategory.route.js';
 import trackingRouter from './route/tracking.route.js';
@@ -129,7 +128,6 @@ app.use('/api', campaignRouter);
 app.use('/api/tracking', trackingRouter);
 app.use('/api/pos', posRouter);
 app.use('/api/delivery', deliveryRoutes);
-app.use('/api/recommend', recommendRouter);
 
 // ── Admin loyalty routes ─────────────────────────────────────────────────────
 app.get('/api/admin/loyalty/cards', auth, admin, getLoyaltyCards);
