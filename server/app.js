@@ -97,17 +97,10 @@ app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 app.use(passport.initialize());
 app.use(session({
-<<<<<<< Updated upstream
-    secret: process.env.SESSION_SECRET || 'taji-cart-session-secret',
-    resave: false,
-    saveUninitialized: false,
-    cookie: { secure: process.env.NODE_ENV === 'production' },
-=======
   secret: process.env.SESSION_SECRET || 'nawiri-session-fallback-dev',
   resave: false,
-  saveUninitialized: true,
-  cookie: { secure: process.env.NODE_ENV === 'production' }
->>>>>>> Stashed changes
+  saveUninitialized: false,
+  cookie: { secure: process.env.NODE_ENV === 'production' },
 }));
 
 // ── Routes ───────────────────────────────────────────────────────────────────
