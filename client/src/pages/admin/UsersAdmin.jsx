@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import toast from 'react-hot-toast';
-import { FaExclamationTriangle, FaSearch, FaSpinner, FaUsersCog } from 'react-icons/fa';
+import { FaEnvelope, FaExclamationTriangle, FaSearch, FaSpinner, FaUsersCog } from 'react-icons/fa';
 import UserTable from '../../components/UserTable';
 import BlockUserModal from '../../components/modals/BlockUserModal';
 import ConfirmationModal from '../../components/modals/ConfirmationModal';
@@ -24,6 +24,7 @@ const UsersAdmin = () => {
   const [isConfirmationModalOpen, setIsConfirmationModalOpen] = useState(false);
   const [confirmationAction, setConfirmationAction] = useState(null);
   const [isDeliveryModalOpen, setIsDeliveryModalOpen] = useState(false);
+  const [bulkSending, setBulkSending] = useState(false);
 
   useEffect(() => {
     fetchUsersWithCacheBusting();
@@ -414,6 +415,23 @@ const UsersAdmin = () => {
 
   const confirmationConfig = getConfirmationConfig();
 
+  const handleBulkSendVerification = async () => {
+    if (!window.confirm('Send verification emails to ALL unverified users? This cannot be undone.')) return;
+    try {
+      setBulkSending(true);
+      const res = await Axios({ url: '/api/user/admin/bulk-send-verification', method: 'POST' });
+      if (res.data.success) {
+        toast.success(`Sent ${res.data.sent} verification emails (${res.data.failed} failed)`);
+      } else {
+        toast.error(res.data.message || 'Bulk send failed');
+      }
+    } catch (err) {
+      toast.error('Error: ' + (err.response?.data?.message || err.message));
+    } finally {
+      setBulkSending(false);
+    }
+  };
+
   return (
     <div className="container mx-auto w-full max-w-full overflow-x-hidden px-3 py-4 sm:px-4 sm:py-6 pb-24 lg:pb-6">
       <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -424,12 +442,24 @@ const UsersAdmin = () => {
           </p>
         </div>
         
-        <button
-          onClick={fetchUsersWithCacheBusting}
-          className="px-4 py-2 bg-plum-700 text-white rounded-lg hover:bg-plum-600 flex items-center justify-center"
-        >
-          <FaUsersCog className="mr-2" /> Refresh Users
-        </button>
+        <div className="flex flex-wrap gap-3">
+          <button
+            onClick={handleBulkSendVerification}
+            disabled={bulkSending}
+            className="px-4 py-2 bg-rose-600 text-white rounded-lg hover:bg-rose-700 disabled:opacity-50 flex items-center justify-center gap-2"
+            title="Send verification email to all unverified users"
+          >
+            {bulkSending ? <FaSpinner className="animate-spin" /> : <FaEnvelope />}
+            {bulkSending ? 'Sending…' : 'Verify Unverified Users'}
+          </button>
+
+          <button
+            onClick={fetchUsersWithCacheBusting}
+            className="px-4 py-2 bg-plum-700 text-white rounded-lg hover:bg-plum-600 flex items-center justify-center"
+          >
+            <FaUsersCog className="mr-2" /> Refresh Users
+          </button>
+        </div>
       </div>
 
       <div className="mb-6 flex gap-3 overflow-x-auto pb-2">

@@ -9,6 +9,12 @@ import welcomeEmailTemplate from '../utils/welcomeEmailTemplate.js';
 
 dotenv.config();
 
+const SERVER_BASE_URL =
+  process.env.SERVER_URL?.replace(/\/$/, '') ||
+  `http://localhost:${process.env.PORT || 5000}`;
+const GOOGLE_CALLBACK_URL =
+  process.env.GOOGLE_CALLBACK_URL || `${SERVER_BASE_URL}/api/auth/google/callback`;
+
 // Debug: Check if JWT_SECRET is loaded
 console.log('JWT_SECRET in passport config:', process.env.JWT_SECRET);
 
@@ -40,7 +46,7 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
       {
         clientID: process.env.GOOGLE_CLIENT_ID,
         clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-        callbackURL: process.env.GOOGLE_CALLBACK_URL || `${(process.env.SERVER_URL || '').replace(/\/$/, '')}/api/auth/google/callback`,
+        callbackURL: GOOGLE_CALLBACK_URL,
         scope: ['profile', 'email']
       },
       async (accessToken, refreshToken, profile, done) => {
