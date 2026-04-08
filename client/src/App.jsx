@@ -8,7 +8,7 @@ import './App.css';
 import SummaryApi from './common/SummaryApi';
 import BottomNavigation from './components/BottomNavigation';
 import CartMobileLink from './components/CartMobile';
-import ChatbotAI from './components/ChatbotAI';
+// import ChatbotAI from './components/ChatbotAI'; // Hidden: AI feature not yet complete
 import Header from './components/Header';
 import GlobalProvider from './provider/GlobalProvider';
 import { fetchCartItems } from './redux/slice/cartSlice';
@@ -285,7 +285,7 @@ function App() {
         <Toaster />
         <ToastContainer position="top-right" autoClose={3000} />
         {showStoreChrome && location.pathname !== '/checkout' && location.pathname !== '/dashboard/checkout' && user?._id && <CartMobileLink />}
-        {showStoreChrome && <ChatbotAI />}
+        {/* ChatbotAI hidden: AI feature not yet complete */}
       </GlobalProvider>
     </ErrorBoundary>
   );

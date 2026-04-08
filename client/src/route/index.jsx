@@ -9,14 +9,14 @@ import Dashboard from '../layouts/Dashboard';
 import DeliveryLayout from '../layouts/DeliveryLayout';
 import ActiveCampaigns from '../pages/ActiveCampaigns';
 import Address from '../pages/Address';
-import AdminChatMonitor from '../pages/admin/AdminChatMonitor';
+// import AdminChatMonitor from '../pages/admin/AdminChatMonitor'; // Hidden: AI not yet complete
 import AllOrdersAdmin from '../pages/admin/AllOrdersAdmin';
-import ChatSessionView from '../pages/admin/ChatSessionView';
+// import ChatSessionView from '../pages/admin/ChatSessionView'; // Hidden: AI not yet complete
 import CommunityPerksAdmin from '../pages/admin/CommunityPerksAdmin';
 import LoyaltyProgramAdmin from '../pages/admin/LoyaltyProgramAdmin';
 import UsersAdmin from '../pages/admin/UsersAdmin';
 import CategoryPage from '../pages/CategoryPage';
-import ChatInterface from '../pages/ChatInterface'; // Import the new ChatInterface component
+// import ChatInterface from '../pages/ChatInterface'; // Hidden: AI not yet complete
 import CommunityPerks from '../pages/CommunityPerks';
 import ActiveDeliveries from '../pages/delivery/ActiveDeliveries';
 import CompletedDeliveries from '../pages/delivery/CompletedDeliveries';
@@ -245,11 +245,11 @@ const router = createBrowserRouter([
         }
       },
       
-      // Other app routes
-      {
-        path: 'chat',
-        element: <ChatInterface />
-      },
+      // Chat route hidden: AI feature not yet complete
+      // {
+      //   path: 'chat',
+      //   element: <ChatInterface />
+      // },
       
       // Mobile-specific routes
       {
@@ -627,22 +627,23 @@ const router = createBrowserRouter([
           }
         ]
       },
-      {
-        path: 'admin/chats',
-        element: (
-          <PrivateRoute requireAdmin={true}>
-            <AdminChatMonitor />
-          </PrivateRoute>
-        )
-      },
-      {
-        path: 'admin/chat/:id',
-        element: (
-          <PrivateRoute requireAdmin={true}>
-            <ChatSessionView />
-          </PrivateRoute>
-        )
-      },
+      // Admin chat routes hidden: AI feature not yet complete
+      // {
+      //   path: 'admin/chats',
+      //   element: (
+      //     <PrivateRoute requireAdmin={true}>
+      //       <AdminChatMonitor />
+      //     </PrivateRoute>
+      //   )
+      // },
+      // {
+      //   path: 'admin/chat/:id',
+      //   element: (
+      //     <PrivateRoute requireAdmin={true}>
+      //       <ChatSessionView />
+      //     </PrivateRoute>
+      //   )
+      // },
       // Improved catch-all route
       {
         path: '*',
