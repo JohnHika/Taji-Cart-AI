@@ -61,6 +61,7 @@ const allowedOrigins = [
     'http://localhost:5174',
     'http://localhost:3000',
     'https://nawiri-hair-client.onrender.com',
+    'https://nawiri-hair.vercel.app',
     'https://nawirihairke.com',
     'https://www.nawirihairke.com',
     'https://www.nawirihair.com',

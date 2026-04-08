@@ -28,6 +28,7 @@ export const initializeSocket = (server) => {
                     'http://localhost:5173',
                     'http://localhost:5174',
                     'https://nawiri-hair-client.onrender.com',
+                    'https://nawiri-hair.vercel.app',
                     'https://nawirihairke.com',
                     'https://www.nawirihairke.com',
                     'https://www.nawirihair.com',
