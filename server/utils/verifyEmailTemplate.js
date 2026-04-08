@@ -3,18 +3,19 @@ import { renderAccountNoticeEmail } from './emailTemplates.js';
 const verifyEmailTemplate = ({ name, url }) =>
   renderAccountNoticeEmail({
     name,
-    title: 'Confirm your email address',
+    title: name ? `Welcome, ${name}!` : 'Welcome to Nawiri Hair Kenya!',
     intro:
-      'Welcome to Nawiri Hair Kenya. Please confirm your email address to protect your account and activate secure sign-in.',
+      'Thank you for joining Nawiri Hair Kenya — your destination for premium wigs, weaves, braids, and extensions that blend quality, class, and affordability. Confirm your email address to activate your account and start shopping.',
     highlights: [
-      'Email verification is required before you can sign in with your password.',
-      'The verification link expires automatically for your safety.',
-      'Once confirmed, you will receive account and order updates at this address.',
+      'Browse and order from our full collection of premium hair products.',
+      'Earn loyalty points on every purchase and redeem them for exclusive discounts.',
+      'Get early access to new arrivals and member-only deals delivered to your inbox.',
     ],
-    ctaLabel: 'Verify email address',
+    ctaLabel: 'Verify my email address',
     ctaUrl: url,
     supportingText:
-      'If the button does not open, copy and paste the verification link into your browser.',
+      'Button not working? Copy and paste the link below into your browser. This link expires in 24 hours.',
+    footerNote: 'If you did not create a Nawiri Hair Kenya account, you can safely ignore this email.',
   });
 
-export default verifyEmailTemplate
+export default verifyEmailTemplate;

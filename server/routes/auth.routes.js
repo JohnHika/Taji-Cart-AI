@@ -47,7 +47,7 @@ const handleSocialAuthSuccess = async (req, res) => {
 const generateToken = (user) => {
   return jwt.sign(
     { id: user._id, email: user.email, role: user.role },
-    process.env.JWT_SECRET || 'your-jwt-secret',
+    process.env.JWT_SECRET || 'fallback-secret',
     { expiresIn: '1d' }
   );
 };

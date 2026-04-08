@@ -4,6 +4,8 @@ import { Strategy as GoogleStrategy } from 'passport-google-oauth20';
 import { ExtractJwt, Strategy as JwtStrategy } from 'passport-jwt';
 import LoyaltyCard from '../models/loyaltycard.model.js';
 import UserModel from '../models/user.model.js';
+import sendEmail from './sendEmail.js';
+import welcomeEmailTemplate from '../utils/welcomeEmailTemplate.js';
 
 dotenv.config();
 
@@ -82,6 +84,13 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
               console.error('Error creating loyalty card:', loyaltyError);
               // Continue with auth flow even if loyalty card creation fails
             }
+
+            // Send welcome email to new Google sign-up (non-blocking)
+            sendEmail({
+              sendTo: user.email,
+              subject: 'Welcome to Nawiri Hair Kenya!',
+              html: welcomeEmailTemplate({ name: user.name }),
+            }).catch((err) => console.error('Welcome email failed:', err.message));
           }
 
           return done(null, user);

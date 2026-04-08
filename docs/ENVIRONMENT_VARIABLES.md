@@ -28,6 +28,78 @@ Tip: You can verify the server sees the env with `GET /api/pesapal/health` (see 
 ## Google OAuth Configuration
 - `GOOGLE_CLIENT_ID`: OAuth client ID from Google Cloud Console (type: Web application)
 - `GOOGLE_CLIENT_SECRET`: OAuth client secret from Google Cloud Console
-- `FRONTEND_URL`: Base URL the server should redirect to after social login (e.g., `http://localhost:5173` in dev, production domain in prod)
+- `FRONTEND_URL`: Base URL the server should redirect to after social login (e.g., `http://localhost:5173` in dev, `https://nawirihairke.com` in production)
 
-Authorized redirect URI registered with Google must exactly match your backend callback, e.g. `http://localhost:8080/api/auth/google/callback` for local dev. For production, use your public HTTPS domain such as `https://api.your-domain.com/api/auth/google/callback`.
+### Setting up Google OAuth (first time)
+1. Go to https://console.cloud.google.com → select your project
+2. **APIs & Services → Credentials → Create Credentials → OAuth 2.0 Client ID**
+3. Application type: **Web application**, Name: `Nawiri Hair Kenya`
+4. **Authorized JavaScript Origins** — add all of these:
+   ```
+   https://nawirihairke.com
+   https://www.nawirihairke.com
+   https://<your-render-backend>.onrender.com
+   http://localhost:5173   (dev only)
+   ```
+5. **Authorized Redirect URIs** — must be exact:
+   ```
+   https://<your-render-backend>.onrender.com/api/auth/google/callback
+   http://localhost:5000/api/auth/google/callback   (dev only)
+   ```
+6. Click **Create** → copy Client ID and Client Secret into your Render environment variables.
+
+> The redirect URI in step 5 must match exactly what the server receives. The path is always `/api/auth/google/callback`.
+
+## Email / SMTP Configuration
+
+The server uses Nodemailer and supports any SMTP provider. For production on `nawirihairke.com`, use **Resend.com** (free tier: 3,000 emails/month, custom domain support).
+
+### Resend.com Setup (recommended for nawirihairke.com)
+1. Sign up at https://resend.com
+2. Go to **Domains → Add Domain** → enter `nawirihairke.com`
+3. Add the DNS records Resend provides (TXT + DKIM/SPF) at your domain registrar
+4. Wait for domain verification (usually under 10 minutes)
+5. Go to **API Keys → Create API Key** → copy the key
+
+**Render environment variables:**
+```
+SMTP_HOST=smtp.resend.com
+SMTP_PORT=587
+SMTP_SECURE=false
+SMTP_USER=resend
+SMTP_PASS=<your-resend-api-key>
+EMAIL_FROM=Nawiri Hair Kenya <noreply@nawirihairke.com>
+EMAIL_REPLY_TO=nawirihairke@gmail.com
+```
+
+### Alternative: Gmail App Password (simpler, but sends from Gmail address)
+1. Enable 2FA on your Google account
+2. Go to https://myaccount.google.com/apppasswords → create an App Password for "Mail"
+3. Use the 16-character app password as `SMTP_PASS`
+
+```
+SMTP_SERVICE=gmail
+SMTP_USER=nawirihairke@gmail.com
+SMTP_PASS=<16-char-app-password>
+EMAIL_FROM=Nawiri Hair Kenya <nawirihairke@gmail.com>
+EMAIL_REPLY_TO=nawirihairke@gmail.com
+```
+
+### Environment variable reference
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `SMTP_HOST` | If not using `SMTP_SERVICE` | SMTP server hostname (e.g. `smtp.resend.com`) |
+| `SMTP_PORT` | No | Port, defaults to `587` |
+| `SMTP_SECURE` | No | `true` for port 465, `false` for 587 (STARTTLS) |
+| `SMTP_USER` | Yes | SMTP username (use `resend` for Resend.com) |
+| `SMTP_PASS` | Yes | SMTP password or API key |
+| `SMTP_SERVICE` | Alternative | Named service (e.g. `gmail`) — skips host/port config |
+| `EMAIL_FROM` | No | Sender display name + address. Defaults to brand name + SMTP user |
+| `EMAIL_REPLY_TO` | No | Reply-to address. Defaults to `nawirihairke@gmail.com` |
+
+## Authentication & Security
+
+- `JWT_SECRET`: Strong random string used to sign access tokens. **Required in production.** Generate with: `node -e "console.log(require('crypto').randomBytes(64).toString('hex'))"`
+- `SESSION_SECRET`: Strong random string for Express session signing. **Required in production.** Generate the same way as JWT_SECRET.
+
+> Never use default/fallback values in production. Always set both secrets explicitly on Render.
