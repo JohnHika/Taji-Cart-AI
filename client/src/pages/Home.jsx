@@ -7,6 +7,7 @@ import SummaryApi from "../common/SummaryApi";
 import CardLoading from '../components/CardLoading';
 import CardProduct from '../components/CardProduct';
 import CommunityCampaignProgress from "../components/CommunityCampaignProgress";
+import PromoBanner from '../components/PromoBanner';
 import UserActiveCampaigns from "../components/UserActiveCampaigns";
 import { setAllCategory, setAllSubCategory } from "../store/productSlice";
 import Axios from "../utils/Axios";
@@ -136,6 +137,15 @@ const Home = () => {
 
   return (
    <section className='bg-ivory dark:bg-dm-surface transition-colors'>
+      {/* Promo Banner */}
+      <div className='container mx-auto px-2 pt-4 sm:px-4 sm:pt-6'>
+        {loadingProducts ? (
+          <div className='h-[280px] sm:h-[340px] animate-pulse rounded-2xl bg-plum-100 dark:bg-plum-900/50' />
+        ) : (
+          <PromoBanner products={allProducts} />
+        )}
+      </div>
+
       {/* Categories */}
       <div className='container mx-auto px-2 pt-4 sm:px-4 sm:pt-6 my-6 sm:my-10'>
         {/* Premium Benefits Banner */}
