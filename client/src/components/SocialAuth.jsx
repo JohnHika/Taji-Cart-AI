@@ -13,14 +13,28 @@ const GoogleIcon = () => (
 const SocialAuth = () => {
   const [isLoading, setIsLoading] = useState(false);
 
-  const RAW_API_URL = import.meta.env.VITE_API_URL || '';
-  const API_URL = RAW_API_URL
-    ? (RAW_API_URL.endsWith('/api') ? RAW_API_URL : `${RAW_API_URL.replace(/\/$/, '')}/api`)
-    : '/api';
+  // Resolve backend URL — must be absolute for Google OAuth redirect to work.
+  // Falls back through VITE_API_URL → VITE_SERVER_URL → VITE_BACKEND_URL.
+  const resolveApiUrl = () => {
+    const raw =
+      import.meta.env.VITE_API_URL ||
+      import.meta.env.VITE_SERVER_URL ||
+      import.meta.env.VITE_BACKEND_URL ||
+      '';
+    if (!raw) return null;
+    const base = raw.replace(/\/$/, '');
+    return base.endsWith('/api') ? base : `${base}/api`;
+  };
+  const API_URL = resolveApiUrl();
 
   const handleGoogleLogin = async () => {
     setIsLoading(true);
     try {
+      if (!API_URL) {
+        toast.error('Google login is not configured. Please use email login.');
+        setIsLoading(false);
+        return;
+      }
       const response = await fetch(`${API_URL}/auth/google`, { method: 'HEAD' });
       if (response.status === 503) {
         toast.error('Google login is currently not available. Please use email login.');
