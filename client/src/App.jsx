@@ -10,6 +10,7 @@ import BottomNavigation from './components/BottomNavigation';
 import CartMobileLink from './components/CartMobile';
 import ChatbotAI from './components/ChatbotAI';
 import Header from './components/Header';
+import { StoreLayoutProvider } from './context/StoreLayoutContext';
 import GlobalProvider from './provider/GlobalProvider';
 import { fetchCartItems } from './redux/slice/cartSlice';
 import { setAllCategory, setAllSubCategory, setLoadingCategory, setLoyaltyDetails } from './store/productSlice';
@@ -273,19 +274,21 @@ function App() {
   return (
     <ErrorBoundary FallbackComponent={ErrorFallback}>
       <GlobalProvider>
-        {showStoreChrome && <Header />}
-        <CartSynchronizer />
-        <main className='min-h-[78vh] max-w-full overflow-x-hidden'>
-          {/* Add suspense to catch lazy-loaded component errors */}
-          <Suspense fallback={<div className="p-5 text-center">Loading...</div>}>
-            <Outlet key={location.pathname} />
-          </Suspense>
-        </main>
-        {showStoreChrome && <BottomNavigation />}
-        <Toaster />
-        <ToastContainer position="top-right" autoClose={3000} />
-        {showStoreChrome && location.pathname !== '/checkout' && location.pathname !== '/dashboard/checkout' && user?._id && <CartMobileLink />}
-        {showStoreChrome && <ChatbotAI />}
+        <StoreLayoutProvider>
+          {showStoreChrome && <Header />}
+          <CartSynchronizer />
+          <main className='min-h-[78vh] max-w-full overflow-x-hidden'>
+            {/* Add suspense to catch lazy-loaded component errors */}
+            <Suspense fallback={<div className="p-5 text-center">Loading...</div>}>
+              <Outlet key={location.pathname} />
+            </Suspense>
+          </main>
+          {showStoreChrome && <BottomNavigation />}
+          <Toaster />
+          <ToastContainer position="top-right" autoClose={3000} />
+          {showStoreChrome && location.pathname !== '/checkout' && location.pathname !== '/dashboard/checkout' && user?._id && <CartMobileLink />}
+          {showStoreChrome && <ChatbotAI />}
+        </StoreLayoutProvider>
       </GlobalProvider>
     </ErrorBoundary>
   );

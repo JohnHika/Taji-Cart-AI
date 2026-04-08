@@ -7,7 +7,9 @@ import SummaryApi from "../common/SummaryApi";
 import CardLoading from '../components/CardLoading';
 import CardProduct from '../components/CardProduct';
 import CommunityCampaignProgress from "../components/CommunityCampaignProgress";
+import Search from '../components/Search';
 import UserActiveCampaigns from "../components/UserActiveCampaigns";
+import { useStoreCompact } from '../context/StoreLayoutContext';
 import { setAllCategory, setAllSubCategory } from "../store/productSlice";
 import Axios from "../utils/Axios";
 import { valideURLConvert } from "../utils/valideURLConvert";
@@ -27,6 +29,7 @@ function useScrollReveal(threshold = 0.15) {
 }
 
 const Home = () => {
+  const isCompact = useStoreCompact();
   const loadingCategory = useSelector(state => state.product.loadingCategory);
   const categoryData = useSelector(state => state.product.allCategory);
   const subCategoryData = useSelector(state => state.product.allSubCategory);
@@ -136,6 +139,13 @@ const Home = () => {
 
   return (
    <section className='bg-ivory dark:bg-dm-surface transition-colors'>
+      {isCompact && (
+        <div className="container mx-auto px-3 pt-3 sm:px-4">
+          <div className="mx-auto max-w-lg">
+            <Search />
+          </div>
+        </div>
+      )}
       {/* Categories */}
       <div className='container mx-auto px-2 pt-4 sm:px-4 sm:pt-6 my-6 sm:my-10'>
         {/* Premium Benefits Banner */}

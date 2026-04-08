@@ -1,24 +1,22 @@
-import React, { useEffect, useState } from "react"
+import React, { useEffect, useState } from 'react';
 
-const useMobile = (breakpoint = 768)=>{
-    const [isMobile,setIsMobile] = useState(window.innerWidth < breakpoint)
+/** Viewport width is strictly less than `breakpoint` (default 768). */
+const useMobile = (breakpoint = 768) => {
+  const [isMobile, setIsMobile] = useState(() =>
+    typeof window !== 'undefined' ? window.innerWidth < breakpoint : false
+  );
 
-    const handleResize = ()=>{
-        const checkpoint = window.innerWidth < breakpoint
-        setIsMobile(checkpoint)
-    }
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < breakpoint);
+    };
 
-    useEffect(()=>{
-        handleResize()
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, [breakpoint]);
 
-        window.addEventListener('resize',handleResize)
+  return [isMobile];
+};
 
-        return ()=>{
-            window.removeEventListener('resize',handleResize)
-        }
-    },[])
-
-    return [ isMobile ]
-}
-
-export default useMobile
+export default useMobile;

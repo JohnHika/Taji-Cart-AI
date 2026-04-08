@@ -3,11 +3,13 @@ import { FaCaretRight } from "react-icons/fa";
 import { FaCartShopping } from 'react-icons/fa6';
 import { useDispatch, useSelector } from 'react-redux';
 import { Link } from 'react-router-dom';
+import { useStoreCompact } from '../context/StoreLayoutContext';
 import { useGlobalContext } from '../provider/GlobalProvider';
 import { DisplayPriceInShillings } from '../utils/DisplayPriceInShillings';
 import { fetchCartItems } from '../redux/slice/cartSlice';
 
 const CartMobileLink = () => {
+    const isCompact = useStoreCompact();
     const { totalPrice, totalQty } = useGlobalContext();
     const user = useSelector(state => state.user);
     const cart = useSelector(state => state.cartItem?.cart || []);
@@ -31,10 +33,14 @@ const CartMobileLink = () => {
         return null; // Don't render cart for unauthenticated users
     }
 
+    if (!isCompact) {
+        return null;
+    }
+
     // Always show cart icon even if empty
     return (
         <div className="sticky bottom-4 p-2 z-20 pointer-events-none">
-            <div className="pointer-events-auto bg-plum-800 dark:bg-plum-900 border border-plum-700 dark:border-plum-700 px-3 py-2 rounded-pill text-white text-sm flex items-center justify-between gap-3 lg:hidden shadow-hover max-w-md mx-auto">
+            <div className="pointer-events-auto bg-plum-800 dark:bg-plum-900 border border-plum-700 dark:border-plum-700 px-3 py-2 rounded-pill text-white text-sm flex items-center justify-between gap-3 shadow-hover max-w-md mx-auto">
                 <div className="flex items-center gap-2 min-w-0">
                     <div className="p-2 bg-gold-500 text-charcoal rounded-pill w-fit shrink-0">
                         <FaCartShopping className="text-base" />

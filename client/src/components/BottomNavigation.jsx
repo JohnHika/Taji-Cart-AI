@@ -2,11 +2,13 @@ import React, { useMemo } from 'react';
 import { FaCashRegister, FaClipboardList, FaCompass, FaHeart, FaHome, FaMapMarkedAlt, FaSearch, FaShoppingCart, FaStore, FaTruck, FaUser, FaUsers } from 'react-icons/fa';
 import { useSelector } from 'react-redux';
 import { Link, useLocation } from 'react-router-dom';
+import { useStoreCompact } from '../context/StoreLayoutContext';
 import { useGlobalContext } from '../provider/GlobalProvider';
 import isadmin from '../utils/isAdmin';
 import isStaff from '../utils/isStaff';
 
 const BottomNavigation = () => {
+  const isCompact = useStoreCompact();
   const location = useLocation();
   const user = useSelector(state => state.user);
   const { totalQty } = useGlobalContext();
@@ -58,8 +60,10 @@ const BottomNavigation = () => {
   const hiddenRoutes = ['/login', '/register', '/checkout', '/dashboard/checkout', '/dashboard/cart', '/mobile/cart', '/mobile/profile'];
   if (hiddenRoutes.includes(location.pathname)) return null;
 
+  if (!isCompact) return null;
+
   return (
-    <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40 border-t border-gray-200/80 bg-white/95 shadow-[0_-8px_30px_rgba(15,23,42,0.08)] backdrop-blur dark:border-gray-700/80 dark:bg-gray-800/95 safe-area-bottom">
+    <div className="fixed bottom-0 left-0 right-0 z-40 border-t border-gray-200/80 bg-white/95 shadow-[0_-8px_30px_rgba(15,23,42,0.08)] backdrop-blur dark:border-gray-700/80 dark:bg-gray-800/95 safe-area-bottom">
       <div className={`grid items-center gap-0.5 px-1 py-1.5 ${navItems.length >= 6 ? 'grid-cols-6' : 'grid-cols-5'}`}>
         {navItems.map((item, index) => {
           const Icon = item.icon;

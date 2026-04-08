@@ -9,6 +9,9 @@ const normalizeScanValue = (value) => {
     return String(value).trim();
 };
 
+/** SKU: digits only, 8–13 chars (EAN/UPC-style internal IDs) */
+const SKU_DIGITS_REGEX = /^\d{8,13}$/;
+
 const ensureUniqueProductField = async ({ field, value, excludeId }) => {
     const normalizedValue = normalizeScanValue(value);
 
@@ -47,20 +50,42 @@ export const createProductController = async(request,response)=>{
             discount,
             description,
             more_details,
-            weight
+            weight,
+            publish: publishBody
         } = request.body 
 
         const normalizedSku = normalizeScanValue(sku);
         const normalizedBarcode = normalizeScanValue(barcode);
         const normalizedQrCode = normalizeScanValue(qrCode);
 
-        // Validate required fields for hair products
-        if(!handle || !name || !normalizedSku || !image?.[0] || !category?.[0] || !subCategory?.[0] || !unit || !costPrice || !price || !description ){
+        // Validate required fields for hair products (image and pricing optional for drafts)
+        const descriptionValue = description ?? '';
+
+        if(!handle || !name || !normalizedSku || !category?.[0] || !subCategory?.[0] || !unit || stock === undefined || stock === null ){
             return response.status(400).json({
-                message : "Enter required fields (handle, name, SKU, image, category, subcategory, unit, costPrice, price, description)",
+                message : "Enter required fields (handle, name, SKU, category, subcategory, unit, stock)",
                 error : true,
                 success : false
             })
+        }
+
+        if (!SKU_DIGITS_REGEX.test(normalizedSku)) {
+            return response.status(400).json({
+                message : "SKU must be 8–13 digits only (for barcode and inventory)",
+                error : true,
+                success : false
+            })
+        }
+
+        const priceNum = price === '' || price === undefined || price === null ? NaN : Number(price);
+        const costNum = costPrice === '' || costPrice === undefined || costPrice === null ? NaN : Number(costPrice);
+        const hasValidRetail = Number.isFinite(priceNum) && priceNum >= 0;
+        const hasValidCost = Number.isFinite(costNum) && costNum >= 0;
+        let publishFlag = publishBody !== false;
+        if (publishBody === false) {
+            publishFlag = false;
+        } else if (!hasValidRetail || !hasValidCost) {
+            publishFlag = false;
         }
 
         // Check for SKU uniqueness
@@ -98,18 +123,19 @@ export const createProductController = async(request,response)=>{
             barcode: normalizedBarcode || undefined,
             qrCode: normalizedQrCode || undefined,
             variants,
-            image ,
+            image : Array.isArray(image) ? image : [],
             imageFilename,
             category,
             subCategory,
             unit,
             stock,
-            costPrice,
-            price,
+            ...(hasValidCost ? { costPrice: costNum } : {}),
+            ...(hasValidRetail ? { price: priceNum } : {}),
             discount,
-            description,
+            description: descriptionValue,
             more_details,
-            weight
+            weight,
+            publish: publishFlag
         })
         const saveProduct = await product.save()
 

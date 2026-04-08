@@ -1,7 +1,8 @@
 import CartProductModel from "../models/cartproduct.model.js";
 import UserModel from "../models/user.model.js";
+import ProductModel from "../models/product.model.js";
 
-const VARIANT_FIELDS = ['color', 'length', 'density', 'laceSpecification'];
+const VARIANT_FIELDS = ['color', 'length', 'texture', 'density', 'laceSpecification'];
 
 const normalizeText = (value) => {
     if (typeof value !== 'string') {
@@ -53,6 +54,30 @@ export const addToCartItemController = async(request,response)=>{
         if(!productId){
             return response.status(402).json({
                 message : "Provide productId",
+                error : true,
+                success : false
+            })
+        }
+
+        const productDoc = await ProductModel.findById(productId).select('publish price name');
+        if (!productDoc) {
+            return response.status(404).json({
+                message : "Product not found",
+                error : true,
+                success : false
+            })
+        }
+        if (productDoc.publish === false) {
+            return response.status(400).json({
+                message : "This product is not available for sale yet.",
+                error : true,
+                success : false
+            })
+        }
+        const retail = Number(productDoc.price);
+        if (!Number.isFinite(retail) || retail < 0) {
+            return response.status(400).json({
+                message : "This product has no valid price and cannot be added to the cart.",
                 error : true,
                 success : false
             })

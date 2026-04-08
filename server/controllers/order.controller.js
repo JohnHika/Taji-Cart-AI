@@ -272,6 +272,26 @@ export async function paymentController(request,response){
             }
         }
 
+        for (const item of list_items) {
+            const p = item.productId;
+            const name = p?.name || 'Unknown product';
+            if (p && p.publish === false) {
+                return response.status(400).json({
+                    message: `Product "${name}" is not published for sale. Remove it from the cart or complete pricing in admin.`,
+                    error: true,
+                    success: false
+                });
+            }
+            const originalPriceCheck = Number(p?.price);
+            if (!Number.isFinite(originalPriceCheck) || originalPriceCheck < 0) {
+                return response.status(400).json({
+                    message: `Product "${name}" has no valid retail price. Complete pricing before checkout.`,
+                    error: true,
+                    success: false
+                });
+            }
+        }
+
         const line_items = list_items.map(item => {
             // Calculate the combined discount (product discount + royal card discount)
             const productDiscount = Number(item.productId.discount || 0)

@@ -1,14 +1,17 @@
-﻿import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import InfiniteScroll from 'react-infinite-scroll-component'
 import { useLocation } from 'react-router-dom'
 import noDataImage from '../assets/nothing here yet.webp'
 import SummaryApi from '../common/SummaryApi'
 import CardLoading from '../components/CardLoading'
 import CardProduct from '../components/CardProduct'
+import Search from '../components/Search'
+import { useStoreCompact } from '../context/StoreLayoutContext'
 import Axios from '../utils/Axios'
 import AxiosToastError from '../utils/AxiosToastError'
 
 const SearchPage = () => {
+  const isCompact = useStoreCompact()
   const [data,setData] = useState([])
   const [loading,setLoading] = useState(true)
   const loadingArrayCard = new Array(10).fill(null)
@@ -88,6 +91,13 @@ const SearchPage = () => {
   return (
     <section className='bg-white dark:bg-gray-900 min-h-[80vh]'>
       <div className='mobile-page-shell container mx-auto'>
+        {isCompact && (
+          <div className="mb-4 px-1 pt-3 sm:px-0">
+            <div className="mx-auto max-w-lg">
+              <Search />
+            </div>
+          </div>
+        )}
         <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <p className='font-semibold text-gray-800 dark:text-gray-200 text-sm sm:text-base'>
             {searchText ? `Search Results for "${searchText}": ${data.length}` : 'Enter search term'}

@@ -17,6 +17,7 @@ const EditProductAdmin = ({ close ,data : propsData,fetchProductData}) => {
   const [data, setData] = useState({
     _id : propsData._id,
     name: propsData.name,
+    handle: propsData.handle || "",
     sku: propsData.sku || "",
     barcode: propsData.barcode || "",
     qrCode: propsData.qrCode || "",
@@ -25,9 +26,18 @@ const EditProductAdmin = ({ close ,data : propsData,fetchProductData}) => {
     subCategory: propsData.subCategory,
     unit: propsData.unit,
     stock: propsData.stock,
-    price: propsData.price,
+    costPrice: propsData.costPrice ?? "",
+    price: propsData.price ?? "",
     discount: propsData.discount,
     description: propsData.description,
+    variants: propsData.variants || {
+      color: "",
+      length: "",
+      texture: "",
+      density: "",
+      laceSpecification: "",
+    },
+    publish: propsData.publish !== false,
     more_details: propsData.more_details || {},
   })
   const [imageLoading, setImageLoading] = useState(false)
@@ -42,14 +52,29 @@ const EditProductAdmin = ({ close ,data : propsData,fetchProductData}) => {
 
 
   const handleChange = (e) => {
-    const { name, value } = e.target
+    const { name, value, type, checked } = e.target
 
-    setData((preve) => {
-      return {
+    if (name.startsWith('variant_')) {
+      const variantField = name.replace('variant_', '')
+      setData((preve) => ({
         ...preve,
-        [name]: value
-      }
-    })
+        variants: {
+          ...(preve.variants || {}),
+          [variantField]: value,
+        },
+      }))
+      return
+    }
+
+    if (name === 'publish') {
+      setData((preve) => ({ ...preve, publish: checked }))
+      return
+    }
+
+    setData((preve) => ({
+      ...preve,
+      [name]: value,
+    }))
   }
 
   const handleUploadImage = async (e) => {
@@ -180,6 +205,18 @@ const EditProductAdmin = ({ close ,data : propsData,fetchProductData}) => {
                 />
               </div>
               <div className='grid gap-1'>
+                <label htmlFor='handle' className='font-medium'>Handle</label>
+                <input
+                  id='handle'
+                  type='text'
+                  placeholder='Parent product handle'
+                  name='handle'
+                  value={data.handle}
+                  onChange={handleChange}
+                  className='bg-plum-50/80 p-2 outline-none border focus-within:border-plum-500 rounded'
+                />
+              </div>
+              <div className='grid gap-1'>
                 <label htmlFor='sku' className='font-medium'>SKU</label>
                 <input
                   id='sku'
@@ -226,12 +263,54 @@ const EditProductAdmin = ({ close ,data : propsData,fetchProductData}) => {
                   name='description'
                   value={data.description}
                   onChange={handleChange}
-                  required
                   multiple
                   rows={3}
                   className='bg-plum-50/80 p-2 outline-none border focus-within:border-plum-500 rounded resize-none'
                 />
               </div>
+
+              <div className='grid grid-cols-2 gap-2'>
+                <div className='grid gap-1'>
+                  <label htmlFor='variant_color' className='font-medium'>Color</label>
+                  <input
+                    id='variant_color'
+                    name='variant_color'
+                    value={data.variants?.color || ''}
+                    onChange={handleChange}
+                    className='bg-plum-50/80 p-2 outline-none border focus-within:border-plum-500 rounded'
+                  />
+                </div>
+                <div className='grid gap-1'>
+                  <label htmlFor='variant_length' className='font-medium'>Length</label>
+                  <input
+                    id='variant_length'
+                    name='variant_length'
+                    value={data.variants?.length || ''}
+                    onChange={handleChange}
+                    className='bg-plum-50/80 p-2 outline-none border focus-within:border-plum-500 rounded'
+                  />
+                </div>
+                <div className='grid gap-1'>
+                  <label htmlFor='variant_texture' className='font-medium'>Texture</label>
+                  <input
+                    id='variant_texture'
+                    name='variant_texture'
+                    value={data.variants?.texture || ''}
+                    onChange={handleChange}
+                    className='bg-plum-50/80 p-2 outline-none border focus-within:border-plum-500 rounded'
+                  />
+                </div>
+              </div>
+
+              <label className='flex items-center gap-2 font-medium cursor-pointer'>
+                <input
+                  type='checkbox'
+                  name='publish'
+                  checked={data.publish !== false}
+                  onChange={handleChange}
+                />
+                Published for sale
+              </label>
               <div>
                 <p className='font-medium'>Image</p>
                 <div>
@@ -395,7 +474,22 @@ const EditProductAdmin = ({ close ,data : propsData,fetchProductData}) => {
               </div>
 
               <div className='grid gap-1'>
-                <label htmlFor='price' className='font-medium'>Price</label>
+                <label htmlFor='costPrice' className='font-medium'>Cost price</label>
+                <input
+                  id='costPrice'
+                  type='number'
+                  placeholder='Vendor cost'
+                  name='costPrice'
+                  value={data.costPrice}
+                  onChange={handleChange}
+                  min="0"
+                  step="0.01"
+                  className='bg-plum-50/80 p-2 outline-none border focus-within:border-plum-500 rounded'
+                />
+              </div>
+
+              <div className='grid gap-1'>
+                <label htmlFor='price' className='font-medium'>Retail price</label>
                 <input
                   id='price'
                   type='number'
@@ -403,7 +497,8 @@ const EditProductAdmin = ({ close ,data : propsData,fetchProductData}) => {
                   name='price'
                   value={data.price}
                   onChange={handleChange}
-                  required
+                  min="0"
+                  step="0.01"
                   className='bg-plum-50/80 p-2 outline-none border focus-within:border-plum-500 rounded'
                 />
               </div>
@@ -417,7 +512,6 @@ const EditProductAdmin = ({ close ,data : propsData,fetchProductData}) => {
                   name='discount'
                   value={data.discount}
                   onChange={handleChange}
-                  required
                   className='bg-plum-50/80 p-2 outline-none border focus-within:border-plum-500 rounded'
                 />
               </div>

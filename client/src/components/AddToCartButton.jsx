@@ -11,6 +11,7 @@ const buildVariantKey = (variant = {}) =>
     JSON.stringify({
         color: variant?.color || '',
         length: variant?.length || '',
+        texture: variant?.texture || '',
         density: variant?.density || '',
         laceSpecification: variant?.laceSpecification || ''
     })
@@ -30,6 +31,11 @@ const AddToCartButton = ({ data, product: productProp, cartData, selectedVariant
     const product = data || productProp || cartData?.productId
     const normalizedSku = typeof sku === 'string' ? sku.trim() : ''
     const selectedVariantKey = buildVariantKey(selectedVariant)
+    const priceNum = Number(product?.price)
+    const canAddToCart =
+        product?.publish !== false &&
+        Number.isFinite(priceNum) &&
+        priceNum >= 0
 
     const isMatchingCartItem = (item) => {
         if (item.productId?._id !== product?._id) {
@@ -60,6 +66,11 @@ const AddToCartButton = ({ data, product: productProp, cartData, selectedVariant
 
         if (!product?._id) {
             toast.error("Product information is missing")
+            return
+        }
+
+        if (!canAddToCart) {
+            toast.error("This product is not available for purchase")
             return
         }
 
@@ -239,8 +250,8 @@ const AddToCartButton = ({ data, product: productProp, cartData, selectedVariant
                 ) : (
                     <button
                         onClick={handleAddToCart}
-                        disabled={loading || !product?._id}
-                        className='bg-gold-500 hover:bg-gold-400 active:bg-gold-600 text-charcoal px-2 sm:px-3 lg:px-4 py-1.5 sm:py-2 rounded-lg text-[11px] sm:text-sm font-semibold w-full touch-manipulation transition-all shadow-sm hover:shadow-md ring-1 ring-gold-300/50'
+                        disabled={loading || !product?._id || !canAddToCart}
+                        className='bg-gold-500 hover:bg-gold-400 active:bg-gold-600 text-charcoal px-2 sm:px-3 lg:px-4 py-1.5 sm:py-2 rounded-lg text-[11px] sm:text-sm font-semibold w-full touch-manipulation transition-all shadow-sm hover:shadow-md ring-1 ring-gold-300/50 disabled:opacity-50 disabled:cursor-not-allowed'
                     >
                         {loading ? <Loading /> : (showText ? 'Add to Cart' : '+')}
                     </button>

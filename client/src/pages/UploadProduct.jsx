@@ -40,6 +40,7 @@ const UploadProduct = () => {
       variants: {
         color: "",
         length: "",
+        texture: "",
         density: "",
         laceSpecification: ""
       },
@@ -85,7 +86,14 @@ const UploadProduct = () => {
           category: Array.isArray(productData.category) ? productData.category : [],
           subCategory: Array.isArray(productData.subCategory) ? productData.subCategory : [],
           // Ensure variants is an object with default values
-          variants: productData.variants || { color: "", length: "", density: "", laceSpecification: "" },
+          variants: {
+            color: "",
+            length: "",
+            texture: "",
+            density: "",
+            laceSpecification: "",
+            ...(productData.variants || {}),
+          },
           // Ensure more_details is an object even if API returns null
           more_details: productData.more_details || {},
         });
@@ -236,24 +244,41 @@ const UploadProduct = () => {
       return;
     }
     
-    if (data.image.length === 0) {
-      successAlert("Please upload at least one image", "error");
-      return;
+    if (!isEditMode) {
+      const skuDigits = String(data.sku || '').trim();
+      if (!/^\d{8,13}$/.test(skuDigits)) {
+        successAlert("SKU must be 8–13 digits only (for barcode scanning)", "error");
+        return;
+      }
     }
     
     try {
       setFormLoading(true);
+
+      const stockNum = data.stock === '' ? NaN : Number(data.stock);
+      if (!Number.isFinite(stockNum) || stockNum < 0) {
+        successAlert("Enter a valid stock quantity", "error");
+        setFormLoading(false);
+        return;
+      }
+
+      const payload = {
+        ...data,
+        stock: stockNum,
+        discount: data.discount === '' ? 0 : Number(data.discount) || 0,
+        weight: data.weight === '' ? undefined : Number(data.weight),
+      };
       
       // For edit mode, structure the request properly with productId
       const apiEndpoint = isEditMode 
         ? { 
             ...SummaryApi.updateProductDetails,  // Using correct API endpoint name
             data: { 
-              ...data, 
+              ...payload, 
               _id: editProductId  // Using _id instead of productId to match controller expectation
             } 
           }
-        : { ...SummaryApi.createProduct, data };
+        : { ...SummaryApi.createProduct, data: payload };
       
       // Add some debug logging
       console.log("Submitting product data:", isEditMode ? "UPDATE" : "CREATE", apiEndpoint.data);
@@ -286,6 +311,7 @@ const UploadProduct = () => {
             variants: {
               color: "",
               length: "",
+              texture: "",
               density: "",
               laceSpecification: ""
             },
@@ -372,18 +398,20 @@ const UploadProduct = () => {
           </div>
 
           <div className='grid gap-1'>
-            <label htmlFor='sku' className='font-medium dark:text-gray-200'>SKU (Internal Stock Code) *UNIQUE*</label>
+            <label htmlFor='sku' className='font-medium dark:text-gray-200'>SKU (8–13 digits) *UNIQUE*</label>
             <input 
               id='sku'
               type='text'
-              placeholder='e.g., BR-STR-13x4-18-150-001'
+              inputMode='numeric'
+              pattern='\d*'
+              placeholder='e.g., 6151234567890'
               name='sku'
               value={data.sku}
               onChange={handleChange}
               required
               className='bg-plum-50/90 dark:bg-dm-card p-2 outline-none border dark:border-dm-border focus-within:border-plum-500 dark:focus-within:border-plum-400 rounded dark:text-white transition-colors duration-200'
             />
-            <p className='text-xs text-red-500 dark:text-red-400 mt-1'>⚠️ Critical: Must be unique for every row for barcode scanning</p>
+            <p className='text-xs text-gray-500 dark:text-gray-400 mt-1'>Digits only, unique per product. Use the same value in Barcode if the label encodes it.</p>
           </div>
 
           <div className='grid gap-4 md:grid-cols-2'>
@@ -399,6 +427,20 @@ const UploadProduct = () => {
                 className='bg-plum-50/90 dark:bg-dm-card p-2 outline-none border dark:border-dm-border focus-within:border-plum-500 dark:focus-within:border-plum-400 rounded dark:text-white transition-colors duration-200'
               />
               <p className='text-xs text-gray-500 dark:text-gray-400 mt-1'>Enter the exact value encoded in the printed product barcode so staff can scan it at the sales counter.</p>
+              <button
+                type='button'
+                className='text-xs text-plum-600 dark:text-plum-300 mt-1 underline'
+                onClick={() => {
+                  const s = String(data.sku || '').trim();
+                  if (/^\d{8,13}$/.test(s)) {
+                    setData((prev) => ({ ...prev, barcode: s }));
+                  } else {
+                    successAlert('Set a valid 8–13 digit SKU first', 'error');
+                  }
+                }}
+              >
+                Copy SKU to barcode
+              </button>
             </div>
 
             <div className='grid gap-1'>
@@ -429,7 +471,6 @@ const UploadProduct = () => {
               name='description'
               value={data.description}
               onChange={handleChange}
-              required
               rows={3}
               className='bg-plum-50/90 dark:bg-dm-card p-2 outline-none border dark:border-dm-border focus-within:border-plum-500 dark:focus-within:border-plum-400 rounded resize-none dark:text-white transition-colors duration-200'
             />
@@ -677,6 +718,19 @@ const UploadProduct = () => {
               </div>
 
               <div className='grid gap-1'>
+                <label htmlFor='variant_texture' className='font-medium text-gray-700 dark:text-gray-200'>Texture</label>
+                <input 
+                  id='variant_texture'
+                  type='text'
+                  placeholder='e.g., Twist, Straight'
+                  name='variant_texture'
+                  value={data.variants.texture}
+                  onChange={handleChange}
+                  className='bg-white dark:bg-dm-card-2 p-2 outline-none border border-plum-200 dark:border-plum-700 focus-within:border-plum-500 dark:focus-within:border-plum-400 rounded dark:text-white transition-colors duration-200'
+                />
+              </div>
+
+              <div className='grid gap-1'>
                 <label htmlFor='variant_density' className='font-medium text-gray-700 dark:text-gray-200'>Density</label>
                 <input 
                   id='variant_density'
@@ -730,12 +784,11 @@ const UploadProduct = () => {
                 name='costPrice'
                 value={data.costPrice}
                 onChange={handleChange}
-                required
                 min="0"
                 step="0.01"
                 className='bg-plum-50/90 dark:bg-dm-card p-2 outline-none border dark:border-dm-border focus-within:border-plum-500 dark:focus-within:border-plum-400 rounded dark:text-white transition-colors duration-200'
               />
-              <p className='text-xs text-gray-500 dark:text-gray-400'>What you pay the vendor</p>
+              <p className='text-xs text-gray-500 dark:text-gray-400'>What you pay the vendor. Leave blank with retail blank for a draft (not for sale).</p>
             </div>
 
             <div className='grid gap-1'>
@@ -747,12 +800,11 @@ const UploadProduct = () => {
                 name='price'
                 value={data.price}
                 onChange={handleChange}
-                required
                 min="0"
                 step="0.01"
                 className='bg-plum-50/90 dark:bg-dm-card p-2 outline-none border dark:border-dm-border focus-within:border-plum-500 dark:focus-within:border-plum-400 rounded dark:text-white transition-colors duration-200'
               />
-              <p className='text-xs text-gray-500 dark:text-gray-400'>What customers pay</p>
+              <p className='text-xs text-gray-500 dark:text-gray-400'>What customers pay. Both cost and retail required to publish for sale.</p>
             </div>
           </div>
 

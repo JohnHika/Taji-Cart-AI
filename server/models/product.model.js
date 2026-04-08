@@ -54,6 +54,10 @@ const productSchema = new mongoose.Schema({
         laceSpecification : {
             type : String,
             description: "Lace details (e.g., 13x4 HD, 5x5 Transparent)"
+        },
+        texture : {
+            type : String,
+            description: "Hair texture (e.g., Twist, Straight)"
         }
     },
     
@@ -88,13 +92,11 @@ const productSchema = new mongoose.Schema({
     },
     costPrice : {
         type : Number,
-        required : true,
-        description: "Vendor cost in Ksh"
+        description: "Vendor cost in Ksh (optional when draft)"
     },
     price : {
         type : Number,
-        required : true,
-        description: "Retail selling price in Ksh"
+        description: "Retail selling price in Ksh (optional when draft)"
     },
     discount : {
         type : Number,
@@ -169,6 +171,14 @@ productSchema.index({
         description: 5
     },
     name: "ProductTextIndex"
+});
+
+productSchema.index({
+    category: 1,
+    subCategory: 1,
+    'variants.color': 1,
+    'variants.texture': 1,
+    'variants.length': 1,
 });
 
 const ProductModel = mongoose.model('product',productSchema)

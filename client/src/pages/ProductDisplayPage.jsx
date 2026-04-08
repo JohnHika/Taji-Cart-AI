@@ -54,6 +54,7 @@ const ProductDisplayPage = () => {
     variants: {
       color: "",
       length: "",
+      texture: "",
       density: "",
       laceSpecification: ""
     },
@@ -62,6 +63,7 @@ const ProductDisplayPage = () => {
   const [selectedVariant, setSelectedVariant] = useState({
     color: "",
     length: "",
+    texture: "",
     density: "",
     laceSpecification: ""
   });
@@ -206,12 +208,14 @@ const ProductDisplayPage = () => {
     );
   }
 
-  if (!data.image || data.image.length === 0) {
-    data.image = ['https://via.placeholder.com/400?text=No+Image'];
-  }
+  const galleryImages = (!data.image || data.image.length === 0)
+    ? ['https://via.placeholder.com/400?text=No+Image']
+    : data.image;
 
-  const discountedPrice = pricewithDiscount(data.price, data.discount);
-  const hasDiscount = data.discount > 0;
+  const hasValidPrice = Number.isFinite(Number(data.price)) && Number(data.price) >= 0;
+  const canPurchase = data.publish !== false && hasValidPrice;
+  const discountedPrice = hasValidPrice ? pricewithDiscount(data.price, data.discount) : null;
+  const hasDiscount = hasValidPrice && data.discount > 0;
 
   return (
     <div className="bg-ivory dark:bg-dm-surface min-h-screen">
@@ -241,7 +245,7 @@ const ProductDisplayPage = () => {
             <div className="relative bg-white dark:bg-dm-card rounded-card border border-brown-100 dark:border-dm-border shadow-card overflow-hidden">
               <div className="aspect-square">
                 <img
-                  src={data.image[image]}
+                  src={galleryImages[image]}
                   alt={data.name}
                   className="w-full h-full object-contain p-4 transition-opacity duration-300"
                   onError={(e) => { e.target.src = 'https://via.placeholder.com/400?text=No+Image'; }}
@@ -255,9 +259,9 @@ const ProductDisplayPage = () => {
             </div>
 
             {/* Dots (mobile) */}
-            {data.image.length > 1 && (
+            {galleryImages.length > 1 && (
               <div className="flex items-center justify-center gap-2 sm:hidden">
-                {data.image.map((_, i) => (
+                {galleryImages.map((_, i) => (
                   <button
                     key={i}
                     onClick={() => setImage(i)}
@@ -268,7 +272,7 @@ const ProductDisplayPage = () => {
             )}
 
             {/* Thumbnail strip (desktop) */}
-            {data.image.length > 1 && (
+            {galleryImages.length > 1 && (
               <div className="relative hidden sm:flex items-center gap-2">
                 <button
                   onClick={() => imageContainer.current?.scrollBy({ left: -100, behavior: 'smooth' })}
@@ -277,7 +281,7 @@ const ProductDisplayPage = () => {
                   <FaAngleLeft size={12} />
                 </button>
                 <div ref={imageContainer} className="flex gap-2 overflow-x-auto scrollbar-hide scroll-smooth flex-1">
-                  {data.image.map((img, i) => (
+                  {galleryImages.map((img, i) => (
                     <button
                       key={i}
                       onClick={() => setImage(i)}
@@ -333,15 +337,27 @@ const ProductDisplayPage = () => {
 
             {/* Price */}
             <div className="flex items-baseline gap-3 flex-wrap">
-              <span className="text-2xl sm:text-3xl font-bold font-price text-gold-600 dark:text-gold-300">
-                {DisplayPriceInShillings(discountedPrice)}
-              </span>
-              {hasDiscount && (
-                <span className="text-sm text-brown-300 dark:text-white/30 line-through font-price">
-                  {DisplayPriceInShillings(data.price)}
-                </span>
+              {hasValidPrice ? (
+                <>
+                  <span className="text-2xl sm:text-3xl font-bold font-price text-gold-600 dark:text-gold-300">
+                    {DisplayPriceInShillings(discountedPrice)}
+                  </span>
+                  {hasDiscount && (
+                    <span className="text-sm text-brown-300 dark:text-white/30 line-through font-price">
+                      {DisplayPriceInShillings(data.price)}
+                    </span>
+                  )}
+                </>
+              ) : (
+                <span className="text-lg font-semibold text-brown-400 dark:text-white/50">Price on request</span>
               )}
             </div>
+
+            {data.publish === false && (
+              <p className="text-sm text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg px-3 py-2">
+                This product is not yet available for purchase. Pricing or images may still be pending.
+              </p>
+            )}
 
             {/* Stock */}
             <StockBadge stock={data.stock} />
@@ -355,7 +371,7 @@ const ProductDisplayPage = () => {
 
             {/* Add to cart / OOS */}
             <div className="flex flex-col sm:flex-row gap-3 mt-1">
-              {data.stock > 0 ? (
+              {data.stock > 0 && canPurchase ? (
                 <>
                   <div className="flex-1">
                     <AddToCartButton data={data} />
@@ -364,9 +380,13 @@ const ProductDisplayPage = () => {
                     <FiHeart size={16} /> Wishlist
                   </button>
                 </>
-              ) : (
+              ) : data.stock <= 0 ? (
                 <div className="w-full text-center py-3 bg-brown-100 dark:bg-dm-card-2 text-brown-400 dark:text-white/30 rounded-pill text-sm font-semibold">
                   Out of Stock
+                </div>
+              ) : (
+                <div className="w-full text-center py-3 bg-brown-100 dark:bg-dm-card-2 text-brown-400 dark:text-white/30 rounded-pill text-sm font-semibold">
+                  Not available for purchase
                 </div>
               )}
             </div>
@@ -459,6 +479,14 @@ const ProductDisplayPage = () => {
                       </div>
                     </div>
                   )}
+                  {data.variants.texture && (
+                    <div>
+                      <label className='text-xs font-semibold text-brown-700 dark:text-white/70 block mb-1'>Texture</label>
+                      <div className='bg-white dark:bg-dm-card-2 p-2 rounded border border-plum-200 dark:border-plum-700'>
+                        <p className='text-sm font-medium dark:text-white'>{data.variants.texture}</p>
+                      </div>
+                    </div>
+                  )}
                   {data.variants.density && (
                     <div>
                       <label className='text-xs font-semibold text-brown-700 dark:text-white/70 block mb-1'>Density</label>
@@ -480,7 +508,7 @@ const ProductDisplayPage = () => {
             )}
             
             {/* Add to Cart Button */}
-            {data.stock > 0 && (
+            {data.stock > 0 && canPurchase && (
               <div className="mt-4">
                 <AddToCartButton data={data} selectedVariant={selectedVariant} sku={data.sku} />
               </div>
