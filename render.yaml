@@ -1,0 +1,10 @@
+services:
+  - type: web
+    name: taji-cart-api
+    runtime: node
+    rootDir: server
+    buildCommand: npm install --omit=dev
+    startCommand: node index.js
+    envVars:
+      - key: NODE_ENV
+        value: production
