@@ -1008,6 +1008,41 @@ export async function resetpassword(request,response){
     }
 }
 
+export async function logoutController(request, response) {
+    try {
+        const userid = request.userId
+
+        const cookiesOption = {
+            httpOnly: true,
+            secure: true,
+            sameSite: "None"
+        }
+
+        response.clearCookie("accessToken", cookiesOption)
+        response.clearCookie("refreshToken", cookiesOption)
+
+        if (userid) {
+            try {
+                await UserModel.findByIdAndUpdate(userid, { refresh_token: "" })
+            } catch (error) {
+                console.log("Error updating user refresh token:", error.message)
+            }
+        }
+
+        return response.json({
+            message: "Logout successfully",
+            error: false,
+            success: true
+        })
+    } catch (error) {
+        return response.status(500).json({
+            message: error.message || error,
+            error: true,
+            success: false
+        })
+    }
+}
+
 /**
  * Refresh token controller - generates new access and refresh tokens
  */
