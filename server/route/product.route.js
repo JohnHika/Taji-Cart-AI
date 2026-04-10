@@ -24,6 +24,6 @@ productRouter.delete('/delete-product',auth,admin,deleteProductDetails)
 productRouter.post('/search-product',searchProduct)
 
 //rate product
-productRouter.post('/rate', rateProduct)
+productRouter.post('/rate', auth, rateProduct)
 
 export default productRouter

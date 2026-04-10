@@ -808,83 +808,64 @@ export const searchProduct = async(request,response)=>{
 // Rate a product
 export const rateProduct = async (req, res) => {
   try {
-    const { productId, rating, userId } = req.body;
-    
-    // Validate inputs
+    const { productId, rating } = req.body;
+    // Accept userId from auth middleware (covers normal + Google OAuth login)
+    const userId = req.userId || req.body.userId;
+
     if (!productId || !rating || !userId) {
-      return res.status(400).json({
-        success: false,
-        message: "Product ID, rating, and user ID are required"
-      });
+      return res.status(400).json({ success: false, message: "Product ID, rating, and user ID are required" });
     }
-    
-    // Check if rating is between 1-5
+
+    if (!mongoose.Types.ObjectId.isValid(productId)) {
+      return res.status(400).json({ success: false, message: "Invalid product ID format" });
+    }
+
     const ratingValue = parseInt(rating);
     if (ratingValue < 1 || ratingValue > 5 || isNaN(ratingValue)) {
-      return res.status(400).json({
-        success: false,
-        message: "Rating must be between 1 and 5"
-      });
+      return res.status(400).json({ success: false, message: "Rating must be between 1 and 5" });
     }
-    
-    // Find the product
-    const product = await ProductModel.findById(productId);
+
+    const product = await ProductModel.findById(productId).lean();
     if (!product) {
-      return res.status(404).json({
-        success: false,
-        message: "Product not found"
-      });
+      return res.status(404).json({ success: false, message: "Product not found" });
     }
-    
-    // Initialize ratings array if it doesn't exist
-    if (!product.ratings) {
-      product.ratings = [];
-    }
-    
-    // Check if user has already rated this product
-    const existingRatingIndex = product.ratings.findIndex(
-      r => r.userId && r.userId.toString() === userId
+
+    const existingRatings = Array.isArray(product.ratings) ? product.ratings : [];
+    const existingIdx = existingRatings.findIndex(
+      r => r.userId && r.userId.toString() === String(userId)
     );
-    
-    if (existingRatingIndex >= 0) {
-      // Update existing rating
-      product.ratings[existingRatingIndex].rating = ratingValue;
-      product.ratings[existingRatingIndex].updatedAt = new Date();
+
+    let updatedRatings;
+    if (existingIdx >= 0) {
+      updatedRatings = existingRatings.map((r, i) =>
+        i === existingIdx ? { ...r, rating: ratingValue, updatedAt: new Date() } : r
+      );
     } else {
-      // Add new rating
-      product.ratings.push({
-        userId,
-        rating: ratingValue,
-        createdAt: new Date(),
-        updatedAt: new Date()
-      });
+      updatedRatings = [
+        ...existingRatings,
+        { userId, rating: ratingValue, createdAt: new Date(), updatedAt: new Date() },
+      ];
     }
-    
-    // Calculate average rating
-    const totalRatings = product.ratings.length;
-    const ratingSum = product.ratings.reduce((sum, item) => sum + item.rating, 0);
-    product.averageRating = totalRatings > 0 ? (ratingSum / totalRatings) : 0;
-    
-    // Save the product with updated ratings
-    await product.save();
-    
-    // Return success response
+
+    const totalRatings = updatedRatings.length;
+    const ratingSum = updatedRatings.reduce((sum, item) => sum + item.rating, 0);
+    const averageRating = totalRatings > 0 ? ratingSum / totalRatings : 0;
+
+    // Use $set to update only the ratings fields — avoids full-document validation
+    await ProductModel.findByIdAndUpdate(
+      productId,
+      { $set: { ratings: updatedRatings, averageRating } },
+      { runValidators: false }
+    );
+
     return res.status(200).json({
       success: true,
       message: "Rating submitted successfully",
-      data: {
-        averageRating: product.averageRating,
-        totalRatings: totalRatings
-      }
+      data: { averageRating, totalRatings },
     });
-    
   } catch (error) {
     console.error("Error rating product:", error);
-    return res.status(500).json({
-      success: false,
-      message: "Internal server error",
-      error: error.message
-    });
+    return res.status(500).json({ success: false, message: "Internal server error", error: error.message });
   }
 };
 

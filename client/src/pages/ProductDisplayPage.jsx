@@ -73,7 +73,9 @@ const ProductDisplayPage = () => {
 
   const user = useSelector(state => state.user);
   const userIsAdmin = user?.role === 'admin';
-  const isLoggedIn = !!user?._id;
+  // Works for email/password AND Google OAuth — either _id or email indicates a logged-in user
+  const isLoggedIn = !!(user?._id || user?.email);
+  const [wishlisted, setWishlisted] = useState(false);
 
   const [ratingData, setRatingData] = useState([]);
   const [userRating, setUserRating] = useState(0);
@@ -83,29 +85,40 @@ const ProductDisplayPage = () => {
   const [ratingCount, setRatingCount] = useState(0);
 
   const handleRate = async (star) => {
-    if (!isLoggedIn) { toast.info("Please login to rate this product"); return; }
+    if (!isLoggedIn) {
+      toast.info('Please sign in to rate this product');
+      navigate('/login');
+      return;
+    }
     try {
       setRatingSubmitting(true);
+      // userId is picked up server-side from the auth middleware (works for Google + normal login)
       const response = await Axios({
         ...SummaryApi.rateProduct,
-        data: { productId, rating: star, userId: user._id }
+        data: { productId, rating: star },
       });
       if (response.data.success) {
-        toast.success("Thank you for your rating!");
+        toast.success('Thank you for your rating!');
         setUserRating(star);
         fetchProductDetails();
       } else {
-        toast.error(response.data.message || "Failed to submit rating");
+        toast.error(response.data.message || 'Failed to submit rating');
       }
-    } catch (error) {
-      if (error.response?.status === 404) {
-        toast.error("Rating service temporarily unavailable.");
-      } else {
-        AxiosToastError(error);
-      }
+    } catch (err) {
+      AxiosToastError(err);
     } finally {
       setRatingSubmitting(false);
     }
+  };
+
+  const handleWishlist = () => {
+    if (!isLoggedIn) {
+      toast.info('Please sign in to save to wishlist');
+      navigate('/login');
+      return;
+    }
+    setWishlisted(prev => !prev);
+    toast.success(wishlisted ? 'Removed from wishlist' : 'Added to wishlist ❤️');
   };
 
   const fetchProductDetails = async () => {
@@ -375,8 +388,17 @@ const ProductDisplayPage = () => {
                   <div className="flex-1">
                     <AddToCartButton data={data} />
                   </div>
-                  <button className="flex items-center justify-center gap-2 border border-plum-200 dark:border-plum-700 text-plum-700 dark:text-plum-200 hover:bg-plum-50 dark:hover:bg-plum-900/30 rounded-pill py-2.5 px-5 text-sm font-semibold transition-colors flex-shrink-0">
-                    <FiHeart size={16} /> Wishlist
+                  <button
+                    onClick={handleWishlist}
+                    className={`flex items-center justify-center gap-2 border rounded-pill py-2.5 px-5 text-sm font-semibold transition-colors flex-shrink-0 ${
+                      wishlisted
+                        ? 'border-blush-500 bg-blush-50 text-blush-500 dark:bg-blush-500/10 dark:border-blush-400 dark:text-blush-300'
+                        : 'border-plum-200 dark:border-plum-700 text-plum-700 dark:text-plum-200 hover:bg-plum-50 dark:hover:bg-plum-900/30'
+                    }`}
+                    aria-label={wishlisted ? 'Remove from wishlist' : 'Add to wishlist'}
+                  >
+                    <FiHeart size={16} className={wishlisted ? 'fill-current' : ''} />
+                    {wishlisted ? 'Saved' : 'Wishlist'}
                   </button>
                 </>
               ) : (
@@ -494,77 +516,57 @@ const ProductDisplayPage = () => {
               </div>
             )}
             
-            {/* Add to Cart Button */}
+            {/* Add to Cart Button (second position, below variants) */}
             {canPurchase && (
               <div className="mt-4">
                 <AddToCartButton data={data} selectedVariant={selectedVariant} sku={data.sku} />
               </div>
             )}
-            
-            {/* User Rating Section (Mobile) */}
-            <div className="mt-6">
-              <h3 className="text-lg font-medium text-gray-900 dark:text-white">Rate this Product</h3>
+
+            {/* ── Rate this Product ──────────────────────────────────── */}
+            <div className="mt-6 rounded-card border border-brown-100 dark:border-dm-border bg-white dark:bg-dm-card p-4 shadow-sm">
+              <h3 className="text-sm font-semibold text-charcoal dark:text-white mb-3">Rate this Product</h3>
+
               {ratingSubmitting ? (
-                <div className="flex justify-center my-2">
-                  <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-orange-500"></div>
+                <div className="flex items-center gap-2 py-2">
+                  <div className="w-5 h-5 rounded-full border-2 border-plum-700 border-t-transparent animate-spin" />
+                  <span className="text-xs text-brown-400 dark:text-white/40">Submitting…</span>
                 </div>
+              ) : isLoggedIn ? (
+                <StarRating ratingData={ratingData} onRate={handleRate} userRating={userRating} />
               ) : (
-                <StarRating 
-                  ratingData={ratingData} 
-                  onRate={handleRate} 
-                  userRating={userRating}
-                />
-              )}
-              
-              {/* Display rating information */}
-              <div className="mt-2">
-                <div className="flex items-center gap-2">
-                  <div className="font-semibold text-sm text-gray-700 dark:text-gray-300">
-                    {ratingCount > 0 ? ratingCount : 0} {ratingCount === 1 ? 'user has' : 'users have'} rated this product
+                <div className="flex items-center gap-3">
+                  {/* Decorative locked stars */}
+                  <div className="flex items-center gap-1 opacity-40 pointer-events-none select-none">
+                    {[1,2,3,4,5].map(s => <FaStar key={s} size={20} className="text-brown-200 dark:text-white/20" />)}
                   </div>
-                  {averageRating > 0 && (
-                    <>
-                      <div className="flex items-center">
-                        <span className="text-sm font-medium text-orange-500">
-                          {averageRating.toFixed(1)}
-                        </span>
-                        <span className="ml-1 text-xs text-gray-500 dark:text-gray-400">
-                          ({getRatingPercentage(averageRating)}%)
-                        </span>
-                      </div>
-                      {ratingSubmitting ? (
-                        <div className="flex justify-center py-3">
-                          <div className="w-6 h-6 rounded-full border-2 border-plum-700 border-t-transparent animate-spin" />
-                        </div>
-                      ) : (
-                        <StarRating ratingData={ratingData} onRate={handleRate} userRating={userRating} />
-                      )}
-                      {!isLoggedIn && (
-                        <p className="text-xs text-brown-400 dark:text-white/40 mt-2">
-                          Please <Link to="/login" className="text-plum-700 dark:text-plum-200 underline">login</Link> to rate this product.
-                        </p>
-                      )}
-                      {ratingUsers.length > 0 && (
-                        <ul className="mt-4 space-y-2">
-                          {ratingUsers.slice(0, 5).map((u, i) => (
-                            <li key={i} className="flex items-center gap-2 text-xs">
-                              <div className="w-6 h-6 rounded-full bg-plum-100 dark:bg-plum-900/40 text-plum-700 dark:text-plum-200 flex items-center justify-center font-semibold text-xs">
-                                {(u.name || 'A')[0].toUpperCase()}
-                              </div>
-                              <span className="font-medium text-charcoal dark:text-white/80">{u.name || 'Anonymous'}</span>
-                              <div className="flex items-center gap-0.5 ml-auto">
-                                {[1, 2, 3, 4, 5].map((s) => (
-                                  <FaStar key={s} size={10} className={s <= u.rating ? 'text-gold-500' : 'text-brown-200'} />
-                                ))}
-                              </div>
-                            </li>
-                          ))}
-                        </ul>
-                      )}
-                    </>
-                  )}
+                  <p className="text-xs text-brown-400 dark:text-white/40">
+                    <Link to="/login" className="font-semibold text-plum-700 dark:text-plum-200 underline underline-offset-2 hover:text-plum-600">
+                      Sign in
+                    </Link>{' '}
+                    to rate this product
+                  </p>
                 </div>
-              </div>
+              )}
+
+              {/* Reviewer list */}
+              {ratingUsers.length > 0 && (
+                <ul className="mt-4 space-y-2 border-t border-brown-100 dark:border-dm-border pt-3">
+                  {ratingUsers.slice(0, 5).map((u, i) => (
+                    <li key={i} className="flex items-center gap-2 text-xs">
+                      <div className="flex h-6 w-6 items-center justify-center rounded-full bg-plum-100 dark:bg-plum-900/40 text-plum-700 dark:text-plum-200 font-semibold text-xs shrink-0">
+                        {(u.name || 'A')[0].toUpperCase()}
+                      </div>
+                      <span className="font-medium text-charcoal dark:text-white/80 truncate">{u.name || 'Anonymous'}</span>
+                      <div className="flex items-center gap-0.5 ml-auto shrink-0">
+                        {[1,2,3,4,5].map(s => (
+                          <FaStar key={s} size={10} className={s <= u.rating ? 'text-gold-500' : 'text-brown-200 dark:text-white/20'} />
+                        ))}
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </div>
           </div>
         </div>
