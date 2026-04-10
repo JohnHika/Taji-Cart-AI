@@ -11,6 +11,7 @@
     "db:whitelist": "node scripts/updateMongoIPWhitelist.js",
     "catalog:clear": "node scripts/clearCatalogProducts.js",
     "catalog:clear-taxonomy": "node scripts/clearCatalogTaxonomy.js",
+    "catalog:normalize-taxonomy": "node scripts/normalizeCatalogTaxonomy.js",
     "recommendation-collect": "python ./recommendation/data_collector.py",
     "recommendation-train": "python ./recommendation/train_model.py",
     "recommendation-debug": "python -m recommendation.data_collector_debug",

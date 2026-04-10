@@ -1,4 +1,4 @@
-import React, { useEffect, useCallback } from 'react';
+import React, { useCallback, useEffect } from 'react';
 import { FiArrowRight } from 'react-icons/fi';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
@@ -11,66 +11,80 @@ import { valideURLConvert } from '../utils/valideURLConvert';
 const ShopCategoriesPage = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
-  const categoryData = useSelector(state => state.product.allCategory);
-  const subCategoryData = useSelector(state => state.product.allSubCategory);
-  const loadingCategory = useSelector(state => state.product.loadingCategory);
+  const categoryData = useSelector((state) => state.product.allCategory);
+  const subCategoryData = useSelector((state) => state.product.allSubCategory);
+  const loadingCategory = useSelector((state) => state.product.loadingCategory);
 
   useEffect(() => {
     const fetchCategoriesData = async () => {
       try {
         const response = await Axios({ ...SummaryApi.getCategory, timeout: 10000 });
-        if (response.data?.data) dispatch(setAllCategory(response.data.data || []));
+        if (response.data?.data) {
+          dispatch(setAllCategory(response.data.data || []));
+        }
       } catch (error) {
         console.error('ShopCategoriesPage: error fetching categories:', error);
       }
     };
-    if (!categoryData || categoryData.length === 0) fetchCategoriesData();
-  }, [dispatch, categoryData]);
+
+    if (!categoryData || categoryData.length === 0) {
+      fetchCategoriesData();
+    }
+  }, [categoryData, dispatch]);
 
   const fetchSubCategories = useCallback(async () => {
     try {
-      const endpoint = SummaryApi.getSubCategory || {
-        url: `${import.meta.env.VITE_SERVER_URL || 'http://localhost:8080'}/api/subcategory/get`,
-        method: 'get',
-      };
-      const response = await Axios({ ...endpoint, timeout: 10000 });
+      const response = await Axios({
+        ...SummaryApi.getSubCategory,
+        timeout: 10000,
+      });
+
       if (response.data?.data) {
         dispatch(setAllSubCategory(response.data.data || []));
         return response.data.data;
       }
+
       return [];
-    } catch {
+    } catch (error) {
+      console.error('ShopCategoriesPage: error fetching subcategories:', error);
       return [];
     }
   }, [dispatch]);
 
   useEffect(() => {
-    if (!subCategoryData || subCategoryData.length === 0) fetchSubCategories();
-  }, [subCategoryData, fetchSubCategories]);
+    if (!subCategoryData || subCategoryData.length === 0) {
+      fetchSubCategories();
+    }
+  }, [fetchSubCategories, subCategoryData]);
 
-  const handleNavigateToCategory = async (id, cat) => {
-    const loadingToast = toast.loading('Loading products…');
+  const handleNavigateToCategory = async (id, categoryName) => {
+    const loadingToast = toast.loading('Loading products...');
+
     try {
       let currentSubCategories = subCategoryData;
       if (!currentSubCategories || currentSubCategories.length === 0) {
         currentSubCategories = await fetchSubCategories();
       }
-      const matchingSubcategories = (currentSubCategories || []).filter(sub =>
-        sub.category?.some(c => c._id === id)
+
+      const matchingSubcategories = (currentSubCategories || []).filter((subCategory) =>
+        subCategory.category?.some((category) => category._id === id)
       );
-      const subcategory = matchingSubcategories[0] || null;
-      const url = `/${valideURLConvert(cat)}-${id}`;
+
+      const url = `/${valideURLConvert(categoryName)}-${id}`;
+
       toast.dismiss(loadingToast);
       navigate(url, {
         state: {
           categoryId: id,
-          categoryName: cat,
-          subcategoryId: subcategory?._id,
-          subcategoryName: subcategory?.name,
-          matchingSubcategories: matchingSubcategories.map(s => ({ id: s._id, name: s.name })),
+          categoryName,
+          matchingSubcategories: matchingSubcategories.map((subcategory) => ({
+            id: subcategory._id,
+            name: subcategory.name,
+          })),
         },
       });
-    } catch {
+    } catch (error) {
+      console.error('ShopCategoriesPage: navigation failed', error);
       toast.dismiss(loadingToast);
       toast.error('Something went wrong');
     }
@@ -79,63 +93,57 @@ const ShopCategoriesPage = () => {
   const skeletonCount = 12;
 
   return (
-    <section className="bg-ivory dark:bg-dm-surface min-h-screen transition-colors duration-200">
-      {/* Page header */}
-      <div className="bg-gradient-to-br from-plum-900 via-plum-700 to-charcoal py-12 sm:py-16 px-4">
+    <section className="min-h-screen bg-ivory transition-colors duration-200 dark:bg-dm-surface">
+      <div className="bg-gradient-to-br from-plum-900 via-plum-700 to-charcoal px-4 py-12 sm:py-16">
         <div className="container mx-auto text-center">
-          <p className="font-display italic text-gold-300 text-sm sm:text-base mb-1">
-            Nawiri Hair
-          </p>
-          <h1 className="font-display font-bold text-white text-3xl sm:text-4xl lg:text-5xl">
+          <p className="mb-1 text-sm italic text-gold-300 sm:text-base">Nawiri Hair</p>
+          <h1 className="font-display text-3xl font-bold text-white sm:text-4xl lg:text-5xl">
             Shop by Category
           </h1>
-          <p className="text-white/60 text-sm sm:text-base mt-3 max-w-md mx-auto">
-            Find exactly what your hair needs — browse all our curated collections.
+          <p className="mx-auto mt-3 max-w-md text-sm text-white/60 sm:text-base">
+            Find exactly what your hair needs and browse our collections in a cleaner, easier flow.
           </p>
         </div>
       </div>
 
-      {/* Category grid */}
-      <div className="container mx-auto px-4 sm:px-6 py-10 sm:py-12">
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 sm:gap-5">
+      <div className="container mx-auto px-4 py-10 sm:px-6 sm:py-12">
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 sm:gap-5 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
           {loadingCategory
-            ? new Array(skeletonCount).fill(null).map((_, i) => (
-                <div key={i} className="flex flex-col items-center gap-3">
-                  <div className="w-full aspect-square rounded-card bg-shimmer" />
-                  <div className="h-3 w-2/3 bg-shimmer rounded-pill" />
+            ? Array.from({ length: skeletonCount }).map((_, index) => (
+                <div key={`shop-category-skeleton-${index}`} className="flex flex-col items-center gap-3">
+                  <div className="aspect-square w-full rounded-card bg-shimmer" />
+                  <div className="h-3 w-2/3 rounded-pill bg-shimmer" />
                 </div>
               ))
-            : categoryData.map((cat) => (
+            : categoryData.map((category) => (
                 <button
-                  key={cat._id}
-                  onClick={() => handleNavigateToCategory(cat._id, cat.name)}
-                  className="group flex flex-col items-center cursor-pointer hover-lift press text-left"
+                  key={category._id}
+                  onClick={() => handleNavigateToCategory(category._id, category.name)}
+                  className="group flex cursor-pointer flex-col items-center text-left hover-lift press"
                 >
-                  <div className="w-full aspect-square rounded-card overflow-hidden bg-blush-50 dark:bg-dm-card border border-brown-100 dark:border-dm-border shadow-card group-hover:shadow-hover group-hover:border-plum-200 dark:group-hover:border-plum-700 transition-all duration-300 flex items-center justify-center p-3 relative">
+                  <div className="relative flex aspect-square w-full items-center justify-center overflow-hidden rounded-card border border-brown-100 bg-blush-50 p-3 shadow-card transition-all duration-300 group-hover:border-plum-200 group-hover:shadow-hover dark:border-dm-border dark:bg-dm-card dark:group-hover:border-plum-700">
                     <img
-                      src={cat.image}
-                      alt={cat.name}
-                      className="max-w-full max-h-full object-contain group-hover:scale-110 transition-transform duration-400"
-                      onError={(e) => {
-                        e.target.src = 'https://via.placeholder.com/200?text=Hair';
+                      src={category.image}
+                      alt={category.name}
+                      className="max-h-full max-w-full object-contain transition-transform duration-400 group-hover:scale-110"
+                      onError={(event) => {
+                        event.target.src = 'https://via.placeholder.com/200?text=Hair';
                       }}
                     />
-                    <div className="absolute inset-0 bg-plum-900/0 group-hover:bg-plum-900/10 transition-all duration-300 rounded-card" />
-                    {/* Arrow indicator */}
-                    <div className="absolute bottom-2 right-2 w-6 h-6 rounded-full bg-gold-500/0 group-hover:bg-gold-500 flex items-center justify-center transition-all duration-300 opacity-0 group-hover:opacity-100">
+                    <div className="absolute inset-0 rounded-card bg-plum-900/0 transition-all duration-300 group-hover:bg-plum-900/10" />
+                    <div className="absolute bottom-2 right-2 flex h-6 w-6 items-center justify-center rounded-full bg-gold-500/0 opacity-0 transition-all duration-300 group-hover:bg-gold-500 group-hover:opacity-100">
                       <FiArrowRight size={12} className="text-charcoal" />
                     </div>
                   </div>
-                  <span className="text-center text-xs sm:text-sm font-medium text-charcoal dark:text-white/80 group-hover:text-plum-700 dark:group-hover:text-plum-200 transition-colors mt-2.5 line-clamp-2 leading-snug w-full">
-                    {cat.name}
+                  <span className="mt-2.5 w-full line-clamp-2 text-center text-xs font-medium leading-snug text-charcoal transition-colors group-hover:text-plum-700 dark:text-white/80 dark:group-hover:text-plum-200 sm:text-sm">
+                    {category.name}
                   </span>
                 </button>
-              ))
-          }
+              ))}
         </div>
 
         {!loadingCategory && categoryData.length === 0 && (
-          <div className="text-center py-20 text-brown-400 dark:text-white/40">
+          <div className="py-20 text-center text-brown-400 dark:text-white/40">
             <p className="text-base">No categories found.</p>
           </div>
         )}

@@ -3,8 +3,10 @@
  * every 13 minutes (Render sleeps after 15 min of inactivity).
  */
 import https from 'https';
+import http from 'http';
 
-const RENDER_URL  = 'https://taji-cart-api.onrender.com';
+// Render automatically sets RENDER_EXTERNAL_URL; fall back to the known URL.
+const RENDER_URL  = process.env.RENDER_EXTERNAL_URL || process.env.SERVER_URL || 'https://taji-cart-api.onrender.com';
 const PING_PATH   = '/health';
 const INTERVAL_MS = 13 * 60 * 1000; // 13 minutes
 const MAX_RETRIES = 3;
@@ -15,7 +17,9 @@ function timestamp() {
 }
 
 function ping(attempt = 1) {
-    const req = https.get(`${RENDER_URL}${PING_PATH}`, (res) => {
+    const isHttps = RENDER_URL.startsWith('https');
+    const client  = isHttps ? https : http;
+    const req = client.get(`${RENDER_URL}${PING_PATH}`, (res) => {
         if (res.statusCode >= 200 && res.statusCode < 400) {
             console.log(`[Keepalive ✓] ${timestamp()} — HTTP ${res.statusCode}`);
         } else {

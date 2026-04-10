@@ -1,4 +1,4 @@
-﻿import { apiBaseUrl } from './apiBaseUrl';
+import { apiBaseUrl } from './apiBaseUrl';
 
 export const baseURL = apiBaseUrl;
 
@@ -108,6 +108,10 @@ const SummaryApi = {
     getProduct: {
         url: `${baseURL}/api/product/get`,
         method: 'post'
+    },
+    getHomeCatalog: {
+        url: `${baseURL}/api/product/home-catalog`,
+        method: 'get'
     },
     getProductByCategory: {
         url: `${baseURL}/api/product/get-product-by-category`,
@@ -336,9 +340,9 @@ const REQUIRED_ENDPOINTS = [
 
 REQUIRED_ENDPOINTS.forEach(endpoint => {
   if (!SummaryApi[endpoint]) {
-    console.error(`âŒ CRITICAL ERROR: Missing required API endpoint: ${endpoint}`);
+    console.error(`[ERROR] Missing required API endpoint: ${endpoint}`);
   } else {
-    console.log(`âœ… Found API endpoint: ${endpoint}`, SummaryApi[endpoint]);
+    console.log(`[OK] Found API endpoint: ${endpoint}`, SummaryApi[endpoint]);
   }
 });
 

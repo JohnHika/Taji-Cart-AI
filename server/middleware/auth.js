@@ -31,28 +31,11 @@ const auth = async(request, response, next) => {
                     request.isAdmin = user.isAdmin === true || user.role === 'admin';
                     // Ensure both conditions are checked for delivery status
                     request.isDelivery = user.isDelivery === true || user.role === 'delivery';
-                    // Log for debugging
-                    console.log(`User ${user._id} auth check: role=${user.role}, isAdmin=${request.isAdmin}, isDelivery=${request.isDelivery}`);
                 }
             } catch (userError) {
                 console.error("Error fetching user for role:", userError);
                 // Continue even if we couldn't set the role
             }
-            
-            console.log(`Auth successful for user ID: ${decode._id}`)
-            
-            // Debug information about where the token came from
-            if (request.cookies.accessToken) {
-                console.log("Auth from cookies")
-            } else if (request?.headers?.authorization) {
-                console.log("Auth from Authorization header")
-            }
-            
-            // Inside your auth middleware function:
-            console.log('Auth headers:', request.headers.authorization ? 'Present' : 'Missing');
-            console.log('Cookie data:', request.cookies);
-            console.log('User verified:', request.user ? 'Yes' : 'No');
-            console.log('User role:', request.user?.role);
             
             next()
         } catch (jwtError) {

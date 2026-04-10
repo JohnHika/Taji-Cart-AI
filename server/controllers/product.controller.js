@@ -1,5 +1,6 @@
 import mongoose from "mongoose";
 import ProductModel from "../models/product.model.js";
+import Sale from "../models/sale.model.js";
 
 const normalizeScanValue = (value) => {
     if (value === null || value === undefined) {
@@ -142,6 +143,181 @@ export const getProductController = async (req, res) => {
     console.error("Product fetch error:", error);
     res.status(500).json({ success: false, message: error.message });
   }
+};
+
+const buildCategoryPathPayload = (categoryDoc) => ({
+    _id: categoryDoc?._id,
+    name: categoryDoc?.name || '',
+    image: categoryDoc?.image || ''
+});
+
+const buildSubCategoryPathPayload = (subCategoryDoc, categoryDoc) => ({
+    _id: subCategoryDoc?._id,
+    name: subCategoryDoc?.name || '',
+    image: subCategoryDoc?.image || '',
+    category: categoryDoc ? buildCategoryPathPayload(categoryDoc) : null
+});
+
+const hasSellablePrice = (product) => Number.isFinite(Number(product?.price));
+
+export const getHomeCatalogController = async (request, response) => {
+    try {
+        const inventoryProducts = await ProductModel.find({
+            stock: { $gt: 0 }
+        })
+            .sort({ createdAt: -1 })
+            .populate('category subCategory');
+
+        const normalizedProducts = inventoryProducts.map((product) => product.toObject());
+        const liveProducts = normalizedProducts.filter((product) => product.publish && hasSellablePrice(product));
+
+        const categoryMap = new Map();
+        const subCategoryMap = new Map();
+
+        normalizedProducts.forEach((product) => {
+            const categories = Array.isArray(product.category) ? product.category : [];
+            const subCategories = Array.isArray(product.subCategory) ? product.subCategory : [];
+
+            categories.forEach((categoryDoc) => {
+                const categoryId = String(categoryDoc?._id || '');
+                if (!categoryId) return;
+
+                if (!categoryMap.has(categoryId)) {
+                    categoryMap.set(categoryId, {
+                        ...buildCategoryPathPayload(categoryDoc),
+                        productCount: 0,
+                        coverImage: categoryDoc?.image || product.image?.[0] || '',
+                        subcategories: [],
+                        products: []
+                    });
+                }
+
+                const categoryEntry = categoryMap.get(categoryId);
+                categoryEntry.productCount += 1;
+                if (!categoryEntry.coverImage) {
+                    categoryEntry.coverImage = product.image?.[0] || '';
+                }
+
+                if (categoryEntry.products.length < 3) {
+                    categoryEntry.products.push(product);
+                }
+
+                subCategories.forEach((subCategoryDoc) => {
+                    const subCategoryId = String(subCategoryDoc?._id || '');
+                    if (!subCategoryId) return;
+
+                    if (!categoryEntry.subcategories.some((item) => String(item._id) === subCategoryId)) {
+                        categoryEntry.subcategories.push(buildSubCategoryPathPayload(subCategoryDoc, categoryDoc));
+                    }
+                });
+            });
+
+            subCategories.forEach((subCategoryDoc) => {
+                const subCategoryId = String(subCategoryDoc?._id || '');
+                if (!subCategoryId) return;
+
+                const primaryCategory = categories[0] || null;
+
+                if (!subCategoryMap.has(subCategoryId)) {
+                    subCategoryMap.set(subCategoryId, {
+                        ...buildSubCategoryPathPayload(subCategoryDoc, primaryCategory),
+                        productCount: 0,
+                        coverImage: subCategoryDoc?.image || product.image?.[0] || '',
+                        products: []
+                    });
+                }
+
+                const subCategoryEntry = subCategoryMap.get(subCategoryId);
+                subCategoryEntry.productCount += 1;
+                if (!subCategoryEntry.coverImage) {
+                    subCategoryEntry.coverImage = product.image?.[0] || '';
+                }
+
+                if (subCategoryEntry.products.length < 8) {
+                    subCategoryEntry.products.push(product);
+                }
+            });
+        });
+
+        const topSellingStats = await Sale.aggregate([
+            { $match: { isVoided: { $ne: true } } },
+            { $unwind: '$items' },
+            {
+                $group: {
+                    _id: '$items.product',
+                    totalQuantity: { $sum: '$items.quantity' }
+                }
+            },
+            { $sort: { totalQuantity: -1 } },
+            { $limit: 8 }
+        ]);
+
+        const topSellingIds = topSellingStats.map((item) => item._id).filter(Boolean);
+        const topSellingProducts = topSellingIds.length
+            ? await ProductModel.find({
+                _id: { $in: topSellingIds },
+                stock: { $gt: 0 }
+            }).populate('category subCategory')
+            : [];
+
+        const topSellingMap = new Map(
+            topSellingProducts.map((product) => [String(product._id), product.toObject()])
+        );
+
+        let bestSellers = topSellingIds
+            .map((id) => topSellingMap.get(String(id)))
+            .filter(Boolean);
+
+        if (bestSellers.length < 8) {
+            const fallbackProducts = [...normalizedProducts]
+                .sort((a, b) =>
+                    (b.averageRating || 0) - (a.averageRating || 0) ||
+                    (b.discount || 0) - (a.discount || 0) ||
+                    new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+                )
+                .filter((product) => !bestSellers.some((item) => String(item._id) === String(product._id)));
+
+            bestSellers = [...bestSellers, ...fallbackProducts].slice(0, 8);
+        }
+
+        const bannerProducts = [...liveProducts]
+            .sort((a, b) =>
+                (b.discount || 0) - (a.discount || 0) ||
+                (b.averageRating || 0) - (a.averageRating || 0) ||
+                new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+            )
+            .slice(0, 6);
+
+        const categoryBanners = Array.from(categoryMap.values())
+            .sort((a, b) => b.productCount - a.productCount || a.name.localeCompare(b.name))
+            .map((item) => ({
+                ...item,
+                subcategories: item.subcategories.slice(0, 3)
+            }))
+            .slice(0, 6);
+
+        const subcategoryShelves = Array.from(subCategoryMap.values())
+            .filter((item) => item.products.length > 0)
+            .sort((a, b) => b.productCount - a.productCount || a.name.localeCompare(b.name))
+            .slice(0, 6);
+
+        return response.json({
+            success: true,
+            error: false,
+            data: {
+                bannerProducts,
+                bestSellers,
+                categoryBanners,
+                subcategoryShelves
+            }
+        });
+    } catch (error) {
+        return response.status(500).json({
+            success: false,
+            error: true,
+            message: error.message || 'Failed to build home catalog'
+        });
+    }
 };
 
 export const getProductByCategory = async(request,response)=>{
@@ -373,7 +549,6 @@ export const getProductByCategoryAndSubCategory = async(request,response)=>{
 
 export const getProductDetailsController = async (request, response) => {
   try {
-    console.log('⭐ getProductDetailsController called with body:', request.body);
     const { productId } = request.body;
     
     if (!productId) {
@@ -382,8 +557,14 @@ export const getProductDetailsController = async (request, response) => {
         message: "Product ID is required"
       });
     }
-    
-    console.log('🔍 Looking up product with ID:', productId);
+
+    if (!mongoose.Types.ObjectId.isValid(productId)) {
+      return response.status(400).json({
+        success: false,
+        message: "Invalid product ID format"
+      });
+    }
+
     const product = await ProductModel.findById(productId);
     
     if (!product) {
@@ -712,6 +893,10 @@ export const getProductByIdController = async (request, response) => {
         const { id } = request.params;
         if (!id) {
             return response.status(400).json({ success: false, message: 'Product ID is required' });
+        }
+
+        if (!mongoose.Types.ObjectId.isValid(id)) {
+            return response.status(400).json({ success: false, message: 'Invalid product ID format' });
         }
 
         const product = await ProductModel.findById(id);

@@ -237,7 +237,7 @@ function App() {
     // Check if we're on a category page strictly matching slug-id pattern
     const isCategoryRoute = /\/[^/]+-[a-f0-9]{8,}$/.test(location.pathname);
     if (isCategoryRoute) {
-      console.log("ðŸš¨ Direct navigation to category route detected:", location.pathname);
+      console.log("Direct navigation to category route detected:", location.pathname);
       
       // Force data loading for direct URL navigation
       if (!categories || categories.length === 0) {
@@ -247,7 +247,7 @@ function App() {
       
       // Check if state is missing (happens with direct URL navigation)
       if (!location.state) {
-        console.log("âš ï¸ No state available for category route - this likely means direct URL access");
+        console.log("[warn] No state available for category route - this likely means direct URL access");
         
         // Try to extract category/subcategory IDs from URL
         const pathParts = location.pathname.split('/').filter(Boolean);

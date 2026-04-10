@@ -94,6 +94,10 @@ const limiter = rateLimit({
     legacyHeaders: false,
     message: 'Too many requests, please try again later',
 });
+// ── Health + root — must be BEFORE rate-limiter so self-pings always succeed ─
+app.get('/', (req, res) => res.json({ message: 'Taji Cart API is running ✅' }));
+app.get('/health', (_req, res) => res.status(200).json({ status: 'ok', uptime: process.uptime(), time: new Date().toISOString() }));
+
 app.use(limiter);
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -107,8 +111,6 @@ app.use(session({
 }));
 
 // ── Routes ───────────────────────────────────────────────────────────────────
-app.get('/', (req, res) => res.json({ message: 'Taji Cart API is running ✅' }));
-app.get('/health', (_req, res) => res.status(200).json({ status: 'ok', uptime: process.uptime(), time: new Date().toISOString() }));
 
 app.use('/api/user', userRouter);
 app.use('/api/auth', authRoutes);

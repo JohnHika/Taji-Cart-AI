@@ -223,7 +223,7 @@ const DisplayCartItem = ({ close, variant = 'drawer' }) => {
                                 />
                                 <h1 className="font-semibold text-charcoal dark:text-white mt-4">Your cart is empty</h1>
                                 <p className="text-sm text-brown-400 dark:text-white/50 mx-2 text-center mt-2 max-w-xs">
-                                    Add something beautiful â€” browse categories from the shop.
+                                    Add something beautiful - browse categories from the shop.
                                 </p>
                             </div>
                         )
@@ -371,7 +371,7 @@ const FulfillmentModal = ({ isOpen, onClose, onSelect, pickupLocations = [] }) =
                             <option value="">Select a location</option>
                             {pickupLocations.map((location, index) => (
                                 <option key={index} value={location.address}>
-                                    {location.name} â€” {location.address}
+                                    {location.name} - {location.address}
                                 </option>
                             ))}
                         </select>
@@ -382,7 +382,7 @@ const FulfillmentModal = ({ isOpen, onClose, onSelect, pickupLocations = [] }) =
                         <textarea
                             value={pickupInstructions}
                             onChange={(e) => setPickupInstructions(e.target.value)}
-                            placeholder="Any special instructionsâ€¦"
+                            placeholder="Any special instructions..."
                             className="w-full p-3 rounded-lg border border-brown-200 dark:border-dm-border bg-ivory dark:bg-dm-surface text-charcoal dark:text-white text-sm placeholder:text-brown-300 dark:placeholder:text-white/30"
                             rows={3}
                         />

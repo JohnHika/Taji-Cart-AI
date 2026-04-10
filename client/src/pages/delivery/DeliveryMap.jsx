@@ -875,7 +875,7 @@ const DeliveryMap = () => {
                         <div className="flex-1">
                           <p className="font-medium dark:text-white">{item.name}</p>
                           <p className="text-sm text-gray-600 dark:text-gray-400">
-                            Qty: {item.quantity} Ã— KSh {item.price?.toFixed(2)}
+                            Qty: {item.quantity} x KSh {item.price?.toFixed(2)}
                           </p>
                         </div>
                       </div>
@@ -975,7 +975,7 @@ const DeliveryMap = () => {
                         <div className="flex-1">
                           <p className="font-medium text-charcoal dark:text-white text-sm">Order #{delivery.orderId}</p>
                           <p className="text-xs text-brown-400 dark:text-white/40">
-                            {delivery.customer.name} â€¢ {delivery.deliveryAddress.substring(0, 30)}
+                            {delivery.customer.name} | {delivery.deliveryAddress.substring(0, 30)}
                             {delivery.deliveryAddress.length > 30 ? '...' : ''}
                           </p>
                         </div>
@@ -1263,7 +1263,7 @@ const DeliveryMap = () => {
                 <ol className="list-decimal list-inside text-xs text-plum-700 dark:text-plum-200 pl-2 space-y-1">
                   {selectedDeliveries.map((delivery, index) => (
                     <li key={delivery._id}>
-                      {delivery.customer.name} â€¢ #{delivery.orderId}
+                      {delivery.customer.name} | #{delivery.orderId}
                     </li>
                   ))}
                 </ol>
@@ -1514,7 +1514,7 @@ const DeliveryMap = () => {
                       <p className="font-semibold text-blush-500 dark:text-blush-300 text-sm">{alert.headline || 'Weather Alert'}</p>
                       <p className="text-xs text-blush-500 dark:text-blush-400 mb-1">{alert.event}</p>
                       <p className="text-xs text-brown-400 dark:text-white/40">
-                        {new Date(alert.effective).toLocaleString()} â€” {new Date(alert.expires).toLocaleString()}
+                        {new Date(alert.effective).toLocaleString()} to {new Date(alert.expires).toLocaleString()}
                       </p>
                     </div>
                   ))}

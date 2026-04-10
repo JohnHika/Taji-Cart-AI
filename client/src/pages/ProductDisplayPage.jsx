@@ -210,8 +210,10 @@ const ProductDisplayPage = () => {
     data.image = ['https://via.placeholder.com/400?text=No+Image'];
   }
 
-  const discountedPrice = pricewithDiscount(data.price, data.discount);
-  const hasDiscount = data.discount > 0;
+  const hasValidPrice = Number.isFinite(Number(data.price));
+  const discountedPrice = hasValidPrice ? pricewithDiscount(data.price, data.discount) : null;
+  const hasDiscount = hasValidPrice && data.discount > 0;
+  const canPurchase = data.stock > 0 && hasValidPrice;
 
   return (
     <div className="bg-ivory dark:bg-dm-surface min-h-screen">
@@ -235,7 +237,7 @@ const ProductDisplayPage = () => {
         {/* Main grid */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-10">
 
-          {/* â”€â”€ Left: Image Gallery â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+          {/* Left: Image Gallery */}
           <div className="flex flex-col gap-3">
             {/* Main image */}
             <div className="relative bg-white dark:bg-dm-card rounded-card border border-brown-100 dark:border-dm-border shadow-card overflow-hidden">
@@ -297,7 +299,7 @@ const ProductDisplayPage = () => {
             )}
           </div>
 
-          {/* â”€â”€ Right: Product Info â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+          {/* Right: Product Info */}
           <div className="flex flex-col gap-4">
             {/* Category chip */}
             {data.category?.[0]?.name && (
@@ -333,13 +335,26 @@ const ProductDisplayPage = () => {
 
             {/* Price */}
             <div className="flex items-baseline gap-3 flex-wrap">
-              <span className="text-2xl sm:text-3xl font-bold font-price text-gold-600 dark:text-gold-300">
-                {DisplayPriceInShillings(discountedPrice)}
-              </span>
-              {hasDiscount && (
-                <span className="text-sm text-brown-300 dark:text-white/30 line-through font-price">
-                  {DisplayPriceInShillings(data.price)}
-                </span>
+              {hasValidPrice ? (
+                <>
+                  <span className="text-2xl sm:text-3xl font-bold font-price text-gold-600 dark:text-gold-300">
+                    {DisplayPriceInShillings(discountedPrice)}
+                  </span>
+                  {hasDiscount && (
+                    <span className="text-sm text-brown-300 dark:text-white/30 line-through font-price">
+                      {DisplayPriceInShillings(data.price)}
+                    </span>
+                  )}
+                </>
+              ) : (
+                <div className="flex flex-col gap-1">
+                  <span className="text-2xl sm:text-3xl font-bold text-charcoal dark:text-white">
+                    Pricing coming soon
+                  </span>
+                  <span className="text-sm text-brown-400 dark:text-white/50">
+                    This item is visible in the catalog while its selling price is being updated.
+                  </span>
+                </div>
               )}
             </div>
 
@@ -355,7 +370,7 @@ const ProductDisplayPage = () => {
 
             {/* Add to cart / OOS */}
             <div className="flex flex-col sm:flex-row gap-3 mt-1">
-              {data.stock > 0 ? (
+              {canPurchase ? (
                 <>
                   <div className="flex-1">
                     <AddToCartButton data={data} />
@@ -366,7 +381,7 @@ const ProductDisplayPage = () => {
                 </>
               ) : (
                 <div className="w-full text-center py-3 bg-brown-100 dark:bg-dm-card-2 text-brown-400 dark:text-white/30 rounded-pill text-sm font-semibold">
-                  Out of Stock
+                  {data.stock > 0 ? 'Price update in progress' : 'Out of Stock'}
                 </div>
               )}
             </div>
@@ -480,7 +495,7 @@ const ProductDisplayPage = () => {
             )}
             
             {/* Add to Cart Button */}
-            {data.stock > 0 && (
+            {canPurchase && (
               <div className="mt-4">
                 <AddToCartButton data={data} selectedVariant={selectedVariant} sku={data.sku} />
               </div>
@@ -554,7 +569,7 @@ const ProductDisplayPage = () => {
           </div>
         </div>
 
-        {/* â”€â”€ Why Shop Section â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+        {/* Why Shop Section */}
         <div className="mt-12 mb-6">
           <h2 className="text-lg font-semibold text-charcoal dark:text-white mb-5 text-center">
             Why shop from <span className="font-display italic text-plum-700 dark:text-plum-200">Nawiri Hair</span>?
