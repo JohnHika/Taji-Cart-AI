@@ -51,8 +51,12 @@ dotenv.config();
 
 const app = express();
 
-// Connect to database on startup
-connectDB();
+// Connect to database on startup — catch error so the process doesn't crash on
+// Atlas timeouts (e.g. IP not whitelisted during local development).
+connectDB().catch((err) => {
+    console.error('⚠️  Database startup failed:', err.message);
+    console.error('Server is running but DB operations will fail until a connection is established.');
+});
 
 // ── CORS ────────────────────────────────────────────────────────────────────
 const FRONTEND_URL = process.env.FRONTEND_URL;

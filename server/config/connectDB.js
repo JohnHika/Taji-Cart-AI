@@ -92,8 +92,10 @@ async function connectDB() {
             console.log("MongoDB Atlas connection error:", error.message);
 
             // Optional fallback for local/dev machines that run with NODE_ENV=production.
-            if (ALLOW_DB_FALLBACK_IN_PRODUCTION) {
-                console.log('⚠️ ALLOW_DB_FALLBACK_IN_PRODUCTION=true detected. Trying local fallback databases...');
+            // Auto-enable fallback when running locally (no cloud host env vars present)
+            const isCloudHost = process.env.RENDER_EXTERNAL_URL || process.env.RAILWAY_ENVIRONMENT || process.env.VERCEL;
+            if (ALLOW_DB_FALLBACK_IN_PRODUCTION || isCloudHost === undefined || !isCloudHost) {
+                console.log('⚠️ Atlas unreachable — trying local/memory fallback databases...');
 
                 try {
                     const localStarted = await localMongoDB.startLocalMongoDB();
@@ -121,6 +123,8 @@ async function connectDB() {
                 }
             }
 
+            // All fallbacks exhausted — throw so the caller (app.js) can log and
+            // keep the HTTP server alive rather than hard-crashing the process.
             throw new Error(
                 `Cannot connect to MongoDB Atlas: ${error.message}. ` +
                 'One common reason is Atlas IP whitelist restrictions. ' +
