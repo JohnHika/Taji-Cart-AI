@@ -72,12 +72,18 @@ const Header = () => {
           </div>
         ) : (
           <div className="container mx-auto flex min-w-0 items-center gap-2 px-2 py-2 md:gap-3 md:px-4">
-            <Link to="/" className="flex shrink-0 items-center py-1" aria-label={nawiriBrand.shortName}>
+            <Link to="/" className="flex shrink-0 items-center gap-1.5 sm:gap-2 py-1" aria-label={nawiriBrand.shortName}>
               <img
                 src={nawiriBrand.logo}
                 alt=""
-                className="h-8 w-auto max-h-9 max-w-[120px] object-contain object-left sm:max-w-[140px] md:h-10 md:max-w-[180px]"
+                className="h-8 w-auto max-h-9 max-w-[36px] object-contain object-left sm:max-w-[42px] md:h-10 md:max-w-[46px]"
               />
+              <span
+                className="font-display font-bold text-plum-800 dark:text-white leading-none tracking-tight whitespace-nowrap"
+                style={{ fontSize: 'clamp(0.75rem, 1.8vw, 1.125rem)' }}
+              >
+                Nawiri Hair
+              </span>
             </Link>
 
             <div className="flex min-w-0 flex-1 justify-center px-1">
@@ -195,11 +201,16 @@ const Header = () => {
           />
           <div className="fixed left-0 top-0 z-50 flex h-full w-72 flex-col bg-white shadow-xl dark:bg-dm-card lg:hidden">
             <div className="flex items-center justify-between bg-plum-800/95 px-5 py-4">
-              <img
-                src={nawiriBrand.logo}
-                alt=""
-                className="h-9 max-w-[160px] object-contain object-left drop-shadow-sm"
-              />
+              <div className="flex items-center gap-2">
+                <img
+                  src={nawiriBrand.logo}
+                  alt=""
+                  className="h-9 max-w-[40px] object-contain object-left drop-shadow-sm"
+                />
+                <span className="font-display text-base font-bold text-white leading-none tracking-tight">
+                  Nawiri Hair
+                </span>
+              </div>
               <button
                 onClick={() => setMobileMenuOpen(false)}
                 className="text-white/80 transition-colors hover:text-white"

@@ -175,6 +175,11 @@
   }
 }
 
+@keyframes promoProgress {
+  from { transform: scaleX(0); }
+  to   { transform: scaleX(1); }
+}
+
 @layer utilities {
   .animate-fade-up {
     animation: fadeUp 0.5s ease both;
