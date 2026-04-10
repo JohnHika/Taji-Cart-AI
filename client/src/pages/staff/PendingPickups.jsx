@@ -135,7 +135,7 @@ const PendingPickups = () => {
         <div className="flex flex-col gap-2 sm:flex-row sm:space-x-2">
           <button 
             onClick={() => navigate('/dashboard/profile')}
-            className="bg-gray-200 dark:bg-gray-700 px-4 py-2 rounded-lg flex items-center justify-center text-gray-700 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-600"
+            className="bg-brown-100 dark:bg-dm-card-2 px-4 py-2 rounded-lg flex items-center justify-center text-charcoal dark:text-white/70 hover:bg-brown-200 dark:hover:bg-dm-border"
           >
             <FaArrowLeft className="mr-2" /> Back to Dashboard
           </button>
@@ -160,10 +160,10 @@ const PendingPickups = () => {
           </div>
         </div>
       ) : pickups.length === 0 ? (
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-8 text-center">
-          <FaBoxOpen className="text-5xl mx-auto mb-4 text-gray-400 dark:text-gray-500" />
+        <div className="bg-white dark:bg-dm-card rounded-lg shadow-md p-8 text-center">
+          <FaBoxOpen className="text-5xl mx-auto mb-4 text-brown-400 dark:text-brown-400" />
           <h2 className="text-xl font-semibold dark:text-white mb-2">No Pending Pickups</h2>
-          <p className="text-gray-600 dark:text-gray-400">
+          <p className="text-brown-500 dark:text-white/40">
             There are currently no orders waiting for pickup.
           </p>
         </div>
@@ -174,9 +174,9 @@ const PendingPickups = () => {
               <div key={pickup._id} className="mobile-surface p-4">
                 <div className="flex items-start justify-between gap-3">
                   <div>
-                    <p className="text-base font-semibold text-gray-900 dark:text-white">#{pickup.orderNumber || pickup._id.substring(0, 8)}</p>
-                    <p className="mt-1 text-sm text-gray-600 dark:text-gray-300">{pickup.customerName}</p>
-                    {pickup.customerPhone && <p className="text-xs text-gray-500 dark:text-gray-400">{pickup.customerPhone}</p>}
+                    <p className="text-base font-semibold text-charcoal dark:text-white">#{pickup.orderNumber || pickup._id.substring(0, 8)}</p>
+                    <p className="mt-1 text-sm text-brown-500 dark:text-white/55">{pickup.customerName}</p>
+                    {pickup.customerPhone && <p className="text-xs text-brown-400 dark:text-white/40">{pickup.customerPhone}</p>}
                   </div>
                   <span className="inline-flex rounded-full bg-yellow-100 px-2.5 py-1 text-xs font-semibold text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300">
                     {pickup.status}
@@ -185,12 +185,12 @@ const PendingPickups = () => {
 
                 <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
                   <div>
-                    <p className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">Date</p>
-                    <p className="mt-1 text-gray-700 dark:text-gray-200">{formatDate(pickup.createdAt)}</p>
+                    <p className="text-xs uppercase tracking-wide text-brown-400 dark:text-white/40">Date</p>
+                    <p className="mt-1 text-charcoal dark:text-white/70">{formatDate(pickup.createdAt)}</p>
                   </div>
                   <div>
-                    <p className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">Amount</p>
-                    <p className="mt-1 text-gray-700 dark:text-gray-200">{formatCurrency(pickup.totalAmount)}</p>
+                    <p className="text-xs uppercase tracking-wide text-brown-400 dark:text-white/40">Amount</p>
+                    <p className="mt-1 text-charcoal dark:text-white/70">{formatCurrency(pickup.totalAmount)}</p>
                   </div>
                 </div>
 
@@ -204,45 +204,45 @@ const PendingPickups = () => {
             ))}
           </div>
 
-          <div className="hidden md:block bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden">
+          <div className="hidden md:block bg-white dark:bg-dm-card rounded-lg shadow-md overflow-hidden">
             <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                <thead className="bg-gray-50 dark:bg-gray-700">
+              <table className="min-w-full divide-y divide-brown-100 dark:divide-dm-border">
+                <thead className="bg-ivory dark:bg-dm-card-2">
                   <tr>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-brown-400 dark:text-white/55 uppercase tracking-wider">
                       Order ID
                     </th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-brown-400 dark:text-white/55 uppercase tracking-wider">
                       Customer
                     </th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-brown-400 dark:text-white/55 uppercase tracking-wider">
                       Date
                     </th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-brown-400 dark:text-white/55 uppercase tracking-wider">
                       Amount
                     </th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-brown-400 dark:text-white/55 uppercase tracking-wider">
                       Status
                     </th>
-                    <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-brown-400 dark:text-white/55 uppercase tracking-wider">
                       Actions
                     </th>
                   </tr>
                 </thead>
-                <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                <tbody className="bg-white dark:bg-dm-card divide-y divide-brown-100 dark:divide-dm-border">
                   {pickups.map((pickup) => (
-                    <tr key={pickup._id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+                    <tr key={pickup._id} className="hover:bg-ivory dark:hover:bg-dm-card-2">
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium dark:text-white">
                         {pickup.orderNumber || pickup._id.substring(0, 8)}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-300">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-brown-500 dark:text-white/55">
                         {pickup.customerName}
-                        {pickup.customerPhone && <div className="text-xs text-gray-500">{pickup.customerPhone}</div>}
+                        {pickup.customerPhone && <div className="text-xs text-brown-400">{pickup.customerPhone}</div>}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-300">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-brown-500 dark:text-white/55">
                         {formatDate(pickup.createdAt)}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-300">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-brown-500 dark:text-white/55">
                         {formatCurrency(pickup.totalAmount)}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">

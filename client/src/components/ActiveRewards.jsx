@@ -73,7 +73,7 @@ const ActiveRewards = ({ onSelectReward, selectedRewardId, displayMode = 'full',
   // If no rewards, show a message for full mode
   if (rewards.length === 0 && displayMode === 'full') {
     return (
-      <div className={`p-4 text-center text-gray-500 dark:text-gray-400 ${className}`}>
+      <div className={`p-4 text-center text-brown-400 dark:text-white/40 ${className}`}>
         You don't have any active rewards
       </div>
     );
@@ -84,7 +84,7 @@ const ActiveRewards = ({ onSelectReward, selectedRewardId, displayMode = 'full',
     return (
       <div className={`${className}`}>
         <div className="mb-3">
-          <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">Your Available Rewards</h3>
+          <h3 className="text-sm font-medium text-charcoal dark:text-white/55">Your Available Rewards</h3>
         </div>
         <div className="space-y-2">
           {rewards.map((reward) => (
@@ -94,19 +94,19 @@ const ActiveRewards = ({ onSelectReward, selectedRewardId, displayMode = 'full',
               className={`flex items-center p-2 rounded-md cursor-pointer transition-colors ${
                 selectedRewardId === reward._id
                   ? 'bg-primary-100/20 border border-primary-200'
-                  : 'bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-750'
+                  : 'bg-ivory dark:bg-dm-card border border-brown-100 dark:border-dm-border hover:bg-brown-50 dark:hover:bg-dm-card-2'
               }`}
             >
               <div className="mr-3">
                 {getRewardIcon(reward.type)}
               </div>
               <div className="flex-grow">
-                <p className="text-sm font-medium dark:text-gray-200">{getRewardText(reward)}</p>
-                <p className="text-xs text-gray-500 dark:text-gray-400">
+                <p className="text-sm font-medium dark:text-white/70">{getRewardText(reward)}</p>
+                <p className="text-xs text-brown-400 dark:text-white/40">
                   From {reward.campaignTitle}
                 </p>
               </div>
-              <div className="text-xs text-gray-500 dark:text-gray-400 flex items-center">
+              <div className="text-xs text-brown-400 dark:text-white/40 flex items-center">
                 <FaCalendarAlt className="mr-1" />
                 {formatExpiry(reward.expiryDate)}
               </div>
@@ -145,18 +145,18 @@ const ActiveRewards = ({ onSelectReward, selectedRewardId, displayMode = 'full',
                   {getRewardIcon(reward.type)}
                 </div>
                 <div>
-                  <h3 className="font-medium text-gray-900 dark:text-gray-100">
+                  <h3 className="font-medium text-charcoal dark:text-white">
                     {getRewardText(reward)}
                   </h3>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                  <p className="text-sm text-brown-500 dark:text-white/40">
                     From community campaign: {reward.campaignTitle}
                   </p>
                 </div>
               </div>
               <div className="p-4">
                 <div className="flex justify-between text-sm mb-2">
-                  <span className="text-gray-600 dark:text-gray-400">Expires on:</span>
-                  <span className="text-gray-900 dark:text-gray-200 font-medium">
+                  <span className="text-brown-500 dark:text-white/40">Expires on:</span>
+                  <span className="text-charcoal dark:text-white/70 font-medium">
                     {formatExpiry(reward.expiryDate)}
                   </span>
                 </div>

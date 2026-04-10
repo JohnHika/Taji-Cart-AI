@@ -57,8 +57,8 @@ const PickupManagement = () => {
   };
 
   const renderOrderCard = (order) => (
-    <div key={order._id} className="bg-white dark:bg-gray-800 shadow rounded-lg overflow-hidden">
-      <div className="bg-gray-50 dark:bg-gray-750 px-4 py-3 border-b border-gray-200 dark:border-gray-700">
+    <div key={order._id} className="bg-white dark:bg-dm-card shadow rounded-lg overflow-hidden">
+      <div className="bg-ivory dark:bg-dm-card-2 px-4 py-3 border-b border-brown-100 dark:border-dm-border">
         <div className="flex justify-between items-center">
           <div className="font-medium dark:text-white">{order.orderId}</div>
           <div className={`text-sm px-2 py-1 rounded-full ${getStatusColor(order.status)}`}>
@@ -70,36 +70,36 @@ const PickupManagement = () => {
       <div className="p-4">
         <div className="grid grid-cols-2 gap-4 mb-4">
           <div>
-            <div className="text-sm text-gray-500 dark:text-gray-400">Customer</div>
+            <div className="text-sm text-brown-400 dark:text-white/40">Customer</div>
             <div className="font-medium dark:text-white">{order.userId?.name || 'N/A'}</div>
           </div>
           <div>
-            <div className="text-sm text-gray-500 dark:text-gray-400">Order Date</div>
+            <div className="text-sm text-brown-400 dark:text-white/40">Order Date</div>
             <div className="font-medium dark:text-white">{formatDate(order.createdAt)}</div>
           </div>
           <div>
-            <div className="text-sm text-gray-500 dark:text-gray-400">Pickup Location</div>
+            <div className="text-sm text-brown-400 dark:text-white/40">Pickup Location</div>
             <div className="font-medium dark:text-white">{order.pickup_location || 'N/A'}</div>
           </div>
           <div>
-            <div className="text-sm text-gray-500 dark:text-gray-400">Total Amount</div>
+            <div className="text-sm text-brown-400 dark:text-white/40">Total Amount</div>
             <div className="font-medium dark:text-white">KSh {order.totalAmt?.toLocaleString() || 'N/A'}</div>
           </div>
         </div>
         
         {order.pickup_instructions && (
           <div className="mb-4">
-            <div className="text-sm text-gray-500 dark:text-gray-400">Special Instructions</div>
-            <div className="p-2 bg-gray-50 dark:bg-gray-750 rounded mt-1 text-sm dark:text-gray-300">
+            <div className="text-sm text-brown-400 dark:text-white/40">Special Instructions</div>
+            <div className="p-2 bg-ivory dark:bg-dm-card-2 rounded mt-1 text-sm dark:text-white/55">
               {order.pickup_instructions}
             </div>
           </div>
         )}
         
         {order.pickupVerificationCode && (
-          <div className="mb-4 p-3 border border-gray-200 dark:border-gray-700 rounded-md bg-gray-50 dark:bg-gray-750">
+          <div className="mb-4 p-3 border border-brown-100 dark:border-dm-border rounded-md bg-ivory dark:bg-dm-card-2">
             <div className="flex items-center justify-between">
-              <div className="text-sm text-gray-500 dark:text-gray-400">Verification Code</div>
+              <div className="text-sm text-brown-400 dark:text-white/40">Verification Code</div>
               <div className="font-mono font-bold text-primary-100">
                 <FaQrcode className="inline mr-1" />
                 {order.pickupVerificationCode}
@@ -128,7 +128,7 @@ const PickupManagement = () => {
           )}
           
           {activeTab === 'completed' && (
-            <div className="text-sm text-gray-500 dark:text-gray-400">
+            <div className="text-sm text-brown-400 dark:text-white/40">
               Completed on {formatDate(order.statusHistory?.find(h => h.status === 'picked_up')?.timestamp || order.updatedAt)}
             </div>
           )}
@@ -146,9 +146,9 @@ const PickupManagement = () => {
       case 'processing':
         return 'bg-plum-100 text-plum-800 dark:bg-plum-900 dark:text-plum-200';
       case 'pending':
-        return 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200';
+        return 'bg-brown-50 text-charcoal dark:bg-dm-card-2 dark:text-white';
       default:
-        return 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200';
+        return 'bg-brown-50 text-charcoal dark:bg-dm-card-2 dark:text-white';
     }
   };
 
@@ -169,7 +169,7 @@ const PickupManagement = () => {
           <select
             id="tabs"
             name="tabs"
-            className="block w-full rounded-md border-gray-300 dark:border-gray-700 focus:border-primary-100 focus:ring-primary-100 dark:bg-gray-800 dark:text-white"
+            className="block w-full rounded-md border-brown-100 dark:border-dm-border focus:border-primary-100 focus:ring-primary-100 dark:bg-dm-card dark:text-white"
             value={activeTab}
             onChange={(e) => setActiveTab(e.target.value)}
           >
@@ -180,13 +180,13 @@ const PickupManagement = () => {
         </div>
         
         <div className="hidden sm:block">
-          <div className="border-b border-gray-200 dark:border-gray-700">
+          <div className="border-b border-brown-100 dark:border-dm-border">
             <nav className="-mb-px flex space-x-8" aria-label="Tabs">
               <button
                 className={`${
                   activeTab === 'pending'
                     ? 'border-primary-100 text-primary-100'
-                    : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
+                    : 'border-transparent text-brown-400 hover:border-brown-100 hover:text-charcoal dark:text-white/40 dark:hover:text-white'
                 } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
                 onClick={() => setActiveTab('pending')}
               >
@@ -196,7 +196,7 @@ const PickupManagement = () => {
                 className={`${
                   activeTab === 'ready'
                     ? 'border-primary-100 text-primary-100'
-                    : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
+                    : 'border-transparent text-brown-400 hover:border-brown-100 hover:text-charcoal dark:text-white/40 dark:hover:text-white'
                 } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
                 onClick={() => setActiveTab('ready')}
               >
@@ -206,7 +206,7 @@ const PickupManagement = () => {
                 className={`${
                   activeTab === 'completed'
                     ? 'border-primary-100 text-primary-100'
-                    : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
+                    : 'border-transparent text-brown-400 hover:border-brown-100 hover:text-charcoal dark:text-white/40 dark:hover:text-white'
                 } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
                 onClick={() => setActiveTab('completed')}
               >
@@ -230,10 +230,10 @@ const PickupManagement = () => {
           {error}
         </div>
       ) : orders.length === 0 ? (
-        <div className="text-center py-12 bg-white dark:bg-gray-800 rounded-lg shadow">
-          <FaStore className="mx-auto h-12 w-12 text-gray-400" />
-          <h3 className="mt-2 text-lg font-medium text-gray-900 dark:text-white">No orders found</h3>
-          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+        <div className="text-center py-12 bg-white dark:bg-dm-card rounded-lg shadow">
+          <FaStore className="mx-auto h-12 w-12 text-brown-400 dark:text-white/40" />
+          <h3 className="mt-2 text-lg font-medium text-charcoal dark:text-white">No orders found</h3>
+          <p className="mt-1 text-sm text-brown-400 dark:text-white/40">
             {activeTab === 'pending' ? 'No pending pickup orders available.' : 
              activeTab === 'ready' ? 'No orders are ready for pickup yet.' : 
              'No completed pickup orders found.'}

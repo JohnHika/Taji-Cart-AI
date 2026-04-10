@@ -463,7 +463,7 @@ const RoyalCard = () => {
           <div className="absolute top-2 right-2 flex space-x-1 z-10">
             <button 
               onClick={() => setViewMode('barcode')}
-              className={`p-1 rounded-full ${viewMode === 'barcode' ? 'bg-white text-gray-700' : 'bg-black/20 text-white'}`}
+              className={`p-1 rounded-full ${viewMode === 'barcode' ? 'bg-white text-charcoal' : 'bg-black/20 text-white'}`}
               title="Show Barcode"
             >
               <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 sm:h-5 sm:w-5" viewBox="0 0 20 20" fill="currentColor">
@@ -472,7 +472,7 @@ const RoyalCard = () => {
             </button>
             <button 
               onClick={() => setViewMode('qrcode')}
-              className={`p-1 rounded-full ${viewMode === 'qrcode' ? 'bg-white text-gray-700' : 'bg-black/20 text-white'}`}
+              className={`p-1 rounded-full ${viewMode === 'qrcode' ? 'bg-white text-charcoal' : 'bg-black/20 text-white'}`}
               title="Show QR Code"
             >
               <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 sm:h-5 sm:w-5" viewBox="0 0 20 20" fill="currentColor">
@@ -492,9 +492,9 @@ const RoyalCard = () => {
           <div className="text-white text-xs sm:text-sm mb-1">Membership Level:</div>
           <div className="flex items-center mb-3 sm:mb-4">
             <span className={`${
-              cardData.tier === 'Basic' ? 'bg-gray-300 text-gray-800' :
+              cardData.tier === 'Basic' ? 'bg-brown-200 text-charcoal' :
               cardData.tier === 'Bronze' ? 'bg-amber-300 text-amber-900' :
-              cardData.tier === 'Silver' ? 'bg-gray-300 text-gray-800' :
+              cardData.tier === 'Silver' ? 'bg-brown-200 text-charcoal' :
               cardData.tier === 'Gold' ? 'bg-yellow-300 text-amber-900' :
               'bg-plum-200 text-plum-900'
             } px-2 py-0.5 rounded-full font-medium text-xs sm:text-sm`}>
@@ -571,8 +571,8 @@ const RoyalCard = () => {
           
           {/* Enhanced progress visualization */}
           <div className="mt-3 mb-1 flex items-center justify-between">
-            <span className="text-xs text-gray-500 dark:text-gray-400">Current: {formatNumber(cardData.points)} pts</span>
-            <span className="text-xs text-gray-500 dark:text-gray-400">
+            <span className="text-xs text-brown-400 dark:text-white/40">Current: {formatNumber(cardData.points)} pts</span>
+            <span className="text-xs text-brown-400 dark:text-white/40">
               {formatNumber(getNextTierThreshold())} pts
             </span>
           </div>
@@ -601,7 +601,7 @@ const RoyalCard = () => {
             
             {/* Points needed overlay */}
             <div className="absolute inset-0 flex items-center justify-center">
-              <span className="text-xs font-medium text-gray-700 dark:text-white px-2 py-0.5 bg-white/70 dark:bg-dm-card/70 rounded">
+              <span className="text-xs font-medium text-charcoal dark:text-white px-2 py-0.5 bg-white/70 dark:bg-dm-card/70 rounded">
                 {formatNumber(Math.max(0, getNextTierThreshold() - cardData.points))} more to {getNextTierName()}
               </span>
             </div>
@@ -615,18 +615,18 @@ const RoyalCard = () => {
                   <p className="text-xs text-amber-800 dark:text-amber-300 font-medium flex items-center">
                     <FaInfoCircle className="mr-1" /> Early Bronze Access Available!
                   </p>
-                  <p className="text-xs mt-1 text-gray-600 dark:text-gray-300">
+                  <p className="text-xs mt-1 text-brown-500 dark:text-white/55">
                     With {formatNumber(cardData.points)} points, you're enjoying early Bronze tier benefits! You'll be automatically upgraded to full Bronze status at {formatNumber(getBronzeThreshold())} points.
                   </p>
                 </div>
               )}
               
               {cardData.tier === 'Bronze' && cardData.points >= getEarlySilverThreshold() && cardData.points < getSilverThreshold() && (
-                <div className="p-2 bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 rounded-md mt-2">
-                  <p className="text-xs text-gray-700 dark:text-gray-300 font-medium flex items-center">
+                <div className="p-2 bg-ivory dark:bg-dm-card-2/50 border border-brown-100 dark:border-dm-border rounded-md mt-2">
+                  <p className="text-xs text-charcoal dark:text-white/55 font-medium flex items-center">
                     <FaInfoCircle className="mr-1" /> Early Silver Access Available!
                   </p>
-                  <p className="text-xs mt-1 text-gray-600 dark:text-gray-300">
+                  <p className="text-xs mt-1 text-brown-500 dark:text-white/55">
                     With {formatNumber(cardData.points)} points, you're enjoying early Silver tier benefits! You'll be automatically upgraded to full Silver status at {formatNumber(getSilverThreshold())} points.
                   </p>
                 </div>
@@ -637,7 +637,7 @@ const RoyalCard = () => {
                   <p className="text-xs text-amber-800 dark:text-amber-300 font-medium flex items-center">
                     <FaInfoCircle className="mr-1" /> Early Gold Access Available!
                   </p>
-                  <p className="text-xs mt-1 text-gray-600 dark:text-gray-300">
+                  <p className="text-xs mt-1 text-brown-500 dark:text-white/55">
                     With {formatNumber(cardData.points)} points, you're enjoying early Gold tier benefits! You'll be automatically upgraded to full Gold status at {formatNumber(getGoldThreshold())} points.
                   </p>
                 </div>
@@ -648,7 +648,7 @@ const RoyalCard = () => {
                   <p className="text-xs text-plum-800 dark:text-plum-200 font-medium flex items-center">
                     <FaInfoCircle className="mr-1" /> Early Platinum Access Available!
                   </p>
-                  <p className="text-xs mt-1 text-gray-600 dark:text-gray-300">
+                  <p className="text-xs mt-1 text-brown-500 dark:text-white/55">
                     With {formatNumber(cardData.points)} points, you're enjoying early Platinum tier benefits! You'll be automatically upgraded to full Platinum status at {formatNumber(getPlatinumThreshold())} points.
                   </p>
                 </div>
@@ -656,7 +656,7 @@ const RoyalCard = () => {
             </div>
           )}
           
-          <p className="mt-2 text-xs text-gray-600 dark:text-gray-400 italic">
+          <p className="mt-2 text-xs text-brown-500 dark:text-white/40 italic">
             {cardData.tier === 'Basic' ? 
               `Earn discounts of 2% with the Bronze tier${cardData.points >= getEarlyBronzeThreshold() && isEarlyAccessEnabled() ? ' (early access active)' : ''}` :
              cardData.tier === 'Bronze' ? 
@@ -850,7 +850,7 @@ const RoyalCard = () => {
               <FaInfoCircle className="mr-1" /> 
               Early Access Status Protected
             </p>
-            <p className="mt-1 text-gray-700 dark:text-gray-300">
+            <p className="mt-1 text-charcoal dark:text-white/55">
               You're currently enjoying {cardData.tier} tier benefits through our previous early access program. To maintain this status, please keep your points above {formatNumber(getCurrentTierEarlyThreshold())} points.
             </p>
           </div>
@@ -861,7 +861,7 @@ const RoyalCard = () => {
           isEarlyAccessEnabled() && 
           cardData.tier !== 'Platinum' &&
           cardData.tier !== 'Basic' && (
-          <div className="mt-2 text-xs text-gray-500 dark:text-gray-400 italic">
+          <div className="mt-2 text-xs text-brown-400 dark:text-white/40 italic">
             <p className="flex items-center">
               <FaInfoCircle className="mr-1 text-plum-500" />
               Your next tier: <span className="ml-1 font-medium text-plum-700 dark:text-plum-300">
@@ -895,19 +895,19 @@ const RoyalCard = () => {
       {/* Special Platinum Progress Bar for Early Access Users - Only show if in Platinum via early access */}
       {cardData.tier === 'Platinum' && cardData.points < getPlatinumThreshold() && !isAdmin && (
         <div className="mt-4 bg-white dark:bg-dm-card rounded-lg border border-brown-100 dark:border-dm-border shadow-md p-3 text-sm">
-          <h3 className="font-medium text-gray-700 dark:text-white mb-2 flex items-center">
+          <h3 className="font-medium text-charcoal dark:text-white mb-2 flex items-center">
             <FaCrown className="text-gold-500 mr-2" /> 
             Platinum Status Progress
           </h3>
           
           <div className="mt-3 mb-1 flex items-center justify-between">
-            <span className="text-xs text-gray-500 dark:text-gray-400">Current: {formatNumber(cardData.points)} pts</span>
-            <span className="text-xs text-gray-500 dark:text-gray-400">Required: {formatNumber(getPlatinumThreshold())} pts</span>
+            <span className="text-xs text-brown-400 dark:text-white/40">Current: {formatNumber(cardData.points)} pts</span>
+            <span className="text-xs text-brown-400 dark:text-white/40">Required: {formatNumber(getPlatinumThreshold())} pts</span>
           </div>
           
           <div className="relative">
             {/* Progress background */}
-            <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+            <div className="h-6 bg-brown-100 dark:bg-dm-card-2 rounded-full overflow-hidden">
               {/* Progress filled area */}
               <div 
                 className="h-full flex items-center justify-end pr-2 text-xs font-semibold text-white"
@@ -925,31 +925,31 @@ const RoyalCard = () => {
             </div>
             
             {/* Points milestone markers */}
-            <div className="flex justify-between mt-1 px-1 text-xs text-gray-500 dark:text-gray-400">
+            <div className="flex justify-between mt-1 px-1 text-xs text-brown-400 dark:text-white/40">
               <div className="relative">
-                <div className="absolute top-0 h-1 w-px bg-gray-400"></div>
+                <div className="absolute top-0 h-1 w-px bg-brown-300"></div>
                 <span>0</span>
               </div>
               <div className="relative">
-                <div className="absolute top-0 h-1 w-px bg-gray-400"></div>
+                <div className="absolute top-0 h-1 w-px bg-brown-300"></div>
                 <span>{formatNumber(Math.round(getPlatinumThreshold() / 4))}</span>
               </div>
               <div className="relative">
-                <div className="absolute top-0 h-1 w-px bg-gray-400"></div>
+                <div className="absolute top-0 h-1 w-px bg-brown-300"></div>
                 <span>{formatNumber(Math.round(getPlatinumThreshold() / 2))}</span>
               </div>
               <div className="relative">
-                <div className="absolute top-0 h-1 w-px bg-gray-400"></div>
+                <div className="absolute top-0 h-1 w-px bg-brown-300"></div>
                 <span>{formatNumber(Math.round(getPlatinumThreshold() * 3 / 4))}</span>
               </div>
               <div className="relative">
-                <div className="absolute top-0 h-1 w-px bg-gray-400"></div>
+                <div className="absolute top-0 h-1 w-px bg-brown-300"></div>
                 <span>{formatNumber(getPlatinumThreshold())}</span>
               </div>
             </div>
           </div>
           
-          <div className="mt-3 text-xs text-gray-700 dark:text-gray-300">
+          <div className="mt-3 text-xs text-charcoal dark:text-white/55">
             <p>You need <span className="font-bold text-plum-700 dark:text-plum-300">{formatNumber(getPlatinumThreshold() - cardData.points)}</span> more points to fully secure your Platinum status.</p>
             <p className="mt-1">
               {isEarlyAccessEnabled() 

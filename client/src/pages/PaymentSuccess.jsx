@@ -100,11 +100,11 @@ const PaymentSuccess = () => {
   };
   
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100 dark:bg-gray-900">
-      <div className="bg-white dark:bg-gray-800 p-8 rounded-lg shadow-lg max-w-md w-full text-center">
+    <div className="min-h-screen flex items-center justify-center bg-brown-50 dark:bg-dm-surface">
+      <div className="bg-white dark:bg-dm-card p-8 rounded-lg shadow-lg max-w-md w-full text-center">
         <FaCheckCircle className="text-green-500 text-6xl mx-auto mb-6" />
         <h1 className="text-2xl font-bold mb-4 dark:text-white">Payment Successful!</h1>
-        <p className="text-gray-600 dark:text-gray-300 mb-6">
+        <p className="text-brown-500 dark:text-white/55 mb-6">
           Your order has been placed successfully. Thank you for your purchase!
         </p>
         <div className="flex flex-col space-y-3">
@@ -121,7 +121,7 @@ const PaymentSuccess = () => {
               if (globalClearCart) globalClearCart();
               navigate('/');
             }}
-            className="bg-gray-200 hover:bg-gray-300 text-gray-800 py-2 px-4 rounded transition-colors"
+            className="bg-brown-100 hover:bg-brown-200 text-charcoal py-2 px-4 rounded transition-colors"
           >
             Continue Shopping
           </button>

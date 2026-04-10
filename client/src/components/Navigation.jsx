@@ -14,7 +14,7 @@ const Navigation = () => {
       {isDelivery && (
         <Link 
           to="/delivery/dashboard" 
-          className="text-gray-700 hover:bg-gray-100 px-4 py-2 flex items-center dark:text-gray-200 dark:hover:bg-gray-700"
+          className="text-charcoal hover:bg-brown-50 px-4 py-2 flex items-center dark:text-white/70 dark:hover:bg-dm-card-2"
         >
           <FaTruck className="mr-2" /> Delivery Dashboard
         </Link>

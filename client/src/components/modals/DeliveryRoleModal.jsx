@@ -19,33 +19,33 @@ const DeliveryRoleModal = ({ isOpen, onClose, user, onSave }) => {
   
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 w-full max-w-md mx-auto">
+      <div className="bg-white dark:bg-dm-card rounded-lg shadow-lg p-6 w-full max-w-md mx-auto">
         <div className="flex justify-between items-center mb-5">
-          <h2 className="text-xl font-semibold text-gray-800 dark:text-white">
+          <h2 className="text-xl font-semibold text-charcoal dark:text-white">
             Manage Delivery Role
           </h2>
           <button 
             onClick={onClose}
-            className="text-gray-500 hover:text-gray-700 dark:text-gray-300 dark:hover:text-white"
+            className="text-brown-400 hover:text-charcoal dark:text-white/55 dark:hover:text-white"
           >
             <FaTimes size={18} />
           </button>
         </div>
         
         <div className="mb-4">
-          <p className="text-gray-600 dark:text-gray-300">
+          <p className="text-brown-500 dark:text-white/55">
             User: <span className="font-medium">{user?.name || 'Unknown'}</span>
           </p>
-          <p className="text-gray-600 dark:text-gray-300">
+          <p className="text-brown-500 dark:text-white/55">
             Email: <span className="font-medium">{user?.email || 'Unknown'}</span>
           </p>
         </div>
         
         <form onSubmit={handleSubmit}>
           <div className="mb-6">
-            <label className="block text-gray-700 dark:text-gray-300 mb-2">Select Role:</label>
+            <label className="block text-charcoal dark:text-white/55 mb-2">Select Role:</label>
             <div className="space-y-2">
-              <label className="flex items-center space-x-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700">
+              <label className="flex items-center space-x-3 p-3 border rounded-lg cursor-pointer hover:bg-ivory dark:border-dm-border dark:hover:bg-dm-card-2">
                 <input
                   type="radio"
                   name="deliveryRole"
@@ -55,12 +55,12 @@ const DeliveryRoleModal = ({ isOpen, onClose, user, onSave }) => {
                   className="h-5 w-5 text-plum-600"
                 />
                 <span className="flex items-center">
-                  <FaUserAlt className="mr-2 text-gray-500 dark:text-gray-400" />
-                  <span className="font-medium text-gray-700 dark:text-gray-300">Regular User</span>
+                  <FaUserAlt className="mr-2 text-brown-400 dark:text-white/40" />
+                  <span className="font-medium text-charcoal dark:text-white/55">Regular User</span>
                 </span>
               </label>
               
-              <label className="flex items-center space-x-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700">
+              <label className="flex items-center space-x-3 p-3 border rounded-lg cursor-pointer hover:bg-ivory dark:border-dm-border dark:hover:bg-dm-card-2">
                 <input
                   type="radio"
                   name="deliveryRole"
@@ -71,7 +71,7 @@ const DeliveryRoleModal = ({ isOpen, onClose, user, onSave }) => {
                 />
                 <span className="flex items-center">
                   <FaTruck className="mr-2 text-plum-600" />
-                  <span className="font-medium text-gray-700 dark:text-gray-300">Delivery Personnel</span>
+                  <span className="font-medium text-charcoal dark:text-white/55">Delivery Personnel</span>
                 </span>
               </label>
             </div>
@@ -81,7 +81,7 @@ const DeliveryRoleModal = ({ isOpen, onClose, user, onSave }) => {
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 bg-gray-200 text-gray-800 rounded hover:bg-gray-300 dark:bg-gray-700 dark:text-white dark:hover:bg-gray-600 transition-colors"
+              className="px-4 py-2 bg-brown-100 text-charcoal rounded hover:bg-brown-200 dark:bg-dm-card-2 dark:text-white dark:hover:bg-dm-border transition-colors"
             >
               Cancel
             </button>

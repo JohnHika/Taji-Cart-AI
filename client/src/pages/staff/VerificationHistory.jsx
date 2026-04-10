@@ -161,14 +161,14 @@ const VerificationHistory = () => {
 
     return (
       <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50 p-2 sm:p-4">
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg w-full max-w-4xl max-h-[90vh] overflow-y-auto">
-          <div className="sticky top-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 p-3 sm:p-4 flex justify-between items-center">
+        <div className="bg-white dark:bg-dm-card rounded-lg shadow-lg w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+          <div className="sticky top-0 bg-white dark:bg-dm-card border-b border-brown-100 dark:border-dm-border p-3 sm:p-4 flex justify-between items-center">
             <h3 className="text-base sm:text-lg font-medium dark:text-white">
               Order Details
             </h3>
             <button 
               onClick={closeOrderDetails}
-              className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+              className="text-brown-400 hover:text-charcoal dark:text-white/40 dark:hover:text-white"
             >
               <FaTimes />
             </button>
@@ -183,35 +183,35 @@ const VerificationHistory = () => {
               <div className="grid sm:grid-cols-2 gap-4 sm:gap-6 mb-6">
                 <div className="space-y-4">
                   <div>
-                    <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400">Order Number</h4>
+                    <h4 className="text-sm font-medium text-brown-400 dark:text-white/40">Order Number</h4>
                     <p className="font-medium dark:text-white text-sm sm:text-base break-all">
                       {selectedOrder.orderNumber || selectedOrder.orderId || selectedOrder._id}
                     </p>
                   </div>
                   <div>
-                    <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400">Customer</h4>
+                    <h4 className="text-sm font-medium text-brown-400 dark:text-white/40">Customer</h4>
                     <p className="font-medium dark:text-white text-sm sm:text-base">{selectedOrder.customerName}</p>
                     {selectedOrder.customerPhone && (
-                      <p className="text-sm text-gray-500 dark:text-gray-400">{selectedOrder.customerPhone}</p>
+                      <p className="text-sm text-brown-400 dark:text-white/40">{selectedOrder.customerPhone}</p>
                     )}
                   </div>
                   <div>
-                    <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400">Pickup Code</h4>
+                    <h4 className="text-sm font-medium text-brown-400 dark:text-white/40">Pickup Code</h4>
                     <p className="font-medium font-mono dark:text-white text-sm sm:text-base">{selectedOrder.pickupCode}</p>
                   </div>
                 </div>
                 
                 <div className="space-y-4">
                   <div>
-                    <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400">Verification Date</h4>
+                    <h4 className="text-sm font-medium text-brown-400 dark:text-white/40">Verification Date</h4>
                     <p className="font-medium dark:text-white text-sm sm:text-base">{formatDate(selectedOrder.verifiedAt)}</p>
                   </div>
                   <div>
-                    <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400">Verified By</h4>
+                    <h4 className="text-sm font-medium text-brown-400 dark:text-white/40">Verified By</h4>
                     <p className="font-medium dark:text-white text-sm sm:text-base">{selectedOrder.verifiedBy}</p>
                   </div>
                   <div>
-                    <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400">Total Amount</h4>
+                    <h4 className="text-sm font-medium text-brown-400 dark:text-white/40">Total Amount</h4>
                     <p className="font-medium text-green-600 dark:text-green-400 text-sm sm:text-base">{formatCurrency(selectedOrder.totalAmount)}</p>
                   </div>
                 </div>
@@ -221,34 +221,34 @@ const VerificationHistory = () => {
               {selectedOrder.items && selectedOrder.items.length > 0 ? (
                 <div className="mt-6">
                   <h4 className="text-base sm:text-lg font-medium dark:text-white mb-3">Order Items</h4>
-                  <div className="bg-gray-50 dark:bg-gray-700 rounded-lg overflow-hidden">
+                  <div className="bg-ivory dark:bg-dm-card-2 rounded-lg overflow-hidden">
                     <div className="overflow-x-auto">
-                      <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-600">
-                        <thead className="bg-gray-100 dark:bg-gray-800">
+                      <table className="min-w-full divide-y divide-brown-100 dark:divide-dm-border">
+                        <thead className="bg-brown-50 dark:bg-dm-card">
                           <tr>
-                            <th scope="col" className="px-3 sm:px-4 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Product</th>
-                            <th scope="col" className="px-3 sm:px-4 py-2 sm:py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Qty</th>
-                            <th scope="col" className="px-3 sm:px-4 py-2 sm:py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                            <th scope="col" className="px-3 sm:px-4 py-2 sm:py-3 text-left text-xs font-medium text-brown-400 dark:text-white/40 uppercase tracking-wider">Product</th>
+                            <th scope="col" className="px-3 sm:px-4 py-2 sm:py-3 text-center text-xs font-medium text-brown-400 dark:text-white/40 uppercase tracking-wider">Qty</th>
+                            <th scope="col" className="px-3 sm:px-4 py-2 sm:py-3 text-right text-xs font-medium text-brown-400 dark:text-white/40 uppercase tracking-wider">
                               <span className="hidden sm:inline">Price</span>
                               <span className="sm:hidden">Price</span>
                             </th>
-                            <th scope="col" className="px-3 sm:px-4 py-2 sm:py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                            <th scope="col" className="px-3 sm:px-4 py-2 sm:py-3 text-right text-xs font-medium text-brown-400 dark:text-white/40 uppercase tracking-wider">
                               <span className="hidden sm:inline">Total</span>
                               <span className="sm:hidden">Sum</span>
                             </th>
                           </tr>
                         </thead>
-                        <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                        <tbody className="bg-white dark:bg-dm-card divide-y divide-brown-100 dark:divide-dm-border">
                           {selectedOrder.items.map((item, index) => (
-                            <tr key={index} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+                            <tr key={index} className="hover:bg-ivory dark:hover:bg-dm-card-2">
                               <td className="px-3 sm:px-4 py-3 sm:py-4">
                                 <div className="flex items-center">
                                   {item.productId?.image && (
                                     <div className="flex-shrink-0 h-8 w-8 sm:h-10 sm:w-10 mr-2 sm:mr-3">
-                                      <img 
-                                        className="h-8 w-8 sm:h-10 sm:w-10 rounded-md object-cover" 
-                                        src={item.productId.image[0]} 
-                                        alt={item.productId.name || 'Product'} 
+                                      <img
+                                        className="h-8 w-8 sm:h-10 sm:w-10 rounded-md object-cover"
+                                        src={item.productId.image[0]}
+                                        alt={item.productId.name || 'Product'}
                                       />
                                     </div>
                                   )}
@@ -259,24 +259,24 @@ const VerificationHistory = () => {
                                   </div>
                                 </div>
                               </td>
-                              <td className="px-3 sm:px-4 py-3 sm:py-4 text-center text-xs sm:text-sm text-gray-900 dark:text-white">
+                              <td className="px-3 sm:px-4 py-3 sm:py-4 text-center text-xs sm:text-sm text-charcoal dark:text-white">
                                 {item.quantity}
                               </td>
-                              <td className="px-3 sm:px-4 py-3 sm:py-4 text-right text-xs sm:text-sm text-gray-900 dark:text-white">
+                              <td className="px-3 sm:px-4 py-3 sm:py-4 text-right text-xs sm:text-sm text-charcoal dark:text-white">
                                 {formatCurrency(item.price)}
                               </td>
-                              <td className="px-3 sm:px-4 py-3 sm:py-4 text-right text-xs sm:text-sm font-medium text-gray-900 dark:text-white">
+                              <td className="px-3 sm:px-4 py-3 sm:py-4 text-right text-xs sm:text-sm font-medium text-charcoal dark:text-white">
                                 {formatCurrency(item.price * item.quantity)}
                               </td>
                             </tr>
                           ))}
                         </tbody>
-                        <tfoot className="bg-gray-50 dark:bg-gray-700">
+                        <tfoot className="bg-ivory dark:bg-dm-card-2">
                           <tr>
-                            <td colSpan="3" className="px-3 sm:px-4 py-2 sm:py-3 text-right text-xs sm:text-sm font-medium text-gray-500 dark:text-gray-400">
+                            <td colSpan="3" className="px-3 sm:px-4 py-2 sm:py-3 text-right text-xs sm:text-sm font-medium text-brown-400 dark:text-white/40">
                               Total Amount:
                             </td>
-                            <td className="px-3 sm:px-4 py-2 sm:py-3 text-right text-xs sm:text-sm font-bold text-gray-900 dark:text-white">
+                            <td className="px-3 sm:px-4 py-2 sm:py-3 text-right text-xs sm:text-sm font-bold text-charcoal dark:text-white">
                               {formatCurrency(selectedOrder.totalAmount)}
                             </td>
                           </tr>
@@ -302,14 +302,14 @@ const VerificationHistory = () => {
     return (
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {filteredHistory.map((item) => (
-          <div key={item._id} className="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow duration-300">
-            <div className="p-5 border-b border-gray-200 dark:border-gray-700">
+          <div key={item._id} className="bg-white dark:bg-dm-card rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow duration-300">
+            <div className="p-5 border-b border-brown-100 dark:border-dm-border">
               <div className="flex justify-between items-start mb-3">
                 <div>
                   <h3 className="text-lg font-semibold dark:text-white">
                     {item.orderNumber || item._id.substring(0, 8)}
                   </h3>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                  <p className="text-sm text-brown-400 dark:text-white/40">
                     {formatDate(item.verifiedAt)}
                   </p>
                 </div>
@@ -320,21 +320,21 @@ const VerificationHistory = () => {
               
               <div className="space-y-2">
                 <div className="flex justify-between">
-                  <span className="text-sm text-gray-500 dark:text-gray-400">Customer:</span>
+                  <span className="text-sm text-brown-400 dark:text-white/40">Customer:</span>
                   <span className="text-sm font-medium dark:text-white">{item.customerName}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-sm text-gray-500 dark:text-gray-400">Amount:</span>
+                  <span className="text-sm text-brown-400 dark:text-white/40">Amount:</span>
                   <span className="text-sm font-medium text-green-600 dark:text-green-400">{formatCurrency(item.totalAmount)}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-sm text-gray-500 dark:text-gray-400">Verified By:</span>
+                  <span className="text-sm text-brown-400 dark:text-white/40">Verified By:</span>
                   <span className="text-sm font-medium dark:text-white">{item.verifiedBy}</span>
                 </div>
               </div>
             </div>
             
-            <div className="px-5 py-3 bg-gray-50 dark:bg-gray-700">
+            <div className="px-5 py-3 bg-ivory dark:bg-dm-card-2">
               <button
                 onClick={() => handleViewOrderDetails(item)}
                 className="w-full inline-flex justify-center items-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-plum-800 bg-plum-100 hover:bg-plum-200 dark:bg-plum-900/30 dark:text-plum-200 dark:hover:bg-plum-800/40"
@@ -351,62 +351,62 @@ const VerificationHistory = () => {
   // Render table view for verification history
   const renderTableView = () => {
     return (
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden">
+      <div className="bg-white dark:bg-dm-card rounded-lg shadow-md overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-            <thead className="bg-gray-50 dark:bg-gray-700">
+          <table className="min-w-full divide-y divide-brown-100 dark:divide-dm-border">
+            <thead className="bg-ivory dark:bg-dm-card-2">
               <tr>
-                <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-brown-400 dark:text-white/55 uppercase tracking-wider">
                   Order ID
                 </th>
-                <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-brown-400 dark:text-white/55 uppercase tracking-wider">
                   Customer
                 </th>
-                <th scope="col" className="hidden md:table-cell px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                <th scope="col" className="hidden md:table-cell px-4 py-3 text-left text-xs font-medium text-brown-400 dark:text-white/55 uppercase tracking-wider">
                   Amount
                 </th>
-                <th scope="col" className="hidden sm:table-cell px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                <th scope="col" className="hidden sm:table-cell px-4 py-3 text-left text-xs font-medium text-brown-400 dark:text-white/55 uppercase tracking-wider">
                   Verified By
                 </th>
-                <th scope="col" className="hidden lg:table-cell px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                <th scope="col" className="hidden lg:table-cell px-4 py-3 text-left text-xs font-medium text-brown-400 dark:text-white/55 uppercase tracking-wider">
                   Verified At
                 </th>
-                <th scope="col" className="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                <th scope="col" className="px-4 py-3 text-center text-xs font-medium text-brown-400 dark:text-white/55 uppercase tracking-wider">
                   Status
                 </th>
-                <th scope="col" className="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                <th scope="col" className="px-4 py-3 text-center text-xs font-medium text-brown-400 dark:text-white/55 uppercase tracking-wider">
                   Actions
                 </th>
               </tr>
             </thead>
-            <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+            <tbody className="bg-white dark:bg-dm-card divide-y divide-brown-100 dark:divide-dm-border">
               {filteredHistory.map((item) => (
-                <tr key={item._id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+                <tr key={item._id} className="hover:bg-ivory dark:hover:bg-dm-card-2">
                   <td className="px-4 py-4 whitespace-nowrap text-sm font-medium dark:text-white">
                     <span className="hidden sm:inline">{item.orderNumber || ''}</span>
                     <span className="sm:hidden">{item.orderNumber?.substring(0, 6) || item._id.substring(0, 6)}...</span>
                   </td>
-                  <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-300">
+                  <td className="px-4 py-4 whitespace-nowrap text-sm text-brown-500 dark:text-white/55">
                     <div className="flex flex-col">
                       <span className="font-medium truncate max-w-[120px] sm:max-w-[150px] md:max-w-none">
                         {item.customerName}
                       </span>
                       {item.customerPhone && (
-                        <span className="text-xs text-gray-500 hidden sm:block truncate max-w-[120px] sm:max-w-[150px] md:max-w-none">
+                        <span className="text-xs text-brown-400 hidden sm:block truncate max-w-[120px] sm:max-w-[150px] md:max-w-none">
                           {item.customerPhone}
                         </span>
                       )}
                     </div>
                   </td>
-                  <td className="hidden md:table-cell px-4 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-300">
+                  <td className="hidden md:table-cell px-4 py-4 whitespace-nowrap text-sm text-brown-500 dark:text-white/55">
                     {formatCurrency(item.totalAmount)}
                   </td>
-                  <td className="hidden sm:table-cell px-4 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-300">
+                  <td className="hidden sm:table-cell px-4 py-4 whitespace-nowrap text-sm text-brown-500 dark:text-white/55">
                     <span className="truncate max-w-[100px] md:max-w-none block">
                       {item.verifiedBy}
                     </span>
                   </td>
-                  <td className="hidden lg:table-cell px-4 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-300">
+                  <td className="hidden lg:table-cell px-4 py-4 whitespace-nowrap text-sm text-brown-500 dark:text-white/55">
                     {formatDate(item.verifiedAt)}
                   </td>
                   <td className="px-4 py-4 whitespace-nowrap text-center">
@@ -443,7 +443,7 @@ const VerificationHistory = () => {
         <div className="flex space-x-2">
           <button 
             onClick={() => navigate('/dashboard/profile')}
-            className="bg-gray-200 dark:bg-gray-700 px-4 py-2 rounded-lg flex items-center text-gray-700 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-600"
+            className="bg-brown-100 dark:bg-dm-card-2 px-4 py-2 rounded-lg flex items-center text-charcoal dark:text-white/70 hover:bg-brown-200 dark:hover:bg-dm-border"
           >
             <FaArrowLeft className="mr-2" /> Back to Dashboard
           </button>
@@ -470,7 +470,7 @@ const VerificationHistory = () => {
             className={`py-2 px-4 text-sm font-medium rounded-l-lg border ${
               viewMode === 'grid'
                 ? 'bg-primary-100 text-white border-primary-100'
-                : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-white border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700'
+                : 'bg-white dark:bg-dm-card text-charcoal dark:text-white border-brown-200 dark:border-dm-border hover:bg-brown-50 dark:hover:bg-dm-card-2'
             }`}
           >
             Grid View
@@ -480,7 +480,7 @@ const VerificationHistory = () => {
             className={`py-2 px-4 text-sm font-medium rounded-r-lg border ${
               viewMode === 'table'
                 ? 'bg-primary-100 text-white border-primary-100'
-                : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-white border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700'
+                : 'bg-white dark:bg-dm-card text-charcoal dark:text-white border-brown-200 dark:border-dm-border hover:bg-brown-50 dark:hover:bg-dm-card-2'
             }`}
           >
             Table View
@@ -490,18 +490,18 @@ const VerificationHistory = () => {
 
       {/* Filters Section */}
       {showFilters && (
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-4 mb-6">
+        <div className="bg-white dark:bg-dm-card rounded-lg shadow-md p-4 mb-6">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {/* Staff Filter */}
             <div>
-              <label htmlFor="staffFilter" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              <label htmlFor="staffFilter" className="block text-sm font-medium text-charcoal dark:text-white/55 mb-1">
                 <FaUser className="inline mr-1" /> Filter by Staff Member
               </label>
               <select
                 id="staffFilter"
                 value={selectedStaff}
                 onChange={(e) => setSelectedStaff(e.target.value)}
-                className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-800 dark:text-white"
+                className="w-full p-2 border border-brown-200 dark:border-dm-border rounded-md bg-white dark:bg-dm-card-2 text-charcoal dark:text-white"
               >
                 <option value="">All Staff Members</option>
                 {staffMembers.map((staff, index) => (
@@ -512,7 +512,7 @@ const VerificationHistory = () => {
 
             {/* Search Filter */}
             <div>
-              <label htmlFor="searchFilter" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              <label htmlFor="searchFilter" className="block text-sm font-medium text-charcoal dark:text-white/55 mb-1">
                 <FaSearch className="inline mr-1" /> Search by Order ID or Customer
               </label>
               <input
@@ -521,13 +521,13 @@ const VerificationHistory = () => {
                 placeholder="Enter order ID or customer name"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-800 dark:text-white"
+                className="w-full p-2 border border-brown-200 dark:border-dm-border rounded-md bg-white dark:bg-dm-card-2 text-charcoal dark:text-white"
               />
             </div>
 
             {/* Date Range */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              <label className="block text-sm font-medium text-charcoal dark:text-white/55 mb-1">
                 <FaCalendar className="inline mr-1" /> Verification Date Range
               </label>
               <div className="grid grid-cols-2 gap-2">
@@ -535,13 +535,13 @@ const VerificationHistory = () => {
                   type="date"
                   value={dateRange.startDate}
                   onChange={(e) => setDateRange({...dateRange, startDate: e.target.value})}
-                  className="p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-800 dark:text-white"
+                  className="p-2 border border-brown-200 dark:border-dm-border rounded-md bg-white dark:bg-dm-card-2 text-charcoal dark:text-white"
                 />
                 <input
                   type="date"
                   value={dateRange.endDate}
                   onChange={(e) => setDateRange({...dateRange, endDate: e.target.value})}
-                  className="p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-800 dark:text-white"
+                  className="p-2 border border-brown-200 dark:border-dm-border rounded-md bg-white dark:bg-dm-card-2 text-charcoal dark:text-white"
                 />
               </div>
             </div>
@@ -551,7 +551,7 @@ const VerificationHistory = () => {
           <div className="flex justify-end mt-4">
             <button
               onClick={resetFilters}
-              className="flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 mr-2"
+              className="flex items-center px-4 py-2 border border-brown-200 dark:border-dm-border rounded-md text-charcoal dark:text-white/55 hover:bg-brown-50 dark:hover:bg-dm-card-2 mr-2"
             >
               <FaTimes className="mr-1" /> Clear Filters
             </button>
@@ -562,7 +562,7 @@ const VerificationHistory = () => {
       {/* Results summary */}
       {!loading && !error && (
         <div className="mb-4">
-          <p className="text-gray-600 dark:text-gray-400">
+          <p className="text-brown-500 dark:text-white/40">
             <span className="font-medium">{filteredHistory.length}</span> verification{filteredHistory.length !== 1 ? 's' : ''} found
             {(selectedStaff || searchTerm || dateRange.startDate || dateRange.endDate) && ' with current filters'}
           </p>
@@ -581,10 +581,10 @@ const VerificationHistory = () => {
           </div>
         </div>
       ) : filteredHistory.length === 0 ? (
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-8 text-center">
-          <FaHistory className="text-5xl mx-auto mb-4 text-gray-400 dark:text-gray-500" />
+        <div className="bg-white dark:bg-dm-card rounded-lg shadow-md p-8 text-center">
+          <FaHistory className="text-5xl mx-auto mb-4 text-brown-400 dark:text-brown-400" />
           <h2 className="text-xl font-semibold dark:text-white mb-2">No Verification History</h2>
-          <p className="text-gray-600 dark:text-gray-400">
+          <p className="text-brown-500 dark:text-white/40">
             {history.length === 0 
               ? 'There are no completed pickup verifications yet.' 
               : 'No verifications match your current filter criteria.'}

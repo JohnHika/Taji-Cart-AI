@@ -195,7 +195,7 @@ const CommunityPerksAdmin = () => {
         ) : (
           <button
             onClick={resetForm}
-            className="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 flex items-center"
+            className="px-4 py-2 bg-brown-400 text-white rounded-lg hover:bg-brown-500 flex items-center"
           >
             <FaTimes className="mr-2" /> Cancel
           </button>
@@ -203,7 +203,7 @@ const CommunityPerksAdmin = () => {
       </div>
 
       {isCreating && (
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 mb-6 border border-gray-200 dark:border-gray-700">
+        <div className="bg-white dark:bg-dm-card rounded-lg shadow-md p-6 mb-6 border border-brown-100 dark:border-dm-border">
           <h2 className="text-xl font-semibold mb-4 dark:text-white">
             {isEditing ? 'Edit Community Perk' : 'Create New Community Perk'}
           </h2>
@@ -211,20 +211,20 @@ const CommunityPerksAdmin = () => {
           <form onSubmit={handleSubmit}>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Title</label>
+                <label className="block text-sm font-medium text-charcoal dark:text-white mb-1">Title</label>
                 <input
                   type="text"
                   name="title"
                   value={formData.title}
                   onChange={handleInputChange}
                   required
-                  className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200"
+                  className="w-full p-2 border border-brown-100 dark:border-dm-border rounded bg-white dark:bg-dm-card-2 text-charcoal dark:text-white"
                   placeholder="e.g., Weekend Shopping Spree Challenge"
                 />
               </div>
               
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Purchase Goal</label>
+                <label className="block text-sm font-medium text-charcoal dark:text-white mb-1">Purchase Goal</label>
                 <input
                   type="number"
                   name="purchaseGoal"
@@ -232,12 +232,12 @@ const CommunityPerksAdmin = () => {
                   onChange={handleInputChange}
                   min="10"
                   required
-                  className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200"
+                  className="w-full p-2 border border-brown-100 dark:border-dm-border rounded bg-white dark:bg-dm-card-2 text-charcoal dark:text-white"
                 />
               </div>
               
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Discount Percentage</label>
+                <label className="block text-sm font-medium text-charcoal dark:text-white mb-1">Discount Percentage</label>
                 <input
                   type="number"
                   name="discountPercentage"
@@ -246,12 +246,12 @@ const CommunityPerksAdmin = () => {
                   min="1"
                   max="50"
                   required
-                  className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200"
+                  className="w-full p-2 border border-brown-100 dark:border-dm-border rounded bg-white dark:bg-dm-card-2 text-charcoal dark:text-white"
                 />
               </div>
               
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Validity Period (days)</label>
+                <label className="block text-sm font-medium text-charcoal dark:text-white mb-1">Validity Period (days)</label>
                 <input
                   type="number"
                   name="validityPeriod"
@@ -260,19 +260,19 @@ const CommunityPerksAdmin = () => {
                   min="1"
                   max="30"
                   required
-                  className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200"
+                  className="w-full p-2 border border-brown-100 dark:border-dm-border rounded bg-white dark:bg-dm-card-2 text-charcoal dark:text-white"
                 />
               </div>
             </div>
             
             <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Description</label>
+              <label className="block text-sm font-medium text-charcoal dark:text-white mb-1">Description</label>
               <textarea
                 name="description"
                 value={formData.description}
                 onChange={handleInputChange}
                 required
-                className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200"
+                className="w-full p-2 border border-brown-100 dark:border-dm-border rounded bg-white dark:bg-dm-card-2 text-charcoal dark:text-white"
                 rows="3"
                 placeholder="e.g., If 500 customers each make a purchase this week, all loyalty cardholders unlock a 15% discount next weekend."
               />
@@ -288,7 +288,7 @@ const CommunityPerksAdmin = () => {
                   onChange={handleInputChange}
                   className="mr-2"
                 />
-                <label htmlFor="displayOnHomepage" className="dark:text-gray-300">Display on Homepage</label>
+                <label htmlFor="displayOnHomepage" className="dark:text-white/55">Display on Homepage</label>
               </div>
               
               <div className="flex items-center">
@@ -300,7 +300,7 @@ const CommunityPerksAdmin = () => {
                   onChange={handleInputChange}
                   className="mr-2"
                 />
-                <label htmlFor="displayInCart" className="dark:text-gray-300">Display in Cart</label>
+                <label htmlFor="displayInCart" className="dark:text-white/55">Display in Cart</label>
               </div>
               
               <div className="flex items-center">
@@ -312,7 +312,7 @@ const CommunityPerksAdmin = () => {
                   onChange={handleInputChange}
                   className="mr-2"
                 />
-                <label htmlFor="displayInProfile" className="dark:text-gray-300">Display in Profile</label>
+                <label htmlFor="displayInProfile" className="dark:text-white/55">Display in Profile</label>
               </div>
             </div>
             
@@ -321,7 +321,7 @@ const CommunityPerksAdmin = () => {
                 <button
                   type="button"
                   onClick={resetForm}
-                  className="px-4 py-2 bg-gray-300 dark:bg-gray-600 text-gray-700 dark:text-gray-200 rounded-lg hover:bg-gray-400 dark:hover:bg-gray-500"
+                  className="px-4 py-2 bg-brown-100 dark:bg-dm-card-2 text-charcoal dark:text-white rounded-lg hover:bg-brown-200 dark:hover:bg-dm-card"
                 >
                   Cancel
                 </button>
@@ -345,9 +345,9 @@ const CommunityPerksAdmin = () => {
       ) : (
         <div className="grid grid-cols-1 gap-4">
           {campaigns.length === 0 ? (
-            <div className="text-center py-10 bg-gray-50 dark:bg-gray-800 rounded-lg">
-              <FaGift className="mx-auto text-gray-400 dark:text-gray-500 text-4xl mb-2" />
-              <p className="text-gray-500 dark:text-gray-400">No community campaigns or perks found</p>
+            <div className="text-center py-10 bg-ivory dark:bg-dm-card rounded-lg">
+              <FaGift className="mx-auto text-brown-400 dark:text-white/40 text-4xl mb-2" />
+              <p className="text-brown-400 dark:text-white/40">No community campaigns or perks found</p>
             </div>
           ) : (
             campaigns.map(campaign => {
@@ -360,7 +360,7 @@ const CommunityPerksAdmin = () => {
                   className={`p-4 border rounded-lg shadow-sm ${
                     isPerk 
                     ? 'bg-yellow-50 border-yellow-300 dark:bg-yellow-900/20 dark:border-yellow-800/30' 
-                    : 'bg-white dark:bg-gray-800 dark:border-gray-700'
+                    : 'bg-white dark:bg-dm-card dark:border-dm-border'
                   }`}
                 >
                   <div className="flex justify-between items-start">
@@ -378,17 +378,17 @@ const CommunityPerksAdmin = () => {
                       
                       <div>
                         <h3 className="text-lg font-medium dark:text-white">{campaign.title}</h3>
-                        <p className="text-gray-600 dark:text-gray-300 text-sm">{campaign.description}</p>
+                        <p className="text-brown-500 dark:text-white/55 text-sm">{campaign.description}</p>
                         <div className="mt-1 flex flex-wrap gap-2">
                           {isPerk && (
                             <span className="px-2 py-0.5 bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400 text-xs rounded-full">
                               Community Perk
                             </span>
                           )}
-                          <span className="px-2 py-0.5 bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300 text-xs rounded-full">
+                          <span className="px-2 py-0.5 bg-brown-50 text-charcoal dark:bg-dm-card-2 dark:text-white/55 text-xs rounded-full">
                             Goal: {campaign.goalTarget || 0} {campaign.goalType || 'purchases'}
                           </span>
-                          <span className="px-2 py-0.5 bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300 text-xs rounded-full">
+                          <span className="px-2 py-0.5 bg-brown-50 text-charcoal dark:bg-dm-card-2 dark:text-white/55 text-xs rounded-full">
                             Reward: {campaign.rewardValue || 0}% {campaign.rewardType || 'discount'}
                           </span>
                         </div>
@@ -398,14 +398,14 @@ const CommunityPerksAdmin = () => {
                     <div className="flex space-x-2">
                       <button 
                         onClick={() => handleEdit(campaign)}
-                        className="p-2 text-gray-600 dark:text-gray-400 hover:text-primary-200 dark:hover:text-primary-200"
+                        className="p-2 text-brown-500 dark:text-white/40 hover:text-primary-200 dark:hover:text-primary-200"
                         title="Edit campaign"
                       >
                         <FaEdit />
                       </button>
                       <button 
                         onClick={() => confirmDelete(campaign)}
-                        className="p-2 text-gray-600 dark:text-gray-400 hover:text-red-500 dark:hover:text-red-400"
+                        className="p-2 text-brown-500 dark:text-white/40 hover:text-red-500 dark:hover:text-red-400"
                         title="Delete campaign"
                       >
                         <FaTrash />
@@ -415,11 +415,11 @@ const CommunityPerksAdmin = () => {
                   
                   <div className="mt-4">
                     <div className="flex justify-between text-sm mb-1">
-                      <span className="dark:text-gray-300">Progress: {campaign.currentProgress || 0} of {campaign.goalTarget || 0}</span>
-                      <span className="dark:text-gray-300">{progress}% Complete</span>
+                      <span className="dark:text-white/55">Progress: {campaign.currentProgress || 0} of {campaign.goalTarget || 0}</span>
+                      <span className="dark:text-white/55">{progress}% Complete</span>
                     </div>
                     
-                    <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5">
+                    <div className="w-full bg-brown-100 dark:bg-dm-card-2 rounded-full h-2.5">
                       <div 
                         className={`${isPerk ? 'bg-yellow-500' : 'bg-plum-600'} h-2.5 rounded-full`}
                         style={{ width: `${progress}%` }}
@@ -436,15 +436,15 @@ const CommunityPerksAdmin = () => {
       {/* Delete Confirmation Modal */}
       {showDeleteConfirm && campaignToDelete && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg max-w-md w-full">
+          <div className="bg-white dark:bg-dm-card p-6 rounded-lg shadow-lg max-w-md w-full">
             <h3 className="text-xl font-bold mb-4 dark:text-white">Confirm Delete</h3>
-            <p className="mb-6 dark:text-gray-300">
+            <p className="mb-6 dark:text-white/55">
               Are you sure you want to delete the campaign "{campaignToDelete.title}"? This action cannot be undone.
             </p>
             <div className="flex justify-end space-x-3">
               <button
                 onClick={cancelDelete}
-                className="px-4 py-2 bg-gray-300 dark:bg-gray-600 text-gray-800 dark:text-gray-200 rounded-lg hover:bg-gray-400 dark:hover:bg-gray-500"
+                className="px-4 py-2 bg-brown-100 dark:bg-dm-card-2 text-charcoal dark:text-white rounded-lg hover:bg-brown-200 dark:hover:bg-dm-card"
               >
                 Cancel
               </button>

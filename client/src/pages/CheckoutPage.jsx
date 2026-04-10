@@ -814,9 +814,9 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
               </>
             )}
             
-            <button 
-              onClick={() => navigate(-1)} // Go back to previous page
-              className="mt-4 px-4 py-2 bg-plum-100 text-plum-800 dark:bg-plum-900/40 dark:text-plum-200 rounded hover:bg-plum-200 dark:hover:bg-plum-800/50"
+            <button
+              onClick={() => navigate(-1)}
+              className="mt-4 px-4 py-2 rounded-pill text-sm font-medium bg-plum-100 text-plum-800 dark:bg-plum-900/40 dark:text-plum-200 hover:bg-plum-200 dark:hover:bg-plum-800/50 transition-colors"
             >
               Change Pickup Location
             </button>
@@ -857,7 +857,7 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
           {renderAddressOrPickupSection()}
         </div>
 
-        <div className={`w-full self-start rounded border border-brown-100 bg-white px-2 py-4 shadow transition-colors duration-200 dark:border-dm-border dark:bg-dm-card lg:max-w-md xl:max-w-lg ${summarySticky}`}>
+        <div className={`w-full self-start rounded-card border border-brown-100 bg-white px-3 py-4 sm:px-4 shadow transition-colors duration-200 dark:border-dm-border dark:bg-dm-card lg:max-w-sm xl:max-w-md ${summarySticky}`}>
           {/**summary**/}
           <h3 className='text-lg font-semibold text-charcoal dark:text-white px-1 mb-3'>Order Summary</h3>
           

@@ -38,8 +38,8 @@ const ProductCardAdmin = ({ data, fetchProductData }) => {
   }
 
   return (
-    <div className='w-full p-4 bg-white dark:bg-gray-800 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105'>
-      <div className='h-40 overflow-hidden bg-gray-100 dark:bg-gray-700 rounded-lg mb-3'>
+    <div className='w-full p-4 bg-white dark:bg-dm-card rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105'>
+      <div className='h-40 overflow-hidden bg-brown-50 dark:bg-dm-card-2 rounded-lg mb-3'>
         <img
           src={data?.image[0]}
           alt={data?.name}
@@ -47,8 +47,8 @@ const ProductCardAdmin = ({ data, fetchProductData }) => {
           onError={(e) => { e.target.src = 'https://via.placeholder.com/150?text=No+Image' }}
         />
       </div>
-      <h3 className='truncate font-medium text-gray-800 dark:text-white mb-1'>{data?.name || 'Product Name'}</h3>
-      <p className='text-sm capitalize truncate text-slate-500 dark:text-gray-300 mb-3'>{data?.unit || 'Unit'}</p>
+      <h3 className='truncate font-medium text-charcoal dark:text-white mb-1'>{data?.name || 'Product Name'}</h3>
+      <p className='text-sm capitalize truncate text-slate-500 dark:text-white/55 mb-3'>{data?.unit || 'Unit'}</p>
       <div className='flex gap-2 py-2'>
         <button
           onClick={() => setEditOpen(true)}
@@ -74,15 +74,15 @@ const ProductCardAdmin = ({ data, fetchProductData }) => {
 
       {
         openDelete && (
-          <section className='fixed top-0 left-0 right-0 bottom-0 bg-neutral-600 dark:bg-gray-900/80 z-50 bg-opacity-70 p-4 flex justify-center items-center'>
-            <div className='bg-white dark:bg-gray-800 p-4 w-full max-w-md rounded-md shadow-lg'>
+          <section className='fixed top-0 left-0 right-0 bottom-0 bg-neutral-600 dark:bg-dm-surface/80 z-50 bg-opacity-70 p-4 flex justify-center items-center'>
+            <div className='bg-white dark:bg-dm-card p-4 w-full max-w-md rounded-md shadow-lg'>
               <div className='flex items-center justify-between gap-4'>
-                <h3 className='font-semibold dark:text-gray-100'>Permanent Delete</h3>
-                <button onClick={() => setOpenDelete(false)} className='dark:text-gray-300 hover:dark:bg-gray-700 rounded-full p-1'>
+                <h3 className='font-semibold dark:text-white'>Permanent Delete</h3>
+                <button onClick={() => setOpenDelete(false)} className='dark:text-white/55 hover:dark:bg-dm-card-2 rounded-full p-1'>
                   <IoClose size={25} />
                 </button>
               </div>
-              <p className='my-2 dark:text-gray-300'>Are you sure want to delete permanent ?</p>
+              <p className='my-2 dark:text-white/55'>Are you sure want to delete permanent ?</p>
               <div className='flex justify-end gap-5 py-4'>
                 <button
                   onClick={handleDeleteCancel}

@@ -1407,22 +1407,22 @@ const StaffPOS = () => {
         </div>
       )}
       {/* Header / Toolbar */}
-      <div className="bg-white/90 backdrop-blur dark:bg-gray-800 sticky top-0 z-30 border-b border-gray-200 dark:border-gray-700">
+      <div className="bg-white/90 backdrop-blur dark:bg-dm-card sticky top-0 z-30 border-b border-brown-100 dark:border-dm-border">
         <div className="px-3 sm:px-4 py-3 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <div className="min-w-0">
-            <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">NAWIRI Hair Sales Counter</h1>
-            <p className="text-xs text-gray-600 dark:text-gray-400">{SALES_COUNTER_TITLE} | Seller: {user.name} | Branch: {user.staff_branch || 'Main Store'}</p>
+            <h1 className="text-xl sm:text-2xl font-bold text-charcoal dark:text-white">NAWIRI Hair Sales Counter</h1>
+            <p className="text-xs text-brown-500 dark:text-white/40">{SALES_COUNTER_TITLE} | Seller: {user.name} | Branch: {user.staff_branch || 'Main Store'}</p>
           </div>
           <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-            <button onClick={() => setShowParkedDrawer(true)} className="flex items-center justify-center gap-2 px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 text-sm">
+            <button onClick={() => setShowParkedDrawer(true)} className="flex items-center justify-center gap-2 px-3 py-2 rounded-lg border border-brown-200 dark:border-dm-border hover:bg-ivory dark:hover:bg-dm-card-2 text-sm">
               <FaListUl /> <span className="hidden sm:inline">Held</span>
             </button>
-            <button onClick={() => setShowHelp(true)} className="flex items-center justify-center gap-2 px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 text-sm">
+            <button onClick={() => setShowHelp(true)} className="flex items-center justify-center gap-2 px-3 py-2 rounded-lg border border-brown-200 dark:border-dm-border hover:bg-ivory dark:hover:bg-dm-card-2 text-sm">
               <FaQuestionCircle /> <span className="hidden sm:inline">Help</span>
             </button>
             <div className="min-w-0 flex-1 sm:flex-none text-left sm:text-right">
-              <div className="text-xl sm:text-2xl font-extrabold text-gray-900 dark:text-white">{DisplayPriceInShillings(calculateTotals().total)}</div>
-              <div className="text-xs text-gray-600 dark:text-gray-400">{calculateTotals().itemCount} items</div>
+              <div className="text-xl sm:text-2xl font-extrabold text-charcoal dark:text-white">{DisplayPriceInShillings(calculateTotals().total)}</div>
+              <div className="text-xs text-brown-500 dark:text-white/40">{calculateTotals().itemCount} items</div>
             </div>
             <button onClick={() => setShowPaymentModal(true)} disabled={cart.length===0} className="w-full sm:w-auto px-4 py-2 rounded-lg bg-primary-600 hover:bg-primary-700 text-white font-semibold disabled:opacity-50">
               Charge (F4)
@@ -1435,7 +1435,7 @@ const StaffPOS = () => {
         {/* Left Panel - Products */}
         <div className="flex-1 min-w-0 p-3 sm:p-4 xl:overflow-hidden">
           {/* Search and Scan Row */}
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-3 sm:p-4 mb-4">
+          <div className="bg-white dark:bg-dm-card rounded-xl shadow-sm p-3 sm:p-4 mb-4">
             <div className="grid grid-cols-1 xl:grid-cols-2 gap-3 items-start">
               {/* Product Search */}
               <div className="relative">
@@ -1453,14 +1453,14 @@ const StaffPOS = () => {
               <div className="grid grid-cols-1 sm:grid-cols-[minmax(0,1fr)_auto] gap-2">
                 <div className="flex">
                   <div className="relative flex-1">
-                    <FaBarcode className="absolute left-3 top-3 text-gray-400" />
+                    <FaBarcode className="absolute left-3 top-3 text-brown-400" />
                     <input
                       type="text"
                       placeholder="Scan barcode / QR or enter SKU..."
                       value={barcode}
                       onChange={(e) => setBarcode(e.target.value)}
                       onKeyPress={(e) => e.key === 'Enter' && addByBarcode()}
-                      className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-l-lg focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
+                      className="w-full pl-10 pr-4 py-2 border border-brown-200 dark:border-dm-border rounded-l-lg focus:ring-2 focus:ring-primary-500 dark:bg-dm-card-2 dark:text-white"
                     />
                   </div>
                   <button
@@ -1473,7 +1473,7 @@ const StaffPOS = () => {
                 <button
                   type="button"
                   onClick={openProductScanner}
-                  className="w-full sm:w-auto px-4 py-2 border border-primary-500 text-primary-600 dark:text-primary-300 dark:border-primary-400 rounded-lg hover:bg-primary-50 dark:hover:bg-gray-700 flex items-center justify-center gap-2"
+                  className="w-full sm:w-auto px-4 py-2 border border-primary-500 text-primary-600 dark:text-primary-300 dark:border-primary-400 rounded-lg hover:bg-primary-50 dark:hover:bg-dm-card-2 flex items-center justify-center gap-2"
                 >
                   <FaQrcode />
                   Use Camera
@@ -1481,14 +1481,14 @@ const StaffPOS = () => {
               </div>
             </div>
 
-            <div className="mt-3 flex flex-wrap items-start justify-between gap-2 text-xs text-gray-500 dark:text-gray-400">
+            <div className="mt-3 flex flex-wrap items-start justify-between gap-2 text-xs text-brown-400 dark:text-white/40">
               <p>Search products, type the SKU, or scan a product barcode or QR code directly with the device camera.</p>
               <p>{cameraDetectionAvailable ? 'Live barcode and QR detection are available in supported mobile browsers.' : 'If live detection is unavailable, manual barcode or QR entry still works.'}</p>
             </div>
 
             {/* Category Filter moved below */}
             <div className="mt-4 flex items-center gap-2 overflow-x-auto no-scrollbar">
-              <button onClick={() => setSelectedCategory('all')} className={`px-3 py-2 rounded-full text-sm whitespace-nowrap border ${selectedCategory==='all' ? 'bg-primary-600 text-white border-primary-600' : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-600'}`}>All</button>
+              <button onClick={() => setSelectedCategory('all')} className={`px-3 py-2 rounded-full text-sm whitespace-nowrap border ${selectedCategory==='all' ? 'bg-primary-600 text-white border-primary-600' : 'bg-brown-50 dark:bg-dm-card-2 text-charcoal dark:text-white/55 border-brown-100 dark:border-dm-border'}`}>All</button>
               {categories.map(c => (
                 <button key={c._id} onClick={() => setSelectedCategory(c._id)} className={`px-3 py-1.5 rounded-pill text-sm whitespace-nowrap border transition-colors ${selectedCategory===c._id ? 'bg-plum-700 text-white border-plum-700' : 'bg-blush-50 dark:bg-dm-card-2 text-charcoal dark:text-white/70 border-blush-200 dark:border-dm-border hover:bg-plum-50'}`}>{c.name}</button>
               ))}
@@ -1496,7 +1496,7 @@ const StaffPOS = () => {
           </div>
 
           {/* Products Grid */}
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-3 sm:p-4 min-h-[320px] max-h-[55dvh] xl:h-[calc(100dvh-250px)] xl:max-h-none overflow-y-auto">
+          <div className="bg-white dark:bg-dm-card rounded-xl shadow-sm p-3 sm:p-4 min-h-[320px] max-h-[55dvh] xl:h-[calc(100dvh-250px)] xl:max-h-none overflow-y-auto">
             <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3 sm:gap-4">
               {filteredProducts.map(product => (
                 <div key={product._id} className="group border border-brown-100 dark:border-dm-border rounded-card p-3 hover-lift bg-white dark:bg-dm-card transition-all">
@@ -1507,11 +1507,11 @@ const StaffPOS = () => {
                       <div className="w-full h-full flex items-center justify-center text-brown-200"><FaShoppingCart size={24} /></div>
                     )}
                     <button onClick={() => addToCart(product)} className="absolute bottom-2 right-2 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity px-3 py-1.5 rounded-lg bg-primary-600 text-white text-xs font-medium">Add</button>
-                    <div className="absolute left-2 top-2 bg-white/90 dark:bg-gray-800/80 text-xs px-2 py-1 rounded-md border border-gray-200 dark:border-gray-600">Stock: {product.stock}</div>
+                    <div className="absolute left-2 top-2 bg-white/90 dark:bg-dm-card/80 text-xs px-2 py-1 rounded-md border border-brown-100 dark:border-dm-border">Stock: {product.stock}</div>
                   </div>
-                  <h3 className="font-medium text-sm text-gray-900 dark:text-white line-clamp-2 min-h-[36px]">{product.name}</h3>
+                  <h3 className="font-medium text-sm text-charcoal dark:text-white line-clamp-2 min-h-[36px]">{product.name}</h3>
                   {getProductScanLabel(product) && (
-                    <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                    <p className="mt-1 text-xs text-brown-400 dark:text-white/40">
                       {getProductScanLabel(product).label}: {getProductScanLabel(product).value}
                     </p>
                   )}
@@ -1526,7 +1526,7 @@ const StaffPOS = () => {
         </div>
 
         {/* Right Panel - Cart & Customer */}
-        <div className="w-full xl:w-[360px] xl:min-w-[360px] bg-white dark:bg-gray-800 border-t xl:border-t-0 xl:border-l border-gray-200 dark:border-gray-700 flex flex-col xl:max-h-[calc(100dvh-72px)]">
+        <div className="w-full xl:w-[360px] xl:min-w-[360px] bg-white dark:bg-dm-card border-t xl:border-t-0 xl:border-l border-brown-100 dark:border-dm-border flex flex-col xl:max-h-[calc(100dvh-72px)]">
           {/* Customer Section */}
           <div className="p-4 border-b border-brown-100 dark:border-dm-border">
             <div className="flex items-center justify-between mb-2">
@@ -1595,7 +1595,7 @@ Applied: {discount}% loyalty discount applied to cart
               </div>
             ) : (
               <div>
-                <div className="text-center py-3 text-gray-500 dark:text-gray-400">
+                <div className="text-center py-3 text-brown-400 dark:text-white/40">
                   <FaUser className="mx-auto mb-2" />
                   <p className="text-sm">No customer selected</p>
                 </div>
@@ -1605,14 +1605,14 @@ Applied: {discount}% loyalty discount applied to cart
                     value={walkInName}
                     onChange={(e)=>setWalkInName(e.target.value)}
                     placeholder="Customer name (optional)"
-                    className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white"
+                    className="w-full px-3 py-2 text-sm border border-brown-200 dark:border-dm-border rounded-lg dark:bg-dm-card-2 dark:text-white"
                   />
                   <input
                     type="tel"
                     value={walkInPhone}
                     onChange={(e)=>setWalkInPhone(e.target.value)}
                     placeholder="Phone number (optional)"
-                    className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white"
+                    className="w-full px-3 py-2 text-sm border border-brown-200 dark:border-dm-border rounded-lg dark:bg-dm-card-2 dark:text-white"
                   />
                 </div>
               </div>
@@ -1621,7 +1621,7 @@ Applied: {discount}% loyalty discount applied to cart
 
           {/* Cart Items */}
           <div className="flex-1 overflow-y-auto p-4 min-h-0 max-h-[38dvh] xl:max-h-none">
-            <h3 className="font-semibold text-gray-900 dark:text-white mb-3">Cart Items</h3>
+            <h3 className="font-semibold text-charcoal dark:text-white mb-3">Cart Items</h3>
             {cart.length === 0 ? (
               <div className="text-center py-8 text-brown-300 dark:text-white/30">
                 <FaShoppingCart className="mx-auto mb-2 text-3xl" />
@@ -1643,7 +1643,7 @@ Applied: {discount}% loyalty discount applied to cart
                           <button onClick={() => removeFromCart(item._id)} className="text-blush-400 hover:text-red-500 flex-shrink-0 transition-colors"><FaTrash size={13} /></button>
                         </div>
                         {getProductScanLabel(item) && (
-                          <p className="mb-2 text-xs text-gray-500 dark:text-gray-400">
+                          <p className="mb-2 text-xs text-brown-400 dark:text-white/40">
                             {getProductScanLabel(item).label}: {getProductScanLabel(item).value}
                           </p>
                         )}
@@ -1767,11 +1767,11 @@ Applied: {discount}% loyalty discount applied to cart
 
       {showProductScanner && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl w-full max-w-xl overflow-hidden">
-            <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-700">
+          <div className="bg-white dark:bg-dm-card rounded-2xl shadow-xl w-full max-w-xl overflow-hidden">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-brown-100 dark:border-dm-border">
               <div>
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Scan Product Code</h3>
-                <p className="text-xs text-gray-500 dark:text-gray-400">Use the back camera for the fastest scan.</p>
+                <h3 className="text-lg font-semibold text-charcoal dark:text-white">Scan Product Code</h3>
+                <p className="text-xs text-brown-400 dark:text-white/40">Use the back camera for the fastest scan.</p>
               </div>
               <button
                 onClick={() => {
@@ -1780,14 +1780,14 @@ Applied: {discount}% loyalty discount applied to cart
                   setProductScannerStatus('');
                   stopActiveScanner();
                 }}
-                className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                className="text-brown-400 hover:text-charcoal dark:text-white/40 dark:hover:text-charcoal"
               >
                 <FaTimes />
               </button>
             </div>
 
             <div className="p-4 space-y-4">
-              <div className="aspect-[4/3] rounded-xl overflow-hidden bg-gray-100 dark:bg-gray-700 relative">
+              <div className="aspect-[4/3] rounded-xl overflow-hidden bg-brown-50 dark:bg-dm-card-2 relative">
                 <video
                   ref={productScannerVideoRef}
                   className="w-full h-full object-cover"
@@ -1818,7 +1818,7 @@ Applied: {discount}% loyalty discount applied to cart
                   onChange={(e) => setBarcode(e.target.value)}
                   onKeyPress={(e) => e.key === 'Enter' && addByBarcode()}
                   placeholder="Type or paste barcode / QR / SKU"
-                  className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white"
+                  className="w-full px-3 py-2 text-sm border border-brown-200 dark:border-dm-border rounded-lg dark:bg-dm-card-2 dark:text-white"
                 />
                 <button
                   onClick={() => addByBarcode()}
@@ -1833,13 +1833,13 @@ Applied: {discount}% loyalty discount applied to cart
                     setProductScannerStatus('');
                     stopActiveScanner();
                   }}
-                  className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
+                  className="px-4 py-2 border border-brown-200 dark:border-dm-border rounded-lg text-charcoal dark:text-white/55 hover:bg-ivory dark:hover:bg-dm-card-2"
                 >
                   Close
                 </button>
               </div>
 
-              <p className="text-xs text-gray-500 dark:text-gray-400">
+              <p className="text-xs text-brown-400 dark:text-white/40">
                 Camera scanning works best on HTTPS or localhost and may depend on browser barcode support. Manual entry is always available.
               </p>
             </div>
@@ -1932,14 +1932,14 @@ Applied: {discount}% loyalty discount applied to cart
                   <p className="text-xs text-brown-400 dark:text-white/40 mt-2">
                     Activate camera to scan customer's loyalty card
                   </p>
-                  <p className="mt-1 text-[11px] text-gray-500 dark:text-gray-400">
+                  <p className="mt-1 text-[11px] text-brown-400 dark:text-white/40">
                     Allow camera access when prompted. On unsupported browsers, you can still paste the barcode or QR value below.
                   </p>
                 </div>
               ) : (
                 <div className="space-y-3">
-                  <div className="bg-white dark:bg-gray-700 p-4 rounded-lg">
-                    <div className="aspect-square bg-gray-100 dark:bg-gray-600 rounded-lg flex items-center justify-center relative">
+                  <div className="bg-white dark:bg-dm-card-2 p-4 rounded-lg">
+                    <div className="aspect-square bg-brown-50 dark:bg-dm-card-2 rounded-lg flex items-center justify-center relative">
                       <video 
                         ref={loyaltyScannerVideoRef}
                         className="w-full h-full object-cover rounded-lg"
@@ -1968,7 +1968,7 @@ Applied: {discount}% loyalty discount applied to cart
                         setLoyaltyScannerStatus('');
                         stopActiveScanner();
                       }}
-                      className="flex-1 px-3 py-2 bg-gray-600 text-white rounded hover:bg-gray-700"
+                      className="flex-1 px-3 py-2 bg-brown-500 text-white rounded hover:bg-brown-600"
                     >
                       Cancel
                     </button>
@@ -1978,7 +1978,7 @@ Applied: {discount}% loyalty discount applied to cart
                       value={loyaltyCardNumber}
                       onChange={(e) => setLoyaltyCardNumber(e.target.value)}
                       onKeyPress={(e) => e.key === 'Enter' && loyaltyCardNumber.trim() && scanLoyaltyCard()}
-                      className="flex-1 px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded dark:bg-gray-700 dark:text-white"
+                      className="flex-1 px-3 py-2 text-sm border border-brown-200 dark:border-dm-border rounded dark:bg-dm-card-2 dark:text-white"
                     />
                     <button
                       onClick={scanLoyaltyCard}
@@ -2007,7 +2007,7 @@ Applied: {discount}% loyalty discount applied to cart
                 {customerSearchResults.length > 0 ? (
                   <div className="space-y-2">
                     <div className="flex justify-between items-center mb-3">
-                      <p className="text-sm text-gray-600 dark:text-gray-400">
+                      <p className="text-sm text-brown-500 dark:text-white/40">
                         {customerSearchResults.length} customer{customerSearchResults.length !== 1 ? 's' : ''} found
                       </p>
                       {customerSearch && (
@@ -2033,14 +2033,14 @@ Applied: {discount}% loyalty discount applied to cart
                       setWalkInName('');
                       setWalkInPhone('');
                     }}
-                    className="p-3 border border-gray-200 dark:border-gray-700 rounded-lg mb-2 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                    className="p-3 border border-brown-100 dark:border-dm-border rounded-lg mb-2 cursor-pointer hover:bg-ivory dark:hover:bg-dm-card-2 transition-colors"
                   >
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
-                        <p className="font-medium text-gray-900 dark:text-white">{customerResult.name}</p>
-                        <p className="text-sm text-gray-600 dark:text-gray-400">{customerResult.email}</p>
+                        <p className="font-medium text-charcoal dark:text-white">{customerResult.name}</p>
+                        <p className="text-sm text-brown-500 dark:text-white/40">{customerResult.email}</p>
                         {customerResult.mobile && (
-                          <p className="text-sm text-gray-600 dark:text-gray-400">Phone: {customerResult.mobile}</p>
+                          <p className="text-sm text-brown-500 dark:text-white/40">Phone: {customerResult.mobile}</p>
                         )}
                       </div>
                       <div className="flex flex-col items-end gap-1">
@@ -2055,7 +2055,7 @@ Applied: {discount}% loyalty discount applied to cart
                     ))}
                   </div>
                 ) : !customerSearch.trim() && allCustomers.length === 0 ? (
-                  <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+                  <div className="text-center py-8 text-brown-400 dark:text-white/40">
                     <p className="text-sm">No customers loaded yet</p>
                     <button
                       onClick={loadAllCustomers}
@@ -2183,7 +2183,7 @@ Applied: {discount}% loyalty discount applied to cart
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white dark:bg-dm-card rounded-card shadow-hover p-6 w-[420px] max-w-full mx-4 print:w-[80mm]">
             <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Sales Receipt</h3>
+              <h3 className="text-lg font-semibold text-charcoal dark:text-white">Sales Receipt</h3>
               <button
                 onClick={() => setShowReceiptModal(false)}
                 className="text-brown-300 hover:text-charcoal dark:text-white/40 dark:hover:text-white transition-colors"
@@ -2428,8 +2428,8 @@ Applied: {discount}% loyalty discount applied to cart
           <div className="absolute inset-0 bg-black/50" onClick={()=>setShowParkedDrawer(false)} />
           <div className="absolute right-0 top-0 h-full w-[380px] bg-ivory dark:bg-dm-card p-4 overflow-y-auto scrollbar-hide shadow-hover">
             <div className="flex items-center justify-between mb-3">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{SALES_RECORDS_LABEL} on Hold</h3>
-              <button onClick={()=>setShowParkedDrawer(false)} className="text-gray-500"><FaTimes/></button>
+              <h3 className="text-lg font-semibold text-charcoal dark:text-white">{SALES_RECORDS_LABEL} on Hold</h3>
+              <button onClick={()=>setShowParkedDrawer(false)} className="text-brown-400"><FaTimes/></button>
             </div>
             <div className="mb-3">
               <input

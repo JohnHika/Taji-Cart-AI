@@ -53,7 +53,7 @@ const VerificationSuccess = () => {
         <div className="flex space-x-2">
           <button 
             onClick={() => navigate('/dashboard/staff/pending-pickups')}
-            className="bg-gray-200 dark:bg-gray-700 px-4 py-2 rounded-lg flex items-center text-gray-700 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-600"
+            className="bg-brown-100 dark:bg-dm-card-2 px-4 py-2 rounded-lg flex items-center text-charcoal dark:text-white/70 hover:bg-brown-200 dark:hover:bg-dm-border"
           >
             <FaArrowLeft className="mr-2" /> Back to Pending Pickups
           </button>
@@ -66,76 +66,76 @@ const VerificationSuccess = () => {
         </div>
       </div>
 
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 print:shadow-none print:p-1 max-w-2xl mx-auto">
+      <div className="bg-white dark:bg-dm-card rounded-lg shadow-md p-6 print:shadow-none print:p-1 max-w-2xl mx-auto">
         <div className="text-center mb-6">
           <div className="inline-block p-3 bg-green-100 dark:bg-green-900/30 rounded-full mb-3 print:hidden">
             <FaCheckCircle className="text-4xl text-green-600 dark:text-green-400" />
           </div>
           <h2 className="text-xl font-semibold dark:text-white print:text-black">Order Pickup Complete</h2>
-          <p className="text-gray-600 dark:text-gray-400 print:text-gray-800 mt-1">
+          <p className="text-brown-500 dark:text-white/40 print:text-charcoal mt-1">
             Customer pickup verified and completed
           </p>
         </div>
 
-        <div className="border-t border-gray-200 dark:border-gray-700 print:border-gray-300 pt-4 mb-6">
+        <div className="border-t border-brown-100 dark:border-dm-border print:border-brown-200 pt-4 mb-6">
           <h3 className="font-medium text-lg mb-3 dark:text-white print:text-black">Receipt Details</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <p className="text-gray-600 dark:text-gray-400 print:text-gray-700">Order Number:</p>
+              <p className="text-brown-500 dark:text-white/40 print:text-charcoal">Order Number:</p>
               <p className="font-medium dark:text-white print:text-black">{orderDetails.orderId || 'N/A'}</p>
             </div>
             <div>
-              <p className="text-gray-600 dark:text-gray-400 print:text-gray-700">Customer:</p>
+              <p className="text-brown-500 dark:text-white/40 print:text-charcoal">Customer:</p>
               <p className="font-medium dark:text-white print:text-black">{orderDetails.userId?.name || 'Unknown Customer'}</p>
             </div>
             <div>
-              <p className="text-gray-600 dark:text-gray-400 print:text-gray-700">Date Ordered:</p>
+              <p className="text-brown-500 dark:text-white/40 print:text-charcoal">Date Ordered:</p>
               <p className="font-medium dark:text-white print:text-black">{formatDate(orderDetails.createdAt)}</p>
             </div>
             <div>
-              <p className="text-gray-600 dark:text-gray-400 print:text-gray-700">Pickup Date:</p>
+              <p className="text-brown-500 dark:text-white/40 print:text-charcoal">Pickup Date:</p>
               <p className="font-medium dark:text-white print:text-black">{formatDate(completionData?.verifiedAt || new Date())}</p>
             </div>
             <div>
-              <p className="text-gray-600 dark:text-gray-400 print:text-gray-700">Total Amount:</p>
+              <p className="text-brown-500 dark:text-white/40 print:text-charcoal">Total Amount:</p>
               <p className="font-medium dark:text-white print:text-black">{formatCurrency(orderDetails.totalAmt || 0)}</p>
             </div>
             <div>
-              <p className="text-gray-600 dark:text-gray-400 print:text-gray-700">Verified By:</p>
+              <p className="text-brown-500 dark:text-white/40 print:text-charcoal">Verified By:</p>
               <p className="font-medium dark:text-white print:text-black">{completionData?.verifiedBy || 'Staff Member'}</p>
             </div>
             <div>
-              <p className="text-gray-600 dark:text-gray-400 print:text-gray-700">Location:</p>
+              <p className="text-brown-500 dark:text-white/40 print:text-charcoal">Location:</p>
               <p className="font-medium dark:text-white print:text-black">{orderDetails.pickup_location || 'Main Store'}</p>
             </div>
             <div>
-              <p className="text-gray-600 dark:text-gray-400 print:text-gray-700">Verification Code:</p>
+              <p className="text-brown-500 dark:text-white/40 print:text-charcoal">Verification Code:</p>
               <p className="font-medium font-mono dark:text-white print:text-black">{orderDetails.pickupVerificationCode}</p>
             </div>
           </div>
         </div>
 
         {orderDetails.items && orderDetails.items.length > 0 && (
-          <div className="border-t border-gray-200 dark:border-gray-700 print:border-gray-300 pt-4 mb-6">
+          <div className="border-t border-brown-100 dark:border-dm-border print:border-brown-200 pt-4 mb-6">
             <h3 className="font-medium text-lg mb-3 dark:text-white print:text-black">Items</h3>
             <div className="overflow-x-auto">
               <table className="min-w-full">
                 <thead>
-                  <tr className="border-b border-gray-200 dark:border-gray-700 print:border-gray-300">
-                    <th className="text-left py-2 px-1 text-gray-600 dark:text-gray-400 print:text-gray-700">Item</th>
-                    <th className="text-center py-2 px-1 text-gray-600 dark:text-gray-400 print:text-gray-700">Quantity</th>
-                    <th className="text-right py-2 px-1 text-gray-600 dark:text-gray-400 print:text-gray-700">Price</th>
+                  <tr className="border-b border-brown-100 dark:border-dm-border print:border-brown-200">
+                    <th className="text-left py-2 px-1 text-brown-500 dark:text-white/40 print:text-charcoal">Item</th>
+                    <th className="text-center py-2 px-1 text-brown-500 dark:text-white/40 print:text-charcoal">Quantity</th>
+                    <th className="text-right py-2 px-1 text-brown-500 dark:text-white/40 print:text-charcoal">Price</th>
                   </tr>
                 </thead>
                 <tbody>
                   {orderDetails.items.map((item, index) => (
-                    <tr key={index} className="border-b border-gray-200 dark:border-gray-700 print:border-gray-300">
+                    <tr key={index} className="border-b border-brown-100 dark:border-dm-border print:border-brown-200">
                       <td className="py-2 px-1 dark:text-white print:text-black">{item.product_details?.name || 'Unknown Product'}</td>
                       <td className="py-2 px-1 text-center dark:text-white print:text-black">{item.quantity || 1}</td>
                       <td className="py-2 px-1 text-right dark:text-white print:text-black">{formatCurrency(item.price || 0)}</td>
                     </tr>
                   ))}
-                  <tr className="border-t-2 border-gray-300 dark:border-gray-600 print:border-gray-400">
+                  <tr className="border-t-2 border-brown-200 dark:border-dm-border print:border-brown-300">
                     <td colSpan="2" className="py-2 px-1 text-right font-medium dark:text-white print:text-black">Total:</td>
                     <td className="py-2 px-1 text-right font-medium dark:text-white print:text-black">{formatCurrency(orderDetails.totalAmt || 0)}</td>
                   </tr>
@@ -145,11 +145,11 @@ const VerificationSuccess = () => {
           </div>
         )}
 
-        <div className="text-center print:mt-8 print:border-t print:border-gray-300 print:pt-4">
-          <p className="text-gray-600 dark:text-gray-400 print:text-gray-700 text-sm">
+        <div className="text-center print:mt-8 print:border-t print:border-brown-200 print:pt-4">
+          <p className="text-brown-500 dark:text-white/40 print:text-charcoal text-sm">
             Thank you for shopping with us!
           </p>
-          <p className="text-gray-500 dark:text-gray-500 print:text-gray-600 text-xs mt-1">
+          <p className="text-brown-400 dark:text-brown-400 print:text-brown-500 text-xs mt-1">
             This receipt was generated at {formatDate(new Date())}
           </p>
         </div>

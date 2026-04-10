@@ -21,10 +21,10 @@ const BlockUserModal = ({ isOpen, onClose, user, onSave }) => {
   
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-md relative">
+      <div className="bg-white dark:bg-dm-card rounded-lg p-6 w-full max-w-md relative">
         <button 
           onClick={onClose}
-          className="absolute top-3 right-3 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+          className="absolute top-3 right-3 text-brown-400 hover:text-charcoal dark:text-white/40 dark:hover:text-charcoal"
         >
           <FaTimes size={20} />
         </button>
@@ -34,23 +34,23 @@ const BlockUserModal = ({ isOpen, onClose, user, onSave }) => {
         </h2>
         
         <div className="mb-4">
-          <p className="text-gray-600 dark:text-gray-300">
+          <p className="text-brown-500 dark:text-white/55">
             User: <span className="font-medium">{user?.name || 'Unknown'}</span>
           </p>
-          <p className="text-gray-600 dark:text-gray-300">
+          <p className="text-brown-500 dark:text-white/55">
             Email: <span className="font-medium">{user?.email || 'Unknown'}</span>
           </p>
         </div>
         
         <form onSubmit={handleSubmit}>
           <div className="mb-4">
-            <label className="block text-gray-700 dark:text-gray-300 mb-2">
+            <label className="block text-charcoal dark:text-white/55 mb-2">
               Block Duration:
             </label>
             <select
               value={duration}
               onChange={(e) => setDuration(e.target.value)}
-              className="w-full p-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+              className="w-full p-2 border rounded-lg dark:bg-dm-card-2 dark:border-dm-border dark:text-white"
             >
               <option value="7days">7 Days</option>
               <option value="30days">30 Days</option>
@@ -60,14 +60,14 @@ const BlockUserModal = ({ isOpen, onClose, user, onSave }) => {
           </div>
           
           <div className="mb-6">
-            <label className="block text-gray-700 dark:text-gray-300 mb-2">
+            <label className="block text-charcoal dark:text-white/55 mb-2">
               Reason for Blocking:
             </label>
             <textarea
               value={reason}
               onChange={(e) => setReason(e.target.value)}
               placeholder="Please provide a reason for blocking this user..."
-              className="w-full p-2 border rounded-lg h-24 resize-none dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+              className="w-full p-2 border rounded-lg h-24 resize-none dark:bg-dm-card-2 dark:border-dm-border dark:text-white"
               required
             />
           </div>
@@ -76,7 +76,7 @@ const BlockUserModal = ({ isOpen, onClose, user, onSave }) => {
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-100 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
+              className="px-4 py-2 border border-brown-200 text-charcoal rounded-lg hover:bg-brown-50 dark:border-dm-border dark:text-white/55 dark:hover:bg-dm-card-2"
             >
               Cancel
             </button>

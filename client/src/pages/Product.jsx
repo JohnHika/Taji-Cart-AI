@@ -217,14 +217,14 @@ const DashboardProduct = () => {
   };
 
   return (
-    <div className="p-2 sm:p-4 bg-white dark:bg-gray-900 min-h-screen transition-colors duration-200">
+    <div className="p-2 sm:p-4 bg-white dark:bg-dm-surface min-h-screen transition-colors duration-200">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
         <h1 className="text-xl sm:text-2xl font-bold dark:text-white">Manage Products</h1>
         <div className="flex gap-2">
           {!isMobileView && (
             <button
               onClick={toggleViewMode}
-              className="bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 px-3 py-2 rounded-md flex items-center transition-colors duration-200"
+              className="bg-brown-100 dark:bg-dm-card-2 hover:bg-brown-100 dark:hover:bg-dm-card-2 text-charcoal dark:text-white px-3 py-2 rounded-md flex items-center transition-colors duration-200"
               title={viewMode === 'table' ? 'Switch to Grid View' : 'Switch to Table View'}
             >
               {viewMode === 'table' ? 'Grid View' : 'Table View'}
@@ -241,40 +241,40 @@ const DashboardProduct = () => {
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4 mb-4 sm:mb-6">
-        <div className="bg-white dark:bg-gray-800 p-3 sm:p-4 rounded-lg shadow border-l-4 border-plum-600 dark:border-plum-400 transition-colors duration-200">
-          <p className="text-gray-500 dark:text-gray-400 text-xs sm:text-sm">Total Products</p>
+        <div className="bg-white dark:bg-dm-card p-3 sm:p-4 rounded-lg shadow border-l-4 border-plum-600 dark:border-plum-400 transition-colors duration-200">
+          <p className="text-brown-400 dark:text-white/40 text-xs sm:text-sm">Total Products</p>
           <p className="text-xl sm:text-2xl font-bold dark:text-white">{stats.total}</p>
         </div>
-        <div className="bg-white dark:bg-gray-800 p-3 sm:p-4 rounded-lg shadow border-l-4 border-green-500 dark:border-green-400 transition-colors duration-200">
-          <p className="text-gray-500 dark:text-gray-400 text-xs sm:text-sm">In Stock</p>
+        <div className="bg-white dark:bg-dm-card p-3 sm:p-4 rounded-lg shadow border-l-4 border-green-500 dark:border-green-400 transition-colors duration-200">
+          <p className="text-brown-400 dark:text-white/40 text-xs sm:text-sm">In Stock</p>
           <p className="text-xl sm:text-2xl font-bold dark:text-white">{stats.inStock}</p>
         </div>
-        <div className="bg-white dark:bg-gray-800 p-3 sm:p-4 rounded-lg shadow border-l-4 border-yellow-500 dark:border-yellow-400 transition-colors duration-200">
-          <p className="text-gray-500 dark:text-gray-400 text-xs sm:text-sm">Low Stock</p>
+        <div className="bg-white dark:bg-dm-card p-3 sm:p-4 rounded-lg shadow border-l-4 border-yellow-500 dark:border-yellow-400 transition-colors duration-200">
+          <p className="text-brown-400 dark:text-white/40 text-xs sm:text-sm">Low Stock</p>
           <p className="text-xl sm:text-2xl font-bold dark:text-white">{stats.lowStock}</p>
         </div>
-        <div className="bg-white dark:bg-gray-800 p-3 sm:p-4 rounded-lg shadow border-l-4 border-red-500 dark:border-red-400 transition-colors duration-200">
-          <p className="text-gray-500 dark:text-gray-400 text-xs sm:text-sm">Out of Stock</p>
+        <div className="bg-white dark:bg-dm-card p-3 sm:p-4 rounded-lg shadow border-l-4 border-red-500 dark:border-red-400 transition-colors duration-200">
+          <p className="text-brown-400 dark:text-white/40 text-xs sm:text-sm">Out of Stock</p>
           <p className="text-xl sm:text-2xl font-bold dark:text-white">{stats.outOfStock}</p>
         </div>
       </div>
 
-      <div className="bg-white dark:bg-gray-800 p-3 sm:p-4 rounded-lg shadow mb-4 sm:mb-6 grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-4 transition-colors duration-200">
+      <div className="bg-white dark:bg-dm-card p-3 sm:p-4 rounded-lg shadow mb-4 sm:mb-6 grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-4 transition-colors duration-200">
         <div className="relative">
-          <FaSearch className="absolute left-3 top-3 text-gray-400" />
+          <FaSearch className="absolute left-3 top-3 text-brown-400" />
           <input
             type="text"
             placeholder="Search products..."
-            className="w-full pl-10 pr-4 py-2 border rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:outline-none focus:ring-2 focus:ring-plum-500 transition-colors duration-200"
+            className="w-full pl-10 pr-4 py-2 border rounded-md dark:bg-dm-card-2 dark:border-dm-border dark:text-white focus:outline-none focus:ring-2 focus:ring-plum-500 transition-colors duration-200"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
         
         <div className="relative">
-          <FaFilter className="absolute left-3 top-3 text-gray-400" />
+          <FaFilter className="absolute left-3 top-3 text-brown-400" />
           <select
-            className="w-full pl-10 pr-4 py-2 border rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:outline-none focus:ring-2 focus:ring-plum-500 appearance-none transition-colors duration-200"
+            className="w-full pl-10 pr-4 py-2 border rounded-md dark:bg-dm-card-2 dark:border-dm-border dark:text-white focus:outline-none focus:ring-2 focus:ring-plum-500 appearance-none transition-colors duration-200"
             value={filterCategory}
             onChange={(e) => setFilterCategory(e.target.value)}
           >
@@ -309,16 +309,16 @@ const DashboardProduct = () => {
           {(viewMode === 'grid' || isMobileView) && (
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
               {currentProducts.length === 0 ? (
-                <div className="col-span-full text-center py-10 text-gray-500 dark:text-gray-400">
+                <div className="col-span-full text-center py-10 text-brown-400 dark:text-white/40">
                   No products found
                 </div>
               ) : (
                 currentProducts.map(product => (
                   <div 
                     key={product._id} 
-                    className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden border border-gray-200 dark:border-gray-700 hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1"
+                    className="bg-white dark:bg-dm-card rounded-lg shadow overflow-hidden border border-brown-100 dark:border-dm-border hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1"
                   >
-                    <div className="relative h-48 bg-gray-100 dark:bg-gray-700">
+                    <div className="relative h-48 bg-brown-50 dark:bg-dm-card-2">
                       <img
                         src={product.image && product.image[0] ? product.image[0] : 'https://via.placeholder.com/300'}
                         alt={product.name}
@@ -333,7 +333,7 @@ const DashboardProduct = () => {
                           type="checkbox"
                           checked={selectedProducts.includes(product._id)}
                           onChange={() => handleSelectProduct(product._id)}
-                          className="h-5 w-5 text-plum-600 rounded border-gray-300 focus:ring-plum-500"
+                          className="h-5 w-5 text-plum-600 rounded border-brown-200 focus:ring-plum-500"
                         />
                       </div>
                       
@@ -341,7 +341,7 @@ const DashboardProduct = () => {
                       <div className={`absolute top-2 left-2 text-sm font-bold px-2 py-0.5 rounded-full shadow-sm ${
                         product.discount > 0 
                           ? "bg-red-500 text-white" 
-                          : "bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-300"
+                          : "bg-brown-100 text-charcoal dark:bg-dm-card-2 dark:text-white/55"
                       }`}>
                         {product.discount || 0}% off
                       </div>
@@ -349,7 +349,7 @@ const DashboardProduct = () => {
                     
                     <div className="p-4">
                       <div className="mb-2">
-                        <h3 className="text-md font-medium text-gray-900 dark:text-white truncate">
+                        <h3 className="text-md font-medium text-charcoal dark:text-white truncate">
                           {product.name}
                         </h3>
                         <div className="flex items-center mt-1">
@@ -366,7 +366,7 @@ const DashboardProduct = () => {
                       <div className="flex justify-between items-center mb-3">
                         <div>
                           {/* Always show original price */}
-                          <div className={`${product.discount > 0 ? 'text-xs text-gray-500 dark:text-gray-400 line-through' : 'text-xs text-gray-500 dark:text-gray-400'}`}>
+                          <div className={`${product.discount > 0 ? 'text-xs text-brown-400 dark:text-white/40 line-through' : 'text-xs text-brown-400 dark:text-white/40'}`}>
                             {DisplayPriceInShillings(product.price)}
                           </div>
                           <div className="text-sm font-medium text-green-600 dark:text-green-400">
@@ -414,23 +414,23 @@ const DashboardProduct = () => {
           )}
           
           {viewMode === 'table' && !isMobileView && (
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden transition-colors duration-200">
+            <div className="bg-white dark:bg-dm-card rounded-lg shadow overflow-hidden transition-colors duration-200">
               <div className="overflow-x-auto">
-                <table className="w-full divide-y divide-gray-200 dark:divide-gray-700">
-                  <thead className="bg-gray-50 dark:bg-gray-900">
+                <table className="w-full divide-y divide-brown-100 dark:divide-dm-border">
+                  <thead className="bg-ivory dark:bg-dm-surface">
                     <tr>
                       <th className="px-4 py-3 text-left" width="40">
                         <input
                           type="checkbox"
                           checked={selectedProducts.length === currentProducts.length && currentProducts.length > 0}
                           onChange={handleSelectAll}
-                          className="h-4 w-4 text-plum-600 rounded border-gray-300 focus:ring-plum-500"
+                          className="h-4 w-4 text-plum-600 rounded border-brown-200 focus:ring-plum-500"
                         />
                       </th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider" width="70">
+                      <th className="px-4 py-3 text-left text-xs font-medium text-brown-400 dark:text-white/40 uppercase tracking-wider" width="70">
                         Image
                       </th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer" width="35%">
+                      <th className="px-4 py-3 text-left text-xs font-medium text-brown-400 dark:text-white/40 uppercase tracking-wider cursor-pointer" width="35%">
                         <div className="flex items-center" onClick={() => handleToggleSort('name')}>
                           <span>Name</span>
                           {sortBy === 'name' && (
@@ -438,7 +438,7 @@ const DashboardProduct = () => {
                           )}
                         </div>
                       </th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer" width="15%">
+                      <th className="px-4 py-3 text-left text-xs font-medium text-brown-400 dark:text-white/40 uppercase tracking-wider cursor-pointer" width="15%">
                         <div className="flex items-center" onClick={() => handleToggleSort('category.name')}>
                           <span>Category</span>
                           {sortBy === 'category.name' && (
@@ -446,7 +446,7 @@ const DashboardProduct = () => {
                           )}
                         </div>
                       </th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer" width="15%">
+                      <th className="px-4 py-3 text-left text-xs font-medium text-brown-400 dark:text-white/40 uppercase tracking-wider cursor-pointer" width="15%">
                         <div className="flex items-center" onClick={() => handleToggleSort('price')}>
                           <span>Price</span>
                           {sortBy === 'price' && (
@@ -454,7 +454,7 @@ const DashboardProduct = () => {
                           )}
                         </div>
                       </th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer" width="15%">
+                      <th className="px-4 py-3 text-left text-xs font-medium text-brown-400 dark:text-white/40 uppercase tracking-wider cursor-pointer" width="15%">
                         <div className="flex items-center" onClick={() => handleToggleSort('stock')}>
                           <span>Stock</span>
                           {sortBy === 'stock' && (
@@ -462,31 +462,31 @@ const DashboardProduct = () => {
                           )}
                         </div>
                       </th>
-                      <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider" width="120">
+                      <th className="px-4 py-3 text-right text-xs font-medium text-brown-400 dark:text-white/40 uppercase tracking-wider" width="120">
                         Actions
                       </th>
                     </tr>
                   </thead>
-                  <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                  <tbody className="bg-white dark:bg-dm-card divide-y divide-brown-100 dark:divide-dm-border">
                     {currentProducts.length === 0 ? (
                       <tr>
-                        <td colSpan="7" className="px-4 py-4 text-center text-gray-500 dark:text-gray-400">
+                        <td colSpan="7" className="px-4 py-4 text-center text-brown-400 dark:text-white/40">
                           No products found
                         </td>
                       </tr>
                     ) : (
                       currentProducts.map(product => (
-                        <tr key={product._id} className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-150">
+                        <tr key={product._id} className="hover:bg-ivory dark:hover:bg-dm-card-2 transition-colors duration-150">
                           <td className="px-4 py-4">
                             <input
                               type="checkbox"
                               checked={selectedProducts.includes(product._id)}
                               onChange={() => handleSelectProduct(product._id)}
-                              className="h-4 w-4 text-plum-600 rounded border-gray-300 focus:ring-plum-500"
+                              className="h-4 w-4 text-plum-600 rounded border-brown-200 focus:ring-plum-500"
                             />
                           </td>
                           <td className="px-4 py-4">
-                            <div className="h-12 w-12 bg-gray-100 dark:bg-gray-700 rounded overflow-hidden">
+                            <div className="h-12 w-12 bg-brown-50 dark:bg-dm-card-2 rounded overflow-hidden">
                               <img
                                 src={product.image && product.image[0] ? product.image[0] : 'https://via.placeholder.com/150'}
                                 alt={product.name}
@@ -500,10 +500,10 @@ const DashboardProduct = () => {
                           </td>
                           <td className="px-4 py-4">
                             <div className="max-w-xs">
-                              <div className="text-sm font-medium text-gray-900 dark:text-white truncate" title={product.name}>
+                              <div className="text-sm font-medium text-charcoal dark:text-white truncate" title={product.name}>
                                 {product.name}
                               </div>
-                              <div className="text-xs text-gray-500 dark:text-gray-400">
+                              <div className="text-xs text-brown-400 dark:text-white/40">
                                 ID: {product._id.substring(0, 8)}...
                               </div>
                             </div>
@@ -520,7 +520,7 @@ const DashboardProduct = () => {
                           <td className="px-4 py-4">
                             {product.discount > 0 ? (
                               <>
-                                <div className="text-sm text-gray-500 dark:text-gray-400 line-through">
+                                <div className="text-sm text-brown-400 dark:text-white/40 line-through">
                                   {DisplayPriceInShillings(product.price)}
                                 </div>
                                 <div className="text-sm font-medium text-green-600 dark:text-green-400">
@@ -529,7 +529,7 @@ const DashboardProduct = () => {
                                 </div>
                               </>
                             ) : (
-                              <div className="text-sm text-gray-900 dark:text-white">
+                              <div className="text-sm text-charcoal dark:text-white">
                                 {DisplayPriceInShillings(product.price)}
                               </div>
                             )}
@@ -580,26 +580,26 @@ const DashboardProduct = () => {
           )}
           
           {filteredProducts.length > productsPerPage && (
-            <div className="mt-4 px-4 py-3 flex items-center justify-between border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 rounded-lg shadow">
+            <div className="mt-4 px-4 py-3 flex items-center justify-between border-t border-brown-100 dark:border-dm-border bg-white dark:bg-dm-card rounded-lg shadow">
               <div className="flex-1 flex justify-between sm:hidden">
                 <button
                   onClick={() => setCurrentPage(currentPage > 1 ? currentPage - 1 : 1)}
                   disabled={currentPage === 1}
-                  className="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:hover:bg-gray-600"
+                  className="relative inline-flex items-center px-4 py-2 border border-brown-200 text-sm font-medium rounded-md text-charcoal bg-white hover:bg-ivory disabled:opacity-50 disabled:cursor-not-allowed dark:bg-dm-card-2 dark:border-dm-border dark:text-white dark:hover:bg-dm-border"
                 >
                   Previous
                 </button>
                 <button
                   onClick={() => setCurrentPage(currentPage < totalPages ? currentPage + 1 : totalPages)}
                   disabled={currentPage === totalPages}
-                  className="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:hover:bg-gray-600"
+                  className="ml-3 relative inline-flex items-center px-4 py-2 border border-brown-200 text-sm font-medium rounded-md text-charcoal bg-white hover:bg-ivory disabled:opacity-50 disabled:cursor-not-allowed dark:bg-dm-card-2 dark:border-dm-border dark:text-white dark:hover:bg-dm-border"
                 >
                   Next
                 </button>
               </div>
               <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
                 <div>
-                  <p className="text-sm text-gray-700 dark:text-gray-300">
+                  <p className="text-sm text-charcoal dark:text-white/55">
                     Showing <span className="font-medium">{indexOfFirstProduct + 1}</span> to <span className="font-medium">{Math.min(indexOfLastProduct, filteredProducts.length)}</span> of{' '}
                     <span className="font-medium">{filteredProducts.length}</span> results
                   </p>

@@ -106,15 +106,15 @@ const OrderDetailModal = ({ order, onClose, onStatusChange }) => {
   const isInDeliveryProcess = ['driver_assigned', 'out_for_delivery', 'nearby'].includes(order.status);
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-      <div className="bg-white dark:bg-gray-800 rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-        <div className="flex items-start justify-between gap-3 p-4 sm:p-6 border-b dark:border-gray-700">
-          <h2 className="text-lg sm:text-xl font-bold dark:text-white">
-            Order Details: {order.orderId || order._id.substring(order._id.length - 8)}
+    <div className="fixed inset-0 bg-plum-900/60 z-50 flex items-center justify-center p-3 sm:p-4">
+      <div className="bg-white dark:bg-dm-card rounded-card border border-brown-100 dark:border-dm-border max-w-4xl w-full max-h-[92dvh] overflow-y-auto shadow-xl">
+        <div className="flex items-start justify-between gap-3 p-4 sm:p-6 border-b border-brown-100 dark:border-dm-border">
+          <h2 className="text-base sm:text-xl font-bold text-charcoal dark:text-white">
+            Order: {order.orderId || order._id.substring(order._id.length - 8)}
           </h2>
-          <button 
+          <button
             onClick={onClose}
-            className="text-gray-500 hover:text-gray-700 dark:text-gray-300 dark:hover:text-white"
+            className="text-brown-400 hover:text-charcoal dark:text-white/50 dark:hover:text-white transition-colors shrink-0"
           >
             <FaTimes size={20} />
           </button>
@@ -150,7 +150,7 @@ const OrderDetailModal = ({ order, onClose, onStatusChange }) => {
             
             {order.status !== 'delivered' && order.status !== 'cancelled' && (
               <select
-                className="w-full sm:w-auto border p-2 rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                className="w-full sm:w-auto border border-brown-200 dark:border-dm-border p-2 rounded-lg bg-white dark:bg-dm-card text-charcoal dark:text-white text-sm"
                 value={order.status}
                 onChange={handleStatusChange}
               >
@@ -187,7 +187,7 @@ const OrderDetailModal = ({ order, onClose, onStatusChange }) => {
                       </div>
                     ) : (
                       <select
-                        className="w-full border border-plum-300 dark:border-plum-700 rounded-md p-2 bg-white dark:bg-gray-700 text-gray-800 dark:text-white"
+                        className="w-full border border-plum-300 dark:border-plum-700 rounded-md p-2 bg-white dark:bg-dm-card text-charcoal dark:text-white"
                         value={selectedDriver}
                         onChange={(e) => setSelectedDriver(e.target.value)}
                       >
@@ -215,9 +215,9 @@ const OrderDetailModal = ({ order, onClose, onStatusChange }) => {
           
           {/* Order Status and Payment */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="border dark:border-gray-700 p-4 rounded-lg">
+            <div className="border border-brown-100 dark:border-dm-border p-4 rounded-lg">
               <h3 className="font-medium mb-3 flex items-center">
-                <FaChartBar className="mr-2 text-gray-600 dark:text-gray-400" /> Order Status History
+                <FaChartBar className="mr-2 text-brown-400 dark:text-white/40" /> Order Status History
               </h3>
               {order.statusHistory && order.statusHistory.length > 0 ? (
                 <ul className="space-y-2">
@@ -236,7 +236,7 @@ const OrderDetailModal = ({ order, onClose, onStatusChange }) => {
                         <p className="font-medium">
                           {status.status.charAt(0).toUpperCase() + status.status.slice(1).replace('_', ' ')}
                         </p>
-                        <p className="text-sm text-gray-500 dark:text-gray-400">
+                        <p className="text-sm text-brown-400 dark:text-white/40">
                           {typeof format === 'function'
                             ? format(new Date(status.timestamp), 'PPP p')
                             : formatDate(status.timestamp)}
@@ -246,7 +246,7 @@ const OrderDetailModal = ({ order, onClose, onStatusChange }) => {
                   ))}
                 </ul>
               ) : (
-                <div className="flex items-center space-x-2 text-gray-600 dark:text-gray-400">
+                <div className="flex items-center space-x-2 text-brown-500 dark:text-white/55">
                   <span className="w-3 h-3 rounded-full inline-block bg-yellow-500"></span>
                   <p className="font-medium">{order.status.charAt(0).toUpperCase() + order.status.slice(1).replace('_', ' ')}</p>
                   <p className="text-sm">
@@ -258,19 +258,19 @@ const OrderDetailModal = ({ order, onClose, onStatusChange }) => {
               )}
             </div>
             
-            <div className="border dark:border-gray-700 p-4 rounded-lg">
+            <div className="border border-brown-100 dark:border-dm-border p-4 rounded-lg">
               <h3 className="font-medium mb-3 flex items-center">
-                <FaFileInvoiceDollar className="mr-2 text-gray-600 dark:text-gray-400" /> Payment Details
+                <FaFileInvoiceDollar className="mr-2 text-brown-400 dark:text-white/40" /> Payment Details
               </h3>
               <div className="space-y-2">
                 <p>
-                  <span className="text-gray-600 dark:text-gray-400">Payment Method:</span>{" "}
+                  <span className="text-brown-500 dark:text-white/55">Payment Method:</span>{" "}
                   <span className="font-medium dark:text-white">
                     {order.paymentMethod || (order.payment_status === 'paid' ? 'Online Payment' : 'Cash on Delivery')}
                   </span>
                 </p>
                 <p>
-                  <span className="text-gray-600 dark:text-gray-400">Payment Status:</span>{" "}
+                  <span className="text-brown-500 dark:text-white/55">Payment Status:</span>{" "}
                   <span className={`font-medium ${
                     order.paymentStatus === 'paid' || order.payment_status === 'paid' 
                     ? 'text-green-600 dark:text-green-400' 
@@ -281,13 +281,13 @@ const OrderDetailModal = ({ order, onClose, onStatusChange }) => {
                 </p>
                 {order.paymentDetails && order.paymentDetails.transactionId && (
                   <p>
-                    <span className="text-gray-600 dark:text-gray-400">Transaction ID:</span>{" "}
+                    <span className="text-brown-500 dark:text-white/55">Transaction ID:</span>{" "}
                     <span className="font-medium dark:text-white">{order.paymentDetails.transactionId}</span>
                   </p>
                 )}
                 {order.paymentDetails && order.paymentDetails.paymentDate ? (
                   <p>
-                    <span className="text-gray-600 dark:text-gray-400">Payment Date:</span>{" "}
+                    <span className="text-brown-500 dark:text-white/55">Payment Date:</span>{" "}
                     <span className="font-medium dark:text-white">
                       {typeof format === 'function'
                         ? format(new Date(order.paymentDetails.paymentDate), 'PPP')
@@ -296,7 +296,7 @@ const OrderDetailModal = ({ order, onClose, onStatusChange }) => {
                   </p>
                 ) : order.paymentStatus === 'paid' || order.payment_status === 'paid' ? (
                   <p>
-                    <span className="text-gray-600 dark:text-gray-400">Payment Date:</span>{" "}
+                    <span className="text-brown-500 dark:text-white/55">Payment Date:</span>{" "}
                     <span className="font-medium dark:text-white">
                       {typeof format === 'function'
                         ? format(new Date(order.updatedAt || order.createdAt), 'PPP')
@@ -305,7 +305,7 @@ const OrderDetailModal = ({ order, onClose, onStatusChange }) => {
                   </p>
                 ) : null}
                 <p>
-                  <span className="text-gray-600 dark:text-gray-400">Total Amount:</span>{" "}
+                  <span className="text-brown-500 dark:text-white/55">Total Amount:</span>{" "}
                   <span className="font-medium dark:text-white">
                     KSh {Number(order.totalAmt || order.totalPrice || 0).toLocaleString()}
                   </span>
@@ -316,7 +316,7 @@ const OrderDetailModal = ({ order, onClose, onStatusChange }) => {
           
           {/* Delivery Tracking Section - Enhanced with driver info */}
           {isInDeliveryProcess && (
-            <div className="border dark:border-gray-700 p-4 rounded-lg bg-plum-50 dark:bg-plum-900/20">
+            <div className="border border-plum-200 dark:border-plum-800/40 p-4 rounded-lg bg-plum-50 dark:bg-plum-900/20">
               <h3 className="font-medium mb-3 flex items-center text-plum-900 dark:text-plum-200">
                 <FaMapMarkerAlt className="mr-2" /> Delivery Tracking
               </h3>
@@ -324,26 +324,26 @@ const OrderDetailModal = ({ order, onClose, onStatusChange }) => {
               {order.deliveryDetails ? (
                 <div className="space-y-4">
                   {/* Driver Information */}
-                  <div className="bg-white dark:bg-gray-800 p-3 rounded-md border border-plum-200 dark:border-plum-800">
+                  <div className="bg-white dark:bg-dm-card-2 p-3 rounded-md border border-plum-200 dark:border-plum-800">
                     <h4 className="font-medium flex items-center mb-2">
                       <FaUserAlt className="mr-2 text-plum-600 dark:text-plum-300" /> Driver Information
                     </h4>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                      <p><span className="text-gray-600 dark:text-gray-400">Name:</span> {order.deliveryDetails.driver?.name || 'Not assigned yet'}</p>
-                      <p><span className="text-gray-600 dark:text-gray-400">Phone:</span> {order.deliveryDetails.driver?.phone || 'N/A'}</p>
-                      <p><span className="text-gray-600 dark:text-gray-400">Vehicle:</span> {order.deliveryDetails.driver?.vehicleType || 'N/A'}</p>
-                      <p><span className="text-gray-600 dark:text-gray-400">License:</span> {order.deliveryDetails.driver?.licenseNumber || 'N/A'}</p>
+                      <p><span className="text-brown-500 dark:text-white/55">Name:</span> {order.deliveryDetails.driver?.name || 'Not assigned yet'}</p>
+                      <p><span className="text-brown-500 dark:text-white/55">Phone:</span> {order.deliveryDetails.driver?.phone || 'N/A'}</p>
+                      <p><span className="text-brown-500 dark:text-white/55">Vehicle:</span> {order.deliveryDetails.driver?.vehicleType || 'N/A'}</p>
+                      <p><span className="text-brown-500 dark:text-white/55">License:</span> {order.deliveryDetails.driver?.licenseNumber || 'N/A'}</p>
                     </div>
                   </div>
-                  
+
                   {/* Location Information */}
-                  <div className="bg-white dark:bg-gray-800 p-3 rounded-md border border-plum-200 dark:border-plum-800">
+                  <div className="bg-white dark:bg-dm-card-2 p-3 rounded-md border border-plum-200 dark:border-plum-800">
                     <h4 className="font-medium flex items-center mb-2">
                       <FaMotorcycle className="mr-2 text-plum-600 dark:text-plum-300" /> Delivery Status
                     </h4>
                     <div className="space-y-2">
                       <p>
-                        <span className="text-gray-600 dark:text-gray-400">Current Status:</span> 
+                        <span className="text-brown-500 dark:text-white/55">Current Status:</span> 
                         <span className="ml-2 px-2 py-1 rounded-full text-xs font-medium bg-plum-100 text-plum-800 dark:bg-plum-800 dark:text-plum-200">
                           {order.status.charAt(0).toUpperCase() + order.status.slice(1).replace('_', ' ')}
                         </span>
@@ -351,7 +351,7 @@ const OrderDetailModal = ({ order, onClose, onStatusChange }) => {
                       
                       {order.deliveryDetails.estimatedDeliveryTime && (
                         <p>
-                          <span className="text-gray-600 dark:text-gray-400">Estimated Delivery:</span> 
+                          <span className="text-brown-500 dark:text-white/55">Estimated Delivery:</span> 
                           {typeof format === 'function'
                             ? format(new Date(order.deliveryDetails.estimatedDeliveryTime), 'PPP p')
                             : formatDate(order.deliveryDetails.estimatedDeliveryTime)}
@@ -360,7 +360,7 @@ const OrderDetailModal = ({ order, onClose, onStatusChange }) => {
                       
                       {order.deliveryDetails.currentLocation && (
                         <div>
-                          <p className="text-gray-600 dark:text-gray-400 mb-1">Current Location:</p>
+                          <p className="text-brown-500 dark:text-white/55 mb-1">Current Location:</p>
                           <div className="bg-plum-50 dark:bg-plum-900/30 p-2 rounded-md">
                             {order.deliveryDetails.currentLocation.address || 
                              `${order.deliveryDetails.currentLocation.coordinates[1]}, ${order.deliveryDetails.currentLocation.coordinates[0]}`}
@@ -372,52 +372,52 @@ const OrderDetailModal = ({ order, onClose, onStatusChange }) => {
                   
                   {/* Driver Notes */}
                   {order.deliveryDetails.notes && (
-                    <div className="bg-white dark:bg-gray-800 p-3 rounded-md border border-plum-200 dark:border-plum-800">
+                    <div className="bg-white dark:bg-dm-card-2 p-3 rounded-md border border-plum-200 dark:border-plum-800">
                       <h4 className="font-medium flex items-center mb-2">
                         <FaInfoCircle className="mr-2 text-plum-600 dark:text-plum-300" /> Delivery Notes
                       </h4>
-                      <p className="text-gray-700 dark:text-gray-300">{order.deliveryDetails.notes}</p>
+                      <p className="text-charcoal dark:text-white/80">{order.deliveryDetails.notes}</p>
                     </div>
                   )}
                 </div>
               ) : (
-                <p className="text-gray-500 dark:text-gray-400">No delivery details available yet</p>
+                <p className="text-brown-400 dark:text-white/40">No delivery details available yet</p>
               )}
             </div>
           )}
           
           {/* Customer Information */}
-          <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
+          <div className="bg-ivory dark:bg-dm-card-2 p-4 rounded-lg">
             <h3 className="font-medium mb-3 dark:text-white">Customer Information</h3>
             <div className="flex flex-wrap gap-6">
               <div className="flex-1 min-w-[250px]">
                 <div className="text-sm space-y-2">
                   <div>
-                    <span className="text-gray-600 dark:text-gray-300">Name:</span>
+                    <span className="text-brown-500 dark:text-white/55">Name:</span>
                     <span className="ml-2 font-medium dark:text-white">{order.userId?.name || 'Not Available'}</span>
                   </div>
                   <div>
-                    <span className="text-gray-600 dark:text-gray-300">Email:</span>
+                    <span className="text-brown-500 dark:text-white/55">Email:</span>
                     <span className="ml-2 dark:text-white">{order.userId?.email || 'Not Available'}</span>
                   </div>
                   <div>
-                    <span className="text-gray-600 dark:text-gray-300">Phone:</span>
+                    <span className="text-brown-500 dark:text-white/55">Phone:</span>
                     <span className="ml-2 dark:text-white">{order.userId?.mobile || order.delivery_address?.phoneNumber || 'Not Available'}</span>
                   </div>
                 </div>
               </div>
-              
+
               <div className="flex-1 min-w-[250px]">
                 <h4 className="text-sm font-medium mb-2 dark:text-white flex items-center">
-                  <FaMapMarkerAlt className="mr-2 text-gray-600 dark:text-gray-400" /> 
+                  <FaMapMarkerAlt className="mr-2 text-brown-400 dark:text-white/40" /> 
                   {order.fulfillment_type === 'pickup' ? 'Pickup Location' : 'Shipping Address'}
                 </h4>
-                <div className="text-sm dark:text-gray-300 bg-white dark:bg-gray-750 p-3 rounded-md">
+                <div className="text-sm dark:text-white/70 bg-white dark:bg-dm-card p-3 rounded-md">
                   {order.fulfillment_type === 'pickup' ? (
                     <div>
                       <p className="font-medium">{order.pickup_location}</p>
                       {order.pickup_instructions && (
-                        <div className="mt-2 text-xs bg-gray-50 dark:bg-gray-800 p-2 rounded-md">
+                        <div className="mt-2 text-xs bg-ivory dark:bg-dm-card-2 p-2 rounded-md">
                           <span className="font-medium">Instructions:</span> {order.pickup_instructions}
                         </div>
                       )}
@@ -449,7 +449,7 @@ const OrderDetailModal = ({ order, onClose, onStatusChange }) => {
                   ) : order.deliveryAddress ? (
                     <p>{order.deliveryAddress}</p>
                   ) : (
-                    <p className="italic text-gray-500 dark:text-gray-400">
+                    <p className="italic text-brown-400 dark:text-white/40">
                       {order.status === 'cancelled' ? 'Order was cancelled' : 'Address to be confirmed'}
                     </p>
                   )}
@@ -523,17 +523,17 @@ const OrderDetailModal = ({ order, onClose, onStatusChange }) => {
           {/* Order Items */}
           <div>
             <h3 className="font-medium mb-3 dark:text-white">Order Items</h3>
-            <div className="border dark:border-gray-700 rounded-lg overflow-hidden">
-              <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                <thead className="bg-gray-50 dark:bg-gray-800">
+            <div className="border border-brown-100 dark:border-dm-border rounded-lg overflow-hidden">
+              <table className="min-w-full divide-y divide-brown-100 dark:divide-dm-border">
+                <thead className="bg-ivory dark:bg-dm-card-2">
                   <tr>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Product</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Price</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Quantity</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Total</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-brown-400 dark:text-white/40 uppercase tracking-wider">Product</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-brown-400 dark:text-white/40 uppercase tracking-wider">Price</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-brown-400 dark:text-white/40 uppercase tracking-wider">Quantity</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-brown-400 dark:text-white/40 uppercase tracking-wider">Total</th>
                   </tr>
                 </thead>
-                <tbody className="bg-white dark:bg-gray-700 divide-y divide-gray-200 dark:divide-gray-600">
+                <tbody className="bg-white dark:bg-dm-card divide-y divide-brown-100 dark:divide-dm-border">
                   {order.product_details ? (
                     <tr>
                       <td className="px-4 py-3 whitespace-nowrap">
@@ -550,10 +550,10 @@ const OrderDetailModal = ({ order, onClose, onStatusChange }) => {
                           </div>
                         </div>
                       </td>
-                      <td className="px-4 py-3 whitespace-nowrap dark:text-gray-300">
+                      <td className="px-4 py-3 whitespace-nowrap dark:text-white/70">
                         KSh {Number(order.totalAmt / (order.quantity || 1)).toLocaleString()}
                       </td>
-                      <td className="px-4 py-3 whitespace-nowrap dark:text-gray-300">
+                      <td className="px-4 py-3 whitespace-nowrap dark:text-white/70">
                         {order.quantity || 1}
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap font-medium dark:text-white">
@@ -577,10 +577,10 @@ const OrderDetailModal = ({ order, onClose, onStatusChange }) => {
                             </div>
                           </div>
                         </td>
-                        <td className="px-4 py-3 whitespace-nowrap dark:text-gray-300">
+                        <td className="px-4 py-3 whitespace-nowrap dark:text-white/70">
                           KSh {Number(item.price / item.quantity).toLocaleString()}
                         </td>
-                        <td className="px-4 py-3 whitespace-nowrap dark:text-gray-300">
+                        <td className="px-4 py-3 whitespace-nowrap dark:text-white/70">
                           {item.quantity}
                         </td>
                         <td className="px-4 py-3 whitespace-nowrap font-medium dark:text-white">
@@ -590,21 +590,21 @@ const OrderDetailModal = ({ order, onClose, onStatusChange }) => {
                     ))
                   ) : (
                     <tr>
-                      <td colSpan="4" className="px-4 py-3 text-center text-gray-500 dark:text-gray-400">
+                      <td colSpan="4" className="px-4 py-3 text-center text-brown-400 dark:text-white/40">
                         No product details available
                       </td>
                     </tr>
                   )}
                 </tbody>
-                <tfoot className="bg-gray-50 dark:bg-gray-800">
+                <tfoot className="bg-ivory dark:bg-dm-card-2">
                   <tr>
-                    <td colSpan="3" className="px-4 py-2 text-right text-sm dark:text-gray-300">Subtotal:</td>
+                    <td colSpan="3" className="px-4 py-2 text-right text-sm dark:text-white/70">Subtotal:</td>
                     <td className="px-4 py-2 font-medium dark:text-white">
                       KSh {Number(order.subTotalAmt || order.subTotal || 0).toLocaleString()}
                     </td>
                   </tr>
                   <tr>
-                    <td colSpan="3" className="px-4 py-2 text-right text-sm dark:text-gray-300">Shipping:</td>
+                    <td colSpan="3" className="px-4 py-2 text-right text-sm dark:text-white/70">Shipping:</td>
                     <td className="px-4 py-2 font-medium dark:text-white">
                       KSh {Number(order.shippingPrice || 0).toLocaleString()}
                     </td>
@@ -624,28 +624,28 @@ const OrderDetailModal = ({ order, onClose, onStatusChange }) => {
           {order.statusHistory && order.statusHistory.length > 0 && (
             <div>
               <h3 className="font-medium mb-3 dark:text-white">Status History</h3>
-              <div className="border dark:border-gray-700 rounded-lg overflow-hidden">
-                <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                  <thead className="bg-gray-50 dark:bg-gray-800">
+              <div className="border border-brown-100 dark:border-dm-border rounded-lg overflow-hidden">
+                <table className="min-w-full divide-y divide-brown-100 dark:divide-dm-border">
+                  <thead className="bg-ivory dark:bg-dm-card-2">
                     <tr>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Status</th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Timestamp</th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Note</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-brown-400 dark:text-white/40 uppercase tracking-wider">Status</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-brown-400 dark:text-white/40 uppercase tracking-wider">Timestamp</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-brown-400 dark:text-white/40 uppercase tracking-wider">Note</th>
                     </tr>
                   </thead>
-                  <tbody className="bg-white dark:bg-gray-700 divide-y divide-gray-200 dark:divide-gray-600">
+                  <tbody className="bg-white dark:bg-dm-card divide-y divide-brown-100 dark:divide-dm-border">
                     {order.statusHistory.map((status, index) => (
                       <tr key={index}>
                         <td className="px-4 py-3 dark:text-white">
                           {status.status.charAt(0).toUpperCase() + status.status.slice(1).replace('_', ' ')}
                         </td>
-                        <td className="px-4 py-3 dark:text-gray-300">
+                        <td className="px-4 py-3 dark:text-white/70">
                           {typeof format === 'function'
                             ? format(new Date(status.timestamp), 'PPP p')
                             : formatDate(status.timestamp)
                           }
                         </td>
-                        <td className="px-4 py-3 dark:text-gray-300">{status.note || '-'}</td>
+                        <td className="px-4 py-3 dark:text-white/70">{status.note || '-'}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -655,10 +655,10 @@ const OrderDetailModal = ({ order, onClose, onStatusChange }) => {
           )}
         </div>
         
-        <div className="border-t dark:border-gray-700 p-6 flex justify-end gap-3">
+        <div className="border-t border-brown-100 dark:border-dm-border p-6 flex justify-end gap-3">
           <button
             onClick={onClose}
-            className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white rounded hover:bg-gray-300 dark:hover:bg-gray-600"
+            className="px-4 py-2 bg-brown-100 dark:bg-dm-card-2 text-charcoal dark:text-white rounded-pill hover:bg-brown-200 dark:hover:bg-dm-border transition-colors"
           >
             Close
           </button>
@@ -758,7 +758,7 @@ const OrderStatistics = ({ orders }) => {
   const totalRevenue = onlineRevenue + posRevenue;
 
   const statItems = [
-    { label: 'Total Orders', value: total, color: 'bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-white' },
+    { label: 'Total Orders', value: total, color: 'bg-brown-50 dark:bg-dm-card-2 text-charcoal dark:text-white' },
     { label: 'Pending', value: pending, color: 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300' },
     { label: 'Processing', value: processing, color: 'bg-plum-100 dark:bg-plum-900/30 text-plum-800 dark:text-plum-200' },
     { label: 'Shipped', value: shipped, color: 'bg-plum-100 dark:bg-plum-900/30 text-plum-800 dark:text-plum-200' },
@@ -1000,7 +1000,7 @@ const AllOrdersAdmin = () => {
   
   const getStatusColor = (status) => {
     if (!status) {
-      return 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'; // Default color for unknown status
+      return 'bg-brown-50 text-charcoal dark:bg-dm-card-2 dark:text-white/70'; // Default color for unknown status
     }
     
     switch (status) {
@@ -1021,7 +1021,7 @@ const AllOrdersAdmin = () => {
       case 'POS':
         return 'bg-plum-100 text-plum-800 dark:bg-plum-900/30 dark:text-plum-200';
       default:
-        return 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300';
+        return 'bg-brown-50 text-charcoal dark:bg-dm-card-2 dark:text-white/70';
     }
   };
   
@@ -1112,7 +1112,7 @@ const AllOrdersAdmin = () => {
           <div className="mb-6 flex justify-end">
             <button 
               onClick={() => setShowStatistics(false)}
-              className="text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 flex items-center text-sm"
+              className="text-brown-500 dark:text-white/55 hover:text-charcoal dark:hover:text-white flex items-center text-sm"
             >
               <FaTimes className="mr-1" /> Hide Statistics
             </button>
@@ -1139,7 +1139,7 @@ const AllOrdersAdmin = () => {
             className={`px-3 py-1.5 text-sm font-medium rounded-full 
               ${activeTab === 'all' ? 
                 'bg-plum-700 text-white' : 
-                'bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white hover:bg-gray-300 dark:hover:bg-gray-600'}`}
+                'bg-brown-100 dark:bg-dm-card-2 text-charcoal dark:text-white hover:bg-brown-200 dark:hover:bg-dm-border'}`}
             onClick={() => { setActiveTab('all'); setCurrentPage(1); }}
           >
             All Orders
@@ -1148,7 +1148,7 @@ const AllOrdersAdmin = () => {
             className={`px-3 py-1.5 text-sm font-medium rounded-full 
               ${activeTab === 'pending' ? 
                 'bg-yellow-500 text-white' : 
-                'bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white hover:bg-gray-300 dark:hover:bg-gray-600'}`}
+                'bg-brown-100 dark:bg-dm-card-2 text-charcoal dark:text-white hover:bg-brown-200 dark:hover:bg-dm-border'}`}
             onClick={() => { setActiveTab('pending'); setCurrentPage(1); }}
           >
             Pending
@@ -1157,7 +1157,7 @@ const AllOrdersAdmin = () => {
             className={`px-3 py-1.5 text-sm font-medium rounded-full 
               ${activeTab === 'processing' ? 
                 'bg-plum-500 text-white' : 
-                'bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white hover:bg-gray-300 dark:hover:bg-gray-600'}`}
+                'bg-brown-100 dark:bg-dm-card-2 text-charcoal dark:text-white hover:bg-brown-200 dark:hover:bg-dm-border'}`}
             onClick={() => { setActiveTab('processing'); setCurrentPage(1); }}
           >
             Processing
@@ -1166,7 +1166,7 @@ const AllOrdersAdmin = () => {
             className={`px-3 py-1.5 text-sm font-medium rounded-full 
               ${activeTab === 'shipped' ? 
                 'bg-plum-700 text-white' : 
-                'bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white hover:bg-gray-300 dark:hover:bg-gray-600'}`}
+                'bg-brown-100 dark:bg-dm-card-2 text-charcoal dark:text-white hover:bg-brown-200 dark:hover:bg-dm-border'}`}
             onClick={() => { setActiveTab('shipped'); setCurrentPage(1); }}
           >
             Shipped
@@ -1175,7 +1175,7 @@ const AllOrdersAdmin = () => {
             className={`px-3 py-1.5 text-sm font-medium rounded-full 
               ${activeTab === 'in-transit' ? 
                 'bg-purple-500 text-white' : 
-                'bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white hover:bg-gray-300 dark:hover:bg-gray-600'}`}
+                'bg-brown-100 dark:bg-dm-card-2 text-charcoal dark:text-white hover:bg-brown-200 dark:hover:bg-dm-border'}`}
             onClick={() => { setActiveTab('in-transit'); setCurrentPage(1); }}
           >
             In Transit
@@ -1184,7 +1184,7 @@ const AllOrdersAdmin = () => {
             className={`px-3 py-1.5 text-sm font-medium rounded-full 
               ${activeTab === 'delivered' ? 
                 'bg-green-500 text-white' : 
-                'bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white hover:bg-gray-300 dark:hover:bg-gray-600'}`}
+                'bg-brown-100 dark:bg-dm-card-2 text-charcoal dark:text-white hover:bg-brown-200 dark:hover:bg-dm-border'}`}
             onClick={() => { setActiveTab('delivered'); setCurrentPage(1); }}
           >
             Delivered
@@ -1193,7 +1193,7 @@ const AllOrdersAdmin = () => {
             className={`px-3 py-1.5 text-sm font-medium rounded-full 
               ${activeTab === 'cancelled' ? 
                 'bg-red-500 text-white' : 
-                'bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white hover:bg-gray-300 dark:hover:bg-gray-600'}`}
+                'bg-brown-100 dark:bg-dm-card-2 text-charcoal dark:text-white hover:bg-brown-200 dark:hover:bg-dm-border'}`}
             onClick={() => { setActiveTab('cancelled'); setCurrentPage(1); }}
           >
             Cancelled
@@ -1202,7 +1202,7 @@ const AllOrdersAdmin = () => {
             className={`px-3 py-1.5 text-sm font-medium rounded-full 
               ${activeTab === 'POS' ? 
                 'bg-plum-700 text-white' : 
-                'bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white hover:bg-gray-300 dark:hover:bg-gray-600'}`}
+                'bg-brown-100 dark:bg-dm-card-2 text-charcoal dark:text-white hover:bg-brown-200 dark:hover:bg-dm-border'}`}
             onClick={() => { setActiveTab('POS'); setCurrentPage(1); }}
           >
             Counter Sales
@@ -1219,7 +1219,7 @@ const AllOrdersAdmin = () => {
               className={`p-2 rounded-md ${
                 viewMode === 'table' 
                   ? 'bg-plum-700 text-white' 
-                  : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-white'
+                  : 'bg-brown-100 dark:bg-dm-card-2 text-charcoal dark:text-white'
               }`}
               aria-label="Table view"
             >
@@ -1230,7 +1230,7 @@ const AllOrdersAdmin = () => {
               className={`p-2 rounded-md ${
                 viewMode === 'grid' 
                   ? 'bg-plum-700 text-white' 
-                  : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-white'
+                  : 'bg-brown-100 dark:bg-dm-card-2 text-charcoal dark:text-white'
               }`}
               aria-label="Grid view"
             >
@@ -1242,7 +1242,7 @@ const AllOrdersAdmin = () => {
             {/* Fulfillment Filter Dropdown */}
             <div className="relative">
               <select
-                className="w-full border border-gray-300 dark:border-gray-600 rounded-md p-2 pr-8 bg-white dark:bg-gray-700 text-gray-800 dark:text-white"
+                className="w-full border border-brown-200 dark:border-dm-border rounded-md p-2 pr-8 bg-white dark:bg-dm-card text-charcoal dark:text-white"
                 value={fulfillmentFilter}
                 onChange={(e) => { setFulfillmentFilter(e.target.value); setCurrentPage(1); }}
               >
@@ -1254,11 +1254,11 @@ const AllOrdersAdmin = () => {
             
             {/* Search Box */}
             <div className="relative flex items-center">
-              <FaSearch className="absolute left-3 text-gray-400" />
+              <FaSearch className="absolute left-3 text-brown-300 dark:text-white/30" />
               <input
                 type="text"
                 placeholder="Search orders..."
-                className="w-full min-w-0 pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-plum-500 dark:bg-gray-700 dark:text-white xl:min-w-[260px]"
+                className="w-full min-w-0 pl-10 pr-4 py-2 border border-brown-200 dark:border-dm-border rounded-md focus:outline-none focus:ring-2 focus:ring-plum-500 bg-white dark:bg-dm-card text-charcoal dark:text-white xl:min-w-[260px]"
                 value={searchTerm}
                 onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
               />
@@ -1277,35 +1277,35 @@ const AllOrdersAdmin = () => {
       
       {/* Table View */}
       {viewMode === 'table' && (
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
+        <div className="bg-white dark:bg-dm-card rounded-lg shadow overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-              <thead className="bg-gray-50 dark:bg-gray-900">
+            <table className="min-w-full divide-y divide-brown-100 dark:divide-dm-border">
+              <thead className="bg-ivory dark:bg-dm-card-2">
                 <tr>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Order</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Customer</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Date</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Status</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Total</th>
-                  <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Action</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-brown-400 dark:text-white/40 uppercase tracking-wider">Order</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-brown-400 dark:text-white/40 uppercase tracking-wider">Customer</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-brown-400 dark:text-white/40 uppercase tracking-wider">Date</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-brown-400 dark:text-white/40 uppercase tracking-wider">Status</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-brown-400 dark:text-white/40 uppercase tracking-wider">Total</th>
+                  <th className="px-4 py-3 text-center text-xs font-medium text-brown-400 dark:text-white/40 uppercase tracking-wider">Action</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+              <tbody className="divide-y divide-brown-100 dark:divide-dm-border">
                 {loading ? (
                   <tr>
-                    <td colSpan="6" className="px-4 py-4 text-center text-gray-500 dark:text-gray-400">
+                    <td colSpan="6" className="px-4 py-4 text-center text-brown-400 dark:text-white/40">
                       <FaSpinner className="animate-spin inline mr-2" /> Loading orders...
                     </td>
                   </tr>
                 ) : currentOrders.length === 0 ? (
                   <tr>
-                    <td colSpan="6" className="px-4 py-4 text-center text-gray-500 dark:text-gray-400">
+                    <td colSpan="6" className="px-4 py-4 text-center text-brown-400 dark:text-white/40">
                       No orders found
                     </td>
                   </tr>
                 ) : (
                   currentOrders.map(order => (
-                    <tr key={order._id} className="hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer" onClick={() => setSelectedOrder(order)}>
+                    <tr key={order._id} className="hover:bg-ivory dark:hover:bg-dm-card-2 cursor-pointer" onClick={() => setSelectedOrder(order)}>
                       {/* Order ID column with type badge */}
                       <td className="px-4 py-3">
                         <div className="flex items-center">
@@ -1315,7 +1315,7 @@ const AllOrdersAdmin = () => {
                           }`}></span>
                           <div>
                             <div className="text-sm font-medium dark:text-white">{order.orderId || order._id?.substring(order._id.length - 8)}</div>
-                            <div className="text-xs text-gray-500 dark:text-gray-400">
+                            <div className="text-xs text-brown-400 dark:text-white/40">
                               {getFulfillmentType(order)}
                               {order.cashier && <span className="ml-1">• {order.cashier}</span>}
                             </div>
@@ -1328,10 +1328,10 @@ const AllOrdersAdmin = () => {
                         <div className="text-sm font-medium dark:text-white truncate max-w-[150px]">
                           {order.customer?.name || order.userId?.name || 'N/A'}
                         </div>
-                        <div className="text-xs text-gray-500 dark:text-gray-400 truncate max-w-[150px]">
+                        <div className="text-xs text-brown-400 dark:text-white/40 truncate max-w-[150px]">
                           {order.customer?.email || order.userId?.email || 'No email'}
                         </div>
-                        <div className="text-xs text-gray-500 dark:text-gray-400 truncate max-w-[150px]">
+                        <div className="text-xs text-brown-400 dark:text-white/40 truncate max-w-[150px]">
                           {order.customer?.phone || order.userId?.mobile || order.delivery_address?.phoneNumber || 'No phone'}
                         </div>
                       </td>
@@ -1341,15 +1341,15 @@ const AllOrdersAdmin = () => {
                         <div className="text-sm dark:text-white">
                           {format(new Date(order.saleDate || order.createdAt), 'dd MMM yyyy')}
                         </div>
-                        <div className="text-xs text-gray-500 dark:text-gray-400">
+                        <div className="text-xs text-brown-400 dark:text-white/40">
                           {format(new Date(order.saleDate || order.createdAt), 'HH:mm')}
                         </div>
                       </td>
-                      
+
                       {/* Status column with badge */}
                       <td className="px-4 py-3 whitespace-nowrap">
                         {renderStatusBadge(order.status)}
-                        <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                        <div className="text-xs text-brown-400 dark:text-white/40 mt-1">
                           {(order.payment_status || order.paymentStatus || 'pending').toUpperCase()}
                         </div>
                       </td>
@@ -1385,17 +1385,17 @@ const AllOrdersAdmin = () => {
           {loading ? (
             <div className="col-span-full flex justify-center py-8">
               <FaSpinner className="animate-spin text-2xl text-plum-600" />
-              <span className="ml-2 text-gray-600 dark:text-gray-300">Loading orders...</span>
+              <span className="ml-2 text-brown-500 dark:text-white/55">Loading orders...</span>
             </div>
           ) : currentOrders.length === 0 ? (
-            <div className="col-span-full text-center py-8 text-gray-500 dark:text-gray-400">
+            <div className="col-span-full text-center py-8 text-brown-400 dark:text-white/40">
               No orders found
             </div>
           ) : (
             currentOrders.map(order => (
               <div 
                 key={order._id} 
-                className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden cursor-pointer hover:shadow-md transition-shadow"
+                className="bg-white dark:bg-dm-card rounded-lg shadow overflow-hidden cursor-pointer hover:shadow-md transition-shadow"
                 onClick={() => setSelectedOrder(order)}
               >
                 {/* Card Header with Status */}
@@ -1430,7 +1430,7 @@ const AllOrdersAdmin = () => {
                   <div className="flex justify-between items-start mb-3">
                     <div>
                       <div className="text-base font-medium dark:text-white">#{order.orderId || order._id?.substring(order._id.length - 8)}</div>
-                      <div className="text-xs text-gray-500 dark:text-gray-400">
+                      <div className="text-xs text-brown-400 dark:text-white/40">
                         {format(new Date(order.saleDate || order.createdAt), 'dd MMM yyyy')}
                       </div>
                     </div>
@@ -1444,16 +1444,16 @@ const AllOrdersAdmin = () => {
                     <div className="text-sm font-medium dark:text-white truncate" title={order.customer?.name || order.userId?.name || 'N/A'}>
                       {order.customer?.name || order.userId?.name || 'N/A'}
                     </div>
-                    <div className="text-xs text-gray-500 dark:text-gray-400 truncate" title={order.customer?.email || order.userId?.email || 'No email'}>
+                    <div className="text-xs text-brown-400 dark:text-white/40 truncate" title={order.customer?.email || order.userId?.email || 'No email'}>
                       {order.customer?.email || order.userId?.email || 'No email'}
                     </div>
-                    <div className="text-xs text-gray-500 dark:text-gray-400 truncate" title={order.customer?.phone || order.userId?.mobile || order.delivery_address?.phoneNumber || 'No phone'}>
+                    <div className="text-xs text-brown-400 dark:text-white/40 truncate" title={order.customer?.phone || order.userId?.mobile || order.delivery_address?.phoneNumber || 'No phone'}>
                       {order.customer?.phone || order.userId?.mobile || order.delivery_address?.phoneNumber || 'No phone'}
                     </div>
                   </div>
                   
                   {/* Payment Status */}
-                  <div className="flex items-center text-xs text-gray-500 dark:text-gray-400 mb-3">
+                  <div className="flex items-center text-xs text-brown-400 dark:text-white/40 mb-3">
                     <span className={`inline-block w-2 h-2 rounded-full mr-1 ${
                       order.payment_status === 'paid' || order.paymentStatus === 'paid' ? 
                       'bg-green-500' : 'bg-yellow-500'
@@ -1463,7 +1463,7 @@ const AllOrdersAdmin = () => {
                 </div>
                 
                 {/* Card Footer */}
-                <div className="border-t dark:border-gray-700 p-3 bg-gray-50 dark:bg-gray-750 flex justify-end">
+                <div className="border-t border-brown-100 dark:border-dm-border p-3 bg-ivory dark:bg-dm-card-2 flex justify-end">
                   <button 
                     className="px-3 py-1 bg-plum-100 text-plum-700 dark:bg-plum-900/30 dark:text-plum-200 rounded hover:bg-plum-200 dark:hover:bg-plum-800/60 text-sm"
                     onClick={(e) => { e.stopPropagation(); setSelectedOrder(order); }}
@@ -1480,12 +1480,12 @@ const AllOrdersAdmin = () => {
       {/* Pagination */}
       {filteredOrders.length > 0 && (
         <div className="flex flex-col sm:flex-row justify-between items-center mt-6 gap-4">
-          <div className="text-sm text-gray-500 dark:text-gray-400">
+          <div className="text-sm text-brown-400 dark:text-white/40">
             Showing {indexOfFirstOrder + 1}-{Math.min(indexOfLastOrder, filteredOrders.length)} of {filteredOrders.length} orders
           </div>
           <div className="flex space-x-2">
             <button
-              className="px-3 py-1 rounded bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 disabled:opacity-50"
+              className="px-3 py-1 rounded bg-brown-100 dark:bg-dm-card-2 text-charcoal dark:text-white/80 disabled:opacity-50"
               disabled={currentPage === 1}
               onClick={() => setCurrentPage(currentPage - 1)}
             >
@@ -1511,7 +1511,7 @@ const AllOrdersAdmin = () => {
                     className={`px-3 py-1 rounded ${
                       pageNumber === currentPage ? 
                         'bg-plum-700 text-white' : 
-                        'bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200'
+                        'bg-brown-100 dark:bg-dm-card-2 text-charcoal dark:text-white/80'
                     }`}
                     onClick={() => setCurrentPage(pageNumber)}
                   >
@@ -1523,7 +1523,7 @@ const AllOrdersAdmin = () => {
               }
             })}
             <button
-              className="px-3 py-1 rounded bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 disabled:opacity-50"
+              className="px-3 py-1 rounded bg-brown-100 dark:bg-dm-card-2 text-charcoal dark:text-white/80 disabled:opacity-50"
               disabled={currentPage === totalPages}
               onClick={() => setCurrentPage(currentPage + 1)}
             >

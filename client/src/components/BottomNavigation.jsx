@@ -59,7 +59,7 @@ const BottomNavigation = () => {
   if (hiddenRoutes.includes(location.pathname)) return null;
 
   return (
-    <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40 border-t border-gray-200/80 bg-white/95 shadow-[0_-8px_30px_rgba(15,23,42,0.08)] backdrop-blur dark:border-gray-700/80 dark:bg-gray-800/95 safe-area-bottom">
+    <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40 border-t border-brown-100/80 bg-white/95 shadow-[0_-8px_30px_rgba(15,23,42,0.08)] backdrop-blur dark:border-dm-border/80 dark:bg-dm-card/95 safe-area-bottom">
       <div className={`grid items-center gap-0.5 px-1 py-1.5 ${navItems.length >= 6 ? 'grid-cols-6' : 'grid-cols-5'}`}>
         {navItems.map((item, index) => {
           const Icon = item.icon;
@@ -70,7 +70,7 @@ const BottomNavigation = () => {
               className={`relative flex min-w-0 flex-col items-center justify-center rounded-2xl px-0.5 py-2 transition-all ${
                 item.active
                   ? 'bg-primary-50 text-primary-200 dark:bg-primary-900/20'
-                  : 'text-gray-500 dark:text-gray-400 hover:bg-gray-50 hover:text-primary-200 dark:hover:bg-gray-700/60'
+                  : 'text-brown-400 dark:text-white/40 hover:bg-ivory hover:text-primary-200 dark:hover:bg-dm-card-2/60'
               }`}
             >
               <div className="relative mb-1">

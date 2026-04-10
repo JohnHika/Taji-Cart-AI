@@ -46,6 +46,9 @@ const HomeProductShelf = ({
       </div>
 
       <div className="relative">
+        {/* Right-edge fade cue visible on mobile/tablet to hint at horizontal scroll */}
+        <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-10 bg-gradient-to-l from-ivory dark:from-dm-surface lg:hidden" />
+
         <div
           ref={containerRef}
           className="flex gap-3 overflow-x-auto scroll-smooth pb-2 scrollbar-hide sm:gap-4"
@@ -61,7 +64,7 @@ const HomeProductShelf = ({
           <button
             type="button"
             onClick={() => scrollByAmount(-260)}
-            className="pointer-events-auto rounded-full border border-brown-200 bg-white p-2 text-plum-700 shadow-md transition-colors hover:bg-plum-50 dark:border-dm-border dark:bg-dm-card dark:text-plum-200 dark:hover:bg-plum-900/30"
+            className="pointer-events-auto -ml-3 rounded-full border border-brown-200 bg-white p-2 text-plum-700 shadow-md transition-colors hover:bg-plum-50 dark:border-dm-border dark:bg-dm-card dark:text-plum-200 dark:hover:bg-plum-900/30"
             aria-label={`Scroll ${title} left`}
           >
             <FaAngleLeft />
@@ -72,7 +75,7 @@ const HomeProductShelf = ({
           <button
             type="button"
             onClick={() => scrollByAmount(260)}
-            className="pointer-events-auto rounded-full border border-brown-200 bg-white p-2 text-plum-700 shadow-md transition-colors hover:bg-plum-50 dark:border-dm-border dark:bg-dm-card dark:text-plum-200 dark:hover:bg-plum-900/30"
+            className="pointer-events-auto -mr-3 rounded-full border border-brown-200 bg-white p-2 text-plum-700 shadow-md transition-colors hover:bg-plum-50 dark:border-dm-border dark:bg-dm-card dark:text-plum-200 dark:hover:bg-plum-900/30"
             aria-label={`Scroll ${title} right`}
           >
             <FaAngleRight />

@@ -167,7 +167,7 @@ const UserProfileAvatarEdit = ({close}) => {
 
     return (
         <section className='fixed top-0 bottom-0 left-0 right-0 bg-neutral-900 bg-opacity-60 p-4 flex items-center justify-center z-50'>
-            <div className='bg-white dark:bg-gray-800 max-w-md w-full rounded p-6 flex flex-col items-center justify-center'>
+            <div className='bg-white dark:bg-dm-card max-w-md w-full rounded p-6 flex flex-col items-center justify-center'>
                 <button onClick={close} className='text-neutral-800 dark:text-white w-fit block ml-auto'>
                     <IoClose size={20}/>
                 </button>
@@ -183,12 +183,12 @@ const UserProfileAvatarEdit = ({close}) => {
                                     className='w-full h-full object-cover'
                                 />
                             ) : (
-                                <FaRegUserCircle size={65} className="text-gray-400 dark:text-gray-300"/>
+                                <FaRegUserCircle size={65} className="text-brown-400 dark:text-white/55"/>
                             )}
                         </div>
-                        <p className="text-sm text-gray-600 dark:text-gray-300 mb-4 text-center">
+                        <p className="text-sm text-brown-500 dark:text-white/55 mb-4 text-center">
                             Upload a new profile picture<br/>
-                            <span className="text-xs text-gray-500">Supported formats: JPEG, PNG, GIF (Max 5MB)</span>
+                            <span className="text-xs text-brown-400">Supported formats: JPEG, PNG, GIF (Max 5MB)</span>
                         </p>
                         <form className="w-full">
                             <label htmlFor='uploadProfile' className="w-full flex justify-center">
@@ -227,7 +227,7 @@ const UserProfileAvatarEdit = ({close}) => {
                         
                         {/* Zoom Control */}
                         <div className="w-full px-4 mb-4">
-                            <label className="block text-sm text-gray-600 dark:text-gray-300 mb-1">
+                            <label className="block text-sm text-brown-500 dark:text-white/55 mb-1">
                                 Zoom
                             </label>
                             <input
@@ -237,7 +237,7 @@ const UserProfileAvatarEdit = ({close}) => {
                                 step={0.1}
                                 value={zoom}
                                 onChange={(e) => setZoom(parseFloat(e.target.value))}
-                                className="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer"
+                                className="w-full h-2 bg-brown-100 dark:bg-dm-card-2 rounded-lg appearance-none cursor-pointer"
                             />
                         </div>
                         
@@ -249,7 +249,7 @@ const UserProfileAvatarEdit = ({close}) => {
                                     setShowCropper(false)
                                     setSelectedFile(null)
                                 }}
-                                className="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 flex-1"
+                                className="px-4 py-2 border border-brown-200 dark:border-dm-border text-charcoal dark:text-white/55 rounded-md hover:bg-ivory dark:hover:bg-dm-card-2 flex-1"
                                 disabled={loading}
                             >
                                 Cancel

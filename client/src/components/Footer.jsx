@@ -62,7 +62,7 @@ const Footer = () => {
                 href={nawiriBrand.tiktokUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-gray-900 transition-colors hover:text-gray-700 dark:text-white"
+                className="text-charcoal transition-colors hover:text-charcoal dark:text-white"
                 aria-label="TikTok"
               >
                 <FaTiktok />

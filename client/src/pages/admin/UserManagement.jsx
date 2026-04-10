@@ -92,7 +92,7 @@ const UserProfile = ({ user, currentUser, handleRoleChange, selectedRole }) => {
         <div className="user-info-container">
             {/* Existing user info */}
             <h2 className="text-xl font-bold">{user.name}</h2>
-            <p className="text-gray-600">{user.email}</p>
+            <p className="text-brown-500 dark:text-white/55">{user.email}</p>
 
             {/* Add account type */}
             <div className="account-type-container mt-2">
@@ -109,7 +109,7 @@ const UserProfile = ({ user, currentUser, handleRoleChange, selectedRole }) => {
 
             {/* User role management dropdown */}
             <div className="role-management-container mt-4">
-                <label htmlFor="role-select" className="block text-sm font-medium text-gray-700">
+                <label htmlFor="role-select" className="block text-sm font-medium text-charcoal dark:text-white">
                     Manage Role:
                 </label>
                 <select

@@ -13,7 +13,7 @@ const statusColors = {
   shipped: 'bg-plum-100 text-plum-800 border-plum-200',
   delivered: 'bg-green-100 text-green-800 border-green-200',
   cancelled: 'bg-red-100 text-red-800 border-red-200',
-  default: 'bg-gray-100 text-gray-800 border-gray-200'
+  default: 'bg-brown-50 text-charcoal border-brown-100'
 }
 
 const OrderStatusBadge = ({ status }) => {
@@ -116,35 +116,33 @@ const MyOrders = () => {
                 className="bg-white dark:bg-dm-card rounded-card border border-brown-100 dark:border-dm-border shadow-hover overflow-hidden transition-all hover:shadow-lg"
               >
                 {/* Order header */}
-                <div className="p-4 border-b border-brown-100 dark:border-dm-border bg-plum-50/40 dark:bg-plum-900/20 flex flex-col md:flex-row justify-between gap-3">
-                  <div>
-                    <div className="flex items-center gap-2 mb-1">
-                      <FaBox className="text-plum-600 dark:text-plum-300" />
-                      <span className="font-medium text-charcoal dark:text-white">Order #{order?.orderId}</span>
-                      
-                      {/* Fulfillment type badge */}
-                      <span className={`ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                        order.fulfillment_type === 'delivery' 
+                <div className="p-4 border-b border-brown-100 dark:border-dm-border bg-plum-50/40 dark:bg-plum-900/20 flex flex-col sm:flex-row justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-2 mb-1">
+                      <FaBox className="text-plum-600 dark:text-plum-300 shrink-0" />
+                      <span className="font-medium text-charcoal dark:text-white truncate">Order #{order?.orderId}</span>
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium shrink-0 ${
+                        order.fulfillment_type === 'delivery'
                           ? 'bg-plum-100 text-plum-800 dark:bg-plum-900 dark:text-plum-200'
                           : 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200'
                       }`}>
-                        {order.fulfillment_type === 'delivery' 
+                        {order.fulfillment_type === 'delivery'
                           ? <><FaTruck className="mr-1" size={10} /> Delivery</>
                           : <><FaStore className="mr-1" size={10} /> Pickup</>
                         }
                       </span>
                     </div>
-                    <div className="flex items-center gap-2 text-sm text-brown-600 dark:text-white/50">
-                      <FaCalendarAlt />
+                    <div className="flex items-center gap-2 text-xs sm:text-sm text-brown-600 dark:text-white/50">
+                      <FaCalendarAlt className="shrink-0" />
                       <span>Placed on {formatDate(order?.createdAt)}</span>
                     </div>
                   </div>
-                  <div className="flex items-center gap-3">
+                  <div className="flex flex-wrap items-center gap-2 sm:gap-3">
                     <OrderStatusBadge status={order?.status} />
                     {order.status !== 'delivered' && order.status !== 'cancelled' && (
-                      <Link 
-                        to={`/order-tracking/${order._id}`} 
-                        className="inline-flex items-center gap-2 px-4 py-2 bg-plum-700 hover:bg-plum-600 text-white rounded-pill text-sm transition-colors font-medium"
+                      <Link
+                        to={`/order-tracking/${order._id}`}
+                        className="inline-flex items-center gap-2 px-3 py-1.5 sm:px-4 sm:py-2 bg-plum-700 hover:bg-plum-600 text-white rounded-pill text-xs sm:text-sm transition-colors font-medium"
                         aria-label={`Track order ${order.orderId || order._id}`}
                       >
                         <FaTruck /> Track Order
@@ -152,39 +150,36 @@ const MyOrders = () => {
                     )}
                   </div>
                 </div>
-                
+
                 {/* Order content */}
                 <div className="p-4">
-                  {/* Product information */}
-                  <div className="flex flex-col md:flex-row gap-4 mb-4 pb-4 border-b border-brown-100 dark:border-dm-border">
-                    <div className="flex-shrink-0">
+                  {/* Product information — always row on mobile (image + text side by side) */}
+                  <div className="flex gap-3 mb-4 pb-4 border-b border-brown-100 dark:border-dm-border">
+                    <div className="shrink-0">
                       <img
-                        src={order.product_details.image[0]} 
-                        className="w-20 h-20 object-cover rounded"
+                        src={order.product_details.image[0]}
+                        className="w-16 h-16 sm:w-20 sm:h-20 object-cover rounded-lg border border-brown-100 dark:border-dm-border"
                         alt={order.product_details.name}
                       />
                     </div>
-                    <div className="flex-grow">
-                      <h3 className="font-medium text-charcoal dark:text-white mb-1">{order.product_details.name}</h3>
-                      <p className="text-sm text-brown-600 dark:text-white/55 mb-2">
-                        {order.product_details.description ? 
-                          order.product_details.description.substring(0, 100) + '...' : 
-                          'No description available'}
+                    <div className="flex-grow min-w-0">
+                      <h3 className="font-medium text-sm sm:text-base text-charcoal dark:text-white mb-1 line-clamp-2">{order.product_details.name}</h3>
+                      <p className="text-xs text-brown-600 dark:text-white/55 mb-1 line-clamp-2 hidden sm:block">
+                        {order.product_details.description
+                          ? order.product_details.description.substring(0, 100) + '...'
+                          : 'No description available'}
                       </p>
-                      <div className="flex items-center gap-1 text-sm">
-                        <span className="text-brown-600 dark:text-white/50">Quantity:</span>
-                        <span className="text-charcoal dark:text-white/80">{order.quantity || 1}</span>
-                      </div>
-                    </div>
-                    <div className="flex-shrink-0 text-right">
-                      <div className="text-lg font-semibold text-charcoal dark:text-white">
-                        KSh {order.product_details.price?.toLocaleString() || 'N/A'}
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-xs text-brown-600 dark:text-white/50">Qty: <span className="text-charcoal dark:text-white/80 font-medium">{order.quantity || 1}</span></span>
+                        <span className="text-sm font-semibold text-charcoal dark:text-white">
+                          KSh {order.product_details.price?.toLocaleString() || 'N/A'}
+                        </span>
                       </div>
                     </div>
                   </div>
-                  
+
                   {/* Order details and payment info */}
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 text-sm">
                     <div className="bg-plum-50/50 dark:bg-plum-900/15 p-3 rounded-card border border-brown-100/80 dark:border-dm-border">
                       <div className="flex items-center gap-2 mb-2 text-charcoal dark:text-white/85 font-medium">
                         <FaMoneyBillWave className="text-green-600" />

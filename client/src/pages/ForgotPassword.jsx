@@ -53,40 +53,43 @@ const ForgotPassword = () => {
     }
 
     return (
-        <section 
-            className='w-full min-h-screen flex items-center justify-center py-8 px-2 transition-colors duration-200 bg-gray-50 dark:bg-gray-900' 
-        >
-            <div className='bg-white dark:bg-gray-800 my-4 w-full max-w-lg mx-auto rounded p-7 shadow-lg transition-colors duration-200'>
-                <p className='font-semibold text-lg dark:text-white transition-colors duration-200'>Forgot Password</p>
-                <form className='grid gap-4 py-4' onSubmit={handleSubmit}>
-                    <div className='grid gap-1'>
-                        <label htmlFor='email' className="dark:text-gray-200 transition-colors duration-200">Email:</label>
-                        <div className='bg-plum-50 dark:bg-dm-card p-2 border dark:border-dm-border rounded flex items-center focus-within:border-plum-500 dark:focus-within:border-plum-400 transition-colors duration-200'>
+        <section className='w-full min-h-screen flex items-center justify-center py-8 px-3 sm:px-4 bg-ivory dark:bg-dm-surface transition-colors'>
+            <div className='bg-white dark:bg-dm-card border border-brown-100 dark:border-dm-border my-4 w-full max-w-md mx-auto rounded-card p-6 sm:p-8 shadow-card transition-colors'>
+                <h1 className='font-bold text-xl text-charcoal dark:text-white mb-1'>Forgot Password</h1>
+                <p className='text-sm text-brown-400 dark:text-white/50 mb-5'>Enter your email and we'll send a verification code.</p>
+                <form className='flex flex-col gap-4' onSubmit={handleSubmit}>
+                    <div className='flex flex-col gap-1.5'>
+                        <label htmlFor='email' className="text-sm font-medium text-charcoal dark:text-white/80">Email address</label>
+                        <div className='flex items-center gap-2 bg-blush-100 dark:bg-dm-card border border-blush-200 dark:border-dm-border rounded-card px-3 py-2.5 focus-within:border-plum-500 focus-within:ring-1 focus-within:ring-plum-500/20 transition-all'>
                             <input
                                 type='email'
                                 id='email'
-                                className='w-full outline-none bg-transparent dark:text-white transition-colors duration-200'
+                                className='flex-1 bg-transparent outline-none text-sm text-charcoal dark:text-white placeholder:text-brown-300 dark:placeholder:text-white/30'
                                 name='email'
                                 value={data.email}
                                 onChange={handleChange}
-                                placeholder='Enter your email'
+                                placeholder='you@example.com'
+                                autoComplete='email'
                             />
-                            <div className='text-gray-500 dark:text-gray-400 transition-colors duration-200'>
-                                <FaEnvelope />
-                            </div>
+                            <FaEnvelope className='text-brown-300 dark:text-white/30 shrink-0' size={14} />
                         </div>
                     </div>
-             
-                    <button 
-                        disabled={!valideValue} 
-                        className={`${valideValue ? "bg-green-800 hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-600" : "bg-gray-500 dark:bg-gray-600"} text-white py-2 rounded font-semibold my-3 tracking-wide transition-colors duration-200`}
+
+                    <button
+                        disabled={!valideValue}
+                        className={`w-full py-3 rounded-pill font-semibold text-sm transition-all duration-200 press mt-1 ${
+                            valideValue
+                                ? 'bg-gold-500 hover:bg-gold-400 text-charcoal shadow-sm hover:shadow-gold'
+                                : 'bg-brown-100 dark:bg-dm-card-2 text-brown-300 dark:text-white/20 cursor-not-allowed'
+                        }`}
                     >
                         Send OTP
                     </button>
                 </form>
 
-                <p className="dark:text-gray-300 transition-colors duration-200">
-                    Already have account? <Link to={"/login"} className='font-semibold text-green-700 dark:text-green-400 hover:text-green-800 dark:hover:text-green-300 transition-colors duration-200'>Login</Link>
+                <p className="mt-6 text-sm text-brown-400 dark:text-white/50 text-center">
+                    Remember your password?{' '}
+                    <Link to="/login" className='font-semibold text-plum-700 dark:text-plum-200 hover:underline underline-offset-2'>Sign in</Link>
                 </p>
             </div>
         </section>

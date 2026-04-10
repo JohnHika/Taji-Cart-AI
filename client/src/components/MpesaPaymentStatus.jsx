@@ -22,10 +22,10 @@ const MpesaPaymentStatus = () => {
           </svg>
         </div>
         <h2 className="text-2xl font-bold mb-2">Payment Processing</h2>
-        <p className="text-gray-600 mb-6">
+        <p className="text-brown-500 mb-6">
           We've sent an M-Pesa payment request to your phone. Please check your phone and enter your PIN to complete the payment.
         </p>
-        <p className="text-sm text-gray-500 mb-4">
+        <p className="text-sm text-brown-400 mb-4">
           You will be redirected to your orders page shortly.
         </p>
         <button

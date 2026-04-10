@@ -439,11 +439,11 @@ const ProductDisplayPage = () => {
                   <div className="space-y-2">
                     {data.more_details && Object.keys(data.more_details).length > 0 ? (
                       Object.entries(data.more_details).map(([key, value]) => (
-                        <div key={key} className="flex gap-3 py-1.5 border-b border-brown-50 dark:border-dm-border last:border-0">
-                          <span className="font-semibold text-charcoal dark:text-white/70 w-36 shrink-0 capitalize">
+                        <div key={key} className="flex flex-col xs:flex-row gap-1 xs:gap-3 py-1.5 border-b border-brown-50 dark:border-dm-border last:border-0">
+                          <span className="font-semibold text-charcoal dark:text-white/70 xs:w-32 sm:w-36 shrink-0 capitalize text-xs sm:text-sm">
                             {key.replace(/_/g, ' ')}
                           </span>
-                          <span className="text-brown-500 dark:text-white/60">{value}</span>
+                          <span className="text-brown-500 dark:text-white/60 text-xs sm:text-sm">{value}</span>
                         </div>
                       ))
                     ) : (
@@ -600,7 +600,7 @@ const ProductDisplayPage = () => {
           <h2 className="text-lg font-semibold text-charcoal dark:text-white mb-5 text-center">
             Why shop from <span className="font-display italic text-plum-700 dark:text-plum-200">Nawiri Hair</span>?
           </h2>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 xs:grid-cols-3 gap-3 sm:gap-4">
             {[
               { img: image1, title: 'Superfast Delivery', desc: 'Get your order delivered to your doorstep at the earliest from stores near you.' },
               { img: image2, title: 'Best Prices & Offers', desc: 'Best price destination with offers directly from the manufacturers.' },

@@ -129,13 +129,13 @@ const DeliverySimulator = () => {
       <h1 className="text-2xl font-bold mb-6">Delivery Simulator</h1>
       
       <div className="mb-4">
-        <label className="block text-sm font-medium text-gray-700 mb-2">
+        <label className="block text-sm font-medium text-charcoal mb-2">
           Select Order to Deliver
         </label>
         <select 
           value={orderId} 
           onChange={handleOrderSelect}
-          className="w-full p-2 border border-gray-300 rounded-md"
+          className="w-full p-2 border border-brown-200 rounded-md"
         >
           <option value="">-- Select an order --</option>
           {orders.map(order => (
@@ -147,13 +147,13 @@ const DeliverySimulator = () => {
       </div>
       
       <div className="mb-4">
-        <label className="block text-sm font-medium text-gray-700 mb-2">
+        <label className="block text-sm font-medium text-charcoal mb-2">
           Update Order Status
         </label>
         <select 
           value={status} 
           onChange={(e) => setStatus(e.target.value)}
-          className="w-full p-2 border border-gray-300 rounded-md"
+          className="w-full p-2 border border-brown-200 rounded-md"
         >
           <option value="driver_assigned">Driver Assigned</option>
           <option value="out_for_delivery">Out for Delivery</option>
@@ -169,7 +169,7 @@ const DeliverySimulator = () => {
       </div>
       
       <div className="mb-4">
-        <p className="text-sm font-medium text-gray-700 mb-2">Click on the map to update your location</p>
+        <p className="text-sm font-medium text-charcoal mb-2">Click on the map to update your location</p>
       </div>
       
       <div className="h-96 border rounded-lg overflow-hidden">

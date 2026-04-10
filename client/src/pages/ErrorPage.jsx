@@ -72,62 +72,67 @@ const ErrorPage = () => {
   };
   
   return (
-    <div className="container mx-auto p-8 mt-10">
-      <h1 className="text-2xl font-bold mb-4">Page Not Found</h1>
-      <p className="mb-4">The URL you requested could not be found.</p>
-      
-      <p className="text-gray-600 mb-4">
-        Current path: <code className="bg-gray-100 px-2 py-1 rounded">{currentPath}</code>
-      </p>
-      
-      {categoryId && (
-        <div className="p-4 bg-yellow-50 border border-yellow-200 rounded mb-6">
-          <p className="font-medium">This looks like a category page with ID: <code>{categoryId}</code></p>
-          
-          <div className="mt-3 space-y-3">
-            <button 
-              onClick={testServerConnection}
-              disabled={loading}
-              className="px-4 py-2 bg-plum-700 text-white rounded hover:bg-plum-600 disabled:opacity-50"
-            >
-              {loading ? "Testing..." : "Test Server Connection"}
-            </button>
-            
-            <button 
-              onClick={attemptRecovery}
-              disabled={loading}
-              className="ml-3 px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 disabled:opacity-50"
-            >
-              {loading ? "Recovering..." : "Attempt Recovery"}
-            </button>
-          </div>
-          
-          {testResults && (
-            <div className={`mt-3 p-3 rounded ${testResults.success ? 'bg-green-100' : 'bg-red-100'}`}>
-              <p className={testResults.success ? 'text-green-700' : 'text-red-700'}>
-                {testResults.message}
-              </p>
-              
-              {testResults.success && testResults.data?.data?.length > 0 && (
-                <div className="mt-2">
-                  <p className="font-medium">Found {testResults.data.data.length} products!</p>
-                  <button
-                    onClick={() => navigate(`/product-category/${categoryId}`, {
-                      state: { recoveredData: testResults.data.data }
-                    })}
-                    className="mt-2 px-3 py-1.5 bg-green-600 text-white rounded text-sm hover:bg-green-700"
-                  >
-                    View Products
-                  </button>
-                </div>
-              )}
+    <div className="min-h-[70vh] bg-ivory dark:bg-dm-surface flex items-start justify-center px-3 sm:px-6 py-12 sm:py-16">
+      <div className="w-full max-w-lg">
+        <h1 className="text-2xl sm:text-3xl font-bold text-charcoal dark:text-white mb-2">Page Not Found</h1>
+        <p className="text-brown-500 dark:text-white/55 mb-4">The URL you requested could not be found.</p>
+
+        <p className="text-sm text-brown-400 dark:text-white/40 mb-6">
+          Current path:{' '}
+          <code className="bg-plum-50 dark:bg-dm-card-2 text-plum-700 dark:text-plum-200 px-2 py-0.5 rounded text-xs font-mono break-all">
+            {currentPath}
+          </code>
+        </p>
+
+        {categoryId && (
+          <div className="p-4 sm:p-5 bg-gold-50 dark:bg-gold-900/10 border border-gold-200 dark:border-gold-700/30 rounded-card mb-6">
+            <p className="font-medium text-charcoal dark:text-white text-sm mb-3">
+              This looks like a category page with ID:{' '}
+              <code className="font-mono text-plum-700 dark:text-plum-300">{categoryId}</code>
+            </p>
+
+            <div className="flex flex-wrap gap-3">
+              <button
+                onClick={testServerConnection}
+                disabled={loading}
+                className="px-4 py-2 bg-plum-700 hover:bg-plum-600 text-white rounded-pill text-sm font-medium transition-colors disabled:opacity-50"
+              >
+                {loading ? "Testing..." : "Test Server Connection"}
+              </button>
+              <button
+                onClick={attemptRecovery}
+                disabled={loading}
+                className="px-4 py-2 bg-gold-500 hover:bg-gold-400 text-charcoal rounded-pill text-sm font-medium transition-colors disabled:opacity-50"
+              >
+                {loading ? "Recovering..." : "Attempt Recovery"}
+              </button>
             </div>
-          )}
-        </div>
-      )}
-      
-      <div className="mt-6">
-        <Link to="/" className="bg-plum-700 text-white px-4 py-2 rounded hover:bg-plum-600">
+
+            {testResults && (
+              <div className={`mt-3 p-3 rounded-card text-sm ${testResults.success ? 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300' : 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300'}`}>
+                <p>{testResults.message}</p>
+                {testResults.success && testResults.data?.data?.length > 0 && (
+                  <div className="mt-2">
+                    <p className="font-medium mb-1">Found {testResults.data.data.length} products!</p>
+                    <button
+                      onClick={() => navigate(`/product-category/${categoryId}`, {
+                        state: { recoveredData: testResults.data.data }
+                      })}
+                      className="px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white rounded-pill text-xs font-medium transition-colors"
+                    >
+                      View Products
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
+        <Link
+          to="/"
+          className="inline-flex items-center gap-2 bg-plum-700 hover:bg-plum-600 text-white font-semibold px-5 py-2.5 rounded-pill text-sm transition-colors"
+        >
           Return to Home
         </Link>
       </div>

@@ -60,7 +60,7 @@ const DeliveryMenu = ({ close }) => {
   };
 
   return (
-    <div className="dark:bg-gray-800 dark:text-gray-200">
+    <div className="dark:bg-dm-card dark:text-white/70">
       <div className="font-semibold dark:text-white">Delivery Dashboard</div>
       <div className="text-sm flex items-center gap-2">
         <span className="max-w-52 text-ellipsis line-clamp-1">
@@ -133,7 +133,7 @@ const DeliveryMenu = ({ close }) => {
           onClick={handleLogout}
           className="text-left px-2 hover:bg-orange-200 dark:hover:bg-orange-900/30 dark:hover:text-white py-1 flex items-center"
         >
-          <FaSignOutAlt className="mr-2 text-gray-500" /> Log Out
+          <FaSignOutAlt className="mr-2 text-brown-400" /> Log Out
         </button>
       </div>
     </div>

@@ -43,7 +43,7 @@ const Pagination = ({ currentPage, totalPages, onPageChange }) => {
           <button
             onClick={() => onPageChange(currentPage - 1)}
             disabled={currentPage === 1}
-            className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
+            className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-brown-200 bg-white text-sm font-medium text-brown-400 hover:bg-ivory dark:bg-dm-card-2 dark:border-dm-border dark:text-white/55 dark:hover:bg-dm-border disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
           >
             <span className="sr-only">Previous</span>
             <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
@@ -56,7 +56,7 @@ const Pagination = ({ currentPage, totalPages, onPageChange }) => {
         {pageNumbers.map((page, index) => (
           <li key={index}>
             {page === '...' ? (
-              <span className="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300 transition-colors duration-200">
+              <span className="relative inline-flex items-center px-4 py-2 border border-brown-200 bg-white text-sm font-medium text-charcoal dark:bg-dm-card-2 dark:border-dm-border dark:text-white/55 transition-colors duration-200">
                 ...
               </span>
             ) : (
@@ -65,7 +65,7 @@ const Pagination = ({ currentPage, totalPages, onPageChange }) => {
                 className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${
                   currentPage === page
                     ? 'z-10 bg-plum-50 border-plum-600 text-plum-700 dark:bg-plum-900/40 dark:border-plum-500 dark:text-plum-200'
-                    : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-600'
+                    : 'bg-white border-brown-200 text-brown-400 hover:bg-ivory dark:bg-dm-card-2 dark:border-dm-border dark:text-white/55 dark:hover:bg-dm-border'
                 } transition-colors duration-200`}
               >
                 {page}
@@ -79,7 +79,7 @@ const Pagination = ({ currentPage, totalPages, onPageChange }) => {
           <button
             onClick={() => onPageChange(currentPage + 1)}
             disabled={currentPage === totalPages}
-            className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
+            className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-brown-200 bg-white text-sm font-medium text-brown-400 hover:bg-ivory dark:bg-dm-card-2 dark:border-dm-border dark:text-white/55 dark:hover:bg-dm-border disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
           >
             <span className="sr-only">Next</span>
             <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">

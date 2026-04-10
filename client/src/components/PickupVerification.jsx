@@ -99,8 +99,8 @@ const PickupVerification = ({ onSuccess, onError }) => {
   };
   
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
-      <h2 className="text-lg font-medium text-gray-900 dark:text-white mb-4 flex items-center">
+    <div className="bg-white dark:bg-dm-card rounded-lg shadow-sm p-6">
+      <h2 className="text-lg font-medium text-charcoal dark:text-white mb-4 flex items-center">
         <FaQrcode className="mr-2 text-primary-100" />
         Pickup Verification
       </h2>
@@ -109,7 +109,7 @@ const PickupVerification = ({ onSuccess, onError }) => {
         {!orderDetails ? (
           <>
             <div>
-              <label htmlFor="order-id" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              <label htmlFor="order-id" className="block text-sm font-medium text-charcoal dark:text-white/55 mb-1">
                 Order ID
               </label>
               <div className="flex">
@@ -119,7 +119,7 @@ const PickupVerification = ({ onSuccess, onError }) => {
                   placeholder="Enter Order ID"
                   value={orderId}
                   onChange={(e) => setOrderId(e.target.value)}
-                  className="flex-1 min-w-0 block w-full px-3 py-2 rounded-l-md border border-gray-300 dark:border-gray-700 focus:outline-none focus:ring-primary-100 focus:border-primary-100 sm:text-sm dark:bg-gray-800 dark:text-white"
+                  className="flex-1 min-w-0 block w-full px-3 py-2 rounded-l-md border border-brown-200 dark:border-dm-border focus:outline-none focus:ring-primary-100 focus:border-primary-100 sm:text-sm dark:bg-dm-card dark:text-white"
                 />
                 <button
                   onClick={handleFetchOrder}
@@ -152,31 +152,31 @@ const PickupVerification = ({ onSuccess, onError }) => {
           </>
         ) : (
           <>
-            <div className="bg-gray-50 dark:bg-gray-750 p-4 rounded-md">
+            <div className="bg-ivory dark:bg-dm-card-2 p-4 rounded-md">
               <div className="flex justify-between mb-2">
-                <span className="text-gray-500 dark:text-gray-400">Order ID:</span>
+                <span className="text-brown-400 dark:text-white/40">Order ID:</span>
                 <span className="font-medium dark:text-white">{orderDetails.orderId}</span>
               </div>
               <div className="flex justify-between mb-2">
-                <span className="text-gray-500 dark:text-gray-400">Status:</span>
+                <span className="text-brown-400 dark:text-white/40">Status:</span>
                 <span className="font-medium capitalize dark:text-white">{orderDetails.status}</span>
               </div>
               <div className="flex justify-between mb-2">
-                <span className="text-gray-500 dark:text-gray-400">Customer:</span>
+                <span className="text-brown-400 dark:text-white/40">Customer:</span>
                 <span className="font-medium dark:text-white">{orderDetails.userId?.name || 'N/A'}</span>
               </div>
               <div className="flex justify-between mb-2">
-                <span className="text-gray-500 dark:text-gray-400">Pickup Location:</span>
+                <span className="text-brown-400 dark:text-white/40">Pickup Location:</span>
                 <span className="font-medium dark:text-white">{orderDetails.pickup_location || 'N/A'}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-gray-500 dark:text-gray-400">Total Amount:</span>
+                <span className="text-brown-400 dark:text-white/40">Total Amount:</span>
                 <span className="font-medium dark:text-white">KSh {orderDetails.totalAmt?.toLocaleString() || 'N/A'}</span>
               </div>
             </div>
             
             <div>
-              <label htmlFor="verification-code" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              <label htmlFor="verification-code" className="block text-sm font-medium text-charcoal dark:text-white/55 mb-1">
                 Verification Code
               </label>
               <input
@@ -185,7 +185,7 @@ const PickupVerification = ({ onSuccess, onError }) => {
                 placeholder="Enter verification code"
                 value={verificationCode}
                 onChange={(e) => setVerificationCode(e.target.value.toUpperCase())}
-                className="block w-full px-3 py-2 rounded-md border border-gray-300 dark:border-gray-700 focus:outline-none focus:ring-primary-100 focus:border-primary-100 sm:text-sm dark:bg-gray-800 dark:text-white"
+                className="block w-full px-3 py-2 rounded-md border border-brown-200 dark:border-dm-border focus:outline-none focus:ring-primary-100 focus:border-primary-100 sm:text-sm dark:bg-dm-card dark:text-white"
               />
             </div>
             
@@ -219,7 +219,7 @@ const PickupVerification = ({ onSuccess, onError }) => {
               
               <button
                 onClick={handleCancel}
-                className="inline-flex justify-center items-center px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-650 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
+                className="inline-flex justify-center items-center px-4 py-2 border border-brown-200 dark:border-dm-border rounded-md shadow-sm text-sm font-medium text-charcoal dark:text-white/55 bg-white dark:bg-dm-card-2 hover:bg-ivory dark:hover:bg-dm-card-2 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-plum-500"
               >
                 <FaTimes className="mr-1" />
                 Cancel

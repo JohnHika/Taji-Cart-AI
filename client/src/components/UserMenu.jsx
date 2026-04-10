@@ -107,7 +107,7 @@ const UserMenu = ({ close, variant = 'dropdown' }) => {
   };
 
   return (
-    <div className={isSidebar ? 'min-w-0 max-w-full overflow-x-hidden' : 'min-w-0 max-w-full overflow-x-hidden rounded-2xl bg-white p-1 dark:bg-gray-800 dark:text-gray-200 sm:p-2'}>
+    <div className={isSidebar ? 'min-w-0 max-w-full overflow-x-hidden' : 'min-w-0 max-w-full overflow-x-hidden rounded-2xl bg-white p-1 dark:bg-dm-card dark:text-white/70 sm:p-2'}>
       {isSidebar && (
         <div className="mb-4 px-2">
           <Link
