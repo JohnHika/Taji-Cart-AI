@@ -16,7 +16,9 @@
     "recommendation-train": "python ./recommendation/train_model.py",
     "recommendation-debug": "python -m recommendation.data_collector_debug",
     "seed:hair": "node seed/hairSeedData.js",
-    "import:excel": "node seed/importFromExcel.js"
+    "import:excel": "node seed/importFromExcel.js",
+    "catalog:descriptions": "node scripts/generateHairDescriptions.js",
+    "catalog:descriptions:dry": "node scripts/generateHairDescriptions.js --dry-run"
   },
   "author": "",
   "license": "ISC",

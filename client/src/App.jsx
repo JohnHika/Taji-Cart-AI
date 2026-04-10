@@ -9,6 +9,7 @@ import SummaryApi from './common/SummaryApi';
 import BottomNavigation from './components/BottomNavigation';
 import CartMobileLink from './components/CartMobile';
 // import ChatbotAI from './components/ChatbotAI'; // Hidden: AI feature not yet complete
+import Footer from './components/Footer';
 import Header from './components/Header';
 import GlobalProvider from './provider/GlobalProvider';
 import { fetchCartItems } from './redux/slice/cartSlice';
@@ -281,6 +282,7 @@ function App() {
             <Outlet key={location.pathname} />
           </Suspense>
         </main>
+        {showStoreChrome && <Footer />}
         {showStoreChrome && <BottomNavigation />}
         <Toaster />
         <ToastContainer position="top-right" autoClose={3000} />

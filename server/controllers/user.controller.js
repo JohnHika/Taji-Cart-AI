@@ -2102,3 +2102,44 @@ export async function setStaffRoleController(req, res) {
         });
     }
 }
+
+// ── Wishlist ────────────────────────────────────────────────────────────────
+
+export const getWishlist = async (req, res) => {
+    try {
+        const user = await UserModel.findById(req.userId)
+            .populate({
+                path: 'wishlist',
+                select: 'name price discount stock image handle variants category',
+                populate: { path: 'category', select: 'name' }
+            });
+        if (!user) return res.status(404).json({ success: false, message: 'User not found' });
+        return res.json({ success: true, data: user.wishlist || [] });
+    } catch (error) {
+        return res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+export const toggleWishlist = async (req, res) => {
+    try {
+        const { productId } = req.body;
+        if (!productId) return res.status(400).json({ success: false, message: 'productId is required' });
+
+        const user = await UserModel.findById(req.userId);
+        if (!user) return res.status(404).json({ success: false, message: 'User not found' });
+
+        const idx = user.wishlist.findIndex(id => id.toString() === productId);
+        let added;
+        if (idx === -1) {
+            user.wishlist.push(productId);
+            added = true;
+        } else {
+            user.wishlist.splice(idx, 1);
+            added = false;
+        }
+        await user.save();
+        return res.json({ success: true, added, wishlist: user.wishlist });
+    } catch (error) {
+        return res.status(500).json({ success: false, message: error.message });
+    }
+};

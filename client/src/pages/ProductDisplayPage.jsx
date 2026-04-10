@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react'
-import { FaAngleLeft, FaAngleRight, FaStar, FaShieldAlt, FaTruck, FaTags } from "react-icons/fa"
-import { FiShoppingBag, FiHeart } from 'react-icons/fi'
+import { FaAngleLeft, FaAngleRight, FaStar, FaShieldAlt, FaTruck, FaTags, FaRuler } from "react-icons/fa"
+import { FiHeart } from 'react-icons/fi'
 import { useSelector } from 'react-redux'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { toast } from 'react-toastify'
@@ -14,6 +14,7 @@ import Axios from '../utils/Axios'
 import AxiosToastError from '../utils/AxiosToastError'
 import { DisplayPriceInShillings } from '../utils/DisplayPriceInShillings'
 import { pricewithDiscount } from '../utils/PriceWithDiscount'
+import { valideURLConvert } from '../utils/valideURLConvert'
 
 const TABS = ['Description', 'Details', 'Reviews'];
 
@@ -59,12 +60,7 @@ const ProductDisplayPage = () => {
     },
     sku: ""
   });
-  const [selectedVariant, setSelectedVariant] = useState({
-    color: "",
-    length: "",
-    density: "",
-    laceSpecification: ""
-  });
+
   const [image, setImage] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -130,11 +126,6 @@ const ProductDisplayPage = () => {
       const { data: responseData } = response;
       if (responseData.success) {
         setData(responseData.data);
-        
-        // Initialize selected variant with product's variant defaults
-        if (responseData.data.variants) {
-          setSelectedVariant(responseData.data.variants);
-        }
         
         // Set rating data from product response
         if (responseData.data.ratings && Array.isArray(responseData.data.ratings)) {
@@ -444,130 +435,163 @@ const ProductDisplayPage = () => {
                 {activeTab === 'Description' && (
                   <p>{data.description || 'No description available for this product.'}</p>
                 )}
-              </div>
-            </div>
-            
-            {/* Stock Status */}
-            <div className="mt-4">
-              <div className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
-                data.stock === 0 
-                  ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300' 
-                  : data.stock < 5 
-                    ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300' 
-                    : 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300'
-              }`}>
-                <span className={`w-2 h-2 rounded-full mr-2 ${
-                  data.stock === 0 
-                    ? 'bg-red-500 animate-pulse' 
-                    : data.stock < 5 
-                      ? 'bg-orange-500 animate-pulse' 
-                      : 'bg-green-500'
-                }`}></span>
-                {data.stock === 0 
-                  ? 'Out of Stock' 
-                  : data.stock < 5 
-                    ? `Low Stock: ${data.stock} left` 
-                    : `In Stock: ${data.stock}`
-                }
-              </div>
-            </div>
-            
-            {/* Hair Product Variant Selector */}
-            {data.variants && (Object.values(data.variants).some(v => v)) && (
-              <div className='bg-gradient-to-r from-plum-50 to-blush-50 dark:from-dm-card dark:to-dm-card-2 border-2 border-plum-200 dark:border-plum-700 rounded-lg p-4 mt-4 mb-4'>
-                <h3 className='font-semibold text-plum-900 dark:text-plum-200 mb-3 flex items-center gap-2'>
-                  <span className='text-lg'>✨</span> Select Hair Variant
-                </h3>
-                
-                <div className='grid grid-cols-1 md:grid-cols-2 gap-3'>
-                  {data.variants.color && (
-                    <div>
-                      <label className='text-xs font-semibold text-brown-700 dark:text-white/70 block mb-1'>Color</label>
-                      <div className='bg-white dark:bg-dm-card-2 p-2 rounded border border-plum-200 dark:border-plum-700'>
-                        <p className='text-sm font-medium dark:text-white'>{data.variants.color}</p>
-                      </div>
-                    </div>
-                  )}
-                  {data.variants.length && (
-                    <div>
-                      <label className='text-xs font-semibold text-brown-700 dark:text-white/70 block mb-1'>Length</label>
-                      <div className='bg-white dark:bg-dm-card-2 p-2 rounded border border-plum-200 dark:border-plum-700'>
-                        <p className='text-sm font-medium dark:text-white'>{data.variants.length}</p>
-                      </div>
-                    </div>
-                  )}
-                  {data.variants.density && (
-                    <div>
-                      <label className='text-xs font-semibold text-brown-700 dark:text-white/70 block mb-1'>Density</label>
-                      <div className='bg-white dark:bg-dm-card-2 p-2 rounded border border-plum-200 dark:border-plum-700'>
-                        <p className='text-sm font-medium dark:text-white'>{data.variants.density}</p>
-                      </div>
-                    </div>
-                  )}
-                  {data.variants.laceSpecification && (
-                    <div>
-                      <label className='text-xs font-semibold text-brown-700 dark:text-white/70 block mb-1'>Lace Type</label>
-                      <div className='bg-white dark:bg-dm-card-2 p-2 rounded border border-plum-200 dark:border-plum-700'>
-                        <p className='text-sm font-medium dark:text-white'>{data.variants.laceSpecification}</p>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-            
-            {/* Add to Cart Button (second position, below variants) */}
-            {canPurchase && (
-              <div className="mt-4">
-                <AddToCartButton data={data} selectedVariant={selectedVariant} sku={data.sku} />
-              </div>
-            )}
-
-            {/* ── Rate this Product ──────────────────────────────────── */}
-            <div className="mt-6 rounded-card border border-brown-100 dark:border-dm-border bg-white dark:bg-dm-card p-4 shadow-sm">
-              <h3 className="text-sm font-semibold text-charcoal dark:text-white mb-3">Rate this Product</h3>
-
-              {ratingSubmitting ? (
-                <div className="flex items-center gap-2 py-2">
-                  <div className="w-5 h-5 rounded-full border-2 border-plum-700 border-t-transparent animate-spin" />
-                  <span className="text-xs text-brown-400 dark:text-white/40">Submitting…</span>
-                </div>
-              ) : isLoggedIn ? (
-                <StarRating ratingData={ratingData} onRate={handleRate} userRating={userRating} />
-              ) : (
-                <div className="flex items-center gap-3">
-                  {/* Decorative locked stars */}
-                  <div className="flex items-center gap-1 opacity-40 pointer-events-none select-none">
-                    {[1,2,3,4,5].map(s => <FaStar key={s} size={20} className="text-brown-200 dark:text-white/20" />)}
+                {activeTab === 'Details' && (
+                  <div className="space-y-2">
+                    {data.more_details && Object.keys(data.more_details).length > 0 ? (
+                      Object.entries(data.more_details).map(([key, value]) => (
+                        <div key={key} className="flex gap-3 py-1.5 border-b border-brown-50 dark:border-dm-border last:border-0">
+                          <span className="font-semibold text-charcoal dark:text-white/70 w-36 shrink-0 capitalize">
+                            {key.replace(/_/g, ' ')}
+                          </span>
+                          <span className="text-brown-500 dark:text-white/60">{value}</span>
+                        </div>
+                      ))
+                    ) : (
+                      <p className="text-brown-400 dark:text-white/40 italic">No additional details available.</p>
+                    )}
                   </div>
-                  <p className="text-xs text-brown-400 dark:text-white/40">
-                    <Link to="/login" className="font-semibold text-plum-700 dark:text-plum-200 underline underline-offset-2 hover:text-plum-600">
-                      Sign in
-                    </Link>{' '}
-                    to rate this product
-                  </p>
-                </div>
-              )}
+                )}
+                {activeTab === 'Reviews' && (
+                  <div className="space-y-5">
+                    {/* Rating summary bar */}
+                    {ratingCount > 0 && (
+                      <div className="flex items-center gap-4 pb-4 border-b border-brown-50 dark:border-dm-border">
+                        <div className="flex flex-col items-center">
+                          <span className="text-4xl font-bold font-price text-charcoal dark:text-white leading-none">
+                            {averageRating.toFixed(1)}
+                          </span>
+                          <div className="flex gap-0.5 mt-1">
+                            {[1,2,3,4,5].map(s => (
+                              <FaStar key={s} size={12} className={s <= Math.round(averageRating) ? 'text-gold-500' : 'text-brown-200 dark:text-dm-border'} />
+                            ))}
+                          </div>
+                          <span className="text-xs text-brown-400 dark:text-white/40 mt-1">
+                            {ratingCount} review{ratingCount !== 1 ? 's' : ''}
+                          </span>
+                        </div>
+                        {/* Distribution bars */}
+                        <div className="flex-1 space-y-1">
+                          {[5,4,3,2,1].map(star => {
+                            const count = ratingData.filter(r => r.rating === star).length;
+                            const pct = ratingCount > 0 ? Math.round((count / ratingCount) * 100) : 0;
+                            return (
+                              <div key={star} className="flex items-center gap-2">
+                                <span className="text-xs text-brown-400 dark:text-white/40 w-2 shrink-0">{star}</span>
+                                <FaStar size={9} className="text-gold-400 shrink-0" />
+                                <div className="flex-1 h-1.5 bg-brown-100 dark:bg-dm-card-2 rounded-full overflow-hidden">
+                                  <div
+                                    className="h-full bg-gold-400 rounded-full transition-all duration-500"
+                                    style={{ width: `${pct}%` }}
+                                  />
+                                </div>
+                                <span className="text-xs text-brown-400 dark:text-white/30 w-7 text-right shrink-0">{count}</span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
 
-              {/* Reviewer list */}
-              {ratingUsers.length > 0 && (
-                <ul className="mt-4 space-y-2 border-t border-brown-100 dark:border-dm-border pt-3">
-                  {ratingUsers.slice(0, 5).map((u, i) => (
-                    <li key={i} className="flex items-center gap-2 text-xs">
-                      <div className="flex h-6 w-6 items-center justify-center rounded-full bg-plum-100 dark:bg-plum-900/40 text-plum-700 dark:text-plum-200 font-semibold text-xs shrink-0">
-                        {(u.name || 'A')[0].toUpperCase()}
-                      </div>
-                      <span className="font-medium text-charcoal dark:text-white/80 truncate">{u.name || 'Anonymous'}</span>
-                      <div className="flex items-center gap-0.5 ml-auto shrink-0">
-                        {[1,2,3,4,5].map(s => (
-                          <FaStar key={s} size={10} className={s <= u.rating ? 'text-gold-500' : 'text-brown-200 dark:text-white/20'} />
+                    {/* Rate this product */}
+                    <div>
+                      <p className="text-xs font-semibold text-charcoal dark:text-white mb-2">
+                        {userRating > 0 ? `Your rating: ${userRating} star${userRating !== 1 ? 's' : ''}` : 'Leave your rating'}
+                      </p>
+                      {ratingSubmitting ? (
+                        <div className="flex items-center gap-2 py-1">
+                          <div className="w-4 h-4 rounded-full border-2 border-plum-700 border-t-transparent animate-spin" />
+                          <span className="text-xs text-brown-400 dark:text-white/40">Submitting…</span>
+                        </div>
+                      ) : isLoggedIn ? (
+                        <StarRating ratingData={ratingData} onRate={handleRate} userRating={userRating} />
+                      ) : (
+                        <p className="text-xs text-brown-400 dark:text-white/40">
+                          <Link to="/login" className="font-semibold text-plum-700 dark:text-plum-200 underline underline-offset-2 hover:text-plum-600">
+                            Sign in
+                          </Link>{' '}to rate this product
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Reviewer list */}
+                    {ratingUsers.length > 0 && (
+                      <ul className="space-y-2 border-t border-brown-100 dark:border-dm-border pt-3">
+                        {ratingUsers.map((u, i) => (
+                          <li key={i} className="flex items-center gap-2 text-xs">
+                            <div className="flex h-7 w-7 items-center justify-center rounded-full bg-plum-100 dark:bg-plum-900/40 text-plum-700 dark:text-plum-200 font-semibold shrink-0">
+                              {(u.name || 'A')[0].toUpperCase()}
+                            </div>
+                            <span className="font-medium text-charcoal dark:text-white/80 truncate">{u.name || 'Anonymous'}</span>
+                            <div className="flex items-center gap-0.5 ml-auto shrink-0">
+                              {[1,2,3,4,5].map(s => (
+                                <FaStar key={s} size={11} className={s <= u.rating ? 'text-gold-500' : 'text-brown-100 dark:text-white/15'} />
+                              ))}
+                            </div>
+                          </li>
                         ))}
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-              )}
+                      </ul>
+                    )}
+
+                    {ratingCount === 0 && (
+                      <p className="text-brown-400 dark:text-white/40 italic text-xs">
+                        No reviews yet — be the first to rate this product!
+                      </p>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
+
+            {/* Length badge */}
+            {data.variants?.length && data.variants.length !== 'N/A' && (
+              <div className="flex items-center gap-2 mt-1">
+                <FaRuler size={13} className="text-plum-500 dark:text-plum-300" />
+                <span className="text-xs font-semibold text-brown-700 dark:text-white/70">Length:</span>
+                <span className="bg-plum-100 dark:bg-plum-900/40 text-plum-700 dark:text-plum-200 text-xs font-bold px-3 py-1 rounded-pill">
+                  {data.variants.length}
+                </span>
+              </div>
+            )}
+
+            {/* Color swatches */}
+            {data.colorVariants && data.colorVariants.length > 1 && (
+              <div className="mt-3">
+                <p className="text-xs font-semibold text-brown-700 dark:text-white/70 mb-2">
+                  Color — <span className="text-plum-700 dark:text-plum-300 font-bold">{data.variants?.color || '—'}</span>
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {data.colorVariants.map((v) => {
+                    const isCurrent = v._id?.toString() === data._id?.toString();
+                    const isOOS = v.stock === 0;
+                    return (
+                      <button
+                        key={v._id}
+                        disabled={isOOS}
+                        onClick={() => {
+                          if (!isCurrent) navigate(`/product/${valideURLConvert(data.name)}-${v._id}`);
+                        }}
+                        title={`${v.color}${isOOS ? ' — Out of Stock' : ''}`}
+                        className={`relative px-3 py-1.5 rounded-pill text-xs font-semibold border transition-all duration-150
+                          ${isCurrent
+                            ? 'bg-plum-700 text-white border-plum-700 shadow-plum scale-105'
+                            : isOOS
+                              ? 'bg-brown-50 dark:bg-dm-card text-brown-300 dark:text-white/25 border-brown-100 dark:border-dm-border cursor-not-allowed opacity-50'
+                              : 'bg-white dark:bg-dm-card text-charcoal dark:text-white border-brown-200 dark:border-dm-border hover:border-plum-400 hover:text-plum-700 dark:hover:border-plum-500 dark:hover:text-plum-200 cursor-pointer'
+                          }`}
+                      >
+                        {v.color}
+                        {isOOS && !isCurrent && (
+                          <span className="absolute inset-0 flex items-center justify-center">
+                            <span className="absolute w-full h-px bg-brown-300 dark:bg-dm-border rotate-12" />
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
           </div>
         </div>
 

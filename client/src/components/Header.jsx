@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { BsCart4 } from 'react-icons/bs';
 import { FaChevronDown, FaChevronUp, FaRegCircleUser } from 'react-icons/fa6';
 import { FiMenu, FiX } from 'react-icons/fi';
+import { IoSearch } from 'react-icons/io5';
 import { useSelector } from 'react-redux';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { nawiriBrand } from '../config/brand';
@@ -76,18 +77,25 @@ const Header = () => {
               <img
                 src={nawiriBrand.logo}
                 alt=""
-                className="h-8 w-auto max-h-9 max-w-[36px] object-contain object-left sm:max-w-[42px] md:h-10 md:max-w-[46px]"
+                className="h-8 w-auto max-h-9 max-w-[38px] object-contain sm:max-w-[42px] md:h-10 md:max-w-[46px]"
               />
-              <span
-                className="font-display font-bold text-plum-800 dark:text-white leading-none tracking-tight whitespace-nowrap"
-                style={{ fontSize: 'clamp(0.75rem, 1.8vw, 1.125rem)' }}
-              >
+              <span className="hidden sm:block font-display font-bold text-plum-800 dark:text-white leading-none tracking-tight whitespace-nowrap text-[0.95rem] md:text-lg">
                 Nawiri Hair
               </span>
             </Link>
 
-            <div className="flex min-w-0 flex-1 justify-center px-1">
-              <div className="w-full max-w-[min(100%,14rem)] sm:max-w-[16rem] md:max-w-xs lg:max-w-sm xl:max-w-md">
+            {/* Search icon — only on xs screens */}
+            <button
+              className="flex sm:hidden shrink-0 text-neutral-600 dark:text-white/80"
+              onClick={() => navigate('/search')}
+              aria-label="Search"
+            >
+              <IoSearch size={22} />
+            </button>
+
+            {/* Full search bar — sm and up */}
+            <div className="hidden sm:flex min-w-0 flex-1 justify-center px-1">
+              <div className="w-full sm:max-w-[16rem] md:max-w-xs lg:max-w-sm xl:max-w-md">
                 <Search />
               </div>
             </div>

@@ -565,7 +565,8 @@ export const getProductDetailsController = async (request, response) => {
       });
     }
 
-    const product = await ProductModel.findById(productId);
+    const product = await ProductModel.findById(productId)
+      .populate('ratings.userId', 'name');
     
     if (!product) {
       return response.status(404).json({
@@ -595,9 +596,34 @@ export const getProductDetailsController = async (request, response) => {
       product._doc.totalRatings = 0;
     }
 
+    // Fetch all color siblings: same handle, same length
+    const siblingFilter = { handle: product.handle };
+    const productLength = product.variants?.length;
+    if (productLength && productLength !== 'N/A') {
+      siblingFilter['variants.length'] = productLength;
+    }
+    const colorVariants = await ProductModel.find(siblingFilter)
+      .select('_id name variants stock price image')
+      .lean();
+
+    const productObj = product.toObject();
+    productObj.colorVariants = colorVariants.map(v => ({
+      _id: v._id,
+      color: v.variants?.color || '',
+      stock: v.stock,
+      price: v.price,
+      image: v.image?.[0] || '',
+    }));
+
+    // Build ratingUsers list from populated ratings
+    productObj.ratingUsers = (product.ratings || []).map(r => ({
+      name: r.userId?.name || 'Anonymous',
+      rating: r.rating,
+    }));
+
     return response.status(200).json({
       success: true,
-      data: product
+      data: productObj
     });
     
   } catch (error) {
