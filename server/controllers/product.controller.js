@@ -1,5 +1,6 @@
 import mongoose from "mongoose";
 import ProductModel from "../models/product.model.js";
+import Sale from "../models/sale.model.js";
 
 const normalizeScanValue = (value) => {
     if (value === null || value === undefined) {
@@ -142,6 +143,181 @@ export const getProductController = async (req, res) => {
     console.error("Product fetch error:", error);
     res.status(500).json({ success: false, message: error.message });
   }
+};
+
+const buildCategoryPathPayload = (categoryDoc) => ({
+    _id: categoryDoc?._id,
+    name: categoryDoc?.name || '',
+    image: categoryDoc?.image || ''
+});
+
+const buildSubCategoryPathPayload = (subCategoryDoc, categoryDoc) => ({
+    _id: subCategoryDoc?._id,
+    name: subCategoryDoc?.name || '',
+    image: subCategoryDoc?.image || '',
+    category: categoryDoc ? buildCategoryPathPayload(categoryDoc) : null
+});
+
+const hasSellablePrice = (product) => Number.isFinite(Number(product?.price));
+
+export const getHomeCatalogController = async (request, response) => {
+    try {
+        const inventoryProducts = await ProductModel.find({
+            stock: { $gt: 0 }
+        })
+            .sort({ createdAt: -1 })
+            .populate('category subCategory');
+
+        const normalizedProducts = inventoryProducts.map((product) => product.toObject());
+        const liveProducts = normalizedProducts.filter((product) => product.publish && hasSellablePrice(product));
+
+        const categoryMap = new Map();
+        const subCategoryMap = new Map();
+
+        normalizedProducts.forEach((product) => {
+            const categories = Array.isArray(product.category) ? product.category : [];
+            const subCategories = Array.isArray(product.subCategory) ? product.subCategory : [];
+
+            categories.forEach((categoryDoc) => {
+                const categoryId = String(categoryDoc?._id || '');
+                if (!categoryId) return;
+
+                if (!categoryMap.has(categoryId)) {
+                    categoryMap.set(categoryId, {
+                        ...buildCategoryPathPayload(categoryDoc),
+                        productCount: 0,
+                        coverImage: categoryDoc?.image || product.image?.[0] || '',
+                        subcategories: [],
+                        products: []
+                    });
+                }
+
+                const categoryEntry = categoryMap.get(categoryId);
+                categoryEntry.productCount += 1;
+                if (!categoryEntry.coverImage) {
+                    categoryEntry.coverImage = product.image?.[0] || '';
+                }
+
+                if (categoryEntry.products.length < 3) {
+                    categoryEntry.products.push(product);
+                }
+
+                subCategories.forEach((subCategoryDoc) => {
+                    const subCategoryId = String(subCategoryDoc?._id || '');
+                    if (!subCategoryId) return;
+
+                    if (!categoryEntry.subcategories.some((item) => String(item._id) === subCategoryId)) {
+                        categoryEntry.subcategories.push(buildSubCategoryPathPayload(subCategoryDoc, categoryDoc));
+                    }
+                });
+            });
+
+            subCategories.forEach((subCategoryDoc) => {
+                const subCategoryId = String(subCategoryDoc?._id || '');
+                if (!subCategoryId) return;
+
+                const primaryCategory = categories[0] || null;
+
+                if (!subCategoryMap.has(subCategoryId)) {
+                    subCategoryMap.set(subCategoryId, {
+                        ...buildSubCategoryPathPayload(subCategoryDoc, primaryCategory),
+                        productCount: 0,
+                        coverImage: subCategoryDoc?.image || product.image?.[0] || '',
+                        products: []
+                    });
+                }
+
+                const subCategoryEntry = subCategoryMap.get(subCategoryId);
+                subCategoryEntry.productCount += 1;
+                if (!subCategoryEntry.coverImage) {
+                    subCategoryEntry.coverImage = product.image?.[0] || '';
+                }
+
+                if (subCategoryEntry.products.length < 8) {
+                    subCategoryEntry.products.push(product);
+                }
+            });
+        });
+
+        const topSellingStats = await Sale.aggregate([
+            { $match: { isVoided: { $ne: true } } },
+            { $unwind: '$items' },
+            {
+                $group: {
+                    _id: '$items.product',
+                    totalQuantity: { $sum: '$items.quantity' }
+                }
+            },
+            { $sort: { totalQuantity: -1 } },
+            { $limit: 8 }
+        ]);
+
+        const topSellingIds = topSellingStats.map((item) => item._id).filter(Boolean);
+        const topSellingProducts = topSellingIds.length
+            ? await ProductModel.find({
+                _id: { $in: topSellingIds },
+                stock: { $gt: 0 }
+            }).populate('category subCategory')
+            : [];
+
+        const topSellingMap = new Map(
+            topSellingProducts.map((product) => [String(product._id), product.toObject()])
+        );
+
+        let bestSellers = topSellingIds
+            .map((id) => topSellingMap.get(String(id)))
+            .filter(Boolean);
+
+        if (bestSellers.length < 8) {
+            const fallbackProducts = [...normalizedProducts]
+                .sort((a, b) =>
+                    (b.averageRating || 0) - (a.averageRating || 0) ||
+                    (b.discount || 0) - (a.discount || 0) ||
+                    new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+                )
+                .filter((product) => !bestSellers.some((item) => String(item._id) === String(product._id)));
+
+            bestSellers = [...bestSellers, ...fallbackProducts].slice(0, 8);
+        }
+
+        const bannerProducts = [...liveProducts]
+            .sort((a, b) =>
+                (b.discount || 0) - (a.discount || 0) ||
+                (b.averageRating || 0) - (a.averageRating || 0) ||
+                new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+            )
+            .slice(0, 6);
+
+        const categoryBanners = Array.from(categoryMap.values())
+            .sort((a, b) => b.productCount - a.productCount || a.name.localeCompare(b.name))
+            .map((item) => ({
+                ...item,
+                subcategories: item.subcategories.slice(0, 3)
+            }))
+            .slice(0, 6);
+
+        const subcategoryShelves = Array.from(subCategoryMap.values())
+            .filter((item) => item.products.length > 0)
+            .sort((a, b) => b.productCount - a.productCount || a.name.localeCompare(b.name))
+            .slice(0, 6);
+
+        return response.json({
+            success: true,
+            error: false,
+            data: {
+                bannerProducts,
+                bestSellers,
+                categoryBanners,
+                subcategoryShelves
+            }
+        });
+    } catch (error) {
+        return response.status(500).json({
+            success: false,
+            error: true,
+            message: error.message || 'Failed to build home catalog'
+        });
+    }
 };
 
 export const getProductByCategory = async(request,response)=>{
@@ -373,7 +549,6 @@ export const getProductByCategoryAndSubCategory = async(request,response)=>{
 
 export const getProductDetailsController = async (request, response) => {
   try {
-    console.log('⭐ getProductDetailsController called with body:', request.body);
     const { productId } = request.body;
     
     if (!productId) {
@@ -382,9 +557,16 @@ export const getProductDetailsController = async (request, response) => {
         message: "Product ID is required"
       });
     }
-    
-    console.log('🔍 Looking up product with ID:', productId);
-    const product = await ProductModel.findById(productId);
+
+    if (!mongoose.Types.ObjectId.isValid(productId)) {
+      return response.status(400).json({
+        success: false,
+        message: "Invalid product ID format"
+      });
+    }
+
+    const product = await ProductModel.findById(productId)
+      .populate('ratings.userId', 'name');
     
     if (!product) {
       return response.status(404).json({
@@ -414,9 +596,34 @@ export const getProductDetailsController = async (request, response) => {
       product._doc.totalRatings = 0;
     }
 
+    // Fetch all color siblings: same handle, same length
+    const siblingFilter = { handle: product.handle };
+    const productLength = product.variants?.length;
+    if (productLength && productLength !== 'N/A') {
+      siblingFilter['variants.length'] = productLength;
+    }
+    const colorVariants = await ProductModel.find(siblingFilter)
+      .select('_id name variants stock price image')
+      .lean();
+
+    const productObj = product.toObject();
+    productObj.colorVariants = colorVariants.map(v => ({
+      _id: v._id,
+      color: v.variants?.color || '',
+      stock: v.stock,
+      price: v.price,
+      image: v.image?.[0] || '',
+    }));
+
+    // Build ratingUsers list from populated ratings
+    productObj.ratingUsers = (product.ratings || []).map(r => ({
+      name: r.userId?.name || 'Anonymous',
+      rating: r.rating,
+    }));
+
     return response.status(200).json({
       success: true,
-      data: product
+      data: productObj
     });
     
   } catch (error) {
@@ -627,83 +834,64 @@ export const searchProduct = async(request,response)=>{
 // Rate a product
 export const rateProduct = async (req, res) => {
   try {
-    const { productId, rating, userId } = req.body;
-    
-    // Validate inputs
+    const { productId, rating } = req.body;
+    // Accept userId from auth middleware (covers normal + Google OAuth login)
+    const userId = req.userId || req.body.userId;
+
     if (!productId || !rating || !userId) {
-      return res.status(400).json({
-        success: false,
-        message: "Product ID, rating, and user ID are required"
-      });
+      return res.status(400).json({ success: false, message: "Product ID, rating, and user ID are required" });
     }
-    
-    // Check if rating is between 1-5
+
+    if (!mongoose.Types.ObjectId.isValid(productId)) {
+      return res.status(400).json({ success: false, message: "Invalid product ID format" });
+    }
+
     const ratingValue = parseInt(rating);
     if (ratingValue < 1 || ratingValue > 5 || isNaN(ratingValue)) {
-      return res.status(400).json({
-        success: false,
-        message: "Rating must be between 1 and 5"
-      });
+      return res.status(400).json({ success: false, message: "Rating must be between 1 and 5" });
     }
-    
-    // Find the product
-    const product = await ProductModel.findById(productId);
+
+    const product = await ProductModel.findById(productId).lean();
     if (!product) {
-      return res.status(404).json({
-        success: false,
-        message: "Product not found"
-      });
+      return res.status(404).json({ success: false, message: "Product not found" });
     }
-    
-    // Initialize ratings array if it doesn't exist
-    if (!product.ratings) {
-      product.ratings = [];
-    }
-    
-    // Check if user has already rated this product
-    const existingRatingIndex = product.ratings.findIndex(
-      r => r.userId && r.userId.toString() === userId
+
+    const existingRatings = Array.isArray(product.ratings) ? product.ratings : [];
+    const existingIdx = existingRatings.findIndex(
+      r => r.userId && r.userId.toString() === String(userId)
     );
-    
-    if (existingRatingIndex >= 0) {
-      // Update existing rating
-      product.ratings[existingRatingIndex].rating = ratingValue;
-      product.ratings[existingRatingIndex].updatedAt = new Date();
+
+    let updatedRatings;
+    if (existingIdx >= 0) {
+      updatedRatings = existingRatings.map((r, i) =>
+        i === existingIdx ? { ...r, rating: ratingValue, updatedAt: new Date() } : r
+      );
     } else {
-      // Add new rating
-      product.ratings.push({
-        userId,
-        rating: ratingValue,
-        createdAt: new Date(),
-        updatedAt: new Date()
-      });
+      updatedRatings = [
+        ...existingRatings,
+        { userId, rating: ratingValue, createdAt: new Date(), updatedAt: new Date() },
+      ];
     }
-    
-    // Calculate average rating
-    const totalRatings = product.ratings.length;
-    const ratingSum = product.ratings.reduce((sum, item) => sum + item.rating, 0);
-    product.averageRating = totalRatings > 0 ? (ratingSum / totalRatings) : 0;
-    
-    // Save the product with updated ratings
-    await product.save();
-    
-    // Return success response
+
+    const totalRatings = updatedRatings.length;
+    const ratingSum = updatedRatings.reduce((sum, item) => sum + item.rating, 0);
+    const averageRating = totalRatings > 0 ? ratingSum / totalRatings : 0;
+
+    // Use $set to update only the ratings fields — avoids full-document validation
+    await ProductModel.findByIdAndUpdate(
+      productId,
+      { $set: { ratings: updatedRatings, averageRating } },
+      { runValidators: false }
+    );
+
     return res.status(200).json({
       success: true,
       message: "Rating submitted successfully",
-      data: {
-        averageRating: product.averageRating,
-        totalRatings: totalRatings
-      }
+      data: { averageRating, totalRatings },
     });
-    
   } catch (error) {
     console.error("Error rating product:", error);
-    return res.status(500).json({
-      success: false,
-      message: "Internal server error",
-      error: error.message
-    });
+    return res.status(500).json({ success: false, message: "Internal server error", error: error.message });
   }
 };
 
@@ -712,6 +900,10 @@ export const getProductByIdController = async (request, response) => {
         const { id } = request.params;
         if (!id) {
             return response.status(400).json({ success: false, message: 'Product ID is required' });
+        }
+
+        if (!mongoose.Types.ObjectId.isValid(id)) {
+            return response.status(400).json({ success: false, message: 'Invalid product ID format' });
         }
 
         const product = await ProductModel.findById(id);

@@ -30,6 +30,7 @@ const AddToCartButton = ({ data, product: productProp, cartData, selectedVariant
     const product = data || productProp || cartData?.productId
     const normalizedSku = typeof sku === 'string' ? sku.trim() : ''
     const selectedVariantKey = buildVariantKey(selectedVariant)
+    const hasValidPrice = Number.isFinite(Number(product?.price))
 
     const isMatchingCartItem = (item) => {
         if (item.productId?._id !== product?._id) {
@@ -60,6 +61,11 @@ const AddToCartButton = ({ data, product: productProp, cartData, selectedVariant
 
         if (!product?._id) {
             toast.error("Product information is missing")
+            return
+        }
+
+        if (!hasValidPrice) {
+            toast.error("This product is visible in the catalog but its price is still being updated")
             return
         }
 
@@ -239,10 +245,14 @@ const AddToCartButton = ({ data, product: productProp, cartData, selectedVariant
                 ) : (
                     <button
                         onClick={handleAddToCart}
-                        disabled={loading || !product?._id}
-                        className='bg-gold-500 hover:bg-gold-400 active:bg-gold-600 text-charcoal px-2 sm:px-3 lg:px-4 py-1.5 sm:py-2 rounded-lg text-[11px] sm:text-sm font-semibold w-full touch-manipulation transition-all shadow-sm hover:shadow-md ring-1 ring-gold-300/50'
+                        disabled={loading || !product?._id || !hasValidPrice}
+                        className={`px-2 sm:px-3 lg:px-4 py-1.5 sm:py-2 rounded-lg text-[11px] sm:text-sm font-semibold w-full touch-manipulation transition-all shadow-sm ring-1 ${
+                            hasValidPrice
+                                ? 'bg-gold-500 hover:bg-gold-400 active:bg-gold-600 text-charcoal hover:shadow-md ring-gold-300/50'
+                                : 'bg-brown-100 text-brown-500 dark:bg-dm-border dark:text-white/55 ring-brown-200/60 cursor-not-allowed'
+                        }`}
                     >
-                        {loading ? <Loading /> : (showText ? 'Add to Cart' : '+')}
+                        {loading ? <Loading /> : hasValidPrice ? (showText ? 'Add to Cart' : '+') : 'Pricing soon'}
                     </button>
                 )
             }

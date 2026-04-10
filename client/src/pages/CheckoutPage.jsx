@@ -1,5 +1,5 @@
 import { loadStripe } from '@stripe/stripe-js';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
 import { FaCrown, FaStore } from 'react-icons/fa';
 import { FaXmark } from 'react-icons/fa6';
@@ -42,6 +42,7 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
   const [selectAddress, setSelectAddress] = useState(null); // Changed from 0 to null to ensure validation
   const [addressError, setAddressError] = useState(false); // State to track address selection error
   const cartItemsList = useSelector(state => state.cartItem.cart);
+  const cartLoading = useSelector(state => state.cartItem.loading);
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const user = useSelector(state => state.user);
@@ -143,10 +144,16 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
     ? Math.max(0, priceAfterCommunityDiscount - pointsValue) 
     : priceAfterCommunityDiscount;
   const isCheckoutBusy = checkoutAction !== '';
+  const hasCheckoutAmount = useMemo(() => {
+    const numericTotal = Number(totalPrice || 0);
+
+    return cartItemsList.length > 0 && totalQty > 0 && numericTotal > 0;
+  }, [cartItemsList.length, totalPrice, totalQty]);
   const cartFingerprint = cartItemsList
     .map((item) => `${item?._id || item?.productId?._id}:${item?.quantity || 0}`)
     .join('|');
   const checkoutScope = `${user?._id || 'guest'}:${fulfillmentMethod}:${selectAddress ?? 'pickup'}:${pickupLocation}:${cartFingerprint}:${finalPrice}`;
+  const checkoutRedirectedRef = useRef(false);
 
   const runCheckoutAction = async (actionName, callback) => {
     if (checkoutLockRef.current) {
@@ -412,6 +419,24 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
     setPickupLocation(data.pickup_location);
     setPickupInstructions(data.pickup_instructions);
   };
+
+  useEffect(() => {
+    if (cartLoading) {
+      checkoutRedirectedRef.current = false;
+      return;
+    }
+
+    if (hasCheckoutAmount || checkoutRedirectedRef.current) {
+      return;
+    }
+
+    checkoutRedirectedRef.current = true;
+    toast.error('You cannot open checkout with a zero amount. Add items to your cart first.');
+    navigate('/dashboard/cart', {
+      replace: true,
+      state: { fromCheckoutGuard: true }
+    });
+  }, [cartLoading, hasCheckoutAmount, navigate]);
 
   // Pre-checkout handler to show fulfillment modal first
   const handlePreCheckout = (paymentMethod) => {
@@ -748,7 +773,7 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
                       <div className="text-sm text-charcoal dark:text-white/80 leading-relaxed">
                         <p className="font-medium">{address.address_line}</p>
                         <p className="text-brown-400 dark:text-white/50">{address.city}, {address.state}</p>
-                        <p className="text-brown-400 dark:text-white/50">{address.country} â€” {address.pincode}</p>
+                        <p className="text-brown-400 dark:text-white/50">{address.country} - {address.pincode}</p>
                         <p className="text-brown-400 dark:text-white/50 text-xs mt-0.5">{address.mobile}</p>
                       </div>
                     </div>
@@ -808,6 +833,20 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
     ? 'flex w-full max-w-full flex-col gap-5 px-2 py-3 sm:px-3 lg:flex-row lg:justify-between'
     : 'container mx-auto flex w-full flex-col gap-5 px-2 py-4 sm:px-4 lg:flex-row lg:px-6 lg:justify-between';
   const summarySticky = embedded ? 'lg:sticky lg:top-4' : 'lg:sticky lg:top-24';
+
+  if (cartLoading) {
+    return (
+      <section className={sectionShell}>
+        <div className="flex min-h-[40vh] items-center justify-center px-4 py-10 text-sm text-brown-400 dark:text-white/55">
+          Loading checkout...
+        </div>
+      </section>
+    );
+  }
+
+  if (!hasCheckoutAmount) {
+    return null;
+  }
 
   // Full page render (original implementation)
   return (
@@ -1034,9 +1073,7 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
               <button 
                 onClick={() => setShowMpesaForm(false)}
                 className="text-brown-400 hover:text-charcoal dark:text-white/50 dark:hover:text-white"
-              >
-                âœ•
-              </button>
+              ><FaXmark /></button>
             </div>
             <MpesaPayment
               cartItems={cartItemsList}

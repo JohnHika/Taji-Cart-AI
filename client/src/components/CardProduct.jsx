@@ -6,7 +6,8 @@ import { valideURLConvert } from '../utils/valideURLConvert';
 import AddToCartButton from './AddToCartButton';
 
 const CardProduct = ({ data }) => {
-  const discountedPrice = pricewithDiscount(data.price, data.discount);
+  const hasValidPrice = Number.isFinite(Number(data.price));
+  const discountedPrice = hasValidPrice ? pricewithDiscount(data.price, data.discount) : null;
   const hasDiscount = data.discount > 0;
   const isOutOfStock = Number(data.stock) === 0;
   const categoryName = Array.isArray(data.category)
@@ -17,13 +18,13 @@ const CardProduct = ({ data }) => {
   return (
     <Link
       to={`/product/${encodeURIComponent(valideURLConvert(data.name))}-${data._id}`}
-      className="group grid h-full min-h-0 w-[132px] max-w-full grid-rows-[auto_auto_auto_1fr_auto] gap-2 overflow-hidden rounded-xl border border-brown-200 bg-white p-2 transition-all duration-300 hover:-translate-y-1 hover:border-plum-300 hover:shadow-xl dark:border-dm-border dark:bg-dm-card dark:hover:border-plum-600 sm:w-[156px] sm:p-3 lg:w-[200px] lg:p-4 xl:w-[220px]"
+      className="group grid h-full min-h-0 w-[144px] max-w-full grid-rows-[auto_auto_auto_1fr_auto] gap-2 overflow-hidden rounded-xl border border-brown-200 bg-white p-2 transition-all duration-300 hover:-translate-y-1 hover:border-plum-300 hover:shadow-xl dark:border-dm-border dark:bg-dm-card dark:hover:border-plum-600 sm:w-[164px] sm:p-3 lg:w-[208px] lg:p-4 xl:w-[228px]"
     >
-      <div className="relative h-20 w-full overflow-hidden rounded-lg bg-gradient-to-br from-plum-50 to-blush-50 shadow-sm dark:from-dm-card-2 dark:to-dm-card sm:h-24 lg:h-32">
+      <div className="relative aspect-square w-full overflow-hidden rounded-xl bg-blush-50 dark:bg-dm-card-2 shadow-sm">
         <img
           src={data.image?.[0]}
           alt={data.name}
-          className="h-full w-full object-contain"
+          className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
           onError={(e) => {
             e.currentTarget.onerror = null;
             e.currentTarget.src = 'https://via.placeholder.com/150?text=Hair+Product';
@@ -64,27 +65,50 @@ const CardProduct = ({ data }) => {
 
       <div className="mt-auto flex min-w-0 flex-col gap-2 overflow-hidden text-xs sm:text-sm lg:text-base">
         <div className="min-w-0 flex flex-col">
-          <div className={`${hasDiscount ? 'font-medium line-through text-brown-400 dark:text-white/45' : 'text-brown-400 dark:text-white/45'} truncate text-xs`}>
-            {DisplayPriceInShillings(data.price)}
-          </div>
-          <div className="truncate font-semibold text-green-600 dark:text-green-400 sm:text-base">
-            {DisplayPriceInShillings(discountedPrice)}
-          </div>
+          {hasValidPrice ? (
+            <>
+              <div className={`${hasDiscount ? 'font-medium line-through text-brown-400 dark:text-white/45' : 'text-brown-400 dark:text-white/45'} truncate text-xs`}>
+                {DisplayPriceInShillings(data.price)}
+              </div>
+              <div className="truncate font-semibold text-green-600 dark:text-green-400 sm:text-base">
+                {DisplayPriceInShillings(discountedPrice)}
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="truncate text-xs text-brown-400 dark:text-white/45">
+                Price pending
+              </div>
+              <div className="truncate font-semibold text-charcoal dark:text-white sm:text-base">
+                Pricing coming soon
+              </div>
+            </>
+          )}
         </div>
 
         <div className="flex w-full min-w-0 flex-col gap-2">
-          <div
-            className={`w-fit max-w-full truncate rounded-full px-2 py-1 text-[11px] font-bold shadow-sm sm:px-2.5 sm:text-xs ${
-              hasDiscount
-                ? 'bg-gradient-to-r from-plum-700 to-plum-600 text-white'
-                : 'bg-brown-100 text-brown-700 dark:bg-dm-border dark:text-white/70'
-            }`}
-          >
-            {data.discount || 0}% off
-          </div>
+          {hasValidPrice ? (
+            <div
+              className={`w-fit max-w-full truncate rounded-full px-2 py-1 text-[11px] font-bold shadow-sm sm:px-2.5 sm:text-xs ${
+                hasDiscount
+                  ? 'bg-gradient-to-r from-plum-700 to-plum-600 text-white'
+                  : 'bg-brown-100 text-brown-700 dark:bg-dm-border dark:text-white/70'
+              }`}
+            >
+              {data.discount || 0}% off
+            </div>
+          ) : (
+            <div className="w-fit max-w-full truncate rounded-full bg-brown-100 px-2 py-1 text-[11px] font-bold text-brown-700 shadow-sm dark:bg-dm-border dark:text-white/70 sm:px-2.5 sm:text-xs">
+              Catalog preview
+            </div>
+          )}
 
           <div className="w-full min-w-0 max-w-full" onClick={(e) => e.preventDefault()}>
-            {isOutOfStock ? (
+            {!hasValidPrice ? (
+              <p className="text-left text-[11px] text-brown-500 dark:text-white/55">
+                Awaiting price update
+              </p>
+            ) : isOutOfStock ? (
               <p className="text-left text-[11px] text-red-500 dark:text-red-400">
                 Out of stock
               </p>

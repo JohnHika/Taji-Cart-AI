@@ -9,7 +9,7 @@ const Footer = () => {
   const year = new Date().getFullYear();
 
   return (
-    <footer className="border-t border-brown-200/80 bg-gradient-to-br from-ivory via-white to-blush-50 transition-colors dark:border-dm-border dark:from-dm-surface dark:via-dm-card dark:to-dm-card-2">
+    <footer className="border-t border-brown-200/80 bg-gradient-to-br from-ivory via-white to-blush-50 pb-20 lg:pb-0 transition-colors dark:border-dm-border dark:from-dm-surface dark:via-dm-card dark:to-dm-card-2">
       <div className="container mx-auto px-4 py-10 sm:py-12">
         <div className="grid grid-cols-1 gap-8 lg:grid-cols-[1.2fr_0.8fr_0.8fr_1fr]">
           <div className="space-y-4">

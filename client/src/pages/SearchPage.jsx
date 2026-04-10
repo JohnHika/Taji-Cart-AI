@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import InfiniteScroll from 'react-infinite-scroll-component'
 import { useLocation } from 'react-router-dom'
 import noDataImage from '../assets/nothing here yet.webp'
@@ -101,7 +101,7 @@ const SearchPage = () => {
           next={handleFetchMore}
           loader={
             <div className="text-center py-6 text-sm text-brown-400 dark:text-white/45">
-              Loading moreâ€¦
+              Loading more...
             </div>
           }
         >

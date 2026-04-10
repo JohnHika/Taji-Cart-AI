@@ -695,7 +695,7 @@ const StaffPOS = () => {
       video.addEventListener('loadedmetadata', () => {
         const scanType = scanMode === 'barcode' ? 'barcode' : 'QR code';
         toast(`${scanType.charAt(0).toUpperCase() + scanType.slice(1)} scanner active! Point camera at loyalty card ${scanType}`, {
-          icon: scanMode === 'barcode' ? 'ðŸ“Š' : 'ðŸ“¸',
+          icon: scanMode === 'barcode' ? 'BAR' : 'QR',
           duration: 3000,
         });
       });
@@ -836,7 +836,7 @@ const StaffPOS = () => {
 
     // Require success for any M-Pesa rows present
     if (mpesaRows.some(r => r.mpesaStatus !== 'success')) {
-      toast.error('Awaiting M-Pesa confirmation');
+      toast.error('Awaiting M-Pesa...');
       return;
     }
 
@@ -1049,7 +1049,7 @@ const StaffPOS = () => {
       const right = fmt(it.total);
       // Compose as: left | mid | right with basic spacing
       const maxLeft = 28;
-      const l = left.length > maxLeft ? left.slice(0, maxLeft - 1) + 'â€¦' : left.padEnd(maxLeft, ' ');
+      const l = left.length > maxLeft ? left.slice(0, maxLeft - 3) + '...' : left.padEnd(maxLeft, ' ');
       const m = mid.padEnd(12, ' ');
       return `${l} | ${m} | ${right}`;
     });
@@ -1411,7 +1411,7 @@ const StaffPOS = () => {
         <div className="px-3 sm:px-4 py-3 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <div className="min-w-0">
             <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">NAWIRI Hair Sales Counter</h1>
-            <p className="text-xs text-gray-600 dark:text-gray-400">{SALES_COUNTER_TITLE} â€¢ Seller: {user.name} â€¢ Branch: {user.staff_branch || 'Main Store'}</p>
+            <p className="text-xs text-gray-600 dark:text-gray-400">{SALES_COUNTER_TITLE} | Seller: {user.name} | Branch: {user.staff_branch || 'Main Store'}</p>
           </div>
           <div className="flex flex-wrap items-center gap-2 sm:gap-3">
             <button onClick={() => setShowParkedDrawer(true)} className="flex items-center justify-center gap-2 px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 text-sm">
@@ -1548,13 +1548,13 @@ const StaffPOS = () => {
                       <p className="font-semibold text-charcoal dark:text-white">{customer.name}</p>
                       {scannedCustomer?.scanMethod && (
                         <span className="text-xs bg-plum-100 dark:bg-plum-900 text-plum-700 dark:text-plum-200 px-2 py-0.5 rounded-pill">
-                          {scannedCustomer.scanMethod === 'barcode' ? 'ðŸ“Š' : 'ðŸ“¸'} Scanned
+                          {scannedCustomer.scanMethod === 'barcode' ? 'BAR' : 'QR'} Scanned
                         </span>
                       )}
                     </div>
                     <p className="text-sm text-brown-400 dark:text-white/50">{customer.email}</p>
                     {customer.mobile && (
-                      <p className="text-sm text-brown-400 dark:text-white/50">ðŸ“ž {customer.mobile}</p>
+                      <p className="text-sm text-brown-400 dark:text-white/50">Phone: {customer.mobile}</p>
                     )}
                     {customer.loyaltyCard && (
                       <div className="mt-2 space-y-1">
@@ -1567,12 +1567,12 @@ const StaffPOS = () => {
                           </span>
                         </div>
                         <div className="flex items-center gap-4 text-xs text-brown-400 dark:text-white/40">
-                          <span>ðŸ’³ {customer.loyaltyCard.cardNumber}</span>
-                          <span>â­ {customer.loyaltyCard.pointsEarned || 0} pts</span>
+                          <span>Card: {customer.loyaltyCard.cardNumber}</span>
+                          <span>Points: {customer.loyaltyCard.pointsEarned || 0} pts</span>
                         </div>
                         {discount > 0 && (
                           <div className="text-xs text-green-600 dark:text-green-400 font-medium">
-                            âœ… {discount}% loyalty discount applied to cart
+Applied: {discount}% loyalty discount applied to cart
                           </div>
                         )}
                       </div>
@@ -1657,7 +1657,7 @@ const StaffPOS = () => {
                             <p className="font-price text-sm font-semibold text-gold-600 dark:text-gold-400 truncate">{DisplayPriceInShillings(item.price * item.quantity)}</p>
                             <div className="flex items-center justify-end gap-1.5 text-xs text-brown-400 dark:text-white/40">
                               <span className="truncate">{DisplayPriceInShillings(item.price)} ea</span>
-                              <span>â€¢</span>
+                              <span>|</span>
                               <span className="flex items-center gap-0.5"><FaPercent size={9} />
                                 <input type="number" min="0" max="100" value={item.discountPct || ''} onChange={(e)=> setCart(prev=>prev.map(it => it._id===item._id ? { ...it, discountPct: Math.max(0, Math.min(100, parseFloat(e.target.value || '0'))) } : it))} className="w-10 text-right border border-blush-200 dark:border-dm-border rounded px-1 bg-white dark:bg-dm-card text-charcoal dark:text-white" placeholder="0" />
                               </span>
@@ -1899,7 +1899,7 @@ const StaffPOS = () => {
                         : 'bg-white dark:bg-dm-card text-charcoal dark:text-white/70 border-brown-200 dark:border-dm-border hover:bg-plum-50'
                     }`}
                   >
-                    ðŸ“Š Barcode
+                    Barcode
                   </button>
                   <button
                     onClick={() => setScanMode('qr')}
@@ -1909,7 +1909,7 @@ const StaffPOS = () => {
                         : 'bg-white dark:bg-dm-card text-charcoal dark:text-white/70 border-brown-200 dark:border-dm-border hover:bg-plum-50'
                     }`}
                   >
-                    ðŸ“¸ QR Code
+                    QR Code
                   </button>
                 </div>
               </div>
@@ -2040,7 +2040,7 @@ const StaffPOS = () => {
                         <p className="font-medium text-gray-900 dark:text-white">{customerResult.name}</p>
                         <p className="text-sm text-gray-600 dark:text-gray-400">{customerResult.email}</p>
                         {customerResult.mobile && (
-                          <p className="text-sm text-gray-600 dark:text-gray-400">ðŸ“ž {customerResult.mobile}</p>
+                          <p className="text-sm text-gray-600 dark:text-gray-400">Phone: {customerResult.mobile}</p>
                         )}
                       </div>
                       <div className="flex flex-col items-end gap-1">
@@ -2121,7 +2121,7 @@ const StaffPOS = () => {
                     <div className="col-span-3 flex items-center gap-2">
                       <input type="tel" value={row.phone || ''} onChange={e=>updateSplitRow(idx,'phone', e.target.value)} placeholder="07XXXXXXXX" className="flex-1 px-3 py-2 border border-blush-200 dark:border-dm-border rounded-pill bg-white dark:bg-dm-card text-charcoal dark:text-white" />
                       <button onClick={()=>requestMpesaSTKForRow(idx)} disabled={row.mpesaRequesting} className="px-3 py-2 bg-plum-700 hover:bg-plum-800 text-white rounded-pill disabled:opacity-50 transition-colors text-sm">
-                        {row.mpesaRequesting ? 'Sendingâ€¦' : (row.mpesaStatus === 'pending' ? 'Resend' : 'Send')}
+                        {row.mpesaRequesting ? 'Sending...' : (row.mpesaStatus === 'pending' ? 'Resend' : 'Send')}
                       </button>
                     </div>
                   ) : <div className="col-span-3" />}
@@ -2132,7 +2132,7 @@ const StaffPOS = () => {
                   </div>
                   {row.method === 'mobile' && (
                     <div className="col-span-6 text-xs text-brown-400 dark:text-white/40">
-                      {row.mpesaStatus === 'pending' && 'Waiting for customer approvalâ€¦'}
+                      {row.mpesaStatus === 'pending' && 'Waiting for customer approval...'}
                       {row.mpesaStatus === 'success' && `Payment confirmed${row.allocatedAmount ? `: KSh ${row.allocatedAmount.toFixed(2)}` : ''}.`}
                       {row.mpesaStatus === 'failed' && 'Payment failed. Try again.'}
                     </div>
@@ -2170,7 +2170,7 @@ const StaffPOS = () => {
                 disabled={loading || anyMobilePending}
                 className="flex-1 px-4 py-2 bg-gold-500 hover:bg-gold-400 text-charcoal font-semibold rounded-pill disabled:opacity-50 press transition-colors"
               >
-                {loading ? <LoadingSpinner size="small" /> : (anyMobilePending ? 'Awaiting M-Pesaâ€¦' : 'Complete Sale')}
+                {loading ? <LoadingSpinner size="small" /> : (anyMobilePending ? 'Awaiting M-Pesa...' : 'Complete Sale')}
               </button>
               )})()}
             </div>
@@ -2307,7 +2307,7 @@ const StaffPOS = () => {
                   </div>
                   <div className="totals-row">
                     <span>Status:</span>
-                    <span className="payment-status">âœ“ CONFIRMED</span>
+                    <span className="payment-status">CONFIRMED</span>
                   </div>
                   {currentSale.paymentMethod === 'split' && Array.isArray(currentSale.payments) && 
                     currentSale.payments.map((payment, idx) => (
@@ -2367,15 +2367,15 @@ const StaffPOS = () => {
               {/* Policies Box */}
               <div className="policies-box">
                 <div className="policy-item">
-                  <span className="policy-icon">âœ…</span>
+                  <span className="policy-icon">OK</span>
                   <span>Warranty: Refer to product manual for details</span>
                 </div>
                 <div className="policy-item">
-                  <span className="policy-icon">ðŸ”„</span>
+                  <span className="policy-icon">INFO</span>
                   <span>Returns accepted within 7 days with receipt</span>
                 </div>
                 <div className="policy-item">
-                  <span className="policy-icon">ðŸ“ž</span>
+                  <span className="policy-icon">Phone</span>
                   <span>Customer Support: {nawiriBrand.phoneDisplay}</span>
                 </div>
               </div>
@@ -2450,7 +2450,7 @@ const StaffPOS = () => {
                       <div className="min-w-0">
                         <p className="text-sm font-medium text-charcoal dark:text-white truncate">{new Date(p.when).toLocaleString()}</p>
                         <p className="text-xs text-brown-400 dark:text-white/50">
-                          {p.cart.length} items â€¢ {p.customer?.name || 'Walk-in'} â€¢ <span className="font-price text-gold-600">{DisplayPriceInShillings(parkedTotal(p))}</span>
+                          {p.cart.length} items | {p.customer?.name || 'Walk-in'} | <span className="font-price text-gold-600">{DisplayPriceInShillings(parkedTotal(p))}</span>
                         </p>
                         {p.orderNote && <p className="text-xs text-brown-300 dark:text-white/30 truncate">Note: {p.orderNote}</p>}
                       </div>
@@ -2478,7 +2478,7 @@ const StaffPOS = () => {
                             </div>
                           ))}
                           {(p.cart || []).length > 3 && (
-                            <div className="text-xs text-brown-300 dark:text-white/30">+ {(p.cart || []).length - 3} moreâ€¦</div>
+                            <div className="text-xs text-brown-300 dark:text-white/30">+ {(p.cart || []).length - 3} more...</div>
                           )}
                         </div>
                       )}
@@ -2510,13 +2510,13 @@ const StaffPOS = () => {
               <button onClick={()=>setShowHelp(false)} className="text-brown-300 hover:text-charcoal dark:text-white/40 transition-colors"><FaTimes/></button>
             </div>
             <div className="grid grid-cols-2 gap-3 text-sm text-charcoal dark:text-white/70">
-              <div>F2 â€“ Focus Search</div>
-              <div>F4 â€“ Open Payment</div>
-              <div>F6 â€“ Increase Discount</div>
-              <div>F7 â€“ Hold Sale</div>
-              <div>F8 â€“ Show Held</div>
-              <div>+ / - â€“ Change Quantity</div>
-              <div>Del â€“ Remove Item</div>
+              <div>F2 - Focus Search</div>
+              <div>F4 - Open Payment</div>
+              <div>F6 - Increase Discount</div>
+              <div>F7 - Hold Sale</div>
+              <div>F8 - Show Held</div>
+              <div>+ / - - Change Quantity</div>
+              <div>Del - Remove Item</div>
             </div>
           </div>
         </div>

@@ -82,7 +82,7 @@ const AdminDashboard = () => {
     },
     {
       label: 'Sales Hub',
-      description: 'Check daily totals, transactions, and todayâ€™s top-selling items.',
+      description: "Check daily totals, transactions, and today's top-selling items.",
       path: '/dashboard/sales-hub',
       icon: FaStore
     },
@@ -166,7 +166,7 @@ const AdminDashboard = () => {
               View Active Campaigns
             </Link>
             <Link to="/dashboard/admin-community-perks" className="text-sm font-medium bg-plum-700 hover:bg-plum-800 text-white px-3 py-1.5 rounded-pill transition-colors">
-              Manage Campaigns
+                {'Manage ->'}
             </Link>
           </div>
         </div>
@@ -227,7 +227,7 @@ const AdminDashboard = () => {
                           to={`/dashboard/admin-community-perks?edit=${campaign._id}`}
                           className={`text-xs font-semibold hover:underline ${isPerk ? 'text-gold-600 dark:text-gold-400' : 'text-plum-600 dark:text-plum-300'}`}
                         >
-                          Manage â†’
+                            {'Manage ->'}
                         </Link>
                       </div>
                     </div>

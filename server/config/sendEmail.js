@@ -47,6 +47,9 @@ const buildTransport = () => {
                       user: smtpUser,
                       pass: smtpPass,
                   },
+                  connectionTimeout: 10000,
+                  greetingTimeout: 10000,
+                  socketTimeout: 15000,
               }
             : {
                   host: smtpHost,
@@ -56,6 +59,9 @@ const buildTransport = () => {
                       user: smtpUser,
                       pass: smtpPass,
                   },
+                  connectionTimeout: 10000,
+                  greetingTimeout: 10000,
+                  socketTimeout: 15000,
               }
     );
 
@@ -65,13 +71,24 @@ const buildTransport = () => {
 const sendEmail = async ({ sendTo, subject, html }) => {
     const mailTransport = buildTransport();
 
+    const recipients = Array.isArray(sendTo) ? sendTo : [sendTo];
+
     try {
         const info = await mailTransport.sendMail({
             from: emailFrom,
-            to: Array.isArray(sendTo) ? sendTo : [sendTo],
+            to: recipients,
             subject,
             html,
             replyTo,
+            // Anti-spam / deliverability headers
+            headers: {
+                'X-Mailer': 'Nawiri Hair Kenya Mailer',
+                'X-Entity-Ref-ID': `nawiri-${Date.now()}`,
+                'List-Unsubscribe': `<mailto:${replyTo}?subject=unsubscribe>`,
+                'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
+                'Precedence': 'bulk',
+                'Organization': 'Nawiri Hair Kenya',
+            },
         });
 
         return info;

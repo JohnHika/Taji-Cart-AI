@@ -16,6 +16,8 @@ import {
     scanLoyaltyCard,
     searchUsers,
     sendVerificationEmailController,
+    adminSendVerificationEmailController,
+    adminBulkSendVerificationController,
     setDeliveryRoleController,
     setStaffRoleController,
     unblockUserController,
@@ -63,6 +65,8 @@ userRouter.put('/admin/set-staff', auth, admin, setStaffRoleController)
 userRouter.put('/admin/block-user', auth, admin, blockUserController)
 userRouter.put('/admin/unblock-user', auth, admin, unblockUserController)
 userRouter.delete('/admin/delete-user/:userId', auth, admin, deleteUserController)
+userRouter.post('/admin/send-verification-email', auth, admin, adminSendVerificationEmailController)
+userRouter.post('/admin/bulk-send-verification', auth, admin, adminBulkSendVerificationController)
 
 // Delivery routes
 userRouter.get('/delivery/profile', auth, delivery, userDetails)

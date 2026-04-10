@@ -129,7 +129,7 @@ export async function registerUserController(request,response){
         await sendVerificationEmail(save)
 
         return response.json({
-            message : "Account created. Please verify your email before signing in.",
+            message : "Account created. A verification email has been sent to your email address. Please check your inbox and verify your account before signing in.",
             error : false,
             success : true,
             data : {
@@ -428,45 +428,90 @@ export async function loginController(request, response) {
     }
 }
 
-//logout controller
-export async function logoutController(request,response){
+// admin endpoint to force send verification email to a specific user ID
+export async function adminSendVerificationEmailController(request, response) {
     try {
-        // Get the user ID from middleware if it exists, but don't require it
-        const userid = request.userId // May be undefined now
-        
-        const cookiesOption = {
-            httpOnly : true,
-            secure : true,
-            sameSite : "None"
+        const userId = request.body?.userId;
+        if (!userId) {
+            return response.status(400).json({
+                message: "User ID is required.",
+                error: true,
+                success: false
+            });
         }
 
-        // Always clear cookies
-        response.clearCookie("accessToken", cookiesOption)
-        response.clearCookie("refreshToken", cookiesOption)
+        const user = await UserModel.findById(userId);
 
-        // If we have a user ID, update the database
-        if (userid) {
+        if (!user) {
+            return response.status(404).json({
+                message: "User not found.",
+                error: true,
+                success: false
+            });
+        }
+
+        if (user.verify_email) {
+            return response.json({
+                message: "Email already verified.",
+                error: false,
+                success: true
+            });
+        }
+
+        await sendVerificationEmail(user);
+
+        return response.json({
+            message: "Verification email resent successfully. Please check the user's inbox.",
+            error: false,
+            success: true
+        });
+
+    } catch (error) {
+        console.error("Error in adminSendVerificationEmailController:", error);
+        return response.status(500).json({
+            message: error.message || "Failed to send verification email.",
+            error: true,
+            success: false
+        });
+    }
+}
+
+// admin endpoint to bulk-send verification emails to ALL unverified users
+export async function adminBulkSendVerificationController(request, response) {
+    try {
+        // Exclude Google/social OAuth accounts — they are verified by the provider
+        const unverified = await UserModel.find({
+            verify_email: false,
+            $or: [{ authType: { $exists: false } }, { authType: 'email' }],
+        }).select('_id name email');
+
+        if (unverified.length === 0) {
+            return response.json({ message: 'All users are already verified.', sent: 0, failed: 0, success: true });
+        }
+
+        let sent = 0;
+        let failed = 0;
+        for (const user of unverified) {
             try {
-                await UserModel.findByIdAndUpdate(userid, {
-                    refresh_token : ""
-                })
-            } catch (error) {
-                console.log("Error updating user refresh token:", error.message)
-                // Continue with logout even if this fails
+                await sendVerificationEmail(user);
+                sent++;
+            } catch (err) {
+                console.error(`Bulk verification: failed for ${user.email}:`, err.message);
+                failed++;
             }
         }
 
         return response.json({
-            message : "Logout successfully",
-            error : false,
-            success : true
-        })
+            message: `Verification emails sent: ${sent}. Failed: ${failed}.`,
+            sent,
+            failed,
+            total: unverified.length,
+            success: true,
+            error: false,
+        });
     } catch (error) {
-        return response.status(500).json({
-            message : error.message || error,
-            error : true,
-            success : false
-        })
+        console.error('Error in adminBulkSendVerificationController:', error);
+        return response.status(500).json({ message: error.message || 'Bulk send failed.', error: true, success: false });
     }
 }
 
@@ -959,6 +1004,41 @@ export async function resetpassword(request,response){
             message : error.message || error,
             error : true,
             success : false
+        })
+    }
+}
+
+export async function logoutController(request, response) {
+    try {
+        const userid = request.userId
+
+        const cookiesOption = {
+            httpOnly: true,
+            secure: true,
+            sameSite: "None"
+        }
+
+        response.clearCookie("accessToken", cookiesOption)
+        response.clearCookie("refreshToken", cookiesOption)
+
+        if (userid) {
+            try {
+                await UserModel.findByIdAndUpdate(userid, { refresh_token: "" })
+            } catch (error) {
+                console.log("Error updating user refresh token:", error.message)
+            }
+        }
+
+        return response.json({
+            message: "Logout successfully",
+            error: false,
+            success: true
+        })
+    } catch (error) {
+        return response.status(500).json({
+            message: error.message || error,
+            error: true,
+            success: false
         })
     }
 }
@@ -1630,25 +1710,22 @@ export async function updateUserRoleController(req, res) {
             role: updatedUser.role
         });
         
-        // Send email notification to the user
-        try {
-            await sendEmail({
-                sendTo: updatedUser.email,
-                subject: `Account role updated - Nawiri Hair Kenya`,
-                html: renderAccountNoticeEmail({
-                    name: updatedUser.name,
-                    title: 'Your account role changed',
-                    intro: `Your Nawiri Hair Kenya account role is now ${updatedUser.isAdmin ? 'Administrator' : 'Customer'}.`,
-                    highlights: [
-                        'This change controls the tools and dashboards available on your account.',
-                        `If you were not expecting this update, contact ${nawiriBrand.supportEmail}.`,
-                    ],
-                })
-            });
-        } catch (emailError) {
+        // Send email notification asynchronously so SMTP latency does not block API response
+        sendEmail({
+            sendTo: updatedUser.email,
+            subject: `Account role updated - Nawiri Hair Kenya`,
+            html: renderAccountNoticeEmail({
+                name: updatedUser.name,
+                title: 'Your account role changed',
+                intro: `Your Nawiri Hair Kenya account role is now ${updatedUser.isAdmin ? 'Administrator' : 'Customer'}.`,
+                highlights: [
+                    'This change controls the tools and dashboards available on your account.',
+                    `If you were not expecting this update, contact ${nawiriBrand.supportEmail}.`,
+                ],
+            })
+        }).catch((emailError) => {
             console.error("Error sending role update notification:", emailError);
-            // Don't fail the request if email fails
-        }
+        });
         
         return res.status(200).json({
             message: `User role updated to ${updatedUser.isAdmin ? 'admin' : 'regular user'} successfully`,
@@ -2025,3 +2102,44 @@ export async function setStaffRoleController(req, res) {
         });
     }
 }
+
+// ── Wishlist ────────────────────────────────────────────────────────────────
+
+export const getWishlist = async (req, res) => {
+    try {
+        const user = await UserModel.findById(req.userId)
+            .populate({
+                path: 'wishlist',
+                select: 'name price discount stock image handle variants category',
+                populate: { path: 'category', select: 'name' }
+            });
+        if (!user) return res.status(404).json({ success: false, message: 'User not found' });
+        return res.json({ success: true, data: user.wishlist || [] });
+    } catch (error) {
+        return res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+export const toggleWishlist = async (req, res) => {
+    try {
+        const { productId } = req.body;
+        if (!productId) return res.status(400).json({ success: false, message: 'productId is required' });
+
+        const user = await UserModel.findById(req.userId);
+        if (!user) return res.status(404).json({ success: false, message: 'User not found' });
+
+        const idx = user.wishlist.findIndex(id => id.toString() === productId);
+        let added;
+        if (idx === -1) {
+            user.wishlist.push(productId);
+            added = true;
+        } else {
+            user.wishlist.splice(idx, 1);
+            added = false;
+        }
+        await user.save();
+        return res.json({ success: true, added, wishlist: user.wishlist });
+    } catch (error) {
+        return res.status(500).json({ success: false, message: error.message });
+    }
+};
