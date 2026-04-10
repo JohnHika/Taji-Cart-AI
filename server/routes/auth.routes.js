@@ -15,6 +15,13 @@ const handleSocialAuthSuccess = async (req, res) => {
     const user = req.user;
     const accessToken = await generatedAccessToken(user._id);
     const refreshToken = await genertedRefreshToken(user._id);
+
+    // Update last login timestamp (Passport strategy only does this for existing users;
+    // this ensures new OAuth users also get it stamped after token generation)
+    await user.constructor.findByIdAndUpdate(user._id, {
+      last_login_date: new Date(),
+      lastLogin: new Date(),
+    }).catch(() => {}); // non-blocking, best-effort
     
     // Set cookies for security (same as in regular login)
     const cookiesOption = {

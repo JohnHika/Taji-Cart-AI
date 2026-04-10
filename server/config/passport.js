@@ -55,12 +55,17 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
           let user = await UserModel.findOne({ email: profile.emails[0].value });
 
           if (user) {
-            // If user exists but was registered via email, update their Google ID
+            // Update last login and Google ID if missing
+            const updates = {
+              last_login_date: new Date(),
+              lastLogin: new Date(),
+            };
             if (!user.googleId) {
-              user.googleId = profile.id;
-              user.avatar = user.avatar || profile.photos[0]?.value || null;
-              await user.save();
+              updates.googleId = profile.id;
+              updates.avatar = user.avatar || profile.photos[0]?.value || null;
+              updates.authType = 'google';
             }
+            await UserModel.findByIdAndUpdate(user._id, updates);
           } else {
             // Create new user
             user = await new UserModel({
