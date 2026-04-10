@@ -54,9 +54,10 @@ function retry(attempt) {
  * Waits 60 s before the first ping so the server is fully ready.
  */
 export function startKeepalive() {
-    // Only run in production — no point pinging from localhost
-    if (process.env.NODE_ENV !== 'production') {
-        console.log('[Keepalive] Skipped — not in production');
+    // Only run when actually deployed on a cloud host.
+    // RENDER_EXTERNAL_URL is set by Render automatically; without it we're local.
+    if (process.env.NODE_ENV !== 'production' || !process.env.RENDER_EXTERNAL_URL) {
+        console.log('[Keepalive] Skipped — not running on Render (no RENDER_EXTERNAL_URL)');
         return;
     }
     console.log(`[Keepalive] Started — pinging ${RENDER_URL}${PING_PATH} every 13 min`);
