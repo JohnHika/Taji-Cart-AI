@@ -2,7 +2,7 @@ import { Suspense, useEffect, useRef, useState } from 'react';
 import { ErrorBoundary } from 'react-error-boundary';
 import { Toaster } from 'react-hot-toast';
 import { useDispatch, useSelector } from 'react-redux';
-import { Outlet, useLocation } from 'react-router-dom';
+import { Outlet, ScrollRestoration, useLocation } from 'react-router-dom';
 import { ToastContainer, toast } from 'react-toastify';
 import './App.css';
 import SummaryApi from './common/SummaryApi';
@@ -274,6 +274,7 @@ function App() {
   return (
     <ErrorBoundary FallbackComponent={ErrorFallback}>
       <GlobalProvider>
+        <ScrollRestoration />
         {showStoreChrome && <Header />}
         <CartSynchronizer />
         <main className='min-h-[78vh] max-w-full overflow-x-hidden'>

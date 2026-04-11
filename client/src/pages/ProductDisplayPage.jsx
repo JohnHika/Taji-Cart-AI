@@ -600,16 +600,16 @@ const ProductDisplayPage = () => {
           <h2 className="text-lg font-semibold text-charcoal dark:text-white mb-5 text-center">
             Why shop from <span className="font-display italic text-plum-700 dark:text-plum-200">Nawiri Hair</span>?
           </h2>
-          <div className="grid grid-cols-1 xs:grid-cols-3 gap-3 sm:gap-4">
+          <div className="grid grid-cols-3 gap-2 sm:gap-4">
             {[
               { img: image1, title: 'Superfast Delivery', desc: 'Get your order delivered to your doorstep at the earliest from stores near you.' },
               { img: image2, title: 'Best Prices & Offers', desc: 'Best price destination with offers directly from the manufacturers.' },
               { img: image3, title: 'Wide Assortment', desc: 'Choose from hundreds of hair products across textures, styles, and care needs.' },
             ].map(({ img, title, desc }) => (
-              <div key={title} className="bg-white dark:bg-dm-card rounded-card border border-brown-100 dark:border-dm-border shadow-card p-5 flex flex-col items-center text-center">
-                <img src={img} alt={title} className="w-14 h-14 object-contain mb-3" />
-                <h3 className="font-semibold text-sm text-charcoal dark:text-white mb-1">{title}</h3>
-                <p className="text-xs text-brown-400 dark:text-white/50 leading-relaxed">{desc}</p>
+              <div key={title} className="bg-white dark:bg-dm-card rounded-card border border-brown-100 dark:border-dm-border shadow-card p-3 sm:p-5 flex flex-col items-center text-center">
+                <img src={img} alt={title} className="w-10 h-10 sm:w-14 sm:h-14 object-contain mb-2 sm:mb-3" />
+                <h3 className="font-semibold text-xs sm:text-sm text-charcoal dark:text-white mb-0.5 sm:mb-1 leading-tight">{title}</h3>
+                <p className="text-xs text-brown-400 dark:text-white/50 leading-relaxed hidden sm:block">{desc}</p>
               </div>
             ))}
           </div>
