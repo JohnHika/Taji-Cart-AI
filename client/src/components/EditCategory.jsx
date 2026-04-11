@@ -67,16 +67,16 @@ const EditCategory = ({close, fetchData,data : CategoryData}) => {
     }
   return (
     <section className='fixed top-0 bottom-0 left-0 right-0 p-4 bg-neutral-800 bg-opacity-60 z-50 flex items-center justify-center'>
-    <div className='bg-white dark:bg-gray-800 max-w-4xl w-full p-4 rounded transition-colors duration-200'>
+    <div className='bg-white dark:bg-dm-card max-w-4xl w-full p-4 rounded transition-colors duration-200'>
         <div className='flex items-center justify-between'>
-            <h1 className='font-semibold text-gray-900 dark:text-white transition-colors duration-200'>Update Category</h1>
-            <button onClick={close} className='w-fit block ml-auto text-gray-800 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-700 p-1 rounded-full transition-colors duration-200'>
+            <h1 className='font-semibold text-charcoal dark:text-white transition-colors duration-200'>Update Category</h1>
+            <button onClick={close} className='w-fit block ml-auto text-charcoal dark:text-white/70 hover:bg-brown-100 dark:hover:bg-dm-card-2 p-1 rounded-full transition-colors duration-200'>
                 <IoClose size={25}/>
             </button>
         </div>
         <form className='my-3 grid gap-2' onSubmit={handleSubmit}>
             <div className='grid gap-1'>
-                <label id='categoryName' className="text-gray-800 dark:text-white transition-colors duration-200">Name</label>
+                <label id='categoryName' className="text-charcoal dark:text-white transition-colors duration-200">Name</label>
                 <input
                     type='text'
                     id='categoryName'
@@ -84,13 +84,13 @@ const EditCategory = ({close, fetchData,data : CategoryData}) => {
                     value={data.name}
                     name='name'
                     onChange={handleOnChange}
-                    className='bg-plum-50 dark:bg-dm-card-2 p-2 border border-plum-100 dark:border-dm-border focus-within:border-plum-500 dark:focus-within:border-plum-400 outline-none rounded text-gray-900 dark:text-white transition-colors duration-200'
+                    className='bg-plum-50 dark:bg-dm-card-2 p-2 border border-plum-100 dark:border-dm-border focus-within:border-plum-500 dark:focus-within:border-plum-400 outline-none rounded text-charcoal dark:text-white transition-colors duration-200'
                 />
             </div>
             <div className='grid gap-1'>
-                <p className="text-gray-800 dark:text-white transition-colors duration-200">Image</p>
+                <p className="text-charcoal dark:text-white transition-colors duration-200">Image</p>
                 <div className='flex gap-4 flex-col lg:flex-row items-center'>
-                    <div className='border dark:border-gray-600 bg-plum-50 dark:bg-dm-card-2 h-36 w-full lg:w-36 flex items-center justify-center rounded transition-colors duration-200'>
+                    <div className='border dark:border-dm-border bg-plum-50 dark:bg-dm-card-2 h-36 w-full lg:w-36 flex items-center justify-center rounded transition-colors duration-200'>
                         {
                             data.image ? (
                                 <img
@@ -99,7 +99,7 @@ const EditCategory = ({close, fetchData,data : CategoryData}) => {
                                     className='w-full h-full object-scale-down'
                                 />
                             ) : (
-                                <p className='text-sm text-neutral-500 dark:text-gray-300 transition-colors duration-200'>No Image</p>
+                                <p className='text-sm text-neutral-500 dark:text-white/55 transition-colors duration-200'>No Image</p>
                             )
                         }
                         
@@ -107,7 +107,7 @@ const EditCategory = ({close, fetchData,data : CategoryData}) => {
                     <label htmlFor='uploadCategoryImage'>
                         <div  className={`
                         ${!data.name 
-                            ? "bg-gray-300 dark:bg-gray-600 text-gray-700 dark:text-gray-300" 
+                            ? "bg-brown-200 dark:bg-dm-card-2 text-charcoal dark:text-white/55" 
                             : "border-primary-200 text-primary-700 dark:text-primary-300 hover:bg-primary-200 hover:text-neutral-900 dark:hover:bg-primary-300 dark:hover:text-black" }  
                             px-4 py-2 rounded cursor-pointer border font-medium transition-colors duration-200
                         `}>
@@ -127,7 +127,7 @@ const EditCategory = ({close, fetchData,data : CategoryData}) => {
                 className={`
                 ${data.name && data.image 
                   ? "bg-primary-200 hover:bg-primary-100 text-black dark:bg-primary-700 dark:hover:bg-primary-600 dark:text-white" 
-                  : "bg-gray-300 text-gray-700 dark:bg-gray-600 dark:text-gray-300"}
+                  : "bg-brown-200 text-charcoal dark:bg-dm-card-2 dark:text-white/55"}
                 py-2 rounded transition-colors duration-200 
                 font-semibold 
                 `}

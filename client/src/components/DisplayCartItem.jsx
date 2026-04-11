@@ -74,7 +74,7 @@ const DisplayCartItem = ({ close, variant = 'drawer' }) => {
                     <h2 className='font-semibold dark:text-white'>Cart</h2>
                     {!isEmbedded && (
                       <>
-                    <Link to={"/"} className='lg:hidden dark:text-gray-300 hover:dark:text-white'>
+                    <Link to={"/"} className='lg:hidden dark:text-white/55 hover:dark:text-white'>
                         <IoClose size={25}/>
                     </Link>
                     <button type="button" onClick={close} className="hidden lg:block p-1 rounded-lg text-brown-500 dark:text-white/60 hover:text-plum-700 dark:hover:text-plum-200 transition-colors" aria-label="Close cart">
@@ -168,7 +168,7 @@ const DisplayCartItem = ({ close, variant = 'drawer' }) => {
                                     }
                                 </div>
 
-                                <div className='mt-auto w-full bg-white dark:bg-gray-800 border-t-2 dark:border-gray-700 p-3 transition-colors duration-200 safe-area-bottom'>
+                                <div className='mt-auto w-full bg-white dark:bg-dm-card border-t-2 dark:border-dm-border p-3 transition-colors duration-200 safe-area-bottom'>
                                     <div className='flex justify-between px-1 mb-2 text-sm dark:text-white'>
                                         <p>{totalQty} items</p>
                                         <p className="font-price font-semibold">Total: {DisplayPriceInShillings(totalPrice)}</p>

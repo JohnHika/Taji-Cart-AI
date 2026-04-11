@@ -6,20 +6,20 @@ const CategoryFallbackErrorPage = () => {
   const error = useRouteError();
   
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
-      <div className="text-center p-8 max-w-md bg-white dark:bg-gray-800 rounded-lg shadow-lg">
+    <div className="min-h-screen flex items-center justify-center bg-ivory dark:bg-dm-surface">
+      <div className="text-center p-8 max-w-md bg-white dark:bg-dm-card rounded-lg shadow-lg">
         <FaExclamationTriangle className="mx-auto text-yellow-500 text-5xl mb-4" />
         
-        <h1 className="text-2xl font-bold text-gray-800 dark:text-white mb-2">
+        <h1 className="text-2xl font-bold text-charcoal dark:text-white mb-2">
           Category Error
         </h1>
         
-        <p className="text-gray-600 dark:text-gray-300 mb-6">
+        <p className="text-brown-500 dark:text-white/55 mb-6">
           There was a problem loading this category or its products.
         </p>
         
         {error && (
-          <div className="p-3 bg-gray-100 dark:bg-gray-700 rounded mb-6 text-sm text-left overflow-auto max-h-32">
+          <div className="p-3 bg-brown-50 dark:bg-dm-card-2 rounded mb-6 text-sm text-left overflow-auto max-h-32">
             <p className="text-red-500 font-mono">{error.message || "Unknown error occurred"}</p>
           </div>
         )}
@@ -34,7 +34,7 @@ const CategoryFallbackErrorPage = () => {
           
           <Link 
             to="/" 
-            className="flex items-center justify-center px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white rounded hover:bg-gray-300 dark:hover:bg-gray-600 transition"
+            className="flex items-center justify-center px-4 py-2 bg-brown-100 dark:bg-dm-card-2 text-charcoal dark:text-white rounded hover:bg-brown-200 dark:hover:bg-dm-border transition"
           >
             Browse shop
           </Link>

@@ -82,7 +82,7 @@ const ChatInterface = () => {
       if (index > 0 && /^\s+\(KES|\s+\(\$/.test(line)) {
         return (
           <React.Fragment key={index}>
-            <span className="text-sm text-gray-600 dark:text-gray-400">{line}</span>
+            <span className="text-sm text-brown-500 dark:text-white/40">{line}</span>
             {index < text.split('\\n').length - 1 && <br />}
           </React.Fragment>
         );
@@ -400,11 +400,11 @@ const ChatInterface = () => {
               {image ? (
                 <img src={image} alt={name} className="w-16 h-16 object-cover rounded" />
               ) : (
-                <div className="w-16 h-16 bg-gray-200 rounded" />
+                <div className="w-16 h-16 bg-brown-100 rounded" />
               )}
               <div className="flex-1">
                 <div className="text-sm font-medium line-clamp-2">{name}</div>
-                {price != null && <div className="text-xs text-gray-600">KES {Number(price).toLocaleString()}</div>}
+                {price != null && <div className="text-xs text-brown-500">KES {Number(price).toLocaleString()}</div>}
               </div>
               {id && (
                 <button onClick={() => addToCartFromChat(id)} className="px-3 py-1 text-xs bg-emerald-600 text-white rounded">
@@ -800,12 +800,12 @@ const ChatInterface = () => {
 
   // Render the ChatGPT-style interface
   return (
-    <div className="w-full h-screen flex bg-gray-100 dark:bg-gray-900 overflow-hidden">
+    <div className="w-full h-screen flex bg-brown-50 dark:bg-dm-surface overflow-hidden">
       {/* Mobile menu button */}
       <div className="md:hidden absolute top-4 left-4 z-50">
         <button 
           onClick={() => setIsMobileSidebarOpen(!isMobileSidebarOpen)}
-          className="p-2 rounded-md bg-white dark:bg-gray-800 shadow-md text-gray-800 dark:text-gray-200"
+          className="p-2 rounded-md bg-white dark:bg-dm-card shadow-md text-charcoal dark:text-white/70"
         >
           {isMobileSidebarOpen ? <FaArrowLeft /> : <FaRobot />}
         </button>
@@ -813,11 +813,11 @@ const ChatInterface = () => {
       
       {/* Sidebar - Chat history */}
       <div 
-        className={`${isMobileSidebarOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0 fixed md:relative z-40 w-full md:w-80 h-full bg-gray-200 dark:bg-gray-800 transition-transform duration-300 ease-in-out flex flex-col`}
+        className={`${isMobileSidebarOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0 fixed md:relative z-40 w-full md:w-80 h-full bg-brown-100 dark:bg-dm-card transition-transform duration-300 ease-in-out flex flex-col`}
       >
         {/* Sidebar header */}
-        <div className="p-4 border-b border-gray-300 dark:border-gray-700">
-          <h2 className="flex items-center text-lg font-semibold text-gray-800 dark:text-gray-200">
+        <div className="p-4 border-b border-brown-200 dark:border-dm-border">
+          <h2 className="flex items-center text-lg font-semibold text-charcoal dark:text-white/70">
             <FaRobot className="mr-2" /> Shopping Assistant
           </h2>
         </div>
@@ -837,7 +837,7 @@ const ChatInterface = () => {
           {isLoadingSessions ? (
             <div className="flex flex-col items-center justify-center h-32">
               <LoadingSpinner size="medium" />
-              <p className="mt-2 text-gray-600 dark:text-gray-400 text-sm">Loading conversations...</p>
+              <p className="mt-2 text-brown-500 dark:text-white/40 text-sm">Loading conversations...</p>
             </div>
           ) : (
             <div className="p-2 space-y-2">
@@ -845,23 +845,23 @@ const ChatInterface = () => {
                 <button
                   key={session.id}
                   onClick={() => handleSelectSession(session)}
-                  className={`w-full p-3 rounded-md text-left flex flex-col hover:bg-gray-300 dark:hover:bg-gray-700 transition-colors ${
+                  className={`w-full p-3 rounded-md text-left flex flex-col hover:bg-brown-200 dark:hover:bg-dm-card-2 transition-colors ${
                     activeSession?.id === session.id 
-                      ? 'bg-gray-300 dark:bg-gray-700' 
-                      : 'bg-gray-100 dark:bg-gray-900'
+                      ? 'bg-brown-200 dark:bg-dm-card-2' 
+                      : 'bg-brown-50 dark:bg-dm-surface'
                   }`}
                 >
-                  <div className="font-medium text-gray-800 dark:text-gray-200">
+                  <div className="font-medium text-charcoal dark:text-white/70">
                     {session.title}
                   </div>
-                  <div className="text-xs mt-1 text-gray-600 dark:text-gray-400">
+                  <div className="text-xs mt-1 text-brown-500 dark:text-white/40">
                     {session.lastMessage}
                   </div>
                 </button>
               ))}
               
               {recentSessions.length === 0 && (
-                <div className="text-center py-8 text-gray-600 dark:text-gray-400">
+                <div className="text-center py-8 text-brown-500 dark:text-white/40">
                   <p>No recent conversations</p>
                 </div>
               )}
@@ -870,18 +870,18 @@ const ChatInterface = () => {
         </div>
         
         {/* User info */}
-        <div className="p-3 border-t border-gray-300 dark:border-gray-700">
+        <div className="p-3 border-t border-brown-200 dark:border-dm-border">
           <div className="flex items-center justify-between">
             <div className="flex items-center">
               <div className="w-8 h-8 bg-primary-100 dark:bg-primary-300 rounded-full flex items-center justify-center text-white">
                 <FaUser />
               </div>
-              <div className="ml-2 text-gray-800 dark:text-gray-200">
+              <div className="ml-2 text-charcoal dark:text-white/70">
                 {user?._id ? (user.name || 'User') : 'Guest'}
               </div>
             </div>
             <div>
-              <Link to="/" className="text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200">
+              <Link to="/" className="text-brown-500 dark:text-white/40 hover:text-charcoal dark:hover:text-charcoal">
                 <FaHome />
               </Link>
             </div>
@@ -892,8 +892,8 @@ const ChatInterface = () => {
       {/* Main chat container */}
       <div className="flex-grow flex flex-col h-full max-h-screen">
         {/* Chat header */}
-        <div className="bg-white dark:bg-gray-800 p-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
-          <h1 className="text-lg font-medium text-gray-800 dark:text-gray-200">
+        <div className="bg-white dark:bg-dm-card p-4 border-b border-brown-100 dark:border-dm-border flex items-center justify-between">
+          <h1 className="text-lg font-medium text-charcoal dark:text-white/70">
             {activeSession?.title || 'Shopping Assistant'}
           </h1>
           
@@ -932,7 +932,7 @@ const ChatInterface = () => {
         </div>
         
         {/* Chat messages */}
-        <div className="flex-grow overflow-y-auto p-4 bg-white dark:bg-gray-900">
+        <div className="flex-grow overflow-y-auto p-4 bg-white dark:bg-dm-surface">
           {messages.map((message, index) => (
             <div 
               key={index} 
@@ -941,15 +941,15 @@ const ChatInterface = () => {
               <div 
                 className={`max-w-3/4 md:max-w-2/3 rounded-lg px-4 py-3 ${
                   message.type === 'user' 
-                    ? 'bg-primary-100 dark:bg-primary-300 text-gray-800 dark:text-white' 
-                    : 'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-white'
+                    ? 'bg-primary-100 dark:bg-primary-300 text-charcoal dark:text-white' 
+                    : 'bg-brown-50 dark:bg-dm-card text-charcoal dark:text-white'
                 }`}
               >
                 <div className="flex items-start">
                   {message.type === 'bot' && (
                     <div className="mt-1 mr-3">
-                      <div className="w-8 h-8 rounded-full bg-gray-300 dark:bg-gray-600 flex items-center justify-center">
-                        <FaRobot className="text-gray-600 dark:text-gray-300" size={16} />
+                      <div className="w-8 h-8 rounded-full bg-brown-200 dark:bg-dm-card-2 flex items-center justify-center">
+                        <FaRobot className="text-brown-500 dark:text-white/55" size={16} />
                       </div>
                     </div>
                   )}
@@ -976,24 +976,24 @@ const ChatInterface = () => {
           {/* Typing indicator */}
           {isTyping && (
             <div className="mb-6 flex justify-start">
-              <div className="max-w-3/4 rounded-lg px-4 py-3 bg-gray-100 dark:bg-gray-800">
+              <div className="max-w-3/4 rounded-lg px-4 py-3 bg-brown-50 dark:bg-dm-card">
                 <div className="flex items-start">
                   <div className="mt-1 mr-3">
-                    <div className="w-8 h-8 rounded-full bg-gray-300 dark:bg-gray-600 flex items-center justify-center">
-                      <FaRobot className="text-gray-600 dark:text-gray-300" size={16} />
+                    <div className="w-8 h-8 rounded-full bg-brown-200 dark:bg-dm-card-2 flex items-center justify-center">
+                      <FaRobot className="text-brown-500 dark:text-white/55" size={16} />
                     </div>
                   </div>
                   <div>
                     <div className="font-medium mb-1">Shopping Assistant</div>
                     <div className="flex space-x-2">
                       <div className="typing-dot animate-bounce">
-                        <FaCircle size={8} className="text-gray-600 dark:text-gray-300" />
+                        <FaCircle size={8} className="text-brown-500 dark:text-white/55" />
                       </div>
                       <div className="typing-dot animate-bounce delay-150">
-                        <FaCircle size={8} className="text-gray-600 dark:text-gray-300" />
+                        <FaCircle size={8} className="text-brown-500 dark:text-white/55" />
                       </div>
                       <div className="typing-dot animate-bounce delay-300">
-                        <FaCircle size={8} className="text-gray-600 dark:text-gray-300" />
+                        <FaCircle size={8} className="text-brown-500 dark:text-white/55" />
                       </div>
                     </div>
                   </div>
@@ -1014,7 +1014,7 @@ const ChatInterface = () => {
         
         {/* Product actions */}
         {sessionMetadata.lastProductViewed && (
-          <div className="p-2 border-t border-gray-200 dark:border-gray-700 flex justify-center gap-2">
+          <div className="p-2 border-t border-brown-100 dark:border-dm-border flex justify-center gap-2">
             <button
               onClick={() => {
                 addToCartFromChat(sessionMetadata.lastProductViewed);
@@ -1033,7 +1033,7 @@ const ChatInterface = () => {
             </button>
             <button
               onClick={() => handleSuggestionClick("Check stock")}
-              className="text-xs bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 px-3 py-1 rounded-full"
+              className="text-xs bg-brown-50 dark:bg-dm-card-2 hover:bg-brown-100 dark:hover:bg-dm-border text-charcoal dark:text-white/70 px-3 py-1 rounded-full"
               disabled={isLoading || isTyping}
             >
               Check stock
@@ -1042,12 +1042,12 @@ const ChatInterface = () => {
         )}
         
         {/* Suggestions */}
-        <div className="bg-white dark:bg-gray-800 p-2 border-t border-gray-200 dark:border-gray-700 flex flex-wrap gap-2">
+        <div className="bg-white dark:bg-dm-card p-2 border-t border-brown-100 dark:border-dm-border flex flex-wrap gap-2">
           {suggestions.map((suggestion, index) => (
             <button
               key={index}
               onClick={() => handleSuggestionClick(suggestion)}
-              className="text-xs bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 px-3 py-1 rounded-full"
+              className="text-xs bg-brown-50 dark:bg-dm-card-2 hover:bg-brown-100 dark:hover:bg-dm-border text-charcoal dark:text-white/70 px-3 py-1 rounded-full"
               disabled={isLoading || isTyping}
             >
               {suggestion}
@@ -1056,8 +1056,8 @@ const ChatInterface = () => {
         </div>
         
         {/* Input area */}
-        <form onSubmit={handleSendMessage} className="p-4 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700">
-          <div className="flex items-center bg-gray-100 dark:bg-gray-700 rounded-lg p-1">
+        <form onSubmit={handleSendMessage} className="p-4 bg-white dark:bg-dm-card border-t border-brown-100 dark:border-dm-border">
+          <div className="flex items-center bg-brown-50 dark:bg-dm-card-2 rounded-lg p-1">
             <input
               type="text"
               ref={inputRef}
@@ -1068,7 +1068,7 @@ const ChatInterface = () => {
                   `$${sessionMetadata.budget}` : 
                   `KES ${sessionMetadata.budget.toLocaleString()}`}...` : 
                 "Ask about products, deals, prices..."}
-              className="flex-grow py-2 px-3 bg-transparent outline-none text-gray-800 dark:text-white"
+              className="flex-grow py-2 px-3 bg-transparent outline-none text-charcoal dark:text-white"
               disabled={isLoading || isTyping || isRecording || isTranscribing}
             />
             
@@ -1077,7 +1077,7 @@ const ChatInterface = () => {
               type="button"
               onClick={handleMicButtonClick}
               disabled={isTranscribing}
-              className={`p-2 mx-1 rounded-full ${isRecording ? 'bg-red-500 hover:bg-red-600' : 'bg-gray-200 dark:bg-gray-600 hover:bg-gray-300 dark:hover:bg-gray-500'} text-gray-700 dark:text-gray-200`}
+              className={`p-2 mx-1 rounded-full ${isRecording ? 'bg-red-500 hover:bg-red-600' : 'bg-brown-100 dark:bg-dm-card-2 hover:bg-brown-200 dark:hover:bg-brown-400'} text-charcoal dark:text-white/70`}
               aria-label={isRecording ? "Stop recording" : "Start recording"}
               title={isRecording ? "Stop recording" : "Start recording"}
             >
@@ -1104,7 +1104,7 @@ const ChatInterface = () => {
           </div>
           
           {/* Disclaimer */}
-          <div className="mt-2 text-center text-xs text-gray-500 dark:text-gray-400">
+          <div className="mt-2 text-center text-xs text-brown-400 dark:text-white/40">
             Shopping assistant is powered by our AI. It may produce inaccurate information.
           </div>
         </form>

@@ -321,7 +321,7 @@
   }
 
   .mobile-surface {
-    @apply rounded-2xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800;
+    @apply rounded-2xl border border-brown-100 bg-white shadow-sm dark:border-dm-border dark:bg-dm-card;
   }
 
   .mobile-chip-row {
@@ -329,7 +329,7 @@
   }
 
   .mobile-section-title {
-    @apply text-xl font-bold text-gray-900 dark:text-white sm:text-2xl;
+    @apply text-xl font-bold text-charcoal dark:text-white sm:text-2xl;
   }
 }
 
@@ -454,11 +454,11 @@
 }
 
 .premium-product-card {
-  @apply overflow-hidden rounded-xl border border-gray-200 transition-all duration-300 hover:border-pink-300 hover:shadow-2xl dark:border-gray-700 dark:hover:border-pink-600;
+  @apply overflow-hidden rounded-xl border border-brown-100 transition-all duration-300 hover:border-pink-300 hover:shadow-2xl dark:border-dm-border dark:hover:border-pink-600;
 }
 
 .featured-section {
-  @apply rounded-2xl bg-gradient-to-br from-pink-50 to-rose-50 p-6 shadow-lg dark:from-gray-800 dark:to-gray-900 sm:p-8;
+  @apply rounded-2xl bg-gradient-to-br from-pink-50 to-rose-50 p-6 shadow-lg dark:from-dm-card dark:to-dm-surface sm:p-8;
 }
 
 .hair-product-badge {
@@ -470,7 +470,7 @@
 }
 
 .hair-product-image {
-  @apply flex items-center justify-center overflow-hidden rounded-lg bg-gradient-to-br from-pink-50 to-rose-50 dark:from-gray-900 dark:to-gray-800;
+  @apply flex items-center justify-center overflow-hidden rounded-lg bg-gradient-to-br from-pink-50 to-rose-50 dark:from-dm-surface dark:to-dm-card;
 }
 
 .hair-nav-item {
@@ -478,5 +478,5 @@
 }
 
 .trust-badge {
-  @apply flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300;
+  @apply flex items-center gap-2 text-sm text-charcoal dark:text-white/55;
 }

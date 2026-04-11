@@ -190,7 +190,7 @@ const ActiveDeliveries = () => {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh]">
         <FaSpinner className="animate-spin text-4xl text-plum-600 mb-4" />
-        <p className="text-lg text-gray-700 dark:text-gray-300">Loading active deliveries...</p>
+        <p className="text-lg text-charcoal dark:text-white/55">Loading active deliveries...</p>
       </div>
     );
   }
@@ -214,9 +214,9 @@ const ActiveDeliveries = () => {
       <h1 className="text-2xl font-bold mb-6 dark:text-white">Active Deliveries</h1>
       
       {activeOrders.length === 0 ? (
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-8 text-center">
-          <FaTruck className="mx-auto text-gray-400 dark:text-gray-500 mb-4" size={48} />
-          <p className="text-gray-600 dark:text-gray-400">
+        <div className="bg-white dark:bg-dm-card rounded-lg shadow p-8 text-center">
+          <FaTruck className="mx-auto text-brown-400 dark:text-white/40 mb-4" size={48} />
+          <p className="text-brown-500 dark:text-white/40">
             You don't have any active deliveries at the moment.
           </p>
         </div>
@@ -225,19 +225,19 @@ const ActiveDeliveries = () => {
           {activeOrders.map(order => (
             <div 
               key={order._id} 
-              className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden"
+              className="bg-white dark:bg-dm-card rounded-lg shadow overflow-hidden"
             >
-              <div className={`px-6 py-4 border-b border-gray-200 dark:border-gray-700 ${
+              <div className={`px-6 py-4 border-b border-brown-100 dark:border-dm-border ${
                 order.status === 'driver_assigned' ? 'bg-plum-50 dark:bg-plum-900/20' :
                 order.status === 'out_for_delivery' ? 'bg-yellow-50 dark:bg-yellow-900/20' :
                 'bg-green-50 dark:bg-green-900/20'
               }`}>
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <div>
-                    <h3 className="text-lg font-semibold text-gray-800 dark:text-white">
+                    <h3 className="text-lg font-semibold text-charcoal dark:text-white">
                       Order #{order.orderId}
                     </h3>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                    <p className="text-sm text-brown-500 dark:text-white/40">
                       {formatDate(order.createdAt)}
                     </p>
                   </div>
@@ -254,29 +254,29 @@ const ActiveDeliveries = () => {
               <div className="p-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                   <div>
-                    <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">Customer</h4>
+                    <h4 className="text-sm font-medium text-brown-400 dark:text-white/40 mb-2">Customer</h4>
                     <div className="flex items-start">
-                      <FaUser className="text-gray-400 mt-1 mr-2" />
+                      <FaUser className="text-brown-400 dark:text-white/40 mt-1 mr-2" />
                       <div>
-                        <p className="text-gray-800 dark:text-gray-200 font-medium">{order.customer.name}</p>
-                        <p className="text-sm text-gray-600 dark:text-gray-400">{order.customer.phone}</p>
+                        <p className="text-charcoal dark:text-white font-medium">{order.customer.name}</p>
+                        <p className="text-sm text-brown-500 dark:text-white/40">{order.customer.phone}</p>
                       </div>
                     </div>
                   </div>
                   
                   <div>
-                    <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">Delivery Address</h4>
+                    <h4 className="text-sm font-medium text-brown-400 dark:text-white/40 mb-2">Delivery Address</h4>
                     <div className="flex items-start">
-                      <FaMapMarkerAlt className="text-gray-400 mt-1 mr-2" />
-                      <p className="text-gray-800 dark:text-gray-200">{order.deliveryAddress}</p>
+                      <FaMapMarkerAlt className="text-brown-400 mt-1 mr-2" />
+                      <p className="text-charcoal dark:text-white/70">{order.deliveryAddress}</p>
                     </div>
                   </div>
                 </div>
                 
-                <div className="mt-4 flex flex-col gap-3 border-t pt-4 dark:border-gray-700 sm:flex-row sm:items-center sm:justify-between">
+                <div className="mt-4 flex flex-col gap-3 border-t pt-4 dark:border-dm-border sm:flex-row sm:items-center sm:justify-between">
                   <div className="font-medium">
-                    <span className="text-gray-500 dark:text-gray-400">Total: </span>
-                    <span className="text-gray-800 dark:text-white">KSh {order.total.toFixed(2)}</span>
+                    <span className="text-brown-400 dark:text-white/40">Total: </span>
+                    <span className="text-charcoal dark:text-white">KSh {order.total.toFixed(2)}</span>
                   </div>
                   
                   <div className="flex flex-col gap-2 sm:flex-row sm:space-x-3">

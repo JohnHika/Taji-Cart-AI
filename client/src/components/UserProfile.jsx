@@ -93,7 +93,7 @@ const UserProfile = ({ user }) => {
         <div className="user-info-container">
             {/* Existing user info */}
             <h2 className="text-xl font-bold">{user.name}</h2>
-            <p className="text-gray-600">{user.email}</p>
+            <p className="text-brown-500">{user.email}</p>
 
             {/* Add account type */}
             <div className="account-type-container mt-2">
@@ -104,7 +104,7 @@ const UserProfile = ({ user }) => {
             </div>
             
             {/* Debug info - always visible for now to help troubleshoot */}
-            <div className="mt-2 p-2 bg-gray-100 dark:bg-gray-700 rounded text-xs font-mono">
+            <div className="mt-2 p-2 bg-brown-50 dark:bg-dm-card-2 rounded text-xs font-mono">
                 <div className="font-bold">Role properties:</div>
                 <div>- role: "{user.role || 'undefined'}"</div>
                 <div>- isStaff: {String(user.isStaff)}</div>

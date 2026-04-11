@@ -26,18 +26,18 @@ const UserTable = ({ users, onDelete, onChangeRole, onBlockUser, onUnblockUser, 
 
   return (
     <div className="w-full max-w-full overflow-x-hidden md:overflow-x-auto">
-      <div className="divide-y divide-gray-200 dark:divide-gray-700 md:hidden">
+      <div className="divide-y divide-brown-100 dark:divide-dm-border md:hidden">
         {users.map((user) => (
           <div key={user._id} className="p-4">
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
-                <div className="text-base font-semibold text-gray-900 dark:text-white truncate">
+                <div className="text-base font-semibold text-charcoal dark:text-white truncate">
                   {user.name || 'Not Set'}
                 </div>
-                <div className="mt-1 text-sm text-gray-500 dark:text-gray-400 break-all">
+                <div className="mt-1 text-sm text-brown-400 dark:text-white/40 break-all">
                   {user.email || 'Not Set'}
                 </div>
-                <div className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                <div className="mt-1 text-sm text-brown-400 dark:text-white/40">
                   {user.mobile || 'No phone'}
                 </div>
               </div>
@@ -69,10 +69,10 @@ const UserTable = ({ users, onDelete, onChangeRole, onBlockUser, onUnblockUser, 
                  user.isDelivery || user.role === 'delivery' ? 'Driver' : 
                  'Customer'}
               </span>
-              <span className="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-700 dark:bg-gray-700 dark:text-gray-200">
+              <span className="inline-flex items-center rounded-full bg-brown-50 px-2.5 py-1 text-xs font-medium text-charcoal dark:bg-dm-card-2 dark:text-white/70">
                 Joined {formatDate(user.createdAt)}
               </span>
-              <span className="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-700 dark:bg-gray-700 dark:text-gray-200">
+              <span className="inline-flex items-center rounded-full bg-brown-50 px-2.5 py-1 text-xs font-medium text-charcoal dark:bg-dm-card-2 dark:text-white/70">
                 Last login {user.last_login_date ? formatDate(user.last_login_date) : 'Never'}
               </span>
             </div>
@@ -139,50 +139,50 @@ const UserTable = ({ users, onDelete, onChangeRole, onBlockUser, onUnblockUser, 
         ))}
       </div>
 
-      <table className="hidden md:table w-full bg-white dark:bg-gray-800 dark:text-gray-200">
+      <table className="hidden md:table w-full bg-white dark:bg-dm-card dark:text-white/70">
         <thead>
-          <tr className="bg-gray-100 dark:bg-gray-700">
-            <th className="py-2 px-3 border-b dark:border-gray-600 text-left">Name</th>
-            <th className="py-2 px-3 border-b dark:border-gray-600 text-left">Email</th>
-            <th className="py-2 px-3 border-b dark:border-gray-600 text-left">Phone</th>
-            <th className="py-2 px-3 border-b dark:border-gray-600 text-left">Joined</th>
-            <th className="py-2 px-3 border-b dark:border-gray-600 text-left">Last Login</th>
-            <th className="py-2 px-3 border-b dark:border-gray-600 text-left">Status</th>
-            <th className="py-2 px-3 border-b dark:border-gray-600 text-left">Role</th>
+          <tr className="bg-brown-50 dark:bg-dm-card-2">
+            <th className="py-2 px-3 border-b dark:border-dm-border text-left">Name</th>
+            <th className="py-2 px-3 border-b dark:border-dm-border text-left">Email</th>
+            <th className="py-2 px-3 border-b dark:border-dm-border text-left">Phone</th>
+            <th className="py-2 px-3 border-b dark:border-dm-border text-left">Joined</th>
+            <th className="py-2 px-3 border-b dark:border-dm-border text-left">Last Login</th>
+            <th className="py-2 px-3 border-b dark:border-dm-border text-left">Status</th>
+            <th className="py-2 px-3 border-b dark:border-dm-border text-left">Role</th>
             {canManageUsers && (
-              <th className="py-2 px-3 border-b dark:border-gray-600 text-left">Actions</th>
+              <th className="py-2 px-3 border-b dark:border-dm-border text-left">Actions</th>
             )}
           </tr>
         </thead>
         <tbody>
           {users.map((user) => (
-            <tr key={user._id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
-              <td className="py-2 px-3 border-b dark:border-gray-600">
+            <tr key={user._id} className="hover:bg-ivory dark:hover:bg-dm-card-2">
+              <td className="py-2 px-3 border-b dark:border-dm-border">
                 <div className="max-w-[120px] truncate" title={user.name || 'Not Set'}>
                   {user.name || 'Not Set'}
                 </div>
               </td>
-              <td className="py-2 px-3 border-b dark:border-gray-600">
+              <td className="py-2 px-3 border-b dark:border-dm-border">
                 <div className="max-w-[180px] truncate" title={user.email || 'Not Set'}>
                   {user.email || 'Not Set'}
                 </div>
               </td>
-              <td className="py-2 px-3 border-b dark:border-gray-600">
+              <td className="py-2 px-3 border-b dark:border-dm-border">
                 <div className="max-w-[100px] truncate" title={user.mobile || 'Not Set'}>
                   {user.mobile || 'Not Set'}
                 </div>
               </td>
-              <td className="py-2 px-3 border-b dark:border-gray-600">
+              <td className="py-2 px-3 border-b dark:border-dm-border">
                 <div className="max-w-[90px] truncate" title={formatDate(user.createdAt)}>
                   {formatDate(user.createdAt)}
                 </div>
               </td>
-              <td className="py-2 px-3 border-b dark:border-gray-600">
+              <td className="py-2 px-3 border-b dark:border-dm-border">
                 <div className="max-w-[90px] truncate" title={user.last_login_date ? formatDate(user.last_login_date) : 'Never'}>
                   {user.last_login_date ? formatDate(user.last_login_date) : 'Never'}
                 </div>
               </td>
-              <td className="py-2 px-3 border-b dark:border-gray-600">
+              <td className="py-2 px-3 border-b dark:border-dm-border">
                 <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
                   user.status === 'Active' 
                     ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300' 
@@ -196,7 +196,7 @@ const UserTable = ({ users, onDelete, onChangeRole, onBlockUser, onUnblockUser, 
                   {user.status || 'Unknown'}
                 </span>
               </td>
-              <td className="py-2 px-3 border-b dark:border-gray-600">
+              <td className="py-2 px-3 border-b dark:border-dm-border">
                 <span className={`flex items-center px-2 py-1 rounded text-xs font-medium ${
                   user.isAdmin ? 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200' : 
                   user.isStaff || user.role === 'staff' ? 'bg-teal-100 text-teal-800 dark:bg-teal-900 dark:text-teal-200' :
@@ -214,7 +214,7 @@ const UserTable = ({ users, onDelete, onChangeRole, onBlockUser, onUnblockUser, 
                 </span>
               </td>
               {canManageUsers && (
-                <td className="py-2 px-3 border-b dark:border-gray-600">
+                <td className="py-2 px-3 border-b dark:border-dm-border">
                   <div className="flex space-x-1">
                     {onChangeRole && (
                       <button 

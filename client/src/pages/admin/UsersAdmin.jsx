@@ -437,7 +437,7 @@ const UsersAdmin = () => {
       <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold dark:text-white mb-2">User Management</h1>
-          <p className="text-gray-600 dark:text-gray-300">
+          <p className="text-brown-500 dark:text-white/55">
             View and manage admins, sellers, drivers, and customers in one place.
           </p>
         </div>
@@ -490,12 +490,12 @@ const UsersAdmin = () => {
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full p-2 pl-10 pr-4 border rounded-lg dark:bg-dm-card-2 dark:border-dm-border dark:text-white"
             />
-            <FaSearch className="absolute left-3 top-3 text-gray-400 dark:text-gray-300" />
+            <FaSearch className="absolute left-3 top-3 text-brown-400 dark:text-white/40" />
           </div>
           
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:w-auto">
             <div className="flex items-center gap-2">
-              <label className="text-gray-700 dark:text-gray-300 whitespace-nowrap">Status:</label>
+              <label className="text-charcoal dark:text-white/55 whitespace-nowrap">Status:</label>
               <select
                 value={statusFilter}
                 onChange={handleStatusFilterChange}
@@ -509,7 +509,7 @@ const UsersAdmin = () => {
             </div>
 
             <div className="flex items-center gap-2">
-              <label className="text-gray-700 dark:text-gray-300 whitespace-nowrap">Role:</label>
+              <label className="text-charcoal dark:text-white/55 whitespace-nowrap">Role:</label>
               <select
                 value={roleFilter}
                 onChange={(e) => setRoleFilter(e.target.value)}
@@ -537,7 +537,7 @@ const UsersAdmin = () => {
             <FaExclamationTriangle className="mr-2" /> {error}
           </div>
         ) : filteredUsers.length === 0 ? (
-          <div className="text-center p-8 text-gray-600 dark:text-gray-300">
+          <div className="text-center p-8 text-brown-500 dark:text-white/55">
             No users found matching your search criteria
           </div>
         ) : (
@@ -556,7 +556,7 @@ const UsersAdmin = () => {
       
       {/* User Count Summary */}
       {!loading && !error && (
-        <div className="mt-4 text-gray-600 dark:text-gray-300">
+        <div className="mt-4 text-brown-500 dark:text-white/55">
           Showing {filteredUsers.length} of {users.length} total users
         </div>
       )}

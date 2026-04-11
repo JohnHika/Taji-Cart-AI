@@ -53,12 +53,12 @@ const RoyalCardMobilePass = ({ cardData }) => {
   
   return (
     <div className="mt-4">
-      <h3 className="text-gray-700 dark:text-gray-300 font-medium mb-3">Add to Mobile Wallet</h3>
+      <h3 className="text-charcoal dark:text-white/55 font-medium mb-3">Add to Mobile Wallet</h3>
       
       <div className="flex flex-wrap gap-2">
         <button
           onClick={generateAppleWalletPass}
-          className="flex items-center gap-2 bg-black text-white px-4 py-2 rounded-lg hover:bg-gray-800"
+          className="flex items-center gap-2 bg-black text-white px-4 py-2 rounded-lg hover:bg-charcoal"
         >
           <FaApple size={18} />
           <span>Apple Wallet</span>
@@ -66,7 +66,7 @@ const RoyalCardMobilePass = ({ cardData }) => {
         
         <button
           onClick={generateGooglePayPass}
-          className="flex items-center gap-2 bg-white text-gray-800 border border-gray-300 px-4 py-2 rounded-lg hover:bg-gray-100"
+          className="flex items-center gap-2 bg-white text-charcoal border border-brown-200 px-4 py-2 rounded-lg hover:bg-brown-50"
         >
           <FaGoogle size={18} className="text-blue-500" />
           <span>Google Pay</span>

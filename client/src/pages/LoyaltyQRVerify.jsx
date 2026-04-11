@@ -65,20 +65,20 @@ const LoyaltyQRVerify = () => {
 
   if (loading) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen p-4 bg-gray-100 dark:bg-gray-900">
+      <div className="flex flex-col items-center justify-center min-h-screen p-4 bg-brown-50 dark:bg-dm-surface">
         <FaSpinner className="animate-spin text-primary-200 text-4xl mb-4" />
-        <h2 className="text-xl font-semibold text-gray-800 dark:text-white">Verifying loyalty card...</h2>
+        <h2 className="text-xl font-semibold text-charcoal dark:text-white">Verifying loyalty card...</h2>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen p-4 bg-gray-100 dark:bg-gray-900">
-        <div className="w-full max-w-md p-6 bg-white dark:bg-gray-800 rounded-lg shadow-lg text-center">
+      <div className="flex flex-col items-center justify-center min-h-screen p-4 bg-brown-50 dark:bg-dm-surface">
+        <div className="w-full max-w-md p-6 bg-white dark:bg-dm-card rounded-lg shadow-lg text-center">
           <div className="text-red-500 text-5xl mb-4">⚠️</div>
-          <h2 className="text-xl font-semibold text-gray-800 dark:text-white mb-2">Verification Failed</h2>
-          <p className="text-gray-600 dark:text-gray-300 mb-4">{error}</p>
+          <h2 className="text-xl font-semibold text-charcoal dark:text-white mb-2">Verification Failed</h2>
+          <p className="text-brown-500 dark:text-white/55 mb-4">{error}</p>
           <button 
             onClick={() => navigate(-1)} 
             className="px-4 py-2 bg-primary-200 hover:bg-primary-300 text-white rounded-lg transition"
@@ -91,8 +91,8 @@ const LoyaltyQRVerify = () => {
   }
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen p-4 bg-gray-100 dark:bg-gray-900">
-      <div className="w-full max-w-md bg-white dark:bg-gray-800 rounded-lg shadow-lg overflow-hidden">
+    <div className="flex flex-col items-center justify-center min-h-screen p-4 bg-brown-50 dark:bg-dm-surface">
+      <div className="w-full max-w-md bg-white dark:bg-dm-card rounded-lg shadow-lg overflow-hidden">
         {/* Logo Section */}
         <div className="p-6 text-center">
           <img 
@@ -104,8 +104,8 @@ const LoyaltyQRVerify = () => {
               e.target.src = nawiriBrand.logo;
             }}
           />
-          <h1 className="text-2xl font-bold text-gray-800 dark:text-white">{cardData.storeInfo.brandName}</h1>
-          <p className="text-sm text-gray-600 dark:text-gray-400">Loyalty Card Verification</p>
+          <h1 className="text-2xl font-bold text-charcoal dark:text-white">{cardData.storeInfo.brandName}</h1>
+          <p className="text-sm text-brown-500 dark:text-white/40">Loyalty Card Verification</p>
         </div>
 
         {/* Card Info Section */}
@@ -141,8 +141,8 @@ const LoyaltyQRVerify = () => {
         {/* Additional Info */}
         <div className="p-6">
           <div className="mb-4">
-            <h3 className="font-medium text-gray-800 dark:text-white mb-2">Membership Benefits</h3>
-            <ul className="text-sm text-gray-600 dark:text-gray-400 list-disc pl-4">
+            <h3 className="font-medium text-charcoal dark:text-white mb-2">Membership Benefits</h3>
+            <ul className="text-sm text-brown-500 dark:text-white/40 list-disc pl-4">
               {cardData.tier === 'Basic' && (
                 <li>Card membership and point collection</li>
               )}

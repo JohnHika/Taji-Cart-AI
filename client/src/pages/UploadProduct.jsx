@@ -323,10 +323,10 @@ const UploadProduct = () => {
 
   if (formLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center dark:bg-gray-900">
+      <div className="min-h-screen flex items-center justify-center dark:bg-dm-surface">
         <div className="text-center">
           <Loading />
-          <p className="mt-4 text-gray-600 dark:text-gray-400">
+          <p className="mt-4 text-brown-500 dark:text-white/55">
             {isEditMode ? "Loading product details..." : "Processing request..."}
           </p>
         </div>
@@ -335,7 +335,7 @@ const UploadProduct = () => {
   }
 
   return (
-    <section className='transition-colors duration-200 dark:bg-gray-900'>
+    <section className='transition-colors duration-200 dark:bg-dm-surface'>
       <div className='p-2 bg-white dark:bg-dm-card border-b border-brown-100 dark:border-dm-border shadow-md flex items-center justify-between transition-colors duration-200'>
         <h2 className='font-semibold dark:text-white'>{isEditMode ? "Edit Product" : "Upload Product"}</h2>
       </div>
@@ -343,7 +343,7 @@ const UploadProduct = () => {
         <form className='grid gap-4' onSubmit={handleSubmit}>
           {/* Hair Product Identification */}
           <div className='grid gap-1'>
-            <label htmlFor='handle' className='font-medium dark:text-gray-200'>Product Handle (Parent Name)</label>
+            <label htmlFor='handle' className='font-medium dark:text-white'>Product Handle (Parent Name)</label>
             <input 
               id='handle'
               type='text'
@@ -354,11 +354,11 @@ const UploadProduct = () => {
               required
               className='bg-plum-50/90 dark:bg-dm-card p-2 outline-none border dark:border-dm-border focus-within:border-plum-500 dark:focus-within:border-plum-400 rounded dark:text-white transition-colors duration-200'
             />
-            <p className='text-xs text-gray-500 dark:text-gray-400 mt-1'>Identifies that all variants belong to the same product</p>
+            <p className='text-xs text-brown-400 dark:text-white/40 mt-1'>Identifies that all variants belong to the same product</p>
           </div>
 
           <div className='grid gap-1'>
-            <label htmlFor='name' className='font-medium dark:text-gray-200'>Product Title (Customer Name)</label>
+            <label htmlFor='name' className='font-medium dark:text-white'>Product Title (Customer Name)</label>
             <input 
               id='name'
               type='text'
@@ -372,7 +372,7 @@ const UploadProduct = () => {
           </div>
 
           <div className='grid gap-1'>
-            <label htmlFor='sku' className='font-medium dark:text-gray-200'>SKU (Internal Stock Code) *UNIQUE*</label>
+            <label htmlFor='sku' className='font-medium dark:text-white'>SKU (Internal Stock Code) *UNIQUE*</label>
             <input 
               id='sku'
               type='text'
@@ -388,7 +388,7 @@ const UploadProduct = () => {
 
           <div className='grid gap-4 md:grid-cols-2'>
             <div className='grid gap-1'>
-              <label htmlFor='barcode' className='font-medium dark:text-gray-200'>Barcode Value</label>
+              <label htmlFor='barcode' className='font-medium dark:text-white'>Barcode Value</label>
               <input 
                 id='barcode'
                 type='text'
@@ -398,11 +398,11 @@ const UploadProduct = () => {
                 onChange={handleChange}
                 className='bg-plum-50/90 dark:bg-dm-card p-2 outline-none border dark:border-dm-border focus-within:border-plum-500 dark:focus-within:border-plum-400 rounded dark:text-white transition-colors duration-200'
               />
-              <p className='text-xs text-gray-500 dark:text-gray-400 mt-1'>Enter the exact value encoded in the printed product barcode so staff can scan it at the sales counter.</p>
+              <p className='text-xs text-brown-400 dark:text-white/40 mt-1'>Enter the exact value encoded in the printed product barcode so staff can scan it at the sales counter.</p>
             </div>
 
             <div className='grid gap-1'>
-              <label htmlFor='qrCode' className='font-medium dark:text-gray-200'>QR Code Value</label>
+              <label htmlFor='qrCode' className='font-medium dark:text-white'>QR Code Value</label>
               <input 
                 id='qrCode'
                 type='text'
@@ -412,17 +412,17 @@ const UploadProduct = () => {
                 onChange={handleChange}
                 className='bg-plum-50/90 dark:bg-dm-card p-2 outline-none border dark:border-dm-border focus-within:border-plum-500 dark:focus-within:border-plum-400 rounded dark:text-white transition-colors duration-200'
               />
-              <p className='text-xs text-gray-500 dark:text-gray-400 mt-1'>If the packaging has a QR label, save its exact value here. Sellers can scan the barcode, QR code, or SKU.</p>
+              <p className='text-xs text-brown-400 dark:text-white/40 mt-1'>If the packaging has a QR label, save its exact value here. Sellers can scan the barcode, QR code, or SKU.</p>
             </div>
           </div>
 
-          <div className='rounded-lg border border-dashed border-plum-200 dark:border-plum-700 bg-plum-50/60 dark:bg-plum-900/20 p-3 text-sm text-gray-700 dark:text-gray-200'>
+          <div className='rounded-lg border border-dashed border-plum-200 dark:border-plum-700 bg-plum-50/60 dark:bg-plum-900/20 p-3 text-sm text-charcoal dark:text-white'>
             <p className='font-medium'>Scanning flow</p>
             <p className='mt-1'>Product images still upload to Cloudinary. Barcode and QR fields store the scan value itself, so the sales counter can fetch the matching product immediately after scanning without needing a barcode image upload.</p>
           </div>
 
           <div className='grid gap-1'>
-            <label htmlFor='description' className='font-medium dark:text-gray-200'>Description</label>
+            <label htmlFor='description' className='font-medium dark:text-white'>Description</label>
             <textarea 
               id='description'
               placeholder='Enter product description'
@@ -436,9 +436,9 @@ const UploadProduct = () => {
           </div>
           <div>
             <div className="flex justify-between items-center mb-2">
-              <p className='font-medium dark:text-gray-200'>
-                Images {data.image.length > 0 && 
-                  <span className="text-sm text-gray-500 dark:text-gray-400 ml-2">
+              <p className='font-medium dark:text-white'>
+                Images {data.image.length > 0 &&
+                  <span className="text-sm text-brown-400 dark:text-white/40 ml-2">
                     ({data.image.length} {data.image.length === 1 ? 'image' : 'images'})
                   </span>
                 }
@@ -458,7 +458,7 @@ const UploadProduct = () => {
             <div className="flex flex-col gap-4 sm:flex-row">
               {/* Single image upload */}
               <label htmlFor='productImage' className='bg-plum-50/90 dark:bg-dm-card h-24 border dark:border-dm-border rounded flex justify-center items-center cursor-pointer hover:bg-plum-100 dark:hover:bg-dm-card-2 transition-colors duration-200 flex-1'>
-                <div className='text-center flex justify-center items-center flex-col dark:text-gray-300'>
+                <div className='text-center flex justify-center items-center flex-col dark:text-white/55'>
                   {
                     imageLoading ? <Loading /> : (
                       <>
@@ -479,7 +479,7 @@ const UploadProduct = () => {
 
               {/* Multiple image upload */}
               <label htmlFor='multipleProductImages' className='bg-plum-50/90 dark:bg-dm-card h-24 border dark:border-dm-border rounded flex justify-center items-center cursor-pointer hover:bg-plum-100 dark:hover:bg-dm-card-2 transition-colors duration-200 flex-1'>
-                <div className='text-center flex justify-center items-center flex-col dark:text-gray-300'>
+                <div className='text-center flex justify-center items-center flex-col dark:text-white/55'>
                   {
                     imageLoading && uploadProgress.total > 0 ? (
                       <>
@@ -537,8 +537,8 @@ const UploadProduct = () => {
           </div>
           
           <div className='grid gap-1'>
-            <label className='font-medium dark:text-gray-200'>
-              Category {data.category.length > 0 && <span className="text-sm text-gray-500 dark:text-gray-400">({data.category.length} selected)</span>}
+            <label className='font-medium dark:text-white'>
+              Category {data.category.length > 0 && <span className="text-sm text-brown-400 dark:text-white/40">({data.category.length} selected)</span>}
             </label>
             <div>
               <select
@@ -583,8 +583,8 @@ const UploadProduct = () => {
             </div>
           </div>
           <div className='grid gap-1'>
-            <label className='font-medium dark:text-gray-200'>
-              Sub Category {data.subCategory.length > 0 && <span className="text-sm text-gray-500 dark:text-gray-400">({data.subCategory.length} selected)</span>}
+            <label className='font-medium dark:text-white'>
+              Sub Category {data.subCategory.length > 0 && <span className="text-sm text-brown-400 dark:text-white/40">({data.subCategory.length} selected)</span>}
             </label>
             <div>
               <select
@@ -630,7 +630,7 @@ const UploadProduct = () => {
           </div>
 
           <div className='grid gap-1'>
-            <label htmlFor='unit' className='font-medium dark:text-gray-200'>Unit</label>
+            <label htmlFor='unit' className='font-medium dark:text-white'>Unit</label>
             <input 
               id='unit'
               type='text'
@@ -651,7 +651,7 @@ const UploadProduct = () => {
             
             <div className='grid grid-cols-1 md:grid-cols-2 gap-3'>
               <div className='grid gap-1'>
-                <label htmlFor='variant_color' className='font-medium text-gray-700 dark:text-gray-200'>Color</label>
+                <label htmlFor='variant_color' className='font-medium text-charcoal dark:text-white'>Color</label>
                 <input 
                   id='variant_color'
                   type='text'
@@ -664,7 +664,7 @@ const UploadProduct = () => {
               </div>
 
               <div className='grid gap-1'>
-                <label htmlFor='variant_length' className='font-medium text-gray-700 dark:text-gray-200'>Length</label>
+                <label htmlFor='variant_length' className='font-medium text-charcoal dark:text-white'>Length</label>
                 <input 
                   id='variant_length'
                   type='text'
@@ -677,7 +677,7 @@ const UploadProduct = () => {
               </div>
 
               <div className='grid gap-1'>
-                <label htmlFor='variant_density' className='font-medium text-gray-700 dark:text-gray-200'>Density</label>
+                <label htmlFor='variant_density' className='font-medium text-charcoal dark:text-white'>Density</label>
                 <input 
                   id='variant_density'
                   type='text'
@@ -690,7 +690,7 @@ const UploadProduct = () => {
               </div>
 
               <div className='grid gap-1'>
-                <label htmlFor='variant_laceSpecification' className='font-medium text-gray-700 dark:text-gray-200'>Lace Specification</label>
+                <label htmlFor='variant_laceSpecification' className='font-medium text-charcoal dark:text-white'>Lace Specification</label>
                 <input 
                   id='variant_laceSpecification'
                   type='text'
@@ -705,7 +705,7 @@ const UploadProduct = () => {
           </div>
 
           <div className='grid gap-1'>
-            <label htmlFor='stock' className='font-medium dark:text-gray-200'>Stock Quantity</label>
+            <label htmlFor='stock' className='font-medium dark:text-white'>Stock Quantity</label>
             <input 
               id='stock'
               type='number'
@@ -722,7 +722,7 @@ const UploadProduct = () => {
           {/* Pricing Section */}
           <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
             <div className='grid gap-1'>
-              <label htmlFor='costPrice' className='font-medium dark:text-gray-200'>Cost Price (KSh)</label>
+              <label htmlFor='costPrice' className='font-medium dark:text-white'>Cost Price (KSh)</label>
               <input 
                 id='costPrice'
                 type='number'
@@ -735,11 +735,11 @@ const UploadProduct = () => {
                 step="0.01"
                 className='bg-plum-50/90 dark:bg-dm-card p-2 outline-none border dark:border-dm-border focus-within:border-plum-500 dark:focus-within:border-plum-400 rounded dark:text-white transition-colors duration-200'
               />
-              <p className='text-xs text-gray-500 dark:text-gray-400'>What you pay the vendor</p>
+              <p className='text-xs text-brown-400 dark:text-white/40'>What you pay the vendor</p>
             </div>
 
             <div className='grid gap-1'>
-              <label htmlFor='price' className='font-medium dark:text-gray-200'>Retail Price (KSh)</label>
+              <label htmlFor='price' className='font-medium dark:text-white'>Retail Price (KSh)</label>
               <input 
                 id='price'
                 type='number'
@@ -752,13 +752,13 @@ const UploadProduct = () => {
                 step="0.01"
                 className='bg-plum-50/90 dark:bg-dm-card p-2 outline-none border dark:border-dm-border focus-within:border-plum-500 dark:focus-within:border-plum-400 rounded dark:text-white transition-colors duration-200'
               />
-              <p className='text-xs text-gray-500 dark:text-gray-400'>What customers pay</p>
+              <p className='text-xs text-brown-400 dark:text-white/40'>What customers pay</p>
             </div>
           </div>
 
           <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
             <div className='grid gap-1'>
-              <label htmlFor='discount' className='font-medium dark:text-gray-200'>Discount (%)</label>
+              <label htmlFor='discount' className='font-medium dark:text-white'>Discount (%)</label>
               <input 
                 id='discount'
                 type='number'
@@ -773,7 +773,7 @@ const UploadProduct = () => {
             </div>
 
             <div className='grid gap-1'>
-              <label htmlFor='weight' className='font-medium dark:text-gray-200'>Weight (Grams)</label>
+              <label htmlFor='weight' className='font-medium dark:text-white'>Weight (Grams)</label>
               <input 
                 id='weight'
                 type='number'
@@ -791,7 +791,7 @@ const UploadProduct = () => {
           {/* Additional Product Details */}
           <div className="mt-2">
             <div className="flex items-center justify-between">
-              <h3 className="font-medium dark:text-gray-200">Additional Details</h3>
+              <h3 className="font-medium dark:text-white">Additional Details</h3>
               <button
                 type="button"
                 onClick={() => setOpenAddField(true)}
@@ -802,7 +802,7 @@ const UploadProduct = () => {
             </div>
             
             {Object.keys(data?.more_details || {}).length === 0 && (
-              <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
+              <p className="text-sm text-brown-400 dark:text-white/40 mt-2">
                 No additional details. Click "Add Field" to add product specifications.
               </p>
             )}
@@ -812,7 +812,7 @@ const UploadProduct = () => {
                 Object.keys(data?.more_details || {}).map((key) => (
                   <div className='grid gap-1' key={`field-${key}`}>
                     <div className="flex items-center justify-between">
-                      <label htmlFor={key} className='font-medium dark:text-gray-200'>{key}</label>
+                      <label htmlFor={key} className='font-medium dark:text-white'>{key}</label>
                       <button 
                         type="button"
                         onClick={() => handleDeleteField(key)}

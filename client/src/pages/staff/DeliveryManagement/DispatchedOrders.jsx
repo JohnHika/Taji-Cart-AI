@@ -113,19 +113,19 @@ const DispatchedOrders = () => {
     <section className="flex flex-col gap-4 lg:gap-5">
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <div className="mobile-surface p-4">
-          <p className="text-xs uppercase tracking-[0.16em] text-gray-500">Dispatched</p>
-          <p className="mt-2 text-3xl font-bold text-gray-900 dark:text-white">{orders.length}</p>
+          <p className="text-xs uppercase tracking-[0.16em] text-brown-400">Dispatched</p>
+          <p className="mt-2 text-3xl font-bold text-charcoal dark:text-white">{orders.length}</p>
         </div>
         <div className="mobile-surface p-4">
-          <p className="text-xs uppercase tracking-[0.16em] text-gray-500">Available drivers</p>
-          <p className="mt-2 text-3xl font-bold text-gray-900 dark:text-white">{drivers.filter((driver) => driver.isAvailable !== false).length}</p>
+          <p className="text-xs uppercase tracking-[0.16em] text-brown-400">Available drivers</p>
+          <p className="mt-2 text-3xl font-bold text-charcoal dark:text-white">{drivers.filter((driver) => driver.isAvailable !== false).length}</p>
         </div>
         <div className="mobile-surface p-4">
-          <p className="text-xs uppercase tracking-[0.16em] text-gray-500">Busy drivers</p>
-          <p className="mt-2 text-3xl font-bold text-gray-900 dark:text-white">{drivers.filter((driver) => driver.isAvailable === false && driver.isActive !== false).length}</p>
+          <p className="text-xs uppercase tracking-[0.16em] text-brown-400">Busy drivers</p>
+          <p className="mt-2 text-3xl font-bold text-charcoal dark:text-white">{drivers.filter((driver) => driver.isAvailable === false && driver.isActive !== false).length}</p>
         </div>
         <div className="mobile-surface p-4">
-          <p className="text-xs uppercase tracking-[0.16em] text-gray-500">Next step</p>
+          <p className="text-xs uppercase tracking-[0.16em] text-brown-400">Next step</p>
           <p className="mt-2 flex items-center gap-2 text-sm font-medium text-amber-700 dark:text-amber-300">
             <FaUserTie />
             Assign drivers
@@ -136,20 +136,20 @@ const DispatchedOrders = () => {
       <div className="mobile-surface p-4 sm:p-5">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <div>
-            <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Dispatched Orders</h2>
-            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+            <h2 className="text-xl font-semibold text-charcoal dark:text-white">Dispatched Orders</h2>
+            <p className="mt-1 text-sm text-brown-400 dark:text-white/40">
               These orders are ready and waiting for manual driver assignment.
             </p>
           </div>
           <div className="flex flex-col gap-2 sm:flex-row">
             <div className="relative min-w-0 sm:min-w-[280px]">
-              <FaSearch className="pointer-events-none absolute left-3 top-3.5 text-gray-400" />
+              <FaSearch className="pointer-events-none absolute left-3 top-3.5 text-brown-400" />
               <input
                 type="text"
                 placeholder="Search order or customer..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full rounded-xl border border-gray-200 bg-white py-3 pl-10 pr-4 text-sm outline-none transition focus:border-cyan-500 focus:ring-2 focus:ring-cyan-100 dark:border-gray-700 dark:bg-gray-900 dark:text-white"
+                className="w-full rounded-xl border border-brown-100 bg-white py-3 pl-10 pr-4 text-sm outline-none transition focus:border-cyan-500 focus:ring-2 focus:ring-cyan-100 dark:border-dm-border dark:bg-dm-surface dark:text-white"
               />
             </div>
             <button
@@ -159,7 +159,7 @@ const DispatchedOrders = () => {
                 fetchAvailableDrivers();
               }}
               disabled={loading}
-              className="inline-flex items-center justify-center gap-2 rounded-xl border border-gray-200 px-4 py-3 text-sm font-medium text-gray-700 transition hover:bg-gray-50 disabled:opacity-60 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-900"
+              className="inline-flex items-center justify-center gap-2 rounded-xl border border-brown-100 px-4 py-3 text-sm font-medium text-charcoal transition hover:bg-ivory disabled:opacity-60 dark:border-dm-border dark:text-white/70 dark:hover:bg-dm-surface"
             >
               {loading ? <FaSpinner className="animate-spin" /> : <FaRedo />}
               Refresh
@@ -170,7 +170,7 @@ const DispatchedOrders = () => {
 
       {loading && orders.length === 0 ? (
         <div className="mobile-surface flex min-h-[220px] items-center justify-center p-8">
-          <div className="flex items-center gap-3 text-gray-500 dark:text-gray-300">
+          <div className="flex items-center gap-3 text-brown-400 dark:text-white/55">
             <FaSpinner className="animate-spin" />
             Loading dispatched orders...
           </div>
@@ -180,8 +180,8 @@ const DispatchedOrders = () => {
           <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-200">
             <FaMapMarkerAlt />
           </div>
-          <h3 className="mt-4 text-lg font-semibold text-gray-900 dark:text-white">No dispatched orders waiting</h3>
-          <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
+          <h3 className="mt-4 text-lg font-semibold text-charcoal dark:text-white">No dispatched orders waiting</h3>
+          <p className="mt-2 text-sm text-brown-400 dark:text-white/40">
             Every dispatched delivery is either already assigned or your search did not match.
           </p>
         </div>
@@ -192,8 +192,8 @@ const DispatchedOrders = () => {
               <article key={order._id} className="mobile-surface p-4">
                 <div className="flex items-start justify-between gap-3">
                   <div>
-                    <p className="text-xs uppercase tracking-[0.16em] text-gray-500">Order</p>
-                    <h3 className="mt-1 text-lg font-semibold text-gray-900 dark:text-white">{order.orderId}</h3>
+                    <p className="text-xs uppercase tracking-[0.16em] text-brown-400">Order</p>
+                    <h3 className="mt-1 text-lg font-semibold text-charcoal dark:text-white">{order.orderId}</h3>
                   </div>
                   <button
                     type="button"
@@ -204,20 +204,20 @@ const DispatchedOrders = () => {
                   </button>
                 </div>
 
-                <div className="mt-4 grid gap-3 text-sm text-gray-600 dark:text-gray-300">
+                <div className="mt-4 grid gap-3 text-sm text-brown-500 dark:text-white/55">
                   <div>
-                    <p className="font-medium text-gray-900 dark:text-white">{order.customer?.name}</p>
+                    <p className="font-medium text-charcoal dark:text-white">{order.customer?.name}</p>
                     <p>{order.customer?.phone}</p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">{order.customer?.email}</p>
+                    <p className="text-xs text-brown-400 dark:text-white/40">{order.customer?.email}</p>
                   </div>
                   <div>
-                    <p className="font-medium text-gray-900 dark:text-white">Address</p>
+                    <p className="font-medium text-charcoal dark:text-white">Address</p>
                     <p>{order.deliveryAddress?.street}</p>
                     <p>{[order.deliveryAddress?.city, order.deliveryAddress?.neighborhood].filter(Boolean).join(', ')}</p>
                   </div>
                   <div className="flex items-center justify-between">
                     <span>{order.items?.length || 0} item(s)</span>
-                    <span className="text-xs text-gray-500 dark:text-gray-400">{formatDate(order.dispatchedAt || order.updatedAt)}</span>
+                    <span className="text-xs text-brown-400 dark:text-white/40">{formatDate(order.dispatchedAt || order.updatedAt)}</span>
                   </div>
                 </div>
               </article>
@@ -226,41 +226,41 @@ const DispatchedOrders = () => {
 
           <div className="mobile-surface hidden overflow-hidden lg:block">
             <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                <thead className="bg-gray-50 dark:bg-gray-900">
+              <table className="min-w-full divide-y divide-brown-100 dark:divide-dm-border">
+                <thead className="bg-ivory dark:bg-dm-surface">
                   <tr>
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.16em] text-gray-500">Order</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.16em] text-gray-500">Customer</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.16em] text-gray-500">Dispatched</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.16em] text-gray-500">Address</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.16em] text-gray-500">Items</th>
-                    <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-[0.16em] text-gray-500">Action</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.16em] text-brown-400">Order</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.16em] text-brown-400">Customer</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.16em] text-brown-400">Dispatched</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.16em] text-brown-400">Address</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.16em] text-brown-400">Items</th>
+                    <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-[0.16em] text-brown-400">Action</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-100 bg-white dark:divide-gray-800 dark:bg-gray-800">
+                <tbody className="divide-y divide-brown-100 bg-white dark:divide-dm-border dark:bg-dm-card">
                   {filteredOrders.map((order) => (
-                    <tr key={order._id} className="align-top hover:bg-gray-50/70 dark:hover:bg-gray-900/40">
+                    <tr key={order._id} className="align-top hover:bg-ivory/70 dark:hover:bg-dm-surface/40">
                       <td className="px-4 py-4">
-                        <p className="font-semibold text-gray-900 dark:text-white">{order.orderId}</p>
-                        <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">{order.paymentStatus}</p>
+                        <p className="font-semibold text-charcoal dark:text-white">{order.orderId}</p>
+                        <p className="mt-1 text-xs text-brown-400 dark:text-white/40">{order.paymentStatus}</p>
                       </td>
                       <td className="px-4 py-4">
-                        <p className="font-medium text-gray-900 dark:text-white">{order.customer?.name}</p>
-                        <p className="text-sm text-gray-600 dark:text-gray-300">{order.customer?.phone}</p>
-                        <p className="text-xs text-gray-500 dark:text-gray-400">{order.customer?.email}</p>
+                        <p className="font-medium text-charcoal dark:text-white">{order.customer?.name}</p>
+                        <p className="text-sm text-brown-500 dark:text-white/55">{order.customer?.phone}</p>
+                        <p className="text-xs text-brown-400 dark:text-white/40">{order.customer?.email}</p>
                       </td>
-                      <td className="px-4 py-4 text-sm text-gray-600 dark:text-gray-300">
+                      <td className="px-4 py-4 text-sm text-brown-500 dark:text-white/55">
                         {formatDate(order.dispatchedAt || order.updatedAt)}
                       </td>
-                      <td className="px-4 py-4 text-sm text-gray-600 dark:text-gray-300">
+                      <td className="px-4 py-4 text-sm text-brown-500 dark:text-white/55">
                         <p>{order.deliveryAddress?.street}</p>
-                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                        <p className="text-xs text-brown-400 dark:text-white/40">
                           {[order.deliveryAddress?.city, order.deliveryAddress?.neighborhood].filter(Boolean).join(', ')}
                         </p>
                       </td>
-                      <td className="px-4 py-4 text-sm text-gray-600 dark:text-gray-300">
+                      <td className="px-4 py-4 text-sm text-brown-500 dark:text-white/55">
                         <p>{order.items?.length || 0} item(s)</p>
-                        <div className="mt-1 space-y-1 text-xs text-gray-500 dark:text-gray-400">
+                        <div className="mt-1 space-y-1 text-xs text-brown-400 dark:text-white/40">
                           {(order.items || []).slice(0, 2).map((item, index) => (
                             <p key={`${order._id}-${index}`}>{item.quantity}x {item.name}</p>
                           ))}
@@ -287,11 +287,11 @@ const DispatchedOrders = () => {
 
       {selectedOrder && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-          <div className="w-full max-w-2xl rounded-2xl bg-white p-5 shadow-xl dark:bg-gray-800">
+          <div className="w-full max-w-2xl rounded-2xl bg-white p-5 shadow-xl dark:bg-dm-card">
             <div className="flex items-start justify-between gap-4">
               <div>
-                <h3 className="text-xl font-semibold text-gray-900 dark:text-white">Assign Driver</h3>
-                <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                <h3 className="text-xl font-semibold text-charcoal dark:text-white">Assign Driver</h3>
+                <p className="mt-1 text-sm text-brown-400 dark:text-white/40">
                   Order {selectedOrder.orderId} for {selectedOrder.customer?.name}
                 </p>
               </div>
@@ -302,28 +302,28 @@ const DispatchedOrders = () => {
                   setSelectedDriver('');
                   setAssignmentNote('');
                 }}
-                className="rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-600 dark:border-gray-700 dark:text-gray-300"
+                className="rounded-lg border border-brown-100 px-3 py-2 text-sm text-brown-500 dark:border-dm-border dark:text-white/55"
               >
                 Close
               </button>
             </div>
 
             <div className="mt-5 grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
-              <div className="rounded-2xl bg-gray-50 p-4 dark:bg-gray-900">
-                <p className="text-xs uppercase tracking-[0.16em] text-gray-500">Delivery details</p>
-                <div className="mt-3 space-y-3 text-sm text-gray-600 dark:text-gray-300">
+              <div className="rounded-2xl bg-ivory p-4 dark:bg-dm-surface">
+                <p className="text-xs uppercase tracking-[0.16em] text-brown-400">Delivery details</p>
+                <div className="mt-3 space-y-3 text-sm text-brown-500 dark:text-white/55">
                   <div>
-                    <p className="font-medium text-gray-900 dark:text-white">Customer</p>
+                    <p className="font-medium text-charcoal dark:text-white">Customer</p>
                     <p>{selectedOrder.customer?.name}</p>
                     <p>{selectedOrder.customer?.phone}</p>
                   </div>
                   <div>
-                    <p className="font-medium text-gray-900 dark:text-white">Address</p>
+                    <p className="font-medium text-charcoal dark:text-white">Address</p>
                     <p>{selectedOrder.deliveryAddress?.street}</p>
                     <p>{[selectedOrder.deliveryAddress?.city, selectedOrder.deliveryAddress?.neighborhood].filter(Boolean).join(', ')}</p>
                   </div>
                   <div>
-                    <p className="font-medium text-gray-900 dark:text-white">Items</p>
+                    <p className="font-medium text-charcoal dark:text-white">Items</p>
                     {(selectedOrder.items || []).map((item, index) => (
                       <p key={`${selectedOrder._id}-item-${index}`}>{item.quantity}x {item.name}</p>
                     ))}
@@ -333,11 +333,11 @@ const DispatchedOrders = () => {
 
               <div className="space-y-4">
                 <div>
-                  <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-200">Choose driver</label>
+                  <label className="mb-2 block text-sm font-medium text-charcoal dark:text-white/70">Choose driver</label>
                   <select
                     value={selectedDriver}
                     onChange={(e) => setSelectedDriver(e.target.value)}
-                    className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-cyan-500 focus:ring-2 focus:ring-cyan-100 dark:border-gray-700 dark:bg-gray-900 dark:text-white"
+                    className="w-full rounded-xl border border-brown-100 bg-white px-4 py-3 text-sm outline-none transition focus:border-cyan-500 focus:ring-2 focus:ring-cyan-100 dark:border-dm-border dark:bg-dm-surface dark:text-white"
                   >
                     <option value="">Select a driver</option>
                     {drivers.map((driver) => (
@@ -360,13 +360,13 @@ const DispatchedOrders = () => {
                 )}
 
                 <div>
-                  <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-200">Assignment note</label>
+                  <label className="mb-2 block text-sm font-medium text-charcoal dark:text-white/70">Assignment note</label>
                   <textarea
                     value={assignmentNote}
                     onChange={(e) => setAssignmentNote(e.target.value)}
                     rows={4}
                     placeholder="Optional instruction for the driver"
-                    className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-cyan-500 focus:ring-2 focus:ring-cyan-100 dark:border-gray-700 dark:bg-gray-900 dark:text-white"
+                    className="w-full rounded-xl border border-brown-100 bg-white px-4 py-3 text-sm outline-none transition focus:border-cyan-500 focus:ring-2 focus:ring-cyan-100 dark:border-dm-border dark:bg-dm-surface dark:text-white"
                   />
                 </div>
               </div>
@@ -380,7 +380,7 @@ const DispatchedOrders = () => {
                   setSelectedDriver('');
                   setAssignmentNote('');
                 }}
-                className="rounded-xl border border-gray-200 px-4 py-3 text-sm font-medium text-gray-700 dark:border-gray-700 dark:text-gray-200"
+                className="rounded-xl border border-brown-100 px-4 py-3 text-sm font-medium text-charcoal dark:border-dm-border dark:text-white/70"
                 disabled={assigning}
               >
                 Cancel

@@ -31,7 +31,7 @@ const DeliveryNavigation = () => {
   const isActive = (path) => {
     return location.pathname === path ? 
       'bg-primary-300 text-white' : 
-      'text-gray-700 hover:bg-primary-100 dark:text-gray-200 dark:hover:bg-gray-700';
+      'text-charcoal hover:bg-primary-100 dark:text-white/70 dark:hover:bg-dm-card-2';
   };
   
   const handleLogout = async () => {
@@ -58,7 +58,7 @@ const DeliveryNavigation = () => {
   };
   
   return (
-    <div className="bg-white dark:bg-gray-800 shadow-md w-full sticky top-0 z-30">
+    <div className="bg-white dark:bg-dm-card shadow-md w-full sticky top-0 z-30">
       <div className="container mx-auto px-4">
         <div className="flex justify-between items-center py-3">
           <div className="flex items-center">
@@ -108,7 +108,7 @@ const DeliveryNavigation = () => {
           
           <div className="flex items-center space-x-4">
             {/* User info */}
-            <span className="hidden md:block text-sm text-gray-700 dark:text-gray-300">
+            <span className="hidden md:block text-sm text-charcoal dark:text-white/55">
               {user.name}
             </span>
             
@@ -116,21 +116,21 @@ const DeliveryNavigation = () => {
             <div className="hidden md:flex items-center space-x-4">
               <Link 
                 to="/dashboard/profile" 
-                className="text-gray-700 hover:text-primary-200 dark:text-gray-200 dark:hover:text-primary-300"
+                className="text-charcoal hover:text-primary-200 dark:text-white/70 dark:hover:text-primary-300"
                 title="Profile"
               >
                 <FaUserCircle size={20} />
               </Link>
               <Link
                 to="/dashboard/settings"
-                className="text-gray-700 hover:text-primary-200 dark:text-gray-200 dark:hover:text-primary-300"
+                className="text-charcoal hover:text-primary-200 dark:text-white/70 dark:hover:text-primary-300"
                 title="Settings"
               >
                 <FaCog size={20} />
               </Link>
               <button 
                 onClick={handleLogout}
-                className="text-gray-700 hover:text-red-500 dark:text-gray-200 dark:hover:text-red-400"
+                className="text-charcoal hover:text-red-500 dark:text-white/70 dark:hover:text-red-400"
               >
                 <FaSignOutAlt size={20} />
               </button>
@@ -138,7 +138,7 @@ const DeliveryNavigation = () => {
             
             {/* Mobile menu button */}
             <button 
-              className="md:hidden text-gray-700 dark:text-gray-200 focus:outline-none" 
+              className="md:hidden text-charcoal dark:text-white/70 focus:outline-none" 
               onClick={toggleMobileMenu}
             >
               <FaBars size={24} />
@@ -149,7 +149,7 @@ const DeliveryNavigation = () => {
       
       {/* Mobile menu - Only visible on small screens when toggled */}
       {mobileMenuOpen && (
-        <div className="md:hidden border-t border-gray-200 dark:border-gray-700 p-4">
+        <div className="md:hidden border-t border-brown-100 dark:border-dm-border p-4">
           <div className="flex flex-col space-y-3">
             <Link 
               to="/delivery/dashboard" 
@@ -192,10 +192,10 @@ const DeliveryNavigation = () => {
               <span>Map View</span>
             </Link>
             
-            <div className="border-t border-gray-200 dark:border-gray-700 pt-2 mt-2">
+            <div className="border-t border-brown-100 dark:border-dm-border pt-2 mt-2">
               <Link
                 to="/dashboard/profile"
-                className="p-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded flex items-center"
+                className="p-2 text-charcoal dark:text-white/55 hover:bg-brown-50 dark:hover:bg-dm-card-2 rounded flex items-center"
                 onClick={toggleMobileMenu}
               >
                 <FaUserCircle className="mr-2" />
@@ -203,7 +203,7 @@ const DeliveryNavigation = () => {
               </Link>
               <Link
                 to="/dashboard/settings"
-                className="p-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded flex items-center"
+                className="p-2 text-charcoal dark:text-white/55 hover:bg-brown-50 dark:hover:bg-dm-card-2 rounded flex items-center"
                 onClick={toggleMobileMenu}
               >
                 <FaCog className="mr-2" />
@@ -214,7 +214,7 @@ const DeliveryNavigation = () => {
                   handleLogout();
                   toggleMobileMenu();
                 }}
-                className="w-full p-2 text-left text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded flex items-center"
+                className="w-full p-2 text-left text-charcoal dark:text-white/55 hover:bg-brown-50 dark:hover:bg-dm-card-2 rounded flex items-center"
               >
                 <FaSignOutAlt className="mr-2" />
                 <span>Log Out</span>

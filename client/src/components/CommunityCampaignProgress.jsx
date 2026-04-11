@@ -58,7 +58,7 @@ const CommunityCampaignProgress = ({
   // For slim mode with no campaign data, just show a placeholder
   if (displayMode === 'slim' && !campaign && !activeCampaign) {
     return (
-      <div className="px-4 py-2 text-center text-gray-600 dark:text-gray-400 text-sm">
+      <div className="px-4 py-2 text-center text-brown-500 dark:text-white/40 text-sm">
         Check back later for community campaigns
       </div>
     );
@@ -94,16 +94,16 @@ const CommunityCampaignProgress = ({
     
     return (
       <div className={`px-4 py-2 ${className}`}>
-        <div className="text-sm mb-2 dark:text-gray-200">
+        <div className="text-sm mb-2 dark:text-white/70">
           <span className="font-medium">{title}</span>
           {endDate && (
-            <span className="text-xs text-gray-500 dark:text-gray-400 ml-2">
+            <span className="text-xs text-brown-400 dark:text-white/40 ml-2">
               Ends {formatDistance(new Date(endDate), new Date(), { addSuffix: true })}
             </span>
           )}
         </div>
         
-        <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1.5 mb-1">
+        <div className="w-full bg-brown-100 dark:bg-dm-card-2 rounded-full h-1.5 mb-1">
           <div 
             className="bg-plum-600 h-1.5 rounded-full"
             style={{ width: `${progressPercentage}%` }}
@@ -111,7 +111,7 @@ const CommunityCampaignProgress = ({
         </div>
         
         <div className="flex justify-between text-xs">
-          <span className="text-gray-600 dark:text-gray-400">{progressPercentage}% Complete</span>
+          <span className="text-brown-500 dark:text-white/40">{progressPercentage}% Complete</span>
           <span className="text-plum-600 dark:text-plum-300">
             Reward: {formatReward(rewardType, rewardValue)}
           </span>
@@ -213,7 +213,7 @@ const CommunityCampaignProgress = ({
     
     if (!isActive) {
       return (
-        <span className="px-2 py-1 bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300 text-xs rounded-full">
+        <span className="px-2 py-1 bg-brown-50 text-charcoal dark:bg-dm-card-2 dark:text-white/55 text-xs rounded-full">
           Inactive
         </span>
       );
@@ -234,7 +234,7 @@ const CommunityCampaignProgress = ({
       <div className="flex items-start justify-between mb-2">
         <div className="flex-1">
           <h3 className="font-medium text-lg dark:text-white">{title}</h3>
-          <p className="text-gray-600 dark:text-gray-300 text-sm">{description}</p>
+          <p className="text-brown-500 dark:text-white/55 text-sm">{description}</p>
         </div>
         <div>
           {getStatusBadge()}
@@ -243,10 +243,10 @@ const CommunityCampaignProgress = ({
       
       <div className="mb-3">
         <div className="flex justify-between text-sm mb-1">
-          <span className="font-medium dark:text-gray-200">{formatGoal()}</span>
-          <span className="dark:text-gray-200">{progressPercentage}%</span>
+          <span className="font-medium dark:text-white/70">{formatGoal()}</span>
+          <span className="dark:text-white/70">{progressPercentage}%</span>
         </div>
-        <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5">
+        <div className="w-full bg-brown-100 dark:bg-dm-card-2 rounded-full h-2.5">
           <div 
             className={`${isPerk ? 'bg-yellow-500' : 'bg-plum-600'} h-2.5 rounded-full`}
             style={{ width: `${progressPercentage}%` }}
@@ -256,13 +256,13 @@ const CommunityCampaignProgress = ({
       
       <div className="flex flex-wrap gap-2 text-sm mb-3">
         {endDate && (
-          <div className="flex items-center gap-1 text-gray-600 dark:text-gray-400">
-            <FaClock className="text-gray-400 dark:text-gray-500" />
+          <div className="flex items-center gap-1 text-brown-500 dark:text-white/40">
+            <FaClock className="text-brown-400 dark:text-brown-400" />
             <span>{timeLeft}</span>
           </div>
         )}
         
-        <div className="flex items-center gap-1 text-gray-600 dark:text-gray-400">
+        <div className="flex items-center gap-1 text-brown-500 dark:text-white/40">
           <FaGift className="text-primary-200" />
           <span>Reward: {formatReward(rewardType, rewardValue)}</span>
         </div>
@@ -298,25 +298,25 @@ const CommunityCampaignProgress = ({
       </div>
       
       {leaderboardVisible && (
-        <div className="mt-4 border rounded-lg p-3 bg-gray-50 dark:bg-gray-800 dark:border-gray-700">
+        <div className="mt-4 border rounded-lg p-3 bg-ivory dark:bg-dm-card dark:border-dm-border">
           <h4 className="font-medium mb-2 flex items-center gap-1 dark:text-white">
             <FaTrophy className="text-yellow-500" />
             Top Contributors
           </h4>
           
           {loading ? (
-            <p className="text-center text-sm py-2 dark:text-gray-300">Loading...</p>
+            <p className="text-center text-sm py-2 dark:text-white/55">Loading...</p>
           ) : leaderboard.length === 0 ? (
-            <p className="text-center text-sm py-2 text-gray-500 dark:text-gray-400">No participants yet</p>
+            <p className="text-center text-sm py-2 text-brown-400 dark:text-white/40">No participants yet</p>
           ) : (
             <div className="space-y-2">
               {leaderboard.map((participant, index) => (
                 <div key={participant._id} className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <span className="font-medium dark:text-gray-200">{index + 1}.</span>
-                    <span className="dark:text-gray-300">{participant.userId?.name || 'Anonymous'}</span>
+                    <span className="font-medium dark:text-white/70">{index + 1}.</span>
+                    <span className="dark:text-white/55">{participant.userId?.name || 'Anonymous'}</span>
                   </div>
-                  <span className="text-sm dark:text-gray-400">{participant.contributionAmount} contributions</span>
+                  <span className="text-sm dark:text-white/40">{participant.contributionAmount} contributions</span>
                 </div>
               ))}
             </div>
@@ -331,7 +331,7 @@ const CommunityCampaignProgress = ({
       <div className={`border rounded-lg p-4 ${
         isPerk 
           ? 'bg-yellow-50 border-yellow-200 dark:bg-yellow-900/20 dark:border-yellow-800/30' 
-          : 'bg-white dark:bg-gray-800 dark:border-gray-700'
+          : 'bg-white dark:bg-dm-card dark:border-dm-border'
       }`}>
         {content}
       </div>

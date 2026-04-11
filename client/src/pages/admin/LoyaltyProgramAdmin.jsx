@@ -518,33 +518,33 @@ const LoyaltyProgramAdmin = () => {
   };
 
   return (
-    <div className="container mx-auto p-6 dark:bg-gray-900 dark:text-white">
+    <div className="container mx-auto p-6 dark:bg-dm-surface dark:text-white">
       <h1 className="text-2xl font-bold mb-6 dark:text-white">Loyalty Program Management</h1>
       
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4 mb-6">
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
-          <h3 className="text-gray-500 dark:text-gray-300 text-sm">Total Members</h3>
+        <div className="bg-white dark:bg-dm-card rounded-lg shadow p-4">
+          <h3 className="text-brown-400 dark:text-white/40 text-sm">Total Members</h3>
           <p className="text-2xl font-bold dark:text-white">{stats.totalMembers || 0}</p>
         </div>
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
-          <h3 className="text-gray-500 dark:text-gray-300 text-sm">Points Issued</h3>
+        <div className="bg-white dark:bg-dm-card rounded-lg shadow p-4">
+          <h3 className="text-brown-400 dark:text-white/40 text-sm">Points Issued</h3>
           <p className="text-2xl font-bold dark:text-white">{(stats.totalPointsIssued || 0).toLocaleString()}</p>
         </div>
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
-          <h3 className="text-gray-500 dark:text-gray-300 text-sm">Points Redeemed</h3>
+        <div className="bg-white dark:bg-dm-card rounded-lg shadow p-4">
+          <h3 className="text-brown-400 dark:text-white/40 text-sm">Points Redeemed</h3>
           <p className="text-2xl font-bold dark:text-white">{(stats.totalPointsRedeemed || 0).toLocaleString()}</p>
         </div>
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
-          <h3 className="text-gray-500 dark:text-gray-300 text-sm">Tier Distribution</h3>
+        <div className="bg-white dark:bg-dm-card rounded-lg shadow p-4">
+          <h3 className="text-brown-400 dark:text-white/40 text-sm">Tier Distribution</h3>
           <div className="flex items-center mt-2">
-            <div className="bg-gray-300 h-4" style={{width: `${(stats.tierDistribution?.Basic || 0) / (stats.totalMembers || 1) * 100}%`}}></div>
+            <div className="bg-brown-100 h-4" style={{width: `${(stats.tierDistribution?.Basic || 0) / (stats.totalMembers || 1) * 100}%`}}></div>
             <div className="bg-amber-700 h-4" style={{width: `${(stats.tierDistribution?.Bronze || stats.bronzeMembers || 0) / (stats.totalMembers || 1) * 100}%`}}></div>
-            <div className="bg-gray-400 h-4" style={{width: `${(stats.tierDistribution?.Silver || stats.silverMembers || 0) / (stats.totalMembers || 1) * 100}%`}}></div>
+            <div className="bg-brown-300 h-4" style={{width: `${(stats.tierDistribution?.Silver || stats.silverMembers || 0) / (stats.totalMembers || 1) * 100}%`}}></div>
             <div className="bg-amber-400 h-4" style={{width: `${(stats.tierDistribution?.Gold || stats.goldMembers || 0) / (stats.totalMembers || 1) * 100}%`}}></div>
             <div className="bg-plum-700 h-4" style={{width: `${(stats.tierDistribution?.Platinum || stats.platinumMembers || 0) / (stats.totalMembers || 1) * 100}%`}}></div>
           </div>
-          <div className="flex text-xs justify-between mt-1 dark:text-gray-300">
+          <div className="flex text-xs justify-between mt-1 dark:text-white/55">
             <span>Basic: {stats.tierDistribution?.Basic || 0}</span>
             <span>Bronze: {stats.tierDistribution?.Bronze || stats.bronzeMembers || 0}</span>
             <span>Silver: {stats.tierDistribution?.Silver || stats.silverMembers || 0}</span>
@@ -565,14 +565,14 @@ const LoyaltyProgramAdmin = () => {
       
       {/* Tabbed Navigation for Settings Panels */}
       <div className="mb-6">
-        <div className="border-b border-gray-200 dark:border-gray-700">
+        <div className="border-b border-brown-100 dark:border-dm-border">
           <nav className="flex -mb-px">
             <button
               onClick={() => setActiveTab('thresholds')}
               className={`py-4 px-6 font-medium text-sm border-b-2 ${
                 activeTab === 'thresholds'
                   ? 'border-primary-200 text-primary-200 dark:border-primary-400 dark:text-primary-400'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
+                  : 'border-transparent text-brown-400 dark:text-white/40 hover:text-charcoal dark:hover:text-white hover:border-brown-100 dark:hover:border-dm-border'
               }`}
             >
               Tier Benefit Thresholds
@@ -582,7 +582,7 @@ const LoyaltyProgramAdmin = () => {
               className={`py-4 px-6 font-medium text-sm border-b-2 ${
                 activeTab === 'benefits'
                   ? 'border-primary-200 text-primary-200 dark:border-primary-400 dark:text-primary-400'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
+                  : 'border-transparent text-brown-400 dark:text-white/40 hover:text-charcoal dark:hover:text-white hover:border-brown-100 dark:hover:border-dm-border'
               }`}
             >
               Special Benefit Ranges
@@ -592,7 +592,7 @@ const LoyaltyProgramAdmin = () => {
               className={`py-4 px-6 font-medium text-sm border-b-2 ${
                 activeTab === 'promotions'
                   ? 'border-primary-200 text-primary-200 dark:border-primary-400 dark:text-primary-400'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
+                  : 'border-transparent text-brown-400 dark:text-white/40 hover:text-charcoal dark:hover:text-white hover:border-brown-100 dark:hover:border-dm-border'
               }`}
             >
               Special Tier Promotions
@@ -602,9 +602,9 @@ const LoyaltyProgramAdmin = () => {
         
         {/* Tier Benefit Settings Panel */}
         {activeTab === 'thresholds' && (
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 mt-4">
+          <div className="bg-white dark:bg-dm-card rounded-lg shadow p-6 mt-4">
             <h2 className="text-lg font-semibold mb-4 dark:text-white">Tier Benefit Threshold Settings</h2>
-            <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">
+            <p className="text-sm text-brown-500 dark:text-white/55 mb-4">
               Configure the points required for each tier and control early access thresholds.
             </p>
             
@@ -613,18 +613,18 @@ const LoyaltyProgramAdmin = () => {
               <div>
                 <div className="flex items-center justify-between mb-3">
                   <h3 className="font-medium dark:text-white">Standard Tier Requirements</h3>
-                  <div className="text-sm text-gray-600">
+                  <div className="text-sm text-brown-500 dark:text-white/55">
                     <span className="mr-2">Make changes to the standard tier point requirements</span>
                   </div>
                 </div>
                 <div className="space-y-3">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    <label className="block text-sm font-medium text-charcoal dark:text-white mb-1">
                       Bronze Tier (points)
                     </label>
                     <input 
                       type="number" 
-                      className="w-full p-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white" 
+                      className="w-full p-2 border rounded-lg dark:bg-dm-card-2 dark:border-dm-border dark:text-white" 
                       placeholder="e.g., 500"
                       min="100"
                       value={tierThresholds.bronzeThreshold}
@@ -633,12 +633,12 @@ const LoyaltyProgramAdmin = () => {
                   </div>
                   
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    <label className="block text-sm font-medium text-charcoal dark:text-white mb-1">
                       Silver Tier (points)
                     </label>
                     <input 
                       type="number" 
-                      className="w-full p-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white" 
+                      className="w-full p-2 border rounded-lg dark:bg-dm-card-2 dark:border-dm-border dark:text-white" 
                       placeholder="e.g., 1500"
                       min={tierThresholds.bronzeThreshold + 1}
                       value={tierThresholds.silverThreshold}
@@ -647,12 +647,12 @@ const LoyaltyProgramAdmin = () => {
                   </div>
                   
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    <label className="block text-sm font-medium text-charcoal dark:text-white mb-1">
                       Gold Tier (points)
                     </label>
                     <input 
                       type="number" 
-                      className="w-full p-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white" 
+                      className="w-full p-2 border rounded-lg dark:bg-dm-card-2 dark:border-dm-border dark:text-white" 
                       placeholder="e.g., 3000"
                       min={tierThresholds.silverThreshold + 1}
                       value={tierThresholds.goldThreshold}
@@ -661,12 +661,12 @@ const LoyaltyProgramAdmin = () => {
                   </div>
                   
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    <label className="block text-sm font-medium text-charcoal dark:text-white mb-1">
                       Platinum Tier (points)
                     </label>
                     <input 
                       type="number" 
-                      className="w-full p-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white" 
+                      className="w-full p-2 border rounded-lg dark:bg-dm-card-2 dark:border-dm-border dark:text-white" 
                       placeholder="e.g., 5000"
                       min={tierThresholds.goldThreshold + 1}
                       value={tierThresholds.platinumThreshold}
@@ -689,16 +689,16 @@ const LoyaltyProgramAdmin = () => {
                         onChange={(e) => setTierThresholds({...tierThresholds, earlyAccessEnabled: e.target.checked})}
                       />
                       <div className={`relative w-11 h-6 rounded-full peer peer-focus:ring-2 peer-focus:ring-primary-300 
-                        ${tierThresholds.earlyAccessEnabled ? 'bg-primary-200' : 'bg-gray-300 dark:bg-gray-600'}`}>
+                        ${tierThresholds.earlyAccessEnabled ? 'bg-primary-200' : 'bg-brown-100 dark:bg-dm-card-2'}`}>
                         <div className={`absolute inset-y-0 left-0 w-6 h-6 rounded-full bg-white transform transition-transform 
                           ${tierThresholds.earlyAccessEnabled ? 'translate-x-6' : 'translate-x-0'}`}></div>
                       </div>
-                      <span className="ml-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+                      <span className="ml-2 text-sm font-medium text-charcoal dark:text-white">
                         {tierThresholds.earlyAccessEnabled ? 'Enabled' : 'Disabled'}
                       </span>
                     </label>
                   </div>
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                  <p className="text-xs text-brown-400 dark:text-white/40 mt-1">
                     When enabled, users can get early access to tier benefits at lower point thresholds
                   </p>
                 </div>
@@ -709,67 +709,67 @@ const LoyaltyProgramAdmin = () => {
                     <h3 className="font-medium mb-3 dark:text-white">Early Access Thresholds</h3>
                     <div className="space-y-3">
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        <label className="block text-sm font-medium text-charcoal dark:text-white mb-1">
                           Early Bronze Access (points)
                         </label>
                         <input 
                           type="number" 
-                          className="w-full p-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white" 
+                          className="w-full p-2 border rounded-lg dark:bg-dm-card-2 dark:border-dm-border dark:text-white" 
                           placeholder="e.g., 400"
                           min="0"
                           max={tierThresholds.bronzeThreshold}
                           value={tierThresholds.earlyBronzeThreshold}
                           onChange={(e) => setTierThresholds({...tierThresholds, earlyBronzeThreshold: parseInt(e.target.value)})}
                         />
-                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Standard: {tierThresholds.bronzeThreshold} points</p>
+                        <p className="text-xs text-brown-400 dark:text-white/40 mt-1">Standard: {tierThresholds.bronzeThreshold} points</p>
                       </div>
                       
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        <label className="block text-sm font-medium text-charcoal dark:text-white mb-1">
                           Early Silver Access (points)
                         </label>
                         <input 
                           type="number" 
-                          className="w-full p-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white" 
+                          className="w-full p-2 border rounded-lg dark:bg-dm-card-2 dark:border-dm-border dark:text-white" 
                           placeholder="e.g., 1200"
                           min={tierThresholds.bronzeThreshold}
                           max={tierThresholds.silverThreshold}
                           value={tierThresholds.earlySilverThreshold}
                           onChange={(e) => setTierThresholds({...tierThresholds, earlySilverThreshold: parseInt(e.target.value)})}
                         />
-                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Standard: {tierThresholds.silverThreshold} points</p>
+                        <p className="text-xs text-brown-400 dark:text-white/40 mt-1">Standard: {tierThresholds.silverThreshold} points</p>
                       </div>
                       
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        <label className="block text-sm font-medium text-charcoal dark:text-white mb-1">
                           Early Gold Access (points)
                         </label>
                         <input 
                           type="number" 
-                          className="w-full p-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white" 
+                          className="w-full p-2 border rounded-lg dark:bg-dm-card-2 dark:border-dm-border dark:text-white" 
                           placeholder="e.g., 2500"
                           min={tierThresholds.silverThreshold}
                           max={tierThresholds.goldThreshold}
                           value={tierThresholds.earlyGoldThreshold}
                           onChange={(e) => setTierThresholds({...tierThresholds, earlyGoldThreshold: parseInt(e.target.value)})}
                         />
-                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Standard: {tierThresholds.goldThreshold} points</p>
+                        <p className="text-xs text-brown-400 dark:text-white/40 mt-1">Standard: {tierThresholds.goldThreshold} points</p>
                       </div>
                       
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        <label className="block text-sm font-medium text-charcoal dark:text-white mb-1">
                           Early Platinum Access (points)
                         </label>
                         <input 
                           type="number" 
-                          className="w-full p-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white" 
+                          className="w-full p-2 border rounded-lg dark:bg-dm-card-2 dark:border-dm-border dark:text-white" 
                           placeholder="e.g., 3500"
                           min={tierThresholds.goldThreshold}
                           max={tierThresholds.platinumThreshold}
                           value={tierThresholds.earlyPlatinumThreshold}
                           onChange={(e) => setTierThresholds({...tierThresholds, earlyPlatinumThreshold: parseInt(e.target.value)})}
                         />
-                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Standard: {tierThresholds.platinumThreshold} points</p>
+                        <p className="text-xs text-brown-400 dark:text-white/40 mt-1">Standard: {tierThresholds.platinumThreshold} points</p>
                       </div>
                     </div>
                   </div>
@@ -792,22 +792,22 @@ const LoyaltyProgramAdmin = () => {
 
         {/* Special Benefits Range Panel */}
         {activeTab === 'benefits' && (
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 mt-4">
+          <div className="bg-white dark:bg-dm-card rounded-lg shadow p-6 mt-4">
             <h2 className="text-lg font-semibold mb-4 dark:text-white">Special Benefits Range Settings</h2>
-            <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">
-              Define custom point ranges where users will receive special benefits regardless of their tier. 
+            <p className="text-sm text-brown-500 dark:text-white/55 mb-4">
+              Define custom point ranges where users will receive special benefits regardless of their tier.
               These benefits can be awarded to users who have reached specific point milestones.
             </p>
-            
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {/* Benefit Range Settings */}
               <div>
                 <h3 className="font-medium mb-3 dark:text-white">Special Benefits Description</h3>
-                <p className="text-sm text-gray-600 dark:text-gray-300 mb-2">
-                  Special benefits are additional rewards given to users who have accumulated a certain number of points, 
+                <p className="text-sm text-brown-500 dark:text-white/55 mb-2">
+                  Special benefits are additional rewards given to users who have accumulated a certain number of points,
                   regardless of their current tier. These can incentivize continuous engagement with the platform.
                 </p>
-                <ul className="list-disc list-inside text-sm text-gray-600 dark:text-gray-300 ml-2 space-y-1">
+                <ul className="list-disc list-inside text-sm text-brown-500 dark:text-white/55 ml-2 space-y-1">
                   <li>Milestone rewards for point accumulation</li>
                   <li>Limited-time exclusive offers</li>
                   <li>Special event invitations</li>
@@ -821,12 +821,12 @@ const LoyaltyProgramAdmin = () => {
                   {/* First Benefit Range */}
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      <label className="block text-sm font-medium text-charcoal dark:text-white mb-1">
                         First Milestone (points)
                       </label>
                       <input 
                         type="number" 
-                        className="w-full p-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white" 
+                        className="w-full p-2 border rounded-lg dark:bg-dm-card-2 dark:border-dm-border dark:text-white" 
                         placeholder="e.g., 1000"
                         min="100"
                         value={benefitRanges?.firstMilestone || 1000}
@@ -834,12 +834,12 @@ const LoyaltyProgramAdmin = () => {
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      <label className="block text-sm font-medium text-charcoal dark:text-white mb-1">
                         Benefit Name
                       </label>
                       <input 
                         type="text" 
-                        className="w-full p-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white" 
+                        className="w-full p-2 border rounded-lg dark:bg-dm-card-2 dark:border-dm-border dark:text-white" 
                         placeholder="e.g., Welcome Reward"
                         value={benefitRanges?.firstMilestoneName || "Welcome Reward"}
                         onChange={(e) => setBenefitRanges({...benefitRanges, firstMilestoneName: e.target.value})}
@@ -850,12 +850,12 @@ const LoyaltyProgramAdmin = () => {
                   {/* Second Benefit Range */}
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      <label className="block text-sm font-medium text-charcoal dark:text-white mb-1">
                         Second Milestone (points)
                       </label>
                       <input 
                         type="number" 
-                        className="w-full p-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white" 
+                        className="w-full p-2 border rounded-lg dark:bg-dm-card-2 dark:border-dm-border dark:text-white" 
                         placeholder="e.g., 2500"
                         min="1000"
                         value={benefitRanges?.secondMilestone || 2500}
@@ -863,12 +863,12 @@ const LoyaltyProgramAdmin = () => {
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      <label className="block text-sm font-medium text-charcoal dark:text-white mb-1">
                         Benefit Name
                       </label>
                       <input 
                         type="text" 
-                        className="w-full p-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white" 
+                        className="w-full p-2 border rounded-lg dark:bg-dm-card-2 dark:border-dm-border dark:text-white" 
                         placeholder="e.g., Loyalty Bonus"
                         value={benefitRanges?.secondMilestoneName || "Loyalty Bonus"}
                         onChange={(e) => setBenefitRanges({...benefitRanges, secondMilestoneName: e.target.value})}
@@ -879,12 +879,12 @@ const LoyaltyProgramAdmin = () => {
                   {/* Third Benefit Range */}
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      <label className="block text-sm font-medium text-charcoal dark:text-white mb-1">
                         Third Milestone (points)
                       </label>
                       <input 
                         type="number" 
-                        className="w-full p-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white" 
+                        className="w-full p-2 border rounded-lg dark:bg-dm-card-2 dark:border-dm-border dark:text-white" 
                         placeholder="e.g., 5000"
                         min="2500"
                         value={benefitRanges?.thirdMilestone || 5000}
@@ -892,12 +892,12 @@ const LoyaltyProgramAdmin = () => {
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      <label className="block text-sm font-medium text-charcoal dark:text-white mb-1">
                         Benefit Name
                       </label>
                       <input 
                         type="text" 
-                        className="w-full p-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white" 
+                        className="w-full p-2 border rounded-lg dark:bg-dm-card-2 dark:border-dm-border dark:text-white" 
                         placeholder="e.g., VIP Status"
                         value={benefitRanges?.thirdMilestoneName || "VIP Status"}
                         onChange={(e) => setBenefitRanges({...benefitRanges, thirdMilestoneName: e.target.value})}
@@ -923,7 +923,7 @@ const LoyaltyProgramAdmin = () => {
         
         {/* Special Tier Promotions Panel */}
         {activeTab === 'promotions' && (
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 mt-4">
+          <div className="bg-white dark:bg-dm-card rounded-lg shadow p-6 mt-4">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-semibold dark:text-white">Special Tier Promotions</h2>
               <button
@@ -934,25 +934,25 @@ const LoyaltyProgramAdmin = () => {
               </button>
             </div>
             
-            <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">
-              Grant special tier status to specific users regardless of their point total. This allows you to 
+            <p className="text-sm text-brown-500 dark:text-white/55 mb-4">
+              Grant special tier status to specific users regardless of their point total. This allows you to
               reward loyal customers, VIPs, or promotional winners with higher tier benefits.
             </p>
-            
+
             {/* Recent Special Promotions */}
-            <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
-              <h3 className="font-medium text-gray-700 dark:text-gray-200 mb-2">Recent Special Promotions</h3>
+            <div className="bg-ivory dark:bg-dm-card-2 rounded-lg p-4">
+              <h3 className="font-medium text-charcoal dark:text-white mb-2">Recent Special Promotions</h3>
               <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-600">
-                  <thead className="bg-gray-100 dark:bg-gray-600">
+                <table className="min-w-full divide-y divide-brown-100 dark:divide-dm-border">
+                  <thead className="bg-brown-50 dark:bg-dm-card-2">
                     <tr>
-                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-200 uppercase">User</th>
-                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-200 uppercase">Granted Tier</th>
-                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-200 uppercase">Reason</th>
-                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-200 uppercase">Date</th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-brown-400 dark:text-white/40 uppercase">User</th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-brown-400 dark:text-white/40 uppercase">Granted Tier</th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-brown-400 dark:text-white/40 uppercase">Reason</th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-brown-400 dark:text-white/40 uppercase">Date</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-gray-200 dark:divide-gray-600">
+                  <tbody className="divide-y divide-brown-100 dark:divide-dm-border">
                     {loyaltyCards
                       .filter(card => card.specialPromotion)
                       .slice(0, 5)
@@ -961,31 +961,31 @@ const LoyaltyProgramAdmin = () => {
                           <td className="px-4 py-2 whitespace-nowrap">
                             <div className="flex items-center">
                               <div className="ml-2">
-                                <div className="text-sm font-medium text-gray-900 dark:text-gray-200">{card.userId.name}</div>
-                                <div className="text-xs text-gray-500 dark:text-gray-400">{card.userId.email}</div>
+                                <div className="text-sm font-medium text-charcoal dark:text-white">{card.userId.name}</div>
+                                <div className="text-xs text-brown-400 dark:text-white/40">{card.userId.email}</div>
                               </div>
                             </div>
                           </td>
                           <td className="px-4 py-2 whitespace-nowrap">
                             <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
-                              ${card.tier === 'Bronze' ? 'bg-amber-100 text-amber-800 dark:bg-amber-800 dark:text-amber-100' : 
-                               card.tier === 'Silver' ? 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-100' :
+                              ${card.tier === 'Bronze' ? 'bg-amber-100 text-amber-800 dark:bg-amber-800 dark:text-amber-100' :
+                               card.tier === 'Silver' ? 'bg-brown-100 text-charcoal dark:bg-dm-card-2 dark:text-white' :
                                card.tier === 'Gold' ? 'bg-amber-100 text-amber-800 dark:bg-amber-800 dark:text-amber-100' :
                                'bg-plum-100 text-plum-800 dark:bg-plum-800 dark:text-plum-100'}`}>
                               {card.tier}
                             </span>
                           </td>
-                          <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                          <td className="px-4 py-2 whitespace-nowrap text-sm text-brown-400 dark:text-white/40">
                             {card.specialPromotion?.reason || 'Special promotion'}
                           </td>
-                          <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                          <td className="px-4 py-2 whitespace-nowrap text-sm text-brown-400 dark:text-white/40">
                             {card.specialPromotion?.grantedAt ? new Date(card.specialPromotion.grantedAt).toLocaleDateString() : 'N/A'}
                           </td>
                         </tr>
                       ))}
                     {loyaltyCards.filter(card => card.specialPromotion).length === 0 && (
                       <tr>
-                        <td colSpan="4" className="px-4 py-2 text-center text-gray-500 dark:text-gray-400">
+                        <td colSpan="4" className="px-4 py-2 text-center text-brown-400 dark:text-white/40">
                           No special promotions found
                         </td>
                       </tr>
@@ -1006,9 +1006,9 @@ const LoyaltyProgramAdmin = () => {
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             placeholder="Search by name, email, or card number..."
-            className="w-full p-2 pl-10 pr-4 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+            className="w-full p-2 pl-10 pr-4 border rounded-lg dark:bg-dm-card-2 dark:border-dm-border dark:text-white"
           />
-          <FaSearch className="absolute left-3 top-3 text-gray-400 dark:text-gray-300" />
+          <FaSearch className="absolute left-3 top-3 text-brown-400 dark:text-white/55" />
         </div>
         
         <button
@@ -1020,31 +1020,31 @@ const LoyaltyProgramAdmin = () => {
       </div>
       
       {/* Loyalty Cards Table */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
-        <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-600">
-          <thead className="bg-gray-50 dark:bg-gray-700">
+      <div className="bg-white dark:bg-dm-card rounded-lg shadow overflow-hidden">
+        <table className="min-w-full divide-y divide-brown-100 dark:divide-dm-border">
+          <thead className="bg-ivory dark:bg-dm-card-2">
             <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-200 uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-xs font-medium text-brown-400 dark:text-white/40 uppercase tracking-wider">
                 Member
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-200 uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-xs font-medium text-brown-400 dark:text-white/40 uppercase tracking-wider">
                 Card Number
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-200 uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-xs font-medium text-brown-400 dark:text-white/40 uppercase tracking-wider">
                 Tier
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-200 uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-xs font-medium text-brown-400 dark:text-white/40 uppercase tracking-wider">
                 Points
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-200 uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-xs font-medium text-brown-400 dark:text-white/40 uppercase tracking-wider">
                 Created
               </th>
-              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-200 uppercase tracking-wider">
+              <th className="px-6 py-3 text-right text-xs font-medium text-brown-400 dark:text-white/40 uppercase tracking-wider">
                 Actions
               </th>
             </tr>
           </thead>
-          <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-600">
+          <tbody className="bg-white dark:bg-dm-card divide-y divide-brown-100 dark:divide-dm-border">
             {loading ? (
               <tr>
                 <td colSpan="6" className="px-6 py-4 text-center dark:text-white">
@@ -1054,7 +1054,7 @@ const LoyaltyProgramAdmin = () => {
               </tr>
             ) : loyaltyCards.length === 0 ? (
               <tr>
-                <td colSpan="6" className="px-6 py-4 text-center text-gray-500 dark:text-gray-400">
+                <td colSpan="6" className="px-6 py-4 text-center text-brown-400 dark:text-white/40">
                   No loyalty cards found.
                 </td>
               </tr>
@@ -1063,24 +1063,24 @@ const LoyaltyProgramAdmin = () => {
                 <tr key={card._id}>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center">
-                      <div className="flex-shrink-0 h-10 w-10 bg-gray-200 dark:bg-gray-600 rounded-full flex items-center justify-center">
-                        <FaUserTag className="text-gray-500 dark:text-gray-300" />
+                      <div className="flex-shrink-0 h-10 w-10 bg-brown-100 dark:bg-dm-card-2 rounded-full flex items-center justify-center">
+                        <FaUserTag className="text-brown-400 dark:text-white/40" />
                       </div>
                       <div className="ml-4">
-                        <div className="text-sm font-medium text-gray-900 dark:text-white">{card.userId.name}</div>
-                        <div className="text-sm text-gray-500 dark:text-gray-400">{card.userId.email}</div>
+                        <div className="text-sm font-medium text-charcoal dark:text-white">{card.userId.name}</div>
+                        <div className="text-sm text-brown-400 dark:text-white/40">{card.userId.email}</div>
                       </div>
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900 dark:text-white">{card.cardNumber}</div>
+                    <div className="text-sm text-charcoal dark:text-white">{card.cardNumber}</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     {editingCard && editingCard._id === card._id ? (
                       <select
                         value={editingCard.tier}
                         onChange={(e) => setEditingCard({...editingCard, tier: e.target.value})}
-                        className="border rounded p-1 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                        className="border rounded p-1 dark:bg-dm-card-2 dark:border-dm-border dark:text-white"
                       >
                         <option value="Bronze">Bronze</option>
                         <option value="Silver">Silver</option>
@@ -1090,7 +1090,7 @@ const LoyaltyProgramAdmin = () => {
                     ) : (
                       <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
                         ${card.tier === 'Bronze' ? 'bg-amber-100 text-amber-800 dark:bg-amber-800 dark:text-amber-100' : 
-                         card.tier === 'Silver' ? 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-100' :
+                         card.tier === 'Silver' ? 'bg-brown-100 text-charcoal dark:bg-dm-card-2 dark:text-white' :
                          card.tier === 'Gold' ? 'bg-amber-100 text-amber-800 dark:bg-amber-800 dark:text-amber-100' :
                          'bg-plum-100 text-plum-800 dark:bg-plum-800 dark:text-plum-100'}`}>
                         {card.tier}
@@ -1103,14 +1103,14 @@ const LoyaltyProgramAdmin = () => {
                         type="number"
                         value={editingCard.points}
                         onChange={(e) => setEditingCard({...editingCard, points: parseInt(e.target.value)})}
-                        className="border rounded p-1 w-20 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                        className="border rounded p-1 w-20 dark:bg-dm-card-2 dark:border-dm-border dark:text-white"
                       />
                     ) : (
-                      <div className="text-sm text-gray-900 dark:text-white">{card.points}</div>
+                      <div className="text-sm text-charcoal dark:text-white">{card.points}</div>
                     )}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-500 dark:text-gray-400">
+                    <div className="text-sm text-brown-400 dark:text-white/40">
                       {new Date(card.createdAt).toLocaleDateString()}
                     </div>
                   </td>
@@ -1161,22 +1161,22 @@ const LoyaltyProgramAdmin = () => {
       </div>
 
       {/* Pagination */}
-      <div className="flex justify-between items-center mt-4 dark:text-gray-300">
-        <div className="text-sm text-gray-700 dark:text-gray-300">
+      <div className="flex justify-between items-center mt-4 dark:text-white/70">
+        <div className="text-sm text-charcoal dark:text-white">
           Showing page {currentPage} of {totalPages}
         </div>
         <div className="flex space-x-2">
           <button
             onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
             disabled={currentPage === 1}
-            className="px-3 py-1 border rounded disabled:opacity-50 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+            className="px-3 py-1 border rounded disabled:opacity-50 dark:bg-dm-card-2 dark:border-dm-border dark:text-white"
           >
             Previous
           </button>
           <button
             onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
             disabled={currentPage === totalPages}
-            className="px-3 py-1 border rounded disabled:opacity-50 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+            className="px-3 py-1 border rounded disabled:opacity-50 dark:bg-dm-card-2 dark:border-dm-border dark:text-white"
           >
             Next
           </button>
@@ -1186,12 +1186,12 @@ const LoyaltyProgramAdmin = () => {
       {/* Special Promotion Modal */}
       {promotionModalOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 w-full max-w-lg">
+          <div className="bg-white dark:bg-dm-card rounded-lg shadow-lg p-6 w-full max-w-lg">
             <h2 className="text-xl font-bold mb-4 dark:text-white">Grant Special Tier Status</h2>
             
             {/* User Search */}
             <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              <label className="block text-sm font-medium text-charcoal dark:text-white mb-1">
                 Search for User
               </label>
               <div className="flex space-x-2">
@@ -1200,11 +1200,11 @@ const LoyaltyProgramAdmin = () => {
                   value={userSearchTerm}
                   onChange={(e) => setUserSearchTerm(e.target.value)}
                   placeholder="Search by name or email"
-                  className="flex-grow p-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                  className="flex-grow p-2 border rounded-lg dark:bg-dm-card-2 dark:border-dm-border dark:text-white"
                 />
                 <button
                   onClick={searchUsers}
-                  className="px-4 py-2 bg-gray-200 dark:bg-gray-600 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-700 dark:text-white"
+                  className="px-4 py-2 bg-brown-100 dark:bg-dm-card-2 rounded-lg hover:bg-brown-200 dark:hover:bg-dm-border text-charcoal dark:text-white"
                 >
                   Search
                 </button>
@@ -1212,7 +1212,7 @@ const LoyaltyProgramAdmin = () => {
               
               {/* User Search Results */}
               {searchUserResults.length > 0 && (
-                <div className="mt-2 max-h-40 overflow-y-auto border rounded-lg dark:border-gray-600">
+                <div className="mt-2 max-h-40 overflow-y-auto border border-brown-100 dark:border-dm-border rounded-lg">
                   {searchUserResults.map(user => (
                     <div
                       key={user._id}
@@ -1221,10 +1221,10 @@ const LoyaltyProgramAdmin = () => {
                         setSpecialPromotion({...specialPromotion, userId: user._id});
                         setSearchUserResults([]);
                       }}
-                      className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer border-b dark:border-gray-600 dark:text-white"
+                      className="p-2 hover:bg-ivory dark:hover:bg-dm-card-2 cursor-pointer border-b border-brown-100 dark:border-dm-border dark:text-white"
                     >
                       <div className="font-medium">{user.name}</div>
-                      <div className="text-sm text-gray-500 dark:text-gray-400">{user.email}</div>
+                      <div className="text-sm text-brown-400 dark:text-white/40">{user.email}</div>
                     </div>
                   ))}
                 </div>
@@ -1232,23 +1232,23 @@ const LoyaltyProgramAdmin = () => {
               
               {/* Selected User */}
               {selectedUserForPromotion && (
-                <div className="mt-4 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                <div className="mt-4 p-3 bg-ivory dark:bg-dm-card-2 rounded-lg">
                   <div className="font-medium dark:text-white">Selected User:</div>
-                  <div className="text-sm dark:text-gray-300">{selectedUserForPromotion.name}</div>
-                  <div className="text-sm text-gray-500 dark:text-gray-400">{selectedUserForPromotion.email}</div>
+                  <div className="text-sm dark:text-white/70">{selectedUserForPromotion.name}</div>
+                  <div className="text-sm text-brown-400 dark:text-white/40">{selectedUserForPromotion.email}</div>
                 </div>
               )}
             </div>
             
             {/* Tier Selection */}
             <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              <label className="block text-sm font-medium text-charcoal dark:text-white mb-1">
                 Select Tier to Grant
               </label>
               <select
                 value={specialPromotion.tier}
                 onChange={(e) => setSpecialPromotion({...specialPromotion, tier: e.target.value})}
-                className="w-full p-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                className="w-full p-2 border rounded-lg dark:bg-dm-card-2 dark:border-dm-border dark:text-white"
               >
                 <option value="Bronze">Bronze</option>
                 <option value="Silver">Silver</option>
@@ -1259,30 +1259,30 @@ const LoyaltyProgramAdmin = () => {
             
             {/* Reason */}
             <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              <label className="block text-sm font-medium text-charcoal dark:text-white mb-1">
                 Reason for Special Promotion
               </label>
               <textarea
                 value={specialPromotion.reason}
                 onChange={(e) => setSpecialPromotion({...specialPromotion, reason: e.target.value})}
                 placeholder="e.g., Contest winner, VIP customer, etc."
-                className="w-full p-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                className="w-full p-2 border rounded-lg dark:bg-dm-card-2 dark:border-dm-border dark:text-white"
                 rows="3"
               ></textarea>
             </div>
             
             {/* Expiry Date (Optional) */}
             <div className="mb-6">
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              <label className="block text-sm font-medium text-charcoal dark:text-white mb-1">
                 Expiry Date (Optional)
               </label>
               <input
                 type="date"
                 value={specialPromotion.expiryDate}
                 onChange={(e) => setSpecialPromotion({...specialPromotion, expiryDate: e.target.value})}
-                className="w-full p-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                className="w-full p-2 border rounded-lg dark:bg-dm-card-2 dark:border-dm-border dark:text-white"
               />
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+              <p className="text-xs text-brown-400 dark:text-white/40 mt-1">
                 Leave blank for permanent promotion
               </p>
             </div>
@@ -1300,7 +1300,7 @@ const LoyaltyProgramAdmin = () => {
                     expiryDate: ''
                   });
                 }}
-                className="px-4 py-2 bg-gray-200 dark:bg-gray-600 text-gray-800 dark:text-white rounded-lg hover:bg-gray-300 dark:hover:bg-gray-700"
+                className="px-4 py-2 bg-brown-100 dark:bg-dm-card-2 text-charcoal dark:text-white rounded-lg hover:bg-brown-200 dark:hover:bg-dm-border"
               >
                 Cancel
               </button>
@@ -1319,44 +1319,44 @@ const LoyaltyProgramAdmin = () => {
       {/* Refresh Points Confirmation Modal */}
       {refreshModalOpen && refreshingUser && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 w-full max-w-md">
+          <div className="bg-white dark:bg-dm-card rounded-lg shadow-lg p-6 w-full max-w-md">
             <h2 className="text-xl font-bold mb-4 dark:text-white">Refresh Points</h2>
-            
-            <div className="mt-4 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg mb-4">
+
+            <div className="mt-4 p-3 bg-ivory dark:bg-dm-card-2 rounded-lg mb-4">
               <p className="font-medium dark:text-white">Selected User:</p>
-              <div className="text-sm dark:text-gray-300">{refreshingUser.user?.name || 'Unknown User'}</div>
-              <div className="text-sm text-gray-500 dark:text-gray-400">{refreshingUser.user?.email || ''}</div>
+              <div className="text-sm dark:text-white/70">{refreshingUser.user?.name || 'Unknown User'}</div>
+              <div className="text-sm text-brown-400 dark:text-white/40">{refreshingUser.user?.email || ''}</div>
               <div className="text-sm font-medium mt-2">
                 Current Points: <span className="text-primary-600 dark:text-primary-400">{refreshingUser.points}</span> 
               </div>
               <div className="text-sm font-medium">
                 Current Tier: <span className="text-primary-600 dark:text-primary-400">{refreshingUser.tier}</span>
               </div>
-              <div className="text-xs mt-2 text-gray-500">
+              <div className="text-xs mt-2 text-brown-400 dark:text-white/40">
                 Card ID: {refreshingUser._id}
               </div>
             </div>
             
             {!showSecurityCodeInput ? (
               <div className="mb-4">
-                <p className="mb-2 text-gray-700 dark:text-gray-300">Please choose an option:</p>
+                <p className="mb-2 text-charcoal dark:text-white">Please choose an option:</p>
                 <div className="space-y-2">
                   <button
                     onClick={() => setRefreshType('spending')}
-                    className={`w-full text-left px-4 py-2 rounded ${refreshType === 'spending' ? 'bg-plum-100 dark:bg-plum-900/40' : 'bg-gray-100 dark:bg-dm-card-2'}`}
+                    className={`w-full text-left px-4 py-2 rounded ${refreshType === 'spending' ? 'bg-plum-100 dark:bg-plum-900/40' : 'bg-ivory dark:bg-dm-card-2'}`}
                   >
                     <span className="font-medium dark:text-white">Refresh based on spending</span>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                    <p className="text-xs text-brown-400 dark:text-white/40">
                       Calculate points based on user's order history (1 point per KES 100)
                     </p>
                   </button>
                   
                   <button
                     onClick={() => setRefreshType('reset')}
-                    className={`w-full text-left px-4 py-2 rounded ${refreshType === 'reset' ? 'bg-red-100 dark:bg-red-900' : 'bg-gray-100 dark:bg-gray-700'}`}
+                    className={`w-full text-left px-4 py-2 rounded ${refreshType === 'reset' ? 'bg-red-100 dark:bg-red-900' : 'bg-ivory dark:bg-dm-card-2'}`}
                   >
                     <span className="font-medium dark:text-white">Reset points to zero</span>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                    <p className="text-xs text-brown-400 dark:text-white/40">
                       This will reset points to 0 and tier to Basic
                     </p>
                   </button>
@@ -1364,7 +1364,7 @@ const LoyaltyProgramAdmin = () => {
               </div>
             ) : (
               <div className="mb-4">
-                <p className="mb-2 text-gray-700 dark:text-gray-300">
+                <p className="mb-2 text-charcoal dark:text-white">
                   A security code has been sent to your email. Please enter it below:
                 </p>
                 <div className="mt-3">
@@ -1376,7 +1376,7 @@ const LoyaltyProgramAdmin = () => {
                     className="w-full p-2 border rounded-md text-center tracking-wider text-lg"
                     maxLength={6}
                   />
-                  <p className="text-xs text-gray-500 mt-1">
+                  <p className="text-xs text-brown-400 dark:text-white/40 mt-1">
                     The code will expire in 15 minutes. Please check your email.
                   </p>
                 </div>
@@ -1406,11 +1406,11 @@ const LoyaltyProgramAdmin = () => {
                   setSecurityCodeSent(false);
                   setShowSecurityCodeInput(false);
                 }}
-                className="px-4 py-2 bg-gray-200 dark:bg-gray-600 text-gray-800 dark:text-white rounded-lg hover:bg-gray-300 dark:hover:bg-gray-700"
+                className="px-4 py-2 bg-brown-100 dark:bg-dm-card-2 text-charcoal dark:text-white rounded-lg hover:bg-brown-200 dark:hover:bg-dm-border"
               >
                 Cancel
               </button>
-              
+
               <button
                 onClick={() => {
                   if (showSecurityCodeInput) {

@@ -43,7 +43,7 @@ const PrivateRoute = ({ children, requireAdmin = false, requireStaff = false }) 
   if (!isAuthenticated) {
     if (hasStoredSession) {
       return (
-        <div className="min-h-[50vh] flex items-center justify-center text-sm text-gray-500 dark:text-gray-400">
+        <div className="min-h-[50vh] flex items-center justify-center text-sm text-brown-400 dark:text-white/40">
           Restoring your session...
         </div>
       );

@@ -116,7 +116,7 @@ const RouteDebugger = ({ component: Component, routeName }) => {
     return (
       <div className="p-8 bg-red-50 text-red-500 rounded m-4">
         <h2 className="text-xl font-bold">Error rendering {routeName}</h2>
-        <pre className="mt-4 p-4 bg-gray-100 rounded overflow-auto">
+        <pre className="mt-4 p-4 bg-brown-50 rounded overflow-auto">
           {error.stack || error.message}
         </pre>
       </div>

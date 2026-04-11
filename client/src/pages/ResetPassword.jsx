@@ -97,82 +97,69 @@ const ResetPassword = () => {
   }
 
   return (
-    <section 
-      className='w-full min-h-screen flex items-center justify-center py-8 px-2 transition-colors duration-200 bg-gray-50 dark:bg-gray-900'
-    >
-      <div className='bg-white dark:bg-gray-800 my-4 w-full max-w-lg mx-auto rounded p-7 shadow-lg transition-colors duration-200'>
-        <p className='font-semibold text-lg dark:text-white transition-colors duration-200'>Reset Your Password</p>
-        <p className='text-gray-600 dark:text-gray-300 text-sm mt-2 transition-colors duration-200'>
-          Create a new password for your account
-        </p>
-        
-        <form className='grid gap-4 py-4' onSubmit={handleSubmit}>
-          <div className='grid gap-1'>
-            <label htmlFor='newPassword' className='dark:text-gray-200 transition-colors duration-200'>New Password:</label>
-            <div className='bg-plum-50 dark:bg-dm-card p-2 border dark:border-dm-border rounded flex items-center focus-within:border-plum-500 dark:focus-within:border-plum-400 transition-colors duration-200'>
+    <section className='w-full min-h-screen flex items-center justify-center py-8 px-3 sm:px-4 bg-ivory dark:bg-dm-surface transition-colors'>
+      <div className='bg-white dark:bg-dm-card border border-brown-100 dark:border-dm-border my-4 w-full max-w-md mx-auto rounded-card p-6 sm:p-8 shadow-card transition-colors'>
+        <h1 className='font-bold text-xl text-charcoal dark:text-white mb-1'>Reset Your Password</h1>
+        <p className='text-sm text-brown-400 dark:text-white/50 mb-5'>Create a strong new password for your account.</p>
+
+        <form className='flex flex-col gap-4' onSubmit={handleSubmit}>
+          <div className='flex flex-col gap-1.5'>
+            <label htmlFor='newPassword' className='text-sm font-medium text-charcoal dark:text-white/80'>New Password</label>
+            <div className='flex items-center gap-2 bg-blush-100 dark:bg-dm-card border border-blush-200 dark:border-dm-border rounded-card px-3 py-2.5 focus-within:border-plum-500 focus-within:ring-1 focus-within:ring-plum-500/20 transition-all'>
               <input
                 type={showPassword ? "text" : "password"}
                 id='newPassword'
-                className='w-full outline-none bg-transparent dark:text-white transition-colors duration-200'
+                className='flex-1 bg-transparent outline-none text-sm text-charcoal dark:text-white placeholder:text-brown-300 dark:placeholder:text-white/30'
                 name='newPassword'
                 value={data.newPassword}
                 onChange={handleChange}
-                placeholder='Enter your new password'
+                placeholder='Min. 8 characters'
+                autoComplete='new-password'
               />
-              <div onClick={() => setShowPassword(preve => !preve)} className='cursor-pointer text-gray-500 dark:text-gray-400 transition-colors duration-200'>
-                {
-                  showPassword ? (
-                    <FaRegEye />
-                  ) : (
-                    <FaRegEyeSlash />
-                  )
-                }
-              </div>
+              <button type='button' onClick={() => setShowPassword(p => !p)} className='text-brown-300 dark:text-white/30 hover:text-plum-700 dark:hover:text-plum-200 transition-colors'>
+                {showPassword ? <FaRegEye size={14} /> : <FaRegEyeSlash size={14} />}
+              </button>
             </div>
-            <p className='text-xs text-gray-500 dark:text-gray-400 mt-1 transition-colors duration-200'>
-              Password must be at least 8 characters and include both letters and numbers
-            </p>
+            <p className='text-xs text-brown-400 dark:text-white/40'>Must be at least 8 characters with letters and numbers</p>
           </div>
 
-          <div className='grid gap-1'>
-            <label htmlFor='confirmPassword' className='dark:text-gray-200 transition-colors duration-200'>Confirm Password:</label>
-            <div className='bg-plum-50 dark:bg-dm-card p-2 border dark:border-dm-border rounded flex items-center focus-within:border-plum-500 dark:focus-within:border-plum-400 transition-colors duration-200'>
+          <div className='flex flex-col gap-1.5'>
+            <label htmlFor='confirmPassword' className='text-sm font-medium text-charcoal dark:text-white/80'>Confirm Password</label>
+            <div className='flex items-center gap-2 bg-blush-100 dark:bg-dm-card border border-blush-200 dark:border-dm-border rounded-card px-3 py-2.5 focus-within:border-plum-500 focus-within:ring-1 focus-within:ring-plum-500/20 transition-all'>
               <input
                 type={showConfirmPassword ? "text" : "password"}
                 id='confirmPassword'
-                className='w-full outline-none bg-transparent dark:text-white transition-colors duration-200'
+                className='flex-1 bg-transparent outline-none text-sm text-charcoal dark:text-white placeholder:text-brown-300 dark:placeholder:text-white/30'
                 name='confirmPassword'
                 value={data.confirmPassword}
                 onChange={handleChange}
-                placeholder='Confirm your new password'
+                placeholder='Repeat your password'
+                autoComplete='new-password'
               />
-              <div onClick={() => setShowConfirmPassword(preve => !preve)} className='cursor-pointer text-gray-500 dark:text-gray-400 transition-colors duration-200'>
-                {
-                  showConfirmPassword ? (
-                    <FaRegEye />
-                  ) : (
-                    <FaRegEyeSlash />
-                  )
-                }
-              </div>
+              <button type='button' onClick={() => setShowConfirmPassword(p => !p)} className='text-brown-300 dark:text-white/30 hover:text-plum-700 dark:hover:text-plum-200 transition-colors'>
+                {showConfirmPassword ? <FaRegEye size={14} /> : <FaRegEyeSlash size={14} />}
+              </button>
             </div>
             {data.confirmPassword && data.newPassword && data.confirmPassword !== data.newPassword && (
-              <p className='text-xs text-red-600 dark:text-red-400 mt-1 transition-colors duration-200'>
-                Passwords do not match
-              </p>
+              <p className='text-xs text-red-500 dark:text-red-400'>Passwords do not match</p>
             )}
           </div>
 
-          <button 
-            disabled={!valideValue} 
-            className={`${valideValue ? "bg-green-800 hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-600" : "bg-gray-500 dark:bg-gray-600"} text-white py-2 rounded font-semibold my-3 tracking-wide transition-colors duration-200`}
+          <button
+            disabled={!valideValue}
+            className={`w-full py-3 rounded-pill font-semibold text-sm transition-all duration-200 press mt-1 ${
+              valideValue
+                ? 'bg-gold-500 hover:bg-gold-400 text-charcoal shadow-sm hover:shadow-gold'
+                : 'bg-brown-100 dark:bg-dm-card-2 text-brown-300 dark:text-white/20 cursor-not-allowed'
+            }`}
           >
             Change Password
           </button>
         </form>
 
-        <p className="dark:text-gray-300 transition-colors duration-200">
-          Already have account? <Link to={"/login"} className='font-semibold text-green-700 dark:text-green-400 hover:text-green-800 dark:hover:text-green-300 transition-colors duration-200'>Login</Link>
+        <p className="mt-6 text-sm text-brown-400 dark:text-white/50 text-center">
+          Remember your password?{' '}
+          <Link to="/login" className='font-semibold text-plum-700 dark:text-plum-200 hover:underline underline-offset-2'>Sign in</Link>
         </p>
       </div>
     </section>

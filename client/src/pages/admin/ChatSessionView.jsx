@@ -182,7 +182,7 @@ const ChatSessionView = () => {
             {star <= currentRating ? (
               <FaStar className="text-yellow-400" size={isInteractive ? 24 : 18} />
             ) : (
-              <FaRegStar className="text-gray-400" size={isInteractive ? 24 : 18} />
+              <FaRegStar className="text-brown-400 dark:text-white/40" size={isInteractive ? 24 : 18} />
             )}
           </span>
         ))}
@@ -192,10 +192,10 @@ const ChatSessionView = () => {
 
   if (isLoading) {
     return (
-      <div className="flex justify-center items-center min-h-screen bg-gray-50 dark:bg-gray-900">
+      <div className="flex justify-center items-center min-h-screen bg-ivory dark:bg-dm-surface">
         <div className="text-center">
           <FaSpinner className="animate-spin mx-auto text-primary-500" size={32} />
-          <p className="mt-2 text-gray-600 dark:text-gray-300">Loading chat session...</p>
+          <p className="mt-2 text-brown-500 dark:text-white/55">Loading chat session...</p>
         </div>
       </div>
     );
@@ -234,22 +234,22 @@ const ChatSessionView = () => {
       {/* Feedback Modal */}
       {showFeedbackForm && (
         <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full p-6">
-            <h3 className="text-xl font-semibold mb-4 text-gray-800 dark:text-white">Rate Your Experience</h3>
-            <p className="text-gray-600 dark:text-gray-300 mb-6">
+          <div className="bg-white dark:bg-dm-card rounded-lg shadow-xl max-w-md w-full p-6">
+            <h3 className="text-xl font-semibold mb-4 text-charcoal dark:text-white">Rate Your Experience</h3>
+            <p className="text-brown-500 dark:text-white/55 mb-6">
               Your feedback helps us improve our service. Please rate your experience with this chat session.
             </p>
 
             <div className="flex justify-center mb-6">{renderStarRating(rating, true)}</div>
 
             <div className="mb-6">
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              <label className="block text-sm font-medium text-brown-500 dark:text-white/55 mb-2">
                 Additional Comments (Optional)
               </label>
               <textarea
                 value={feedbackText}
                 onChange={(e) => setFeedbackText(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                className="w-full px-3 py-2 border border-brown-100 dark:border-dm-border rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 bg-white dark:bg-dm-card-2 text-charcoal dark:text-white"
                 rows="4"
                 placeholder="Tell us more about your experience..."
               ></textarea>
@@ -258,7 +258,7 @@ const ChatSessionView = () => {
             <div className="flex justify-end gap-3">
               <button
                 onClick={() => setShowFeedbackForm(false)}
-                className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
+                className="px-4 py-2 border border-brown-100 dark:border-dm-border rounded-md text-brown-500 dark:text-white/55 hover:bg-ivory dark:hover:bg-dm-card-2"
               >
                 Skip
               </button>
@@ -267,7 +267,7 @@ const ChatSessionView = () => {
                 disabled={rating === 0 || submittingFeedback}
                 className={`px-4 py-2 rounded-md text-white ${
                   rating === 0 || submittingFeedback
-                    ? 'bg-gray-400 cursor-not-allowed'
+                    ? 'bg-brown-100 cursor-not-allowed'
                     : 'bg-primary-500 hover:bg-primary-600'
                 }`}
               >
@@ -298,28 +298,28 @@ const ChatSessionView = () => {
       </div>
 
       {/* Session Info Card */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md mb-6 p-4">
+      <div className="bg-white dark:bg-dm-card rounded-lg shadow-md mb-6 p-4">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <div>
-            <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">User</h3>
+            <h3 className="text-sm font-medium text-brown-400 dark:text-white/40">User</h3>
             <div className="mt-1 flex items-center">
-              <FaUser className="mr-2 text-gray-500 dark:text-gray-400" />
+              <FaUser className="mr-2 text-brown-400 dark:text-white/40" />
               <span className="font-medium">{session.user ? session.user.name : 'Guest User'}</span>
             </div>
             {session.user && (
-              <div className="mt-1 text-sm text-gray-500 dark:text-gray-400">{session.user.email}</div>
+              <div className="mt-1 text-sm text-brown-400 dark:text-white/40">{session.user.email}</div>
             )}
-            <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">ID: {session.userIdentifier}</div>
+            <div className="mt-1 text-xs text-brown-400 dark:text-white/40">ID: {session.userIdentifier}</div>
           </div>
 
           <div>
-            <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">Status</h3>
+            <h3 className="text-sm font-medium text-brown-400 dark:text-white/40">Status</h3>
             <div className="mt-1">
               <span
                 className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
                   session.isActive
                     ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
-                    : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'
+                    : 'bg-brown-100 text-charcoal dark:bg-dm-card-2 dark:text-white/70'
                 }`}
               >
                 {session.isActive ? 'Active' : 'Closed'}
@@ -328,32 +328,32 @@ const ChatSessionView = () => {
           </div>
 
           <div>
-            <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">Created</h3>
+            <h3 className="text-sm font-medium text-brown-400 dark:text-white/40">Created</h3>
             <div className="mt-1 text-sm">{formatDate(session.createdAt)}</div>
           </div>
 
           <div>
-            <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">Last Active</h3>
+            <h3 className="text-sm font-medium text-brown-400 dark:text-white/40">Last Active</h3>
             <div className="mt-1 text-sm">{formatDate(session.lastActive)}</div>
           </div>
         </div>
 
         {/* Show feedback section if it exists */}
         {(session.feedback || feedbackSubmitted) && (
-          <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
-            <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">User Feedback</h3>
+          <div className="mt-4 pt-4 border-t border-brown-100 dark:border-dm-border">
+            <h3 className="text-sm font-medium text-brown-400 dark:text-white/40 mb-2">User Feedback</h3>
             <div className="flex items-center gap-2">
               {renderStarRating(session.feedback?.rating || rating)}
-              <span className="text-sm text-gray-600 dark:text-gray-300">
+              <span className="text-sm text-brown-500 dark:text-white/55">
                 ({session.feedback?.rating || rating}/5)
               </span>
             </div>
             {(session.feedback?.comment || feedbackText) && (
-              <div className="mt-2 text-sm text-gray-600 dark:text-gray-300 bg-gray-50 dark:bg-gray-700 p-3 rounded-md">
+              <div className="mt-2 text-sm text-brown-500 dark:text-white/55 bg-ivory dark:bg-dm-card-2 p-3 rounded-md">
                 "{session.feedback?.comment || feedbackText}"
               </div>
             )}
-            <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+            <div className="mt-1 text-xs text-brown-400 dark:text-white/40">
               Submitted: {session.feedback ? formatDate(session.feedback.createdAt) : formatDate(new Date().toISOString())}
             </div>
           </div>
@@ -361,11 +361,11 @@ const ChatSessionView = () => {
       </div>
 
       {/* Chat Messages */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md mb-6">
-        <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+      <div className="bg-white dark:bg-dm-card rounded-lg shadow-md mb-6">
+        <div className="p-4 border-b border-brown-100 dark:border-dm-border">
           <h2 className="text-lg font-medium">Conversation History</h2>
           <div className="flex items-center justify-between flex-wrap gap-4 mt-2">
-            <div className="text-sm text-gray-500 dark:text-gray-400">
+            <div className="text-sm text-brown-400 dark:text-white/40">
               {filteredMessages.length} of {session.messages ? session.messages.length : 0} messages
             </div>
 
@@ -373,12 +373,12 @@ const ChatSessionView = () => {
               {/* Message filter */}
               <div className="relative inline-flex">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <FaFilter className="text-gray-400" size={14} />
+                  <FaFilter className="text-brown-300 dark:text-white/30" size={14} />
                 </div>
                 <select
                   value={messageFilter}
                   onChange={(e) => updateFilters(searchTerm, e.target.value)}
-                  className="block w-full pl-10 pr-3 py-2 text-sm bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                  className="block w-full pl-10 pr-3 py-2 text-sm bg-ivory dark:bg-dm-card-2 border border-brown-200 dark:border-dm-border rounded-md focus:outline-none focus:ring-plum-500 focus:border-plum-500 text-charcoal dark:text-white"
                 >
                   <option value="all">All Messages</option>
                   <option value="user">User Messages</option>
@@ -389,19 +389,19 @@ const ChatSessionView = () => {
               {/* Search messages */}
               <div className="relative inline-flex">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <FaSearch className="text-gray-400" size={14} />
+                  <FaSearch className="text-brown-300 dark:text-white/30" size={14} />
                 </div>
                 <input
                   type="text"
                   value={searchTerm}
                   onChange={(e) => updateFilters(e.target.value, messageFilter)}
                   placeholder="Search messages..."
-                  className="block w-full pl-10 pr-3 py-2 text-sm bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                  className="block w-full pl-10 pr-3 py-2 text-sm bg-ivory dark:bg-dm-card-2 border border-brown-200 dark:border-dm-border rounded-md focus:outline-none focus:ring-plum-500 focus:border-plum-500 text-charcoal dark:text-white placeholder:text-brown-300 dark:placeholder:text-white/30"
                 />
                 {searchTerm && (
                   <button
                     onClick={() => updateFilters('', messageFilter)}
-                    className="absolute inset-y-0 right-0 pr-3 flex items-center cursor-pointer text-gray-400 hover:text-gray-600"
+                    className="absolute inset-y-0 right-0 pr-3 flex items-center cursor-pointer text-brown-300 hover:text-charcoal dark:text-white/30 dark:hover:text-white"
                   >
                     <FaTimes size={14} />
                   </button>
@@ -411,9 +411,9 @@ const ChatSessionView = () => {
           </div>
         </div>
 
-        <div className="p-4 bg-gray-50 dark:bg-gray-900 h-[600px] overflow-y-auto">
+        <div className="p-4 bg-ivory dark:bg-dm-surface h-[600px] overflow-y-auto">
           {filteredMessages.length === 0 ? (
-            <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+            <div className="text-center py-8 text-brown-400 dark:text-white/40">
               {session.messages && session.messages.length > 0
                 ? 'No messages match your filters.'
                 : 'No messages in this conversation.'}
@@ -425,23 +425,23 @@ const ChatSessionView = () => {
                   <div
                     className={`max-w-[80%] px-4 py-3 rounded-lg ${
                       message.role === 'user'
-                        ? 'bg-primary-100 dark:bg-primary-300 text-gray-800 dark:text-white mr-2'
-                        : 'bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white ml-2'
+                        ? 'bg-plum-100 dark:bg-plum-900/40 text-charcoal dark:text-white mr-2'
+                        : 'bg-brown-100 dark:bg-dm-card-2 text-charcoal dark:text-white ml-2'
                     }`}
                   >
                     <div className="flex items-start mb-1">
                       {message.role === 'assistant' && (
-                        <FaRobot className="mr-2 mt-1 text-gray-600 dark:text-gray-300" size={14} />
+                        <FaRobot className="mr-2 mt-1 text-brown-500 dark:text-white/55" size={14} />
                       )}
-                      <div className="font-medium text-xs text-gray-600 dark:text-gray-300">
+                      <div className="font-medium text-xs text-brown-500 dark:text-white/55">
                         {message.role === 'user' ? 'User' : 'Assistant'}
                       </div>
                       {message.role === 'user' && (
-                        <FaUser className="ml-2 mt-1 text-gray-600 dark:text-gray-300" size={14} />
+                        <FaUser className="ml-2 mt-1 text-brown-500 dark:text-white/55" size={14} />
                       )}
                     </div>
                     <div className="text-sm whitespace-pre-wrap">{message.content}</div>
-                    <div className="mt-1 text-xs text-gray-500 dark:text-gray-400 text-right">
+                    <div className="mt-1 text-xs text-brown-400 dark:text-white/40 text-right">
                       {formatDate(message.timestamp)}
                     </div>
                   </div>
