@@ -45,7 +45,6 @@ const PromoBanner = ({ products = [] }) => {
   return (
     <div
       className="relative w-full overflow-hidden rounded-2xl sm:rounded-3xl shadow-hover"
-      style={{ minHeight: 'clamp(190px, 33vw, 400px)' }}
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
     >
@@ -61,12 +60,35 @@ const PromoBanner = ({ products = [] }) => {
       <div className="pointer-events-none absolute -bottom-24 -left-16 h-60 w-60 rounded-full bg-plum-700/20 blur-3xl" />
 
       {/* ── Main grid ─────────────────────────────────────────────────── */}
-      <div
-        className="relative z-10 flex h-full items-stretch"
-        style={{ minHeight: 'clamp(190px, 33vw, 400px)' }}
-      >
-        {/* LEFT — text */}
-        <div className="flex w-[58%] sm:w-[56%] flex-col justify-center gap-2 sm:gap-3 lg:gap-4 pl-5 sm:pl-8 lg:pl-14 pr-2 sm:pr-3 py-6 sm:py-8 lg:py-12">
+      {/* Mobile: stacked (image top, text bottom). sm+: side-by-side */}
+      <div className="relative z-10 flex flex-col sm:flex-row sm:items-stretch">
+        {/* Image — top on mobile, right on sm+ */}
+        <div className="relative flex order-first sm:order-last sm:w-[44%] items-center justify-center overflow-hidden py-5 sm:py-0">
+          {/* Soft glow halo behind product */}
+          <div
+            className="pointer-events-none absolute top-1/2 right-4 -translate-y-1/2 rounded-full bg-gold-400/15 blur-3xl"
+            style={{ width: 'clamp(80px, 22vw, 280px)', height: 'clamp(80px, 22vw, 280px)' }}
+          />
+          <img
+            key={item._id}
+            src={item.image[0]}
+            alt={item.name}
+            className="relative z-10 animate-fade-in object-contain drop-shadow-2xl"
+            style={{
+              width: '72%',
+              maxWidth: '260px',
+              height: 'clamp(140px, 28vw, 340px)',
+              padding: 'clamp(4px, 1.5vw, 18px)',
+            }}
+            onError={(e) => {
+              e.target.onerror = null;
+              e.target.src = 'https://via.placeholder.com/300?text=Product';
+            }}
+          />
+        </div>
+
+        {/* Text — bottom on mobile, left on sm+ */}
+        <div className="flex order-last sm:order-first sm:w-[56%] flex-col justify-center gap-2 sm:gap-3 lg:gap-4 px-5 sm:pl-8 lg:pl-14 sm:pr-3 pb-8 sm:py-8 lg:py-12">
           {item.discount > 0 && (
             <span className="inline-flex w-fit items-center rounded-full bg-gold-500 px-2.5 py-0.5 text-[10px] sm:text-xs font-bold uppercase tracking-widest text-charcoal shadow">
               {item.discount}% OFF
@@ -74,9 +96,8 @@ const PromoBanner = ({ products = [] }) => {
           )}
 
           <h2
-            className="font-display font-bold text-white leading-tight"
+            className="font-display font-bold text-white leading-tight text-xl sm:text-2xl lg:text-4xl"
             style={{
-              fontSize: 'clamp(1rem, 3.4vw, 2.5rem)',
               textShadow: '0 2px 16px rgba(0,0,0,0.45)',
               display: '-webkit-box',
               WebkitLineClamp: 2,
@@ -89,9 +110,8 @@ const PromoBanner = ({ products = [] }) => {
 
           {item.description && (
             <p
-              className="text-plum-200/85 leading-relaxed"
+              className="text-plum-200/85 leading-relaxed text-xs sm:text-sm lg:text-base"
               style={{
-                fontSize: 'clamp(0.68rem, 1.4vw, 0.9375rem)',
                 display: '-webkit-box',
                 WebkitLineClamp: 2,
                 WebkitBoxOrient: 'vertical',
@@ -103,17 +123,11 @@ const PromoBanner = ({ products = [] }) => {
           )}
 
           <div className="flex flex-wrap items-baseline gap-2">
-            <span
-              className="font-price font-bold text-gold-300"
-              style={{ fontSize: 'clamp(0.9rem, 2.4vw, 1.875rem)' }}
-            >
+            <span className="font-price font-bold text-gold-300 text-lg sm:text-2xl lg:text-4xl">
               {DisplayPriceInShillings(discountedPrice)}
             </span>
             {item.discount > 0 && (
-              <span
-                className="font-price text-plum-300/60 line-through"
-                style={{ fontSize: 'clamp(0.68rem, 1.3vw, 1.1rem)' }}
-              >
+              <span className="font-price text-plum-300/60 line-through text-xs sm:text-sm lg:text-lg">
                 {DisplayPriceInShillings(item.price)}
               </span>
             )}
@@ -121,40 +135,11 @@ const PromoBanner = ({ products = [] }) => {
 
           <button
             onClick={handleShopNow}
-            className="mt-0.5 inline-flex w-fit items-center gap-1.5 rounded-full bg-gold-500 font-bold text-charcoal shadow-gold transition-all hover:bg-gold-400 hover:shadow-lg active:scale-[0.96] press"
-            style={{
-              fontSize: 'clamp(0.62rem, 1.3vw, 0.875rem)',
-              padding: 'clamp(0.35rem, 0.75vw, 0.6rem) clamp(0.85rem, 1.8vw, 1.625rem)',
-            }}
+            className="mt-0.5 inline-flex w-fit items-center gap-1.5 rounded-full bg-gold-500 text-xs sm:text-sm font-bold text-charcoal shadow-gold transition-all hover:bg-gold-400 hover:shadow-lg active:scale-[0.96] press px-4 py-2 sm:px-6 sm:py-2.5"
           >
             Shop Now
             <FiChevronRight size={13} />
           </button>
-        </div>
-
-        {/* RIGHT — product image */}
-        <div className="relative flex w-[42%] sm:w-[44%] items-center justify-center overflow-hidden">
-          {/* Soft glow halo behind product */}
-          <div
-            className="pointer-events-none absolute top-1/2 right-4 -translate-y-1/2 rounded-full bg-gold-400/15 blur-3xl"
-            style={{ width: 'clamp(100px, 22vw, 280px)', height: 'clamp(100px, 22vw, 280px)' }}
-          />
-          <img
-            key={item._id}
-            src={item.image[0]}
-            alt={item.name}
-            className="relative z-10 animate-fade-in object-contain drop-shadow-2xl"
-            style={{
-              width: '90%',
-              height: '100%',
-              maxHeight: 'clamp(150px, 29vw, 370px)',
-              padding: 'clamp(6px, 1.8vw, 22px)',
-            }}
-            onError={(e) => {
-              e.target.onerror = null;
-              e.target.src = 'https://via.placeholder.com/300?text=Product';
-            }}
-          />
         </div>
       </div>
 

@@ -18,7 +18,7 @@ const CardProduct = ({ data }) => {
   return (
     <Link
       to={`/product/${encodeURIComponent(valideURLConvert(data.name))}-${data._id}`}
-      className="group grid h-full min-h-0 w-[144px] max-w-full grid-rows-[auto_auto_auto_1fr_auto] gap-2 overflow-hidden rounded-xl border border-brown-200 bg-white p-2 transition-all duration-300 hover:-translate-y-1 hover:border-plum-300 hover:shadow-xl dark:border-dm-border dark:bg-dm-card dark:hover:border-plum-600 sm:w-[164px] sm:p-3 lg:w-[208px] lg:p-4 xl:w-[228px]"
+      className="group grid h-full min-h-0 w-[148px] max-w-full grid-rows-[auto_auto_auto_1fr_auto] gap-2 overflow-hidden rounded-xl border border-brown-200 bg-white p-2 transition-all duration-300 hover:-translate-y-1 hover:border-plum-300 hover:shadow-xl dark:border-dm-border dark:bg-dm-card dark:hover:border-plum-600 xs:w-[160px] sm:w-[172px] sm:p-3 md:w-[192px] lg:w-[212px] lg:p-4 xl:w-[232px]"
     >
       <div className="relative aspect-square w-full overflow-hidden rounded-xl bg-blush-50 dark:bg-dm-card-2 shadow-sm">
         <img

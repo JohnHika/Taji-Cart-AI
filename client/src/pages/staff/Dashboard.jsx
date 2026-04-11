@@ -139,7 +139,7 @@ const Dashboard = () => {
       case 'delivered':
         return { icon: <FaCheck className="text-green-500" />, color: 'bg-green-100 text-green-800' };
       default:
-        return { icon: <FaClock className="text-gray-500" />, color: 'bg-gray-100 text-gray-800' };
+        return { icon: <FaClock className="text-brown-400 dark:text-white/40" />, color: 'bg-ivory text-charcoal dark:bg-dm-card-2 dark:text-white' };
     }
   };
   
@@ -172,8 +172,8 @@ const Dashboard = () => {
       <div className="mb-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         {/* Header with welcome message */}
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Staff Dashboard</h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400">
+          <h1 className="text-2xl font-bold text-charcoal dark:text-white">Staff Dashboard</h1>
+          <p className="text-sm text-brown-400 dark:text-white/40">
             Welcome, {user?.firstName || user?.name || 'Staff Member'} | Last updated: {formatDate(dashboardData.lastUpdated || new Date())}
           </p>
         </div>
@@ -218,8 +218,8 @@ const Dashboard = () => {
             {loading ? (
               Array(4).fill(0).map((_, i) => (
                 <div key={i} className="animate-pulse bg-white dark:bg-dm-card rounded-lg shadow border border-brown-100 dark:border-dm-border p-5 h-32">
-                  <div className="h-5 bg-gray-200 dark:bg-dm-card-2 rounded w-1/2 mb-4"></div>
-                  <div className="h-8 bg-gray-200 dark:bg-dm-card-2 rounded w-1/3"></div>
+                  <div className="h-5 bg-brown-100 dark:bg-dm-card-2 rounded w-1/2 mb-4"></div>
+                  <div className="h-8 bg-brown-100 dark:bg-dm-card-2 rounded w-1/3"></div>
                 </div>
               ))
             ) : (
@@ -321,15 +321,15 @@ const Dashboard = () => {
           {/* Delivery trend chart (simple version) */}
           <div className="bg-white dark:bg-dm-card rounded-lg shadow border border-brown-100 dark:border-dm-border p-5">
             <div className="flex justify-between items-center mb-5">
-              <h2 className="text-lg font-medium text-gray-900 dark:text-white">Delivery Performance</h2>
+              <h2 className="text-lg font-medium text-charcoal dark:text-white">Delivery Performance</h2>
             </div>
             {loading ? (
-              <div className="animate-pulse h-64 bg-gray-200 dark:bg-dm-card-2 rounded"></div>
+              <div className="animate-pulse h-64 bg-brown-100 dark:bg-dm-card-2 rounded"></div>
             ) : (
               <div className="h-64 flex flex-col">
                 <div className="text-center mb-4">
                   <div className="text-2xl font-bold">{dashboardData.deliveryPerformance.deliveriesLast7Days}</div>
-                  <div className="text-sm text-gray-500">Deliveries in the last 7 days</div>
+                  <div className="text-sm text-brown-400 dark:text-white/40">Deliveries in the last 7 days</div>
                 </div>
                 
                 <div className="flex flex-col flex-grow justify-end">
@@ -351,7 +351,7 @@ const Dashboard = () => {
                   </div>
                 </div>
                 
-                <div className="text-xs text-center mt-2 text-gray-500">
+                <div className="text-xs text-center mt-2 text-brown-400 dark:text-white/40">
                   Last 7 days
                 </div>
               </div>
@@ -360,43 +360,43 @@ const Dashboard = () => {
           
           {/* Recent orders */}
           <div className="bg-white dark:bg-dm-card rounded-lg shadow border border-brown-100 dark:border-dm-border overflow-hidden">
-            <div className="px-5 py-4 border-b border-gray-200 dark:border-dm-border flex items-center justify-between">
-              <h2 className="text-lg font-medium text-gray-900 dark:text-white">Recent Orders</h2>
+            <div className="px-5 py-4 border-b border-brown-100 dark:border-dm-border flex items-center justify-between">
+              <h2 className="text-lg font-medium text-charcoal dark:text-white">Recent Orders</h2>
               <Link to="/dashboard/staff/delivery" className="text-sm font-medium text-plum-700 dark:text-plum-300 hover:text-plum-600">
                 View all
               </Link>
             </div>
             {loading ? (
-              <div className="divide-y divide-gray-200 dark:divide-gray-700">
+              <div className="divide-y divide-brown-100 dark:divide-dm-border">
                 {Array(3).fill(0).map((_, i) => (
                   <div key={i} className="px-5 py-4 animate-pulse">
                     <div className="flex items-center">
-                      <div className="rounded-full bg-gray-200 dark:bg-gray-700 h-10 w-10"></div>
+                      <div className="rounded-full bg-brown-100 dark:bg-dm-card-2 h-10 w-10"></div>
                       <div className="ml-4 flex-1">
-                        <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/4 mb-2"></div>
-                        <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-1/3"></div>
+                        <div className="h-4 bg-brown-100 dark:bg-dm-card-2 rounded w-1/4 mb-2"></div>
+                        <div className="h-3 bg-brown-100 dark:bg-dm-card-2 rounded w-1/3"></div>
                       </div>
-                      <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-20"></div>
+                      <div className="h-8 bg-brown-100 dark:bg-dm-card-2 rounded w-20"></div>
                     </div>
                   </div>
                 ))}
               </div>
             ) : dashboardData.recentOrders.length > 0 ? (
-              <div className="divide-y divide-gray-200 dark:divide-gray-700">
+              <div className="divide-y divide-brown-100 dark:divide-dm-border">
                 {dashboardData.recentOrders.map((order) => {
                   const statusInfo = getStatusInfo(order.status);
                   return (
                     <div key={order._id} className="px-5 py-4 hover:bg-plum-50/50 dark:hover:bg-dm-card-2">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center">
-                          <div className="p-2 rounded-full bg-gray-100 dark:bg-gray-700">
+                          <div className="p-2 rounded-full bg-ivory dark:bg-dm-card-2">
                             {statusInfo.icon}
                           </div>
                           <div className="ml-4">
-                            <p className="text-sm font-medium text-gray-900 dark:text-white">
+                            <p className="text-sm font-medium text-charcoal dark:text-white">
                               Order #{order.orderId}
                             </p>
-                            <p className="text-xs text-gray-500 dark:text-gray-400">
+                            <p className="text-xs text-brown-400 dark:text-white/40">
                               {order.customerName} • ${order.total?.toFixed(2)}
                             </p>
                           </div>
@@ -405,7 +405,7 @@ const Dashboard = () => {
                           <span className={`text-xs px-2 py-1 rounded-full ${statusInfo.color}`}>
                             {formatStatus(order.status)}
                           </span>
-                          <p className="text-xs text-right text-gray-500 dark:text-gray-400 mt-1">
+                          <p className="text-xs text-right text-brown-400 dark:text-white/40 mt-1">
                             {new Date(order.createdAt).toLocaleDateString()}
                           </p>
                         </div>
@@ -415,7 +415,7 @@ const Dashboard = () => {
                 })}
               </div>
             ) : (
-              <div className="p-5 text-center text-gray-500 dark:text-gray-400">
+              <div className="p-5 text-center text-brown-400 dark:text-white/40">
                 No recent orders available
               </div>
             )}
@@ -427,13 +427,13 @@ const Dashboard = () => {
           {/* Driver availability */}
           <div className="bg-white dark:bg-dm-card rounded-lg shadow border border-brown-100 dark:border-dm-border p-5">
             <Link to="/dashboard/staff/delivery/drivers" className="flex justify-between items-center mb-5">
-              <h2 className="text-lg font-medium text-gray-900 dark:text-white">Driver Availability</h2>
+              <h2 className="text-lg font-medium text-charcoal dark:text-white">Driver Availability</h2>
               <span className="text-sm text-plum-700 dark:text-plum-300 hover:underline">Manage</span>
             </Link>
             {loading ? (
               <div className="animate-pulse space-y-4">
-                <div className="h-32 bg-gray-200 dark:bg-gray-700 rounded"></div>
-                <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/2"></div>
+                <div className="h-32 bg-brown-100 dark:bg-dm-card-2 rounded"></div>
+                <div className="h-4 bg-brown-100 dark:bg-dm-card-2 rounded w-1/2"></div>
               </div>
             ) : (
               <>
@@ -441,7 +441,7 @@ const Dashboard = () => {
                   <div className="relative inline-flex items-center justify-center">
                     <svg className="w-32 h-32">
                       <circle
-                        className="text-gray-300 dark:text-gray-600"
+                        className="text-brown-100 dark:text-dm-border"
                         strokeWidth="10"
                         stroke="currentColor"
                         fill="transparent"
@@ -472,8 +472,8 @@ const Dashboard = () => {
                     {dashboardData.counts.availableDrivers} of {dashboardData.counts.totalDrivers} drivers available
                   </p>
                 </div>
-                <hr className="my-4 border-gray-200 dark:border-dm-border" />
-                <div className="text-sm text-gray-900 dark:text-gray-300">
+                <hr className="my-4 border-brown-100 dark:border-dm-border" />
+                <div className="text-sm text-charcoal dark:text-white/55">
                   <div className="flex justify-between items-center mb-2">
                     <span>Active Orders Per Driver:</span>
                     <span className="font-semibold">
@@ -489,22 +489,22 @@ const Dashboard = () => {
           
           {/* Delivery Status Distribution (simple version) */}
           <div className="bg-white dark:bg-dm-card rounded-lg shadow border border-brown-100 dark:border-dm-border p-5">
-            <h2 className="text-lg font-medium text-gray-900 dark:text-white mb-5">Delivery Status</h2>
+            <h2 className="text-lg font-medium text-charcoal dark:text-white mb-5">Delivery Status</h2>
             {loading ? (
-              <div className="animate-pulse h-64 bg-gray-200 dark:bg-dm-card-2 rounded"></div>
+              <div className="animate-pulse h-64 bg-brown-100 dark:bg-dm-card-2 rounded"></div>
             ) : (
               <div className="h-64 flex flex-col justify-center">
                 {getDeliveryStatusData().map((status, index) => (
                   <div key={index} className="mb-3">
                     <div className="flex justify-between text-sm mb-1">
-                      <span className="font-medium text-gray-700 dark:text-gray-300">
+                      <span className="font-medium text-charcoal dark:text-white">
                         {status.name}
                       </span>
-                      <span className="text-gray-600 dark:text-gray-400">
+                      <span className="text-brown-500 dark:text-white/55">
                         {status.value} ({status.percentage}%)
                       </span>
                     </div>
-                    <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5">
+                    <div className="w-full bg-brown-100 dark:bg-dm-card-2 rounded-full h-2.5">
                       <div 
                         className="h-2.5 rounded-full" 
                         style={{ 
@@ -522,7 +522,7 @@ const Dashboard = () => {
           {/* Active Drivers */}
           <div className="bg-white dark:bg-dm-card rounded-lg shadow border border-brown-100 dark:border-dm-border p-5">
             <div className="flex justify-between items-center mb-5">
-              <h2 className="text-lg font-medium text-gray-900 dark:text-white">Active Drivers</h2>
+              <h2 className="text-lg font-medium text-charcoal dark:text-white">Active Drivers</h2>
               <button
                 onClick={() => setShowDriversMap(!showDriversMap)}
                 className="text-sm text-plum-700 dark:text-plum-300 hover:underline flex items-center"
@@ -534,10 +534,10 @@ const Dashboard = () => {
               <div className="space-y-4">
                 {Array(3).fill(0).map((_, i) => (
                   <div key={i} className="animate-pulse flex items-center p-2">
-                    <div className="rounded-full bg-gray-200 dark:bg-gray-700 h-10 w-10"></div>
+                    <div className="rounded-full bg-brown-100 dark:bg-dm-card-2 h-10 w-10"></div>
                     <div className="ml-3 flex-1">
-                      <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/4 mb-2"></div>
-                      <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-1/2"></div>
+                      <div className="h-4 bg-brown-100 dark:bg-dm-card-2 rounded w-3/4 mb-2"></div>
+                      <div className="h-3 bg-brown-100 dark:bg-dm-card-2 rounded w-1/2"></div>
                     </div>
                   </div>
                 ))}
@@ -545,9 +545,9 @@ const Dashboard = () => {
             ) : dashboardData.activeDrivers.length > 0 ? (
               <>
                 {showDriversMap ? (
-                  <div className="h-64 bg-gray-100 dark:bg-gray-700 rounded mb-4">
+                  <div className="h-64 bg-ivory dark:bg-dm-card-2 rounded mb-4">
                     <div className="flex items-center justify-center h-full">
-                      <div className="text-center text-gray-600 dark:text-gray-300">
+                      <div className="text-center text-brown-500 dark:text-white/55">
                         <FaMapMarkerAlt className="mx-auto mb-2 text-3xl" />
                         <p>Map view would display here</p>
                         <p className="text-xs">(Integration with Google Maps or Mapbox)</p>
@@ -555,19 +555,19 @@ const Dashboard = () => {
                     </div>
                   </div>
                 ) : null}
-                <div className="divide-y divide-gray-200 dark:divide-gray-700">
+                <div className="divide-y divide-brown-100 dark:divide-dm-border">
                   {dashboardData.activeDrivers.map((driver) => (
                     <div key={driver._id} className="py-3">
                       <div className="flex items-center">
-                        <div className={`p-2 rounded-full ${driver.isAvailable ? 'bg-green-100 dark:bg-green-900/30' : 'bg-gray-100 dark:bg-gray-700'}`}>
-                          {driver.isAvailable 
+                        <div className={`p-2 rounded-full ${driver.isAvailable ? 'bg-green-100 dark:bg-green-900/30' : 'bg-ivory dark:bg-dm-card-2'}`}>
+                          {driver.isAvailable
                             ? <HiOutlineStatusOnline className="text-green-500 dark:text-green-300 w-5 h-5" />
-                            : <FaTruck className="text-gray-500 dark:text-gray-400 w-5 h-5" />
+                            : <FaTruck className="text-brown-400 dark:text-white/40 w-5 h-5" />
                           }
                         </div>
                         <div className="ml-3 flex-1">
-                          <p className="text-sm font-medium text-gray-900 dark:text-white">{driver.name}</p>
-                          <p className="text-xs text-gray-500 dark:text-gray-400">
+                          <p className="text-sm font-medium text-charcoal dark:text-white">{driver.name}</p>
+                          <p className="text-xs text-brown-400 dark:text-white/40">
                             {driver.isAvailable 
                               ? 'Available now'
                               : `${driver.activeOrdersCount} active order${driver.activeOrdersCount !== 1 ? 's' : ''}`
@@ -590,7 +590,7 @@ const Dashboard = () => {
                 </div>
               </>
             ) : (
-              <div className="text-center text-gray-500 dark:text-gray-400 py-6">
+              <div className="text-center text-brown-400 dark:text-white/40 py-6">
                 No active drivers at the moment
               </div>
             )}

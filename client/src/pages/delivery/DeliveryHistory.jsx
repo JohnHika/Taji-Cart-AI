@@ -117,7 +117,7 @@ const DeliveryHistory = () => {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh]">
         <FaSpinner className="animate-spin text-4xl text-plum-600 mb-4" />
-        <p className="text-lg text-gray-700 dark:text-gray-300">Loading delivery history...</p>
+        <p className="text-lg text-charcoal dark:text-white/55">Loading delivery history...</p>
       </div>
     );
   }
@@ -151,10 +151,10 @@ const DeliveryHistory = () => {
       </div>
       
       {/* Filters and search */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 mb-6">
+      <div className="bg-white dark:bg-dm-card rounded-lg shadow p-4 mb-6">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <label className="block text-sm font-medium text-charcoal dark:text-white/55 mb-1">
               From Date
             </label>
             <input
@@ -162,12 +162,12 @@ const DeliveryHistory = () => {
               name="startDate"
               value={dateRange.startDate}
               onChange={handleDateChange}
-              className="w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm p-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+              className="w-full border border-brown-200 dark:border-dm-border rounded-md shadow-sm p-2 bg-white dark:bg-dm-card-2 text-charcoal dark:text-white"
             />
           </div>
           
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <label className="block text-sm font-medium text-charcoal dark:text-white/55 mb-1">
               To Date
             </label>
             <input
@@ -175,12 +175,12 @@ const DeliveryHistory = () => {
               name="endDate"
               value={dateRange.endDate}
               onChange={handleDateChange}
-              className="w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm p-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+              className="w-full border border-brown-200 dark:border-dm-border rounded-md shadow-sm p-2 bg-white dark:bg-dm-card-2 text-charcoal dark:text-white"
             />
           </div>
           
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <label className="block text-sm font-medium text-charcoal dark:text-white/55 mb-1">
               Search
             </label>
             <div className="relative">
@@ -189,22 +189,22 @@ const DeliveryHistory = () => {
                 placeholder="Search by order ID, customer, or address"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm p-2 pl-10 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                className="w-full border border-brown-200 dark:border-dm-border rounded-md shadow-sm p-2 pl-10 bg-white dark:bg-dm-card-2 text-charcoal dark:text-white"
               />
-              <FaSearch className="absolute left-3 top-3 text-gray-400" />
+              <FaSearch className="absolute left-3 top-3 text-brown-400" />
             </div>
           </div>
         </div>
         
-        <div className="mt-4 text-sm text-gray-600 dark:text-gray-400">
+        <div className="mt-4 text-sm text-brown-500 dark:text-white/40">
           Showing {filteredHistory.length} of {deliveryHistory.length} deliveries
         </div>
       </div>
       
       {filteredHistory.length === 0 ? (
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-8 text-center">
-          <FaCalendarAlt className="mx-auto text-gray-400 dark:text-gray-500 text-4xl mb-3" />
-          <p className="text-gray-600 dark:text-gray-400">
+        <div className="bg-white dark:bg-dm-card rounded-lg shadow p-8 text-center">
+          <FaCalendarAlt className="mx-auto text-brown-400 dark:text-brown-400 text-4xl mb-3" />
+          <p className="text-brown-500 dark:text-white/40">
             No delivery history found for the selected criteria.
           </p>
         </div>
@@ -215,19 +215,19 @@ const DeliveryHistory = () => {
               <div key={order._id} className="mobile-surface p-4">
                 <div className="flex items-start justify-between gap-3">
                   <div>
-                    <p className="text-base font-semibold text-gray-900 dark:text-white">#{order.orderId}</p>
-                    <p className="mt-1 text-sm text-gray-600 dark:text-gray-300">{order.customer.name}</p>
+                    <p className="text-base font-semibold text-charcoal dark:text-white">#{order.orderId}</p>
+                    <p className="mt-1 text-sm text-brown-500 dark:text-white/55">{order.customer.name}</p>
                   </div>
-                  <p className="text-sm font-semibold text-gray-900 dark:text-white">KSh {order.total.toFixed(2)}</p>
+                  <p className="text-sm font-semibold text-charcoal dark:text-white">KSh {order.total.toFixed(2)}</p>
                 </div>
-                <p className="mt-3 text-sm text-gray-600 dark:text-gray-300">{order.deliveryAddress}</p>
-                <div className="mt-3 flex items-center justify-between gap-3 text-xs text-gray-500 dark:text-gray-400">
+                <p className="mt-3 text-sm text-brown-500 dark:text-white/55">{order.deliveryAddress}</p>
+                <div className="mt-3 flex items-center justify-between gap-3 text-xs text-brown-400 dark:text-white/40">
                   <span>{formatDate(order.deliveredAt)}</span>
                   <div className="flex">
                     {[...Array(5)].map((_, i) => (
                       <svg 
                         key={i}
-                        className={`w-4 h-4 ${i < order.rating ? 'text-yellow-400' : 'text-gray-300 dark:text-gray-600'}`}
+                        className={`w-4 h-4 ${i < order.rating ? 'text-yellow-400' : 'text-brown-200 dark:text-brown-500'}`}
                         fill="currentColor"
                         viewBox="0 0 20 20"
                       >
@@ -240,46 +240,46 @@ const DeliveryHistory = () => {
             ))}
           </div>
 
-          <div className="hidden md:block bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
-          <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-            <thead className="bg-gray-50 dark:bg-gray-700">
+          <div className="hidden md:block bg-white dark:bg-dm-card rounded-lg shadow overflow-hidden">
+          <table className="min-w-full divide-y divide-brown-100 dark:divide-dm-border">
+            <thead className="bg-ivory dark:bg-dm-card-2">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-brown-400 dark:text-white/55 uppercase tracking-wider">
                   Order ID
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-brown-400 dark:text-white/55 uppercase tracking-wider">
                   Customer
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-brown-400 dark:text-white/55 uppercase tracking-wider">
                   Address
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-brown-400 dark:text-white/55 uppercase tracking-wider">
                   Delivered
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-brown-400 dark:text-white/55 uppercase tracking-wider">
                   Amount
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-brown-400 dark:text-white/55 uppercase tracking-wider">
                   Rating
                 </th>
               </tr>
             </thead>
-            <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+            <tbody className="bg-white dark:bg-dm-card divide-y divide-brown-100 dark:divide-dm-border">
               {filteredHistory.map(order => (
-                <tr key={order._id} className="hover:bg-gray-50 dark:hover:bg-gray-750">
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
+                <tr key={order._id} className="hover:bg-ivory dark:hover:bg-dm-card-2">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-charcoal dark:text-white">
                     {order.orderId}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-brown-400 dark:text-white/40">
                     {order.customer.name}
                   </td>
-                  <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400 max-w-xs truncate">
+                  <td className="px-6 py-4 text-sm text-brown-400 dark:text-white/40 max-w-xs truncate">
                     {order.deliveryAddress}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-brown-400 dark:text-white/40">
                     {formatDate(order.deliveredAt)}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-brown-400 dark:text-white/40">
                     KSh {order.total.toFixed(2)}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
@@ -287,7 +287,7 @@ const DeliveryHistory = () => {
                       {[...Array(5)].map((_, i) => (
                         <svg 
                           key={i}
-                          className={`w-4 h-4 ${i < order.rating ? 'text-yellow-400' : 'text-gray-300 dark:text-gray-600'}`}
+                          className={`w-4 h-4 ${i < order.rating ? 'text-yellow-400' : 'text-brown-200 dark:text-brown-500'}`}
                           fill="currentColor"
                           viewBox="0 0 20 20"
                         >

@@ -87,7 +87,7 @@ const SocialAuthSuccess = () => {
       <div className="text-center">
         <FaSpinner className="animate-spin text-6xl text-primary-200 mx-auto mb-4" />
         <h1 className="text-2xl font-semibold mb-2 dark:text-white">Logging you in...</h1>
-        <p className="text-gray-600 dark:text-gray-300">Please wait while we complete your authentication.</p>
+        <p className="text-brown-500 dark:text-white/55">Please wait while we complete your authentication.</p>
       </div>
     </div>
   );

@@ -145,13 +145,13 @@ const AdminDashboard = () => {
             <Link
               key={link.label}
               to={link.path}
-              className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md dark:border-gray-700 dark:bg-gray-800"
+              className="rounded-2xl border border-brown-100 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md dark:border-dm-border dark:bg-dm-card"
             >
-              <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-orange-100 text-orange-600 dark:bg-orange-900/30 dark:text-orange-300">
+              <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-plum-100 text-plum-700 dark:bg-plum-900/30 dark:text-plum-300">
                 <Icon />
               </div>
-              <h2 className="text-base font-semibold text-gray-900 dark:text-white">{link.label}</h2>
-              <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">{link.description}</p>
+              <h2 className="text-base font-semibold text-charcoal dark:text-white">{link.label}</h2>
+              <p className="mt-2 text-sm text-brown-500 dark:text-white/60">{link.description}</p>
             </Link>
           );
         })}
@@ -162,7 +162,7 @@ const AdminDashboard = () => {
         <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <h2 className="text-xl font-semibold">Active Campaigns</h2>
           <div className="flex flex-wrap items-center gap-3">
-            <Link to="/dashboard/active-campaigns" className="text-primary-200 hover:text-primary-300 text-sm">
+            <Link to="/dashboard/active-campaigns" className="text-plum-600 hover:text-plum-500 dark:text-plum-300 dark:hover:text-plum-200 text-sm underline underline-offset-2 transition-colors">
               View Active Campaigns
             </Link>
             <Link to="/dashboard/admin-community-perks" className="text-sm font-medium bg-plum-700 hover:bg-plum-800 text-white px-3 py-1.5 rounded-pill transition-colors">
@@ -244,7 +244,7 @@ const AdminDashboard = () => {
         <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h2 className="text-xl font-semibold mb-1 dark:text-white">Recent System Users</h2>
-            <p className="text-sm text-gray-600 dark:text-gray-300">
+            <p className="text-sm text-brown-500 dark:text-white/55">
               Quick visibility into the people using the store, selling, and delivering.
             </p>
           </div>
@@ -252,7 +252,7 @@ const AdminDashboard = () => {
             Open full user management
           </Link>
         </div>
-        <div className="rounded-2xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
+        <div className="rounded-2xl border border-brown-100 bg-white shadow-sm dark:border-dm-border dark:bg-dm-card">
           <UserTable users={recentUsers} />
         </div>
       </div>

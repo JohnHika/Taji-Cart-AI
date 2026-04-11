@@ -86,7 +86,7 @@ const ChatbotAI = () => {
       if (index > 0 && /^\s+\(KES|\s+\(\$/.test(line)) {
         return (
           <React.Fragment key={index}>
-            <span className="text-sm text-gray-600 dark:text-gray-400">{line}</span>
+            <span className="text-sm text-brown-500 dark:text-white/40">{line}</span>
             {index < text.split('\n').length - 1 && <br />}
           </React.Fragment>
         );
@@ -409,11 +409,11 @@ const ChatbotAI = () => {
               {image ? (
                 <img src={image} alt={name} className="w-16 h-16 object-cover rounded" />
               ) : (
-                <div className="w-16 h-16 bg-gray-200 rounded" />
+                <div className="w-16 h-16 bg-brown-100 rounded" />
               )}
               <div className="flex-1">
                 <div className="text-sm font-medium line-clamp-2">{name}</div>
-                {price != null && <div className="text-xs text-gray-600">KES {Number(price).toLocaleString()}</div>}
+                {price != null && <div className="text-xs text-brown-500">KES {Number(price).toLocaleString()}</div>}
               </div>
               {id && (
                 <button onClick={() => addToCartFromChat(id)} className="px-3 py-1 text-xs bg-emerald-600 text-white rounded">
@@ -776,7 +776,7 @@ const ChatbotAI = () => {
               {/* Add New Chat button */}
               <button 
                 onClick={handleNewChat}
-                className="text-white hover:text-gray-200 mr-3"
+                className="text-white hover:text-charcoal mr-3"
                 aria-label="Start new chat"
                 title="Start new chat"
               >
@@ -790,7 +790,7 @@ const ChatbotAI = () => {
                   fetchUserChatHistory();
                   setIsHistoryOpen(!isHistoryOpen);
                 }}
-                className="text-white hover:text-gray-200 mr-3"
+                className="text-white hover:text-charcoal mr-3"
                 aria-label="View chat history"
                 title="View chat history"
               >
@@ -801,7 +801,7 @@ const ChatbotAI = () => {
               {/* Add expand to full-page button */}
               <Link 
                 to="/chat" 
-                className="text-white hover:text-gray-200 mr-3"
+                className="text-white hover:text-charcoal mr-3"
                 aria-label="Open full-page chat"
                 title="Open full-page chat"
               >
@@ -809,7 +809,7 @@ const ChatbotAI = () => {
               </Link>
               <button 
                 onClick={handleClearChat}
-                className="text-white hover:text-gray-200 mr-3"
+                className="text-white hover:text-charcoal mr-3"
                 aria-label="Clear chat history"
                 title="Clear chat history"
               >
@@ -819,7 +819,7 @@ const ChatbotAI = () => {
               </button>
               <button 
                 onClick={handleToggleChat}
-                className="text-white hover:text-gray-200"
+                className="text-white hover:text-charcoal"
                 aria-label="Close chat"
               >
                 <FaTimes />
@@ -834,7 +834,7 @@ const ChatbotAI = () => {
                 <h3 className="font-medium text-sm md:text-base">Chat History</h3>
                 <button 
                   onClick={() => setIsHistoryOpen(false)}
-                  className="text-white hover:text-gray-200"
+                  className="text-white hover:text-charcoal"
                   aria-label="Close history"
                 >
                   <FaTimes />
@@ -847,7 +847,7 @@ const ChatbotAI = () => {
                     <LoadingSpinner size="small" />
                   </div>
                 ) : chatHistory.length === 0 ? (
-                  <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+                  <div className="text-center py-8 text-brown-400 dark:text-white/40">
                     <p>No previous chat history found.</p>
                   </div>
                 ) : (
@@ -855,10 +855,10 @@ const ChatbotAI = () => {
                     {chatHistory.map(session => (
                       <div 
                         key={session.id}
-                        className={`p-3 rounded-lg border cursor-pointer transition-all duration-200 hover:bg-gray-100 dark:hover:bg-gray-700 ${
+                        className={`p-3 rounded-lg border cursor-pointer transition-all duration-200 hover:bg-brown-50 dark:hover:bg-dm-card-2 ${
                           session.isActive ? 
                             'border-primary-200 dark:border-primary-300' : 
-                            'border-gray-200 dark:border-gray-700'
+                            'border-brown-100 dark:border-dm-border'
                         }`}
                         onClick={() => loadChatSession(session.id)}
                       >
@@ -869,13 +869,13 @@ const ChatbotAI = () => {
                           <div className={`text-xs px-2 py-0.5 rounded-full ${
                             session.isActive ? 
                               'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' : 
-                              'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'
+                              'bg-brown-50 text-charcoal dark:bg-dm-card-2 dark:text-white/55'
                           }`}>
                             {session.isActive ? 'Active' : 'Closed'}
                           </div>
                         </div>
                         
-                        <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                        <div className="mt-1 text-xs text-brown-400 dark:text-white/40">
                           {session.messageCount} messages · Last active: {formatDate(session.lastActive)}
                         </div>
                         
@@ -985,7 +985,7 @@ const ChatbotAI = () => {
           </div>
           {isCheckoutRedirecting && (
             <div className="absolute inset-0 bg-black bg-opacity-50 flex justify-center items-center">
-              <div className="bg-white dark:bg-gray-800 p-4 rounded-lg flex flex-col items-center">
+              <div className="bg-white dark:bg-dm-card p-4 rounded-lg flex flex-col items-center">
                 <LoadingSpinner size="medium" />
                 <p className="mt-2 text-sm">Redirecting to checkout...</p>
               </div>

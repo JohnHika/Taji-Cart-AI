@@ -416,9 +416,9 @@ const UserProfile = () => {
               <div className="space-y-6">
                 {isEditing ? (
                   <div className="space-y-4">
-                    <div className="flex items-start">
-                      <div className="flex-shrink-0 mr-4">
-                        <div className="w-24 h-24 rounded-full bg-gradient-to-br from-plum-100 to-blush-100 dark:from-plum-900/50 dark:to-plum-800/30 ring-2 ring-plum-200/80 dark:ring-plum-700 flex items-center justify-center overflow-hidden relative group">
+                    <div className="flex flex-col sm:flex-row items-start gap-4">
+                      <div className="shrink-0">
+                        <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-gradient-to-br from-plum-100 to-blush-100 dark:from-plum-900/50 dark:to-plum-800/30 ring-2 ring-plum-200/80 dark:ring-plum-700 flex items-center justify-center overflow-hidden relative group">
                           {user.avatar ? (
                             <img 
                               src={user.avatar} 
@@ -438,7 +438,7 @@ const UserProfile = () => {
                         </div>
                       </div>
                       
-                      <div className="flex-grow">
+                      <div className="flex-grow w-full min-w-0">
                         <div className="mb-3">
                           <label className="block text-sm font-medium text-charcoal dark:text-white/80 mb-1">
                             Full Name

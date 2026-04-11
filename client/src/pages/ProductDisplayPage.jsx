@@ -439,11 +439,11 @@ const ProductDisplayPage = () => {
                   <div className="space-y-2">
                     {data.more_details && Object.keys(data.more_details).length > 0 ? (
                       Object.entries(data.more_details).map(([key, value]) => (
-                        <div key={key} className="flex gap-3 py-1.5 border-b border-brown-50 dark:border-dm-border last:border-0">
-                          <span className="font-semibold text-charcoal dark:text-white/70 w-36 shrink-0 capitalize">
+                        <div key={key} className="flex flex-col xs:flex-row gap-1 xs:gap-3 py-1.5 border-b border-brown-50 dark:border-dm-border last:border-0">
+                          <span className="font-semibold text-charcoal dark:text-white/70 xs:w-32 sm:w-36 shrink-0 capitalize text-xs sm:text-sm">
                             {key.replace(/_/g, ' ')}
                           </span>
-                          <span className="text-brown-500 dark:text-white/60">{value}</span>
+                          <span className="text-brown-500 dark:text-white/60 text-xs sm:text-sm">{value}</span>
                         </div>
                       ))
                     ) : (
@@ -600,16 +600,16 @@ const ProductDisplayPage = () => {
           <h2 className="text-lg font-semibold text-charcoal dark:text-white mb-5 text-center">
             Why shop from <span className="font-display italic text-plum-700 dark:text-plum-200">Nawiri Hair</span>?
           </h2>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="grid grid-cols-3 gap-2 sm:gap-4">
             {[
               { img: image1, title: 'Superfast Delivery', desc: 'Get your order delivered to your doorstep at the earliest from stores near you.' },
               { img: image2, title: 'Best Prices & Offers', desc: 'Best price destination with offers directly from the manufacturers.' },
               { img: image3, title: 'Wide Assortment', desc: 'Choose from hundreds of hair products across textures, styles, and care needs.' },
             ].map(({ img, title, desc }) => (
-              <div key={title} className="bg-white dark:bg-dm-card rounded-card border border-brown-100 dark:border-dm-border shadow-card p-5 flex flex-col items-center text-center">
-                <img src={img} alt={title} className="w-14 h-14 object-contain mb-3" />
-                <h3 className="font-semibold text-sm text-charcoal dark:text-white mb-1">{title}</h3>
-                <p className="text-xs text-brown-400 dark:text-white/50 leading-relaxed">{desc}</p>
+              <div key={title} className="bg-white dark:bg-dm-card rounded-card border border-brown-100 dark:border-dm-border shadow-card p-3 sm:p-5 flex flex-col items-center text-center">
+                <img src={img} alt={title} className="w-10 h-10 sm:w-14 sm:h-14 object-contain mb-2 sm:mb-3" />
+                <h3 className="font-semibold text-xs sm:text-sm text-charcoal dark:text-white mb-0.5 sm:mb-1 leading-tight">{title}</h3>
+                <p className="text-xs text-brown-400 dark:text-white/50 leading-relaxed hidden sm:block">{desc}</p>
               </div>
             ))}
           </div>

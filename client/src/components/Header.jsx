@@ -95,7 +95,7 @@ const Header = () => {
 
             {/* Full search bar — sm and up */}
             <div className="hidden sm:flex min-w-0 flex-1 justify-center px-1">
-              <div className="w-full sm:max-w-[16rem] md:max-w-xs lg:max-w-sm xl:max-w-md">
+              <div className="w-full max-w-xs md:max-w-sm lg:max-w-md xl:max-w-lg">
                 <Search />
               </div>
             </div>
@@ -104,7 +104,7 @@ const Header = () => {
               <ThemeToggle />
 
               <button
-                className="relative text-neutral-600 dark:text-white/80 xl:hidden"
+                className="relative text-neutral-600 dark:text-white/80 lg:hidden"
                 onClick={() => navigate('/mobile/cart')}
                 aria-label="Cart"
               >
@@ -117,14 +117,14 @@ const Header = () => {
               </button>
 
               <button
-                className="text-neutral-600 dark:text-white/80 xl:hidden"
+                className="text-neutral-600 dark:text-white/80 lg:hidden"
                 onClick={handleMobileUser}
                 aria-label="Profile"
               >
                 <FaRegCircleUser size={24} />
               </button>
 
-              <div className="hidden xl:flex items-center gap-4">
+              <div className="hidden lg:flex items-center gap-4">
                 <div className="relative" ref={userMenuRef}>
                   {user?._id ? (
                     <>

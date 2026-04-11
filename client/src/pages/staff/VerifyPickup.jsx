@@ -132,25 +132,25 @@ const VerifyPickup = () => {
         <h1 className="text-2xl font-bold dark:text-white">Verify Order Pickup</h1>
         <button 
           onClick={() => navigate('/dashboard/staff/pending-pickups')}
-          className="bg-gray-200 dark:bg-gray-700 px-4 py-2 rounded-lg flex items-center text-gray-700 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-600"
+          className="bg-brown-100 dark:bg-dm-card-2 px-4 py-2 rounded-lg flex items-center text-charcoal dark:text-white/70 hover:bg-brown-200 dark:hover:bg-dm-border"
         >
           <FaArrowLeft className="mr-2" /> Back to Dashboard
         </button>
       </div>
 
       {!verifying ? (
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 max-w-lg mx-auto">
+        <div className="bg-white dark:bg-dm-card rounded-lg shadow-md p-6 max-w-lg mx-auto">
           <div className="mb-4 text-center">
             <FaQrcode className="text-5xl mx-auto mb-3 text-primary-100" />
             <h2 className="text-xl font-semibold dark:text-white">Verify Pickup Code</h2>
-            <p className="text-gray-600 dark:text-gray-400 mt-1">
+            <p className="text-brown-500 dark:text-white/40 mt-1">
               Enter the customer's pickup code to verify their order
             </p>
           </div>
 
           <form onSubmit={handleVerifyPickup} className="mt-6">
             <div className="mb-4">
-              <label htmlFor="pickupCode" className="block text-gray-700 dark:text-gray-300 mb-2">
+              <label htmlFor="pickupCode" className="block text-charcoal dark:text-white/55 mb-2">
                 Pickup Code
               </label>
               <input
@@ -159,7 +159,7 @@ const VerifyPickup = () => {
                 placeholder="Enter pickup code (e.g. ABC123)"
                 value={pickupCode}
                 onChange={(e) => setPickupCode(e.target.value)}
-                className="w-full p-3 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-700 text-gray-800 dark:text-white"
+                className="w-full p-3 border border-brown-200 dark:border-dm-border rounded-lg bg-white dark:bg-dm-card-2 text-charcoal dark:text-white"
                 autoComplete="off"
                 required
               />
@@ -179,7 +179,7 @@ const VerifyPickup = () => {
               disabled={loading || !pickupCode.trim()}
               className={`w-full p-3 rounded-lg font-medium flex items-center justify-center ${
                 loading || !pickupCode.trim()
-                  ? 'bg-gray-400 dark:bg-gray-600 cursor-not-allowed'
+                  ? 'bg-brown-300 dark:bg-dm-card-2 cursor-not-allowed'
                   : 'bg-primary-100 hover:bg-primary-200 text-white'
               }`}
             >
@@ -196,70 +196,70 @@ const VerifyPickup = () => {
           </form>
         </div>
       ) : (
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 max-w-2xl mx-auto">
+        <div className="bg-white dark:bg-dm-card rounded-lg shadow-md p-6 max-w-2xl mx-auto">
           <div className="mb-6 text-center">
             <div className="inline-block p-3 bg-green-100 dark:bg-green-900/30 rounded-full mb-3">
               <FaBoxOpen className="text-4xl text-green-600 dark:text-green-400" />
             </div>
             <h2 className="text-xl font-semibold dark:text-white">Order Verified</h2>
-            <p className="text-gray-600 dark:text-gray-400 mt-1">
+            <p className="text-brown-500 dark:text-white/40 mt-1">
               The pickup code has been verified. Review the order details below.
             </p>
           </div>
 
-          <div className="border-t border-gray-200 dark:border-gray-700 pt-4 mb-6">
+          <div className="border-t border-brown-100 dark:border-dm-border pt-4 mb-6">
             <h3 className="font-medium text-lg mb-3 dark:text-white">Order Details</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <p className="text-gray-600 dark:text-gray-400">Order ID:</p>
+                <p className="text-brown-500 dark:text-white/40">Order ID:</p>
                 <p className="font-medium dark:text-white">{orderDetails._id}</p>
               </div>
               <div>
-                <p className="text-gray-600 dark:text-gray-400">Order Number:</p>
+                <p className="text-brown-500 dark:text-white/40">Order Number:</p>
                 <p className="font-medium dark:text-white">{orderDetails.orderId || 'N/A'}</p>
               </div>
               <div>
-                <p className="text-gray-600 dark:text-gray-400">Customer:</p>
+                <p className="text-brown-500 dark:text-white/40">Customer:</p>
                 <p className="font-medium dark:text-white">{orderDetails.userId?.name || 'Unknown Customer'}</p>
               </div>
               <div>
-                <p className="text-gray-600 dark:text-gray-400">Date Ordered:</p>
+                <p className="text-brown-500 dark:text-white/40">Date Ordered:</p>
                 <p className="font-medium dark:text-white">{formatDate(orderDetails.createdAt)}</p>
               </div>
               <div>
-                <p className="text-gray-600 dark:text-gray-400">Total Amount:</p>
+                <p className="text-brown-500 dark:text-white/40">Total Amount:</p>
                 <p className="font-medium dark:text-white">{formatCurrency(orderDetails.totalAmt || 0)}</p>
               </div>
               <div>
-                <p className="text-gray-600 dark:text-gray-400">Status:</p>
+                <p className="text-brown-500 dark:text-white/40">Status:</p>
                 <p className="font-medium dark:text-white capitalize">{orderDetails.status || 'Pending'}</p>
               </div>
               <div>
-                <p className="text-gray-600 dark:text-gray-400">Pickup Location:</p>
+                <p className="text-brown-500 dark:text-white/40">Pickup Location:</p>
                 <p className="font-medium dark:text-white">{orderDetails.pickup_location || 'Main Store'}</p>
               </div>
               <div>
-                <p className="text-gray-600 dark:text-gray-400">Verification Code:</p>
+                <p className="text-brown-500 dark:text-white/40">Verification Code:</p>
                 <p className="font-medium font-mono dark:text-white">{orderDetails.pickupVerificationCode}</p>
               </div>
             </div>
           </div>
 
           {orderDetails.items && orderDetails.items.length > 0 && (
-            <div className="border-t border-gray-200 dark:border-gray-700 pt-4 mb-6">
+            <div className="border-t border-brown-100 dark:border-dm-border pt-4 mb-6">
               <h3 className="font-medium text-lg mb-3 dark:text-white">Items</h3>
               <div className="overflow-x-auto">
                 <table className="min-w-full">
                   <thead>
-                    <tr className="border-b border-gray-200 dark:border-gray-700">
-                      <th className="text-left py-2 px-1 text-gray-600 dark:text-gray-400">Item</th>
-                      <th className="text-center py-2 px-1 text-gray-600 dark:text-gray-400">Quantity</th>
-                      <th className="text-right py-2 px-1 text-gray-600 dark:text-gray-400">Price</th>
+                    <tr className="border-b border-brown-100 dark:border-dm-border">
+                      <th className="text-left py-2 px-1 text-brown-500 dark:text-white/40">Item</th>
+                      <th className="text-center py-2 px-1 text-brown-500 dark:text-white/40">Quantity</th>
+                      <th className="text-right py-2 px-1 text-brown-500 dark:text-white/40">Price</th>
                     </tr>
                   </thead>
                   <tbody>
                     {orderDetails.items.map((item, index) => (
-                      <tr key={index} className="border-b border-gray-200 dark:border-gray-700">
+                      <tr key={index} className="border-b border-brown-100 dark:border-dm-border">
                         <td className="py-2 px-1 dark:text-white">{item.product_details?.name || 'Unknown Product'}</td>
                         <td className="py-2 px-1 text-center dark:text-white">{item.quantity || 1}</td>
                         <td className="py-2 px-1 text-right dark:text-white">{formatCurrency(item.price || 0)}</td>
@@ -274,7 +274,7 @@ const VerifyPickup = () => {
           <div className="flex flex-col md:flex-row gap-3 justify-end">
             <button
               onClick={() => setVerifying(false)}
-              className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+              className="px-4 py-2 border border-brown-200 dark:border-dm-border rounded-lg text-charcoal dark:text-white/55 hover:bg-brown-50 dark:hover:bg-dm-card-2"
             >
               Enter Another Code
             </button>

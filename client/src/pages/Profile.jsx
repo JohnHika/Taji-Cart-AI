@@ -340,8 +340,8 @@ const Profile = () => {
     if (user.role === 'staff') {
         // Render profile settings for staff
         return (
-            <div className="max-w-3xl mx-auto bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md transition-colors duration-200">
-                <h1 className="text-2xl font-bold mb-6 text-gray-800 dark:text-white transition-colors duration-200">Profile Settings</h1>
+            <div className="max-w-3xl mx-auto bg-white dark:bg-dm-card p-6 rounded-lg shadow-md transition-colors duration-200">
+                <h1 className="text-2xl font-bold mb-6 text-charcoal dark:text-white transition-colors duration-200">Profile Settings</h1>
                 {/* Profile avatar and other settings */}
             </div>
         );
@@ -352,13 +352,13 @@ const Profile = () => {
             <h1 className="mobile-section-title mb-4">My Account</h1>
             
             {/* Tab Navigation */}
-            <div className="mobile-chip-row border-b border-gray-200 dark:border-gray-700 mb-6">
+            <div className="mobile-chip-row border-b border-brown-100 dark:border-dm-border mb-6">
                 <button
                     onClick={() => setActiveTab('profile')}
                     className={`shrink-0 py-3 px-4 font-medium text-sm sm:text-base transition-colors duration-200 ${
                         activeTab === 'profile' 
                         ? 'text-green-800 dark:text-green-500 border-b-2 border-green-800 dark:border-green-500' 
-                        : 'text-gray-600 dark:text-gray-400 hover:text-green-700 dark:hover:text-green-400'
+                        : 'text-brown-500 dark:text-white/40 hover:text-green-700 dark:hover:text-green-400'
                     }`}
                 >
                     My Profile
@@ -368,7 +368,7 @@ const Profile = () => {
                     className={`shrink-0 py-3 px-4 font-medium text-sm sm:text-base transition-colors duration-200 ${
                         activeTab === 'security' 
                         ? 'text-green-800 dark:text-green-500 border-b-2 border-green-800 dark:border-green-500' 
-                        : 'text-gray-600 dark:text-gray-400 hover:text-green-700 dark:hover:text-green-400'
+                        : 'text-brown-500 dark:text-white/40 hover:text-green-700 dark:hover:text-green-400'
                     }`}
                 >
                     Security
@@ -378,7 +378,7 @@ const Profile = () => {
                     className={`shrink-0 py-3 px-4 font-medium text-sm sm:text-base transition-colors duration-200 ${
                         activeTab === 'royal-card' 
                         ? 'text-green-800 dark:text-green-500 border-b-2 border-green-800 dark:border-green-500' 
-                        : 'text-gray-600 dark:text-gray-400 hover:text-green-700 dark:hover:text-green-400'
+                        : 'text-brown-500 dark:text-white/40 hover:text-green-700 dark:hover:text-green-400'
                     }`}
                 >
                     Royal Card
@@ -388,7 +388,7 @@ const Profile = () => {
                     className={`shrink-0 py-3 px-4 font-medium text-sm sm:text-base transition-colors duration-200 ${
                         activeTab === 'rewards' 
                         ? 'text-green-800 dark:text-green-500 border-b-2 border-green-800 dark:border-green-500' 
-                        : 'text-gray-600 dark:text-gray-400 hover:text-green-700 dark:hover:text-green-400'
+                        : 'text-brown-500 dark:text-white/40 hover:text-green-700 dark:hover:text-green-400'
                     }`}
                 >
                     My Rewards
@@ -397,9 +397,9 @@ const Profile = () => {
             
             {/* Profile Tab Content */}
             {activeTab === 'profile' && (
-                <div className='bg-white dark:bg-gray-900 transition-colors duration-200'>
+                <div className='bg-white dark:bg-dm-surface transition-colors duration-200'>
                     <div className="mobile-surface max-w-3xl mx-auto p-4 sm:p-6 transition-colors duration-200">
-                        <h1 className="text-2xl font-bold mb-6 text-gray-800 dark:text-white transition-colors duration-200">Profile Settings</h1>
+                        <h1 className="text-2xl font-bold mb-6 text-charcoal dark:text-white transition-colors duration-200">Profile Settings</h1>
 
                         {/* Profile avatar section */}
                         <div className="flex flex-col items-center mb-8">
@@ -412,7 +412,7 @@ const Profile = () => {
                                             className='w-full h-full object-cover'
                                         />
                                     ) : (
-                                        <FaRegUserCircle size={75} className="text-gray-400 dark:text-gray-300 transition-colors duration-200" />
+                                        <FaRegUserCircle size={75} className="text-brown-400 dark:text-white/55 transition-colors duration-200" />
                                     )
                                 }
                                 
@@ -444,12 +444,12 @@ const Profile = () => {
                                 <button 
                                     onClick={() => fileInputRef.current?.click()}
                                     disabled={avatarLoading} 
-                                    className='w-full sm:w-auto text-sm border border-primary-100 dark:border-primary-300 hover:border-primary-200 dark:hover:border-primary-200 hover:bg-primary-200 dark:hover:bg-primary-200/90 px-4 py-2 rounded-full transition-colors duration-200 text-gray-700 dark:text-white hover:text-gray-900 disabled:opacity-50 disabled:cursor-not-allowed'
+                                    className='w-full sm:w-auto text-sm border border-primary-100 dark:border-primary-300 hover:border-primary-200 dark:hover:border-primary-200 hover:bg-primary-200 dark:hover:bg-primary-200/90 px-4 py-2 rounded-full transition-colors duration-200 text-charcoal dark:text-white hover:text-charcoal disabled:opacity-50 disabled:cursor-not-allowed'
                                 >
                                     {avatarLoading ? 'Uploading...' : 'Change Profile Picture'}
                                 </button>
                                 
-                                <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                                <p className="text-xs text-brown-400 dark:text-white/40 mt-2">
                                     JPEG, PNG or GIF (Max 5MB)
                                 </p>
                             </div>
@@ -464,11 +464,11 @@ const Profile = () => {
                         {/* Profile information form */}
                         <form className='grid gap-6 mt-6' onSubmit={handleSubmit}>
                             <div className='grid gap-2'>
-                                <label className="font-medium text-gray-700 dark:text-gray-200 transition-colors duration-200">Name</label>
+                                <label className="font-medium text-charcoal dark:text-white/70 transition-colors duration-200">Name</label>
                                 <input
                                     type='text'
                                     placeholder='Enter your name'
-                                    className='p-3 bg-plum-50/80 dark:bg-dm-card-2 outline-none border dark:border-dm-border focus-within:border-plum-500 dark:focus-within:border-plum-400 rounded-md text-gray-800 dark:text-white transition-colors duration-200'
+                                    className='p-3 bg-plum-50/80 dark:bg-dm-card-2 outline-none border dark:border-dm-border focus-within:border-plum-500 dark:focus-within:border-plum-400 rounded-md text-charcoal dark:text-white transition-colors duration-200'
                                     value={userData.name}
                                     name='name'
                                     onChange={handleOnChange}
@@ -477,12 +477,12 @@ const Profile = () => {
                             </div>
                             
                             <div className='grid gap-2'>
-                                <label htmlFor='email' className="font-medium text-gray-700 dark:text-gray-200 transition-colors duration-200">Email</label>
+                                <label htmlFor='email' className="font-medium text-charcoal dark:text-white/70 transition-colors duration-200">Email</label>
                                 <input
                                     type='email'
                                     id='email'
                                     placeholder='Enter your email'
-                                    className='p-3 bg-plum-50/80 dark:bg-dm-card-2 outline-none border dark:border-dm-border focus-within:border-plum-500 dark:focus-within:border-plum-400 rounded-md text-gray-800 dark:text-white transition-colors duration-200'
+                                    className='p-3 bg-plum-50/80 dark:bg-dm-card-2 outline-none border dark:border-dm-border focus-within:border-plum-500 dark:focus-within:border-plum-400 rounded-md text-charcoal dark:text-white transition-colors duration-200'
                                     value={userData.email}
                                     name='email'
                                     onChange={handleOnChange}
@@ -491,24 +491,24 @@ const Profile = () => {
                             </div>
                             
                             <div className='grid gap-2'>
-                                <label htmlFor='mobile' className="font-medium text-gray-700 dark:text-gray-200 transition-colors duration-200">Mobile</label>
+                                <label htmlFor='mobile' className="font-medium text-charcoal dark:text-white/70 transition-colors duration-200">Mobile</label>
                                 <input
                                     type='text'
                                     id='mobile'
                                     placeholder='Enter your mobile number'
-                                    className='p-3 bg-plum-50/80 dark:bg-dm-card-2 outline-none border dark:border-dm-border focus-within:border-plum-500 dark:focus-within:border-plum-400 rounded-md text-gray-800 dark:text-white transition-colors duration-200'
+                                    className='p-3 bg-plum-50/80 dark:bg-dm-card-2 outline-none border dark:border-dm-border focus-within:border-plum-500 dark:focus-within:border-plum-400 rounded-md text-charcoal dark:text-white transition-colors duration-200'
                                     value={userData.mobile}
                                     name='mobile'
                                     onChange={handleOnChange}
                                     required
                                 />
-                                <p className="text-xs text-gray-500 dark:text-gray-400 transition-colors duration-200">
+                                <p className="text-xs text-brown-400 dark:text-white/40 transition-colors duration-200">
                                     Phone number with country code (e.g., +254712345678)
                                 </p>
                             </div>
 
                             <div className="mb-4">
-                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                <label className="block text-sm font-medium text-charcoal dark:text-white/55 mb-1">
                                     Account Type
                                 </label>
                                 <div className="flex items-center">
@@ -525,7 +525,7 @@ const Profile = () => {
                                 
                                 {/* Debug info - only visible in development */}
                                 {process.env.NODE_ENV === 'development' && (
-                                    <div className="mt-2 p-2 bg-gray-100 dark:bg-gray-700 rounded text-xs font-mono">
+                                    <div className="mt-2 p-2 bg-brown-50 dark:bg-dm-card-2 rounded text-xs font-mono">
                                         <div>Role properties:</div>
                                         <div>- isStaff: {String(user.isStaff)}</div>
                                         <div>- role: {user.role || 'undefined'}</div>
@@ -547,13 +547,13 @@ const Profile = () => {
                         </form>
 
                         {/* Link to security section */}
-                        <div className="mt-10 pt-8 border-t border-gray-200 dark:border-gray-700 transition-colors duration-200">
-                            <h2 className="text-xl font-bold mb-6 text-gray-800 dark:text-white transition-colors duration-200">Account Security</h2>
+                        <div className="mt-10 pt-8 border-t border-brown-100 dark:border-dm-border transition-colors duration-200">
+                            <h2 className="text-xl font-bold mb-6 text-charcoal dark:text-white transition-colors duration-200">Account Security</h2>
                             
                             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                                <div className="text-gray-600 dark:text-gray-300 transition-colors duration-200">
+                                <div className="text-brown-500 dark:text-white/55 transition-colors duration-200">
                                     <p>Need to update your password?</p>
-                                    <p className="text-sm text-gray-500 dark:text-gray-400 transition-colors duration-200">Secure your account with a strong password</p>
+                                    <p className="text-sm text-brown-400 dark:text-white/40 transition-colors duration-200">Secure your account with a strong password</p>
                                 </div>
                                 
                                 <button 
@@ -570,10 +570,10 @@ const Profile = () => {
             
             {/* Security Tab Content */}
             {activeTab === 'security' && (
-                <div className="bg-white dark:bg-gray-900 transition-colors duration-200">
+                <div className="bg-white dark:bg-dm-surface transition-colors duration-200">
                     <div className="max-w-3xl mx-auto">
                         <div className="mobile-surface p-4 sm:p-6 transition-colors duration-200">
-                            <h2 className="text-2xl font-bold mb-6 text-gray-800 dark:text-white transition-colors duration-200">Security Settings</h2>
+                            <h2 className="text-2xl font-bold mb-6 text-charcoal dark:text-white transition-colors duration-200">Security Settings</h2>
                             
                             <div className="bg-gradient-to-r from-plum-50 to-blush-50 dark:from-dm-card dark:to-dm-card-2 p-4 rounded-md mb-6 border border-plum-100 dark:border-dm-border transition-colors duration-200">
                                 <div className="flex">
@@ -593,7 +593,7 @@ const Profile = () => {
                                 <h3 className="text-lg font-medium dark:text-white">Change Password</h3>
                                 
                                 <div>
-                                    <label htmlFor="currentPassword" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                    <label htmlFor="currentPassword" className="block text-sm font-medium text-charcoal dark:text-white/55 mb-1">
                                         Current Password
                                     </label>
                                     <div className="relative">
@@ -604,12 +604,12 @@ const Profile = () => {
                                             value={passwordData.currentPassword}
                                             onChange={handlePasswordChange}
                                             required
-                                            className="w-full pl-10 pr-10 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-200 dark:bg-gray-700 dark:text-white"
+                                            className="w-full pl-10 pr-10 py-2 border border-brown-200 dark:border-dm-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary-200 dark:bg-dm-card-2 dark:text-white"
                                         />
-                                        <FaLock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                                        <FaLock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-brown-400" />
                                         <button
                                             type="button"
-                                            className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none"
+                                            className="absolute right-3 top-1/2 transform -translate-y-1/2 text-brown-400 hover:text-brown-500 focus:outline-none"
                                             onClick={() => setShowCurrentPassword(!showCurrentPassword)}
                                         >
                                             {showCurrentPassword ? <FaEyeSlash /> : <FaEye />}
@@ -618,7 +618,7 @@ const Profile = () => {
                                 </div>
                                 
                                 <div>
-                                    <label htmlFor="newPassword" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                    <label htmlFor="newPassword" className="block text-sm font-medium text-charcoal dark:text-white/55 mb-1">
                                         New Password
                                     </label>
                                     <div className="relative">
@@ -629,12 +629,12 @@ const Profile = () => {
                                             value={passwordData.newPassword}
                                             onChange={handlePasswordChange}
                                             required
-                                            className="w-full pl-10 pr-10 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-200 dark:bg-gray-700 dark:text-white"
+                                            className="w-full pl-10 pr-10 py-2 border border-brown-200 dark:border-dm-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary-200 dark:bg-dm-card-2 dark:text-white"
                                         />
-                                        <FaKey className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                                        <FaKey className="absolute left-3 top-1/2 transform -translate-y-1/2 text-brown-400" />
                                         <button
                                             type="button"
-                                            className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none"
+                                            className="absolute right-3 top-1/2 transform -translate-y-1/2 text-brown-400 hover:text-brown-500 focus:outline-none"
                                             onClick={() => setShowNewPassword(!showNewPassword)}
                                         >
                                             {showNewPassword ? <FaEyeSlash /> : <FaEye />}
@@ -643,13 +643,13 @@ const Profile = () => {
                                     {/* Password strength meter */}
                                     {passwordData.newPassword && (
                                         <div className="mt-2">
-                                            <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                                            <div className="w-full bg-brown-100 dark:bg-dm-card-2 rounded-full h-2">
                                                 <div
                                                     className={`${passwordStrength.color} h-2 rounded-full transition-all duration-300`}
                                                     style={{ width: passwordStrength.width }}
                                                 ></div>
                                             </div>
-                                            <p className="text-xs mt-1 text-gray-600 dark:text-gray-400">
+                                            <p className="text-xs mt-1 text-brown-500 dark:text-white/40">
                                                 Password Strength: {passwordStrength.label}
                                             </p>
                                         </div>
@@ -657,7 +657,7 @@ const Profile = () => {
                                 </div>
                                 
                                 <div>
-                                    <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                    <label htmlFor="confirmPassword" className="block text-sm font-medium text-charcoal dark:text-white/55 mb-1">
                                         Confirm New Password
                                     </label>
                                     <div className="relative">
@@ -668,12 +668,12 @@ const Profile = () => {
                                             value={passwordData.confirmPassword}
                                             onChange={handlePasswordChange}
                                             required
-                                            className="w-full pl-10 pr-10 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-200 dark:bg-gray-700 dark:text-white"
+                                            className="w-full pl-10 pr-10 py-2 border border-brown-200 dark:border-dm-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary-200 dark:bg-dm-card-2 dark:text-white"
                                         />
-                                        <FaKey className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                                        <FaKey className="absolute left-3 top-1/2 transform -translate-y-1/2 text-brown-400" />
                                         <button
                                             type="button"
-                                            className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none"
+                                            className="absolute right-3 top-1/2 transform -translate-y-1/2 text-brown-400 hover:text-brown-500 focus:outline-none"
                                             onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                                         >
                                             {showConfirmPassword ? <FaEyeSlash /> : <FaEye />}
@@ -706,10 +706,10 @@ const Profile = () => {
                                 </div>
                             </form>
                             
-                            <div className="mt-8 border-t border-gray-200 dark:border-gray-700 pt-6">
+                            <div className="mt-8 border-t border-brown-100 dark:border-dm-border pt-6">
                                 <h3 className="text-lg font-medium dark:text-white mb-4">Account Recovery</h3>
                                 <div className="mb-6">
-                                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+                                    <p className="text-sm text-brown-500 dark:text-white/40 mb-2">
                                         If you forget your password, you can recover your account using your registered email address.
                                     </p>
                                     <a href="/forgot-password" className="text-primary-200 hover:text-primary-300 dark:text-primary-300 dark:hover:text-primary-400 text-sm font-medium">
@@ -733,9 +733,9 @@ const Profile = () => {
             
             {/* Royal Card Tab Content */}
             {activeTab === 'royal-card' && (
-                <div className="bg-white dark:bg-gray-900 transition-colors duration-200">
+                <div className="bg-white dark:bg-dm-surface transition-colors duration-200">
                     <div className="max-w-3xl mx-auto">
-                        <h2 className="text-2xl font-bold mb-6 text-gray-800 dark:text-white transition-colors duration-200">My Royal Card</h2>
+                        <h2 className="text-2xl font-bold mb-6 text-charcoal dark:text-white transition-colors duration-200">My Royal Card</h2>
                         
                         <div className="mobile-surface overflow-hidden mb-6">
                             <RoyalCard />
@@ -753,7 +753,7 @@ const Profile = () => {
                                         <th className="text-left py-2">Required Points</th>
                                     </tr>
                                 </thead>
-                                <tbody className="dark:text-gray-300">
+                                <tbody className="dark:text-white/55">
                                     <tr className="border-b">
                                         <td className="py-2">Basic</td>
                                         <td className="py-2">0%</td>
@@ -795,18 +795,18 @@ const Profile = () => {
                                     ['Gold', '5%', 'Free delivery + early access to sales', '3,000'],
                                     ['Platinum', '7%', 'All benefits + exclusive products', '5,000']
                                 ].map(([tier, discount, benefits, points]) => (
-                                    <div key={tier} className="rounded-2xl border border-gray-200 p-3 dark:border-gray-700">
+                                    <div key={tier} className="rounded-2xl border border-brown-100 p-3 dark:border-dm-border">
                                         <div className="flex items-center justify-between gap-3">
-                                            <h4 className="font-semibold text-gray-900 dark:text-white">{tier}</h4>
+                                            <h4 className="font-semibold text-charcoal dark:text-white">{tier}</h4>
                                             <span className="rounded-full bg-plum-100 px-2.5 py-1 text-xs font-semibold text-plum-800 dark:bg-plum-900/50 dark:text-plum-200">{discount}</span>
                                         </div>
-                                        <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">{benefits}</p>
-                                        <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">Required points: {points}</p>
+                                        <p className="mt-2 text-sm text-brown-500 dark:text-white/55">{benefits}</p>
+                                        <p className="mt-2 text-xs text-brown-400 dark:text-white/40">Required points: {points}</p>
                                     </div>
                                 ))}
                             </div>
                             
-                            <div className="mt-3 text-sm text-gray-600 dark:text-gray-400">
+                            <div className="mt-3 text-sm text-brown-500 dark:text-white/40">
                                 <p>Earn 1 point for every KES 100 spent in our store.</p>
                                 <p className="mt-1">Admin accounts automatically receive Platinum status.</p>
                             </div>
@@ -817,14 +817,14 @@ const Profile = () => {
             
             {/* Community Rewards Tab Content */}
             {activeTab === 'rewards' && (
-                <div className="bg-white dark:bg-gray-900 transition-colors duration-200">
+                <div className="bg-white dark:bg-dm-surface transition-colors duration-200">
                     <div className="max-w-3xl mx-auto">
-                        <h2 className="text-2xl font-bold mb-6 text-gray-800 dark:text-white transition-colors duration-200">My Rewards</h2>
+                        <h2 className="text-2xl font-bold mb-6 text-charcoal dark:text-white transition-colors duration-200">My Rewards</h2>
                         
                         <div className="mobile-surface p-4 sm:p-6">
                             <div className="mb-6">
-                                <h3 className="text-lg font-medium text-gray-800 dark:text-white mb-4">Community Campaign Rewards</h3>
-                                <p className="text-gray-600 dark:text-gray-300 mb-6">
+                                <h3 className="text-lg font-medium text-charcoal dark:text-white mb-4">Community Campaign Rewards</h3>
+                                <p className="text-brown-500 dark:text-white/55 mb-6">
                                     These are rewards you've earned by participating in community campaigns.
                                     You can apply them during checkout to receive discounts or other benefits.
                                 </p>
@@ -832,9 +832,9 @@ const Profile = () => {
                                 <ActiveRewards />
                             </div>
                             
-                            <div className="mt-8 pt-8 border-t border-gray-200 dark:border-gray-700">
-                                <h3 className="text-lg font-medium text-gray-800 dark:text-white mb-4">How Rewards Work</h3>
-                                <div className="text-gray-600 dark:text-gray-300">
+                            <div className="mt-8 pt-8 border-t border-brown-100 dark:border-dm-border">
+                                <h3 className="text-lg font-medium text-charcoal dark:text-white mb-4">How Rewards Work</h3>
+                                <div className="text-brown-500 dark:text-white/55">
                                     <p className="mb-3">
                                         <strong>1. Participate in Community Campaigns</strong> - Make purchases, write reviews, or refer friends to contribute to community goals.
                                     </p>

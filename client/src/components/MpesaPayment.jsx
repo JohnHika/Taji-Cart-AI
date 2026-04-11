@@ -71,12 +71,12 @@ const MpesaPayment = ({
   
   return (
     <div className="mpesa-payment-form">
-      <p className="mb-4 text-sm text-gray-600">
+      <p className="mb-4 text-sm text-brown-500">
         Enter your M-Pesa phone number to receive a payment request.
       </p>
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="space-y-2">
-          <label htmlFor="phoneNumber" className="block text-sm font-medium text-gray-700">
+          <label htmlFor="phoneNumber" className="block text-sm font-medium text-charcoal">
             Phone Number
           </label>
           <input
@@ -85,10 +85,10 @@ const MpesaPayment = ({
             value={phoneNumber}
             onChange={(e) => setPhoneNumber(e.target.value)}
             placeholder="e.g., 254712345678"
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-green-500 focus:border-green-500"
+            className="w-full px-3 py-2 border border-brown-200 rounded-md focus:outline-none focus:ring-green-500 focus:border-green-500"
             required
           />
-          <p className="text-xs text-gray-500">Format: 254XXXXXXXXX (include country code)</p>
+          <p className="text-xs text-brown-400">Format: 254XXXXXXXXX (include country code)</p>
         </div>
         <button 
           type="submit" 

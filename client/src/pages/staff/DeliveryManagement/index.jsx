@@ -102,7 +102,7 @@ const DeliveryManagement = () => {
             </div>
           </div>
 
-          <div className="border-t border-white/10 bg-white px-3 py-3 dark:border-gray-700 dark:bg-gray-800 sm:px-4">
+          <div className="border-t border-white/10 bg-white px-3 py-3 dark:border-dm-border dark:bg-dm-card sm:px-4">
             <nav className="mobile-chip-row">
               {tabs.map((tab) => {
                 const Icon = tab.icon;
@@ -114,7 +114,7 @@ const DeliveryManagement = () => {
                       `inline-flex min-w-fit items-center gap-2 rounded-full border px-3 py-2 text-sm font-medium transition ${
                         isActive || location.pathname.endsWith(`/${tab.to}`)
                           ? 'border-cyan-600 bg-cyan-600 text-white shadow-sm'
-                          : 'border-gray-200 bg-gray-50 text-gray-700 hover:border-cyan-200 hover:bg-cyan-50 hover:text-cyan-700 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200 dark:hover:border-cyan-800 dark:hover:bg-cyan-900/20 dark:hover:text-cyan-200'
+                          : 'border-brown-100 bg-ivory text-charcoal hover:border-cyan-200 hover:bg-cyan-50 hover:text-cyan-700 dark:border-dm-border dark:bg-dm-surface dark:text-white/70 dark:hover:border-cyan-800 dark:hover:bg-cyan-900/20 dark:hover:text-cyan-200'
                       }`
                     }
                   >

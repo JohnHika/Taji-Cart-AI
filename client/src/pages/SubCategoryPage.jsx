@@ -129,22 +129,22 @@ const SubCategoryPage = () => {
   // Table columns configuration
   const column = [
     columnHelper.accessor('name', {
-      header: () => <span className="font-medium text-gray-800 dark:text-white transition-colors duration-200">Name</span>,
+      header: () => <span className="font-medium text-charcoal dark:text-white transition-colors duration-200">Name</span>,
       cell: info => (
         <div className="name-cell">
-          <span className="font-medium text-gray-800 dark:text-white transition-colors duration-200">{info.getValue()}</span>
+          <span className="font-medium text-charcoal dark:text-white transition-colors duration-200">{info.getValue()}</span>
         </div>
       )
     }),
     columnHelper.accessor('image', {
-      header: () => <span className="font-medium text-gray-800 dark:text-white transition-colors duration-200">Image</span>,
+      header: () => <span className="font-medium text-charcoal dark:text-white transition-colors duration-200">Image</span>,
       cell: ({row}) => {
         return (
           <div className='image-cell flex justify-center items-center'>
             <img 
               src={row.original.image}
               alt={row.original.name}
-              className='w-10 h-10 object-cover rounded cursor-pointer hover:scale-110 transition-transform duration-200 bg-white dark:bg-gray-700'
+              className='w-10 h-10 object-cover rounded cursor-pointer hover:scale-110 transition-transform duration-200 bg-white dark:bg-dm-card-2'
               onClick={() => {
                 setImageURL(row.original.image)
               }}      
@@ -154,7 +154,7 @@ const SubCategoryPage = () => {
       }
     }),
     columnHelper.accessor("category", {
-      header: () => <span className="font-medium text-gray-800 dark:text-white transition-colors duration-200">Category</span>,
+      header: () => <span className="font-medium text-charcoal dark:text-white transition-colors duration-200">Category</span>,
       cell: ({row}) => {
         return(
           <div className="flex flex-wrap gap-1">
@@ -163,7 +163,7 @@ const SubCategoryPage = () => {
                 return(
                   <span 
                     key={c._id+"table"} 
-                    className='bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-200 px-2 py-1 text-xs rounded-full shadow-sm transition-colors duration-200'
+                    className='bg-brown-50 text-charcoal dark:bg-dm-card-2 dark:text-white/70 px-2 py-1 text-xs rounded-full shadow-sm transition-colors duration-200'
                   >
                     {c.name}
                   </span>
@@ -175,7 +175,7 @@ const SubCategoryPage = () => {
       }
     }),
     columnHelper.accessor("_id", {
-      header: () => <span className="font-medium text-gray-800 text-center block dark:text-white transition-colors duration-200">Actions</span>,
+      header: () => <span className="font-medium text-charcoal text-center block dark:text-white transition-colors duration-200">Actions</span>,
       cell: ({row}) => {
         return(
           <div className='actions-cell flex items-center justify-center gap-2'>
@@ -227,9 +227,9 @@ const SubCategoryPage = () => {
 
   // Render subcategory card for grid view
   const renderSubCategoryCard = (item) => (
-    <div key={item._id} className="bg-white dark:bg-gray-800 rounded-lg shadow-md hover:shadow-lg overflow-hidden transform hover:scale-[1.02] transition-all duration-200 flex flex-col">
+    <div key={item._id} className="bg-white dark:bg-dm-card rounded-lg shadow-md hover:shadow-lg overflow-hidden transform hover:scale-[1.02] transition-all duration-200 flex flex-col">
       {/* Image header */}
-      <div className="relative h-40 bg-gray-100 dark:bg-gray-700 overflow-hidden">
+      <div className="relative h-40 bg-brown-50 dark:bg-dm-card-2 overflow-hidden">
         <img 
           src={item.image} 
           alt={item.name}
@@ -264,16 +264,16 @@ const SubCategoryPage = () => {
       
       {/* Card content */}
       <div className="p-4 flex-grow">
-        <h3 className="text-lg font-semibold text-gray-800 dark:text-white mb-2 transition-colors duration-200">{item.name}</h3>
+        <h3 className="text-lg font-semibold text-charcoal dark:text-white mb-2 transition-colors duration-200">{item.name}</h3>
         
         {/* Categories */}
         <div className="mt-2">
-          <p className="text-sm text-gray-600 dark:text-gray-400 mb-1 transition-colors duration-200">Categories:</p>
+          <p className="text-sm text-brown-500 dark:text-white/40 mb-1 transition-colors duration-200">Categories:</p>
           <div className="flex flex-wrap gap-1">
             {item.category.map(c => (
               <span 
                 key={c._id} 
-                className="bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-200 px-2 py-1 text-xs rounded-full shadow-sm transition-colors duration-200"
+                className="bg-brown-50 text-charcoal dark:bg-dm-card-2 dark:text-white/70 px-2 py-1 text-xs rounded-full shadow-sm transition-colors duration-200"
               >
                 {c.name}
               </span>
@@ -286,15 +286,15 @@ const SubCategoryPage = () => {
 
   // Render pagination controls
   const renderPagination = () => (
-    <div className="flex flex-col sm:flex-row items-center justify-between px-4 py-3 bg-white dark:bg-gray-800 border-t dark:border-gray-700 transition-colors duration-200">
+    <div className="flex flex-col sm:flex-row items-center justify-between px-4 py-3 bg-white dark:bg-dm-card border-t dark:border-dm-border transition-colors duration-200">
       <div className="flex items-center mb-3 sm:mb-0">
-        <span className="text-sm text-gray-700 dark:text-gray-300 transition-colors duration-200">
+        <span className="text-sm text-charcoal dark:text-white/55 transition-colors duration-200">
           Showing {filteredData.length > 0 ? (currentPage - 1) * itemsPerPage + 1 : 0} to {Math.min(currentPage * itemsPerPage, filteredData.length)} of {filteredData.length} results
         </span>
         <select
           value={itemsPerPage}
           onChange={handleItemsPerPageChange}
-          className="ml-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md text-gray-700 dark:text-gray-300 py-1 px-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-200 dark:focus:ring-primary-300 transition-colors duration-200"
+          className="ml-2 bg-white dark:bg-dm-card-2 border border-brown-200 dark:border-dm-border rounded-md text-charcoal dark:text-white/55 py-1 px-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-200 dark:focus:ring-primary-300 transition-colors duration-200"
         >
           <option value={8}>8 per page</option>
           <option value={12}>12 per page</option>
@@ -309,9 +309,9 @@ const SubCategoryPage = () => {
           disabled={currentPage === 1}
           className={`px-3 py-1 rounded-md ${
             currentPage === 1
-              ? 'bg-gray-200 text-gray-500 dark:bg-gray-700 dark:text-gray-400 cursor-not-allowed'
-              : 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600'
-          } border border-gray-300 dark:border-gray-600 transition-colors duration-200`}
+              ? 'bg-brown-100 text-brown-400 dark:bg-dm-card-2 dark:text-white/40 cursor-not-allowed'
+              : 'bg-white dark:bg-dm-card-2 text-charcoal dark:text-white/55 hover:bg-brown-50 dark:hover:bg-dm-border'
+          } border border-brown-200 dark:border-dm-border transition-colors duration-200`}
         >
           <FaChevronLeft size={14} />
         </button>
@@ -340,8 +340,8 @@ const SubCategoryPage = () => {
               className={`px-3 py-1 rounded-md ${
                 currentPage === pageNum
                   ? 'bg-primary-200 dark:bg-primary-700 text-white'
-                  : 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600'
-              } border border-gray-300 dark:border-gray-600 transition-colors duration-200`}
+                  : 'bg-white dark:bg-dm-card-2 text-charcoal dark:text-white/55 hover:bg-brown-50 dark:hover:bg-dm-border'
+              } border border-brown-200 dark:border-dm-border transition-colors duration-200`}
             >
               {pageNum}
             </button>
@@ -353,9 +353,9 @@ const SubCategoryPage = () => {
           disabled={currentPage === totalPages || totalPages === 0}
           className={`px-3 py-1 rounded-md ${
             currentPage === totalPages || totalPages === 0
-              ? 'bg-gray-200 text-gray-500 dark:bg-gray-700 dark:text-gray-400 cursor-not-allowed'
-              : 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600'
-          } border border-gray-300 dark:border-gray-600 transition-colors duration-200`}
+              ? 'bg-brown-100 text-brown-400 dark:bg-dm-card-2 dark:text-white/40 cursor-not-allowed'
+              : 'bg-white dark:bg-dm-card-2 text-charcoal dark:text-white/55 hover:bg-brown-50 dark:hover:bg-dm-border'
+          } border border-brown-200 dark:border-dm-border transition-colors duration-200`}
         >
           <FaChevronRight size={14} />
         </button>
@@ -364,28 +364,28 @@ const SubCategoryPage = () => {
   );
   
   return (
-    <section className='min-h-screen bg-gray-50 dark:bg-gray-900 p-4 transition-colors duration-200'>
+    <section className='min-h-screen bg-ivory dark:bg-dm-surface p-4 transition-colors duration-200'>
       {/* Header with search and view options */}
-      <div className='p-4 bg-white dark:bg-gray-800 shadow-md dark:shadow-gray-800/30 rounded-lg flex flex-col sm:flex-row items-center justify-between mb-6 transition-colors duration-200'>
-        <h2 className='text-xl font-semibold text-gray-800 mb-3 sm:mb-0 dark:text-white transition-colors duration-200'>Sub Categories</h2>
+      <div className='p-4 bg-white dark:bg-dm-card shadow-md dark:shadow-black/20 rounded-lg flex flex-col sm:flex-row items-center justify-between mb-6 transition-colors duration-200'>
+        <h2 className='text-xl font-semibold text-charcoal mb-3 sm:mb-0 dark:text-white transition-colors duration-200'>Sub Categories</h2>
         
         <div className='flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto'>
           {/* Search bar */}
           <div className='relative w-full sm:w-auto sm:mx-4 flex-grow max-w-md'>
             <div className='absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none'>
-              <FaSearch className='text-gray-400 dark:text-gray-500 transition-colors duration-200' />
+              <FaSearch className='text-brown-400 dark:text-brown-400 transition-colors duration-200' />
             </div>
             <input
               type='text'
               placeholder='Search by name or category...'
               value={searchTerm}
               onChange={handleSearchChange}
-              className='w-full pl-10 pr-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-200 dark:focus:ring-primary-300 focus:border-transparent transition-colors duration-200'
+              className='w-full pl-10 pr-3 py-2 border border-brown-200 dark:border-dm-border rounded-md bg-white dark:bg-dm-card-2 text-charcoal dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-200 dark:focus:ring-primary-300 focus:border-transparent transition-colors duration-200'
             />
             {searchTerm && (
               <button
                 onClick={() => setSearchTerm('')}
-                className='absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition-colors duration-200'
+                className='absolute inset-y-0 right-0 pr-3 flex items-center text-brown-400 dark:text-brown-400 hover:text-brown-500 dark:hover:text-brown-200 transition-colors duration-200'
               >
                 ×
               </button>
@@ -422,9 +422,9 @@ const SubCategoryPage = () => {
       </div>
 
       {/* Content Container */}
-      <div className='bg-white dark:bg-gray-800 shadow-lg dark:shadow-gray-800/30 rounded-lg mx-auto overflow-hidden transition-colors duration-200'>
+      <div className='bg-white dark:bg-dm-card shadow-lg dark:shadow-black/20 rounded-lg mx-auto overflow-hidden transition-colors duration-200'>
         {filteredData.length === 0 ? (
-          <div className="p-8 text-center text-gray-500 dark:text-gray-400 transition-colors duration-200">
+          <div className="p-8 text-center text-brown-400 dark:text-white/40 transition-colors duration-200">
             {loading ? (
               <div className="flex flex-col items-center justify-center">
                 <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary-200 dark:border-primary-300 mb-4"></div>
@@ -440,7 +440,7 @@ const SubCategoryPage = () => {
           <div className='relative'>
             {/* Display result count */}
             {searchTerm && (
-              <div className="p-2 bg-gray-50 text-gray-600 dark:bg-gray-700 dark:text-gray-300 border-b border-gray-200 dark:border-gray-600 transition-colors duration-200">
+              <div className="p-2 bg-ivory text-brown-500 dark:bg-dm-card-2 dark:text-white/55 border-b border-brown-100 dark:border-dm-border transition-colors duration-200">
                 Found {filteredData.length} result{filteredData.length !== 1 ? 's' : ''} for "{searchTerm}"
               </div>
             )}

@@ -522,13 +522,13 @@ const DeliveryMap = () => {
     if (code === 1000) return <FaSun className="text-yellow-500" />;
     
     // Partly cloudy
-    if (code === 1003) return <FaCloudSun className="text-gray-500" />;
+    if (code === 1003) return <FaCloudSun className="text-brown-400" />;
     
     // Cloudy, overcast
-    if ([1006, 1009].includes(code)) return <FaCloud className="text-gray-400" />;
+    if ([1006, 1009].includes(code)) return <FaCloud className="text-brown-400" />;
     
     // Fog, mist
-    if ([1030, 1135, 1147].includes(code)) return <FaCloud className="text-gray-300" />;
+    if ([1030, 1135, 1147].includes(code)) return <FaCloud className="text-brown-200" />;
     
     // Rain, drizzle, etc.
     if ([1063, 1150, 1153, 1180, 1183, 1186, 1189, 1192, 1195, 1240, 1243, 1246].includes(code)) 
@@ -540,10 +540,10 @@ const DeliveryMap = () => {
     
     // Thunderstorm
     if ([1087, 1273, 1276, 1279, 1282].includes(code)) 
-      return <FaCloudRain className="text-gray-600" />;
+      return <FaCloudRain className="text-brown-500" />;
     
     // Default
-    return <FaCloud className="text-gray-500" />;
+    return <FaCloud className="text-brown-400" />;
   };
 
   // Toggle traffic information layer
@@ -684,7 +684,7 @@ const DeliveryMap = () => {
     return (
       <div className="mobile-page-shell flex min-h-[60vh] flex-col items-center justify-center">
         <FaSpinner className="animate-spin text-4xl text-plum-600 mb-4" />
-        <p className="text-lg text-gray-700 dark:text-gray-300">Loading map view...</p>
+        <p className="text-lg text-charcoal dark:text-white/55">Loading map view...</p>
       </div>
     );
   }
@@ -713,7 +713,7 @@ const DeliveryMap = () => {
           
           {/* Weather widget */}
           {weatherData && (
-            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-gray-600 dark:text-gray-300">
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-brown-500 dark:text-white/55">
               {getWeatherIcon(weatherData.current.condition)}
               <span className="ml-1">{weatherData.current.condition.text}</span>
               <FaThermometerHalf className="mr-1" />
@@ -753,7 +753,7 @@ const DeliveryMap = () => {
       {/* Performance Metrics Modal */}
       {showPerformance && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
-          <div className="bg-white dark:bg-gray-800 rounded-lg p-4 sm:p-6 max-w-lg w-full max-h-[90vh] overflow-y-auto">
+          <div className="bg-white dark:bg-dm-card rounded-lg p-4 sm:p-6 max-w-lg w-full max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-xl font-bold dark:text-white">
                 Delivery Performance
@@ -829,7 +829,7 @@ const DeliveryMap = () => {
       {/* Order details modal */}
       {showOrderDetails && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
-          <div className="bg-white dark:bg-gray-800 rounded-lg p-4 sm:p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+          <div className="bg-white dark:bg-dm-card rounded-lg p-4 sm:p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center mb-4">
               <h3 className="font-display text-xl italic text-plum-900 dark:text-white">
                 Order #{selectedOrderDetails?.orderId}
@@ -866,7 +866,7 @@ const DeliveryMap = () => {
                 {/* Order items */}
                 <div className="mb-4">
                   <h4 className="font-medium mb-2 dark:text-white">Order Items</h4>
-                  <div className="divide-y dark:divide-gray-700">
+                  <div className="divide-y dark:divide-dm-border">
                     {selectedOrderDetails?.items?.map((item, index) => (
                       <div key={index} className="py-2 flex items-center">
                         {item.image && (
@@ -874,7 +874,7 @@ const DeliveryMap = () => {
                         )}
                         <div className="flex-1">
                           <p className="font-medium dark:text-white">{item.name}</p>
-                          <p className="text-sm text-gray-600 dark:text-gray-400">
+                          <p className="text-sm text-brown-500 dark:text-white/40">
                             Qty: {item.quantity} x KSh {item.price?.toFixed(2)}
                           </p>
                         </div>
@@ -898,7 +898,7 @@ const DeliveryMap = () => {
                 <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
                   <button
                     onClick={() => setShowOrderDetails(false)}
-                    className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-white rounded hover:bg-gray-300 dark:hover:bg-gray-600"
+                    className="px-4 py-2 bg-brown-100 dark:bg-dm-card-2 text-charcoal dark:text-white rounded hover:bg-brown-200 dark:hover:bg-dm-border"
                   >
                     Close
                   </button>
@@ -934,7 +934,7 @@ const DeliveryMap = () => {
       {/* Route optimizer modal */}
       {showOptimizeModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
-          <div className="bg-white dark:bg-gray-800 rounded-lg p-4 sm:p-6 max-w-lg w-full max-h-[90vh] overflow-y-auto">
+          <div className="bg-white dark:bg-dm-card rounded-lg p-4 sm:p-6 max-w-lg w-full max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center mb-4">
               <h3 className="font-display text-xl italic text-plum-900 dark:text-white">
                 Optimize Delivery Route
@@ -996,7 +996,7 @@ const DeliveryMap = () => {
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
               <button
                 onClick={clearSelectedDeliveries}
-                className="px-3 py-1.5 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-white rounded hover:bg-gray-300 dark:hover:bg-gray-600"
+                className="px-3 py-1.5 bg-brown-100 dark:bg-dm-card-2 text-charcoal dark:text-white rounded hover:bg-brown-200 dark:hover:bg-dm-border"
               >
                 Clear
               </button>
@@ -1032,7 +1032,7 @@ const DeliveryMap = () => {
           <select
             value={selectedTileLayer}
             onChange={(e) => setSelectedTileLayer(e.target.value)}
-            className="w-full sm:w-auto bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded px-3 py-2 text-sm"
+            className="w-full sm:w-auto bg-white dark:bg-dm-card-2 border border-brown-200 dark:border-dm-border rounded px-3 py-2 text-sm"
           >
             {Object.keys(tileLayers).map(key => (
               <option key={key} value={key}>{tileLayers[key].name}</option>
@@ -1051,7 +1051,7 @@ const DeliveryMap = () => {
             className={`rounded px-2 py-1 text-sm flex items-center ${
               trafficLayer 
                 ? 'bg-red-500 text-white hover:bg-red-600' 
-                : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-600'
+                : 'bg-brown-100 dark:bg-dm-card-2 text-charcoal dark:text-white/70 hover:bg-brown-200 dark:hover:bg-dm-border'
               } px-3 py-2`}
           >
             <FaTrafficLight size={10} />
@@ -1063,7 +1063,7 @@ const DeliveryMap = () => {
             className={`rounded px-2 py-1 text-sm flex items-center ${
               weatherMode 
                 ? 'bg-cyan-500 text-white hover:bg-cyan-600' 
-                : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-600'
+                : 'bg-brown-100 dark:bg-dm-card-2 text-charcoal dark:text-white/70 hover:bg-brown-200 dark:hover:bg-dm-border'
               } px-3 py-2`}
           >
             <FaCloud size={10} />
@@ -1083,11 +1083,11 @@ const DeliveryMap = () => {
           </button>
           
           {loadingWeather ? (
-            <div className="bg-gray-100 dark:bg-gray-700 rounded px-3 py-2 text-sm flex items-center">
+            <div className="bg-brown-50 dark:bg-dm-card-2 rounded px-3 py-2 text-sm flex items-center">
               <FaSpinner className="animate-spin mr-1" /> Loading weather...
             </div>
           ) : weatherData ? (
-            <div className="bg-gray-100 dark:bg-gray-700 rounded px-3 py-2 text-sm flex items-center">
+            <div className="bg-brown-50 dark:bg-dm-card-2 rounded px-3 py-2 text-sm flex items-center">
               {getWeatherIcon(weatherData.current.condition)}
               <span>{Math.round(weatherData.current.temp_c)}Â°C</span>
             </div>
@@ -1108,7 +1108,7 @@ const DeliveryMap = () => {
           
           <button
             onClick={toggleFullscreen}
-            className="bg-gray-500 text-white rounded px-3 py-2 text-sm flex items-center justify-center hover:bg-gray-600"
+            className="bg-brown-400 text-white rounded px-3 py-2 text-sm flex items-center justify-center hover:bg-brown-500"
           >
             {isFullscreen ? <FaCompressAlt size={10} /> : <FaExpandAlt size={10} />}
             {isFullscreen ? 'Exit' : 'Fullscreen'}
@@ -1119,7 +1119,7 @@ const DeliveryMap = () => {
       {/* Map container with sidebar layout */}
       <div 
         ref={mapContainerRef} 
-        className={`bg-white dark:bg-gray-800 rounded-xl shadow overflow-hidden flex flex-col ${isFullscreen ? '' : 'md:flex-row'}`}
+        className={`bg-white dark:bg-dm-card rounded-xl shadow overflow-hidden flex flex-col ${isFullscreen ? '' : 'md:flex-row'}`}
       >
         {/* Map */}
         <div 
@@ -1175,7 +1175,7 @@ const DeliveryMap = () => {
                     <div className="text-center">
                       <strong className="block">Order #{delivery.orderId}</strong>
                       <p>{delivery.customer.name}</p>
-                      <p className="text-sm text-gray-600">{delivery.deliveryAddress}</p>
+                      <p className="text-sm text-brown-500">{delivery.deliveryAddress}</p>
                       {delivery.deliveryNotes && (
                         <div className="mt-2 p-2 bg-yellow-50 rounded border border-yellow-200 text-xs">
                           <p className="font-medium">Delivery Notes:</p>
@@ -1245,7 +1245,7 @@ const DeliveryMap = () => {
         
         {/* Active deliveries sidebar - hide in fullscreen mode */}
         {!isFullscreen && (
-          <div className="p-4 border-t md:border-t-0 md:border-l border-gray-200 dark:border-gray-700 md:w-80 lg:w-96 max-h-[70vh] md:max-h-none overflow-y-auto">
+          <div className="p-4 border-t md:border-t-0 md:border-l border-brown-100 dark:border-dm-border md:w-80 lg:w-96 max-h-[70vh] md:max-h-none overflow-y-auto">
             {selectedDeliveries.length > 0 && (
               <div className="mb-4 p-3 bg-plum-50 dark:bg-plum-900/20 rounded-card border border-plum-100 dark:border-plum-800/30">
                 <div className="flex justify-between items-center mb-2">
@@ -1399,7 +1399,7 @@ const DeliveryMap = () => {
       {/* Weather info modal for clicked locations */}
       {showLocationWeather && locationWeatherData && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
-          <div className="bg-white dark:bg-gray-800 rounded-lg p-4 sm:p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+          <div className="bg-white dark:bg-dm-card rounded-lg p-4 sm:p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center mb-4">
               <h3 className="font-display text-xl italic text-plum-900 dark:text-white">
                 {locationWeatherData.location.name}, {locationWeatherData.location.region}

@@ -76,19 +76,19 @@ const CompletedDeliveriesManagement = () => {
     <section className="flex flex-col gap-4 lg:gap-5">
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <div className="mobile-surface p-4">
-          <p className="text-xs uppercase tracking-[0.16em] text-gray-500">Completed</p>
-          <p className="mt-2 text-3xl font-bold text-gray-900 dark:text-white">{filteredOrders.length}</p>
+          <p className="text-xs uppercase tracking-[0.16em] text-brown-400">Completed</p>
+          <p className="mt-2 text-3xl font-bold text-charcoal dark:text-white">{filteredOrders.length}</p>
         </div>
         <div className="mobile-surface p-4">
-          <p className="text-xs uppercase tracking-[0.16em] text-gray-500">Revenue</p>
-          <p className="mt-2 text-xl font-bold text-gray-900 dark:text-white">{formatCurrency(totalRevenue)}</p>
+          <p className="text-xs uppercase tracking-[0.16em] text-brown-400">Revenue</p>
+          <p className="mt-2 text-xl font-bold text-charcoal dark:text-white">{formatCurrency(totalRevenue)}</p>
         </div>
         <div className="mobile-surface p-4">
-          <p className="text-xs uppercase tracking-[0.16em] text-gray-500">With driver record</p>
-          <p className="mt-2 text-3xl font-bold text-gray-900 dark:text-white">{deliveredWithDrivers}</p>
+          <p className="text-xs uppercase tracking-[0.16em] text-brown-400">With driver record</p>
+          <p className="mt-2 text-3xl font-bold text-charcoal dark:text-white">{deliveredWithDrivers}</p>
         </div>
         <div className="mobile-surface p-4">
-          <p className="text-xs uppercase tracking-[0.16em] text-gray-500">Status</p>
+          <p className="text-xs uppercase tracking-[0.16em] text-brown-400">Status</p>
           <p className="mt-2 flex items-center gap-2 text-sm font-medium text-emerald-700 dark:text-emerald-300">
             <FaCheckCircle />
             Delivered successfully
@@ -100,8 +100,8 @@ const CompletedDeliveriesManagement = () => {
         <div className="flex flex-col gap-3">
           <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
             <div>
-              <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Completed Deliveries</h2>
-              <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+              <h2 className="text-xl font-semibold text-charcoal dark:text-white">Completed Deliveries</h2>
+              <p className="mt-1 text-sm text-brown-400 dark:text-white/40">
                 Review delivered orders and the drivers who completed them.
               </p>
             </div>
@@ -109,7 +109,7 @@ const CompletedDeliveriesManagement = () => {
               type="button"
               onClick={fetchOrders}
               disabled={loading}
-              className="inline-flex items-center justify-center gap-2 self-start rounded-xl border border-gray-200 px-4 py-3 text-sm font-medium text-gray-700 transition hover:bg-gray-50 disabled:opacity-60 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-900"
+              className="inline-flex items-center justify-center gap-2 self-start rounded-xl border border-brown-100 px-4 py-3 text-sm font-medium text-charcoal transition hover:bg-ivory disabled:opacity-60 dark:border-dm-border dark:text-white/70 dark:hover:bg-dm-surface"
             >
               {loading ? <FaSpinner className="animate-spin" /> : <FaRedo />}
               Refresh
@@ -118,17 +118,17 @@ const CompletedDeliveriesManagement = () => {
 
           <div className="grid gap-2 lg:grid-cols-[minmax(0,1fr)_180px_180px_auto]">
             <div className="relative min-w-0">
-              <FaSearch className="pointer-events-none absolute left-3 top-3.5 text-gray-400" />
+              <FaSearch className="pointer-events-none absolute left-3 top-3.5 text-brown-400" />
               <input
                 type="text"
                 placeholder="Search order, customer, driver..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full rounded-xl border border-gray-200 bg-white py-3 pl-10 pr-4 text-sm outline-none transition focus:border-cyan-500 focus:ring-2 focus:ring-cyan-100 dark:border-gray-700 dark:bg-gray-900 dark:text-white"
+                className="w-full rounded-xl border border-brown-100 bg-white py-3 pl-10 pr-4 text-sm outline-none transition focus:border-cyan-500 focus:ring-2 focus:ring-cyan-100 dark:border-dm-border dark:bg-dm-surface dark:text-white"
               />
             </div>
             <div>
-              <label className="mb-1 flex items-center gap-2 text-xs font-medium uppercase tracking-[0.16em] text-gray-500">
+              <label className="mb-1 flex items-center gap-2 text-xs font-medium uppercase tracking-[0.16em] text-brown-400">
                 <FaCalendarAlt />
                 From
               </label>
@@ -136,11 +136,11 @@ const CompletedDeliveriesManagement = () => {
                 type="date"
                 value={dateFrom}
                 onChange={(e) => setDateFrom(e.target.value)}
-                className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-cyan-500 focus:ring-2 focus:ring-cyan-100 dark:border-gray-700 dark:bg-gray-900 dark:text-white"
+                className="w-full rounded-xl border border-brown-100 bg-white px-4 py-3 text-sm outline-none transition focus:border-cyan-500 focus:ring-2 focus:ring-cyan-100 dark:border-dm-border dark:bg-dm-surface dark:text-white"
               />
             </div>
             <div>
-              <label className="mb-1 flex items-center gap-2 text-xs font-medium uppercase tracking-[0.16em] text-gray-500">
+              <label className="mb-1 flex items-center gap-2 text-xs font-medium uppercase tracking-[0.16em] text-brown-400">
                 <FaCalendarAlt />
                 To
               </label>
@@ -148,7 +148,7 @@ const CompletedDeliveriesManagement = () => {
                 type="date"
                 value={dateTo}
                 onChange={(e) => setDateTo(e.target.value)}
-                className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-cyan-500 focus:ring-2 focus:ring-cyan-100 dark:border-gray-700 dark:bg-gray-900 dark:text-white"
+                className="w-full rounded-xl border border-brown-100 bg-white px-4 py-3 text-sm outline-none transition focus:border-cyan-500 focus:ring-2 focus:ring-cyan-100 dark:border-dm-border dark:bg-dm-surface dark:text-white"
               />
             </div>
             <button
@@ -164,7 +164,7 @@ const CompletedDeliveriesManagement = () => {
 
       {loading && orders.length === 0 ? (
         <div className="mobile-surface flex min-h-[220px] items-center justify-center p-8">
-          <div className="flex items-center gap-3 text-gray-500 dark:text-gray-300">
+          <div className="flex items-center gap-3 text-brown-400 dark:text-white/55">
             <FaSpinner className="animate-spin" />
             Loading completed deliveries...
           </div>
@@ -174,8 +174,8 @@ const CompletedDeliveriesManagement = () => {
           <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-emerald-50 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-200">
             <FaCheckCircle />
           </div>
-          <h3 className="mt-4 text-lg font-semibold text-gray-900 dark:text-white">No completed deliveries found</h3>
-          <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
+          <h3 className="mt-4 text-lg font-semibold text-charcoal dark:text-white">No completed deliveries found</h3>
+          <p className="mt-2 text-sm text-brown-400 dark:text-white/40">
             Try a different date range or search term.
           </p>
         </div>
@@ -185,45 +185,45 @@ const CompletedDeliveriesManagement = () => {
             <article key={order._id} className="mobile-surface p-4 sm:p-5">
               <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                 <div>
-                  <p className="text-xs uppercase tracking-[0.16em] text-gray-500">Order</p>
-                  <h3 className="mt-1 text-lg font-semibold text-gray-900 dark:text-white">{order.orderId}</h3>
+                  <p className="text-xs uppercase tracking-[0.16em] text-brown-400">Order</p>
+                  <h3 className="mt-1 text-lg font-semibold text-charcoal dark:text-white">{order.orderId}</h3>
                   <div className="mt-3 inline-flex rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-200">
                     Delivered
                   </div>
                 </div>
-                <div className="text-sm text-gray-500 dark:text-gray-400 lg:text-right">
+                <div className="text-sm text-brown-400 dark:text-white/40 lg:text-right">
                   <p>{formatDate(order.deliveredAt || order.updatedAt)}</p>
-                  <p className="mt-1 font-semibold text-gray-900 dark:text-white">{formatCurrency(order.total)}</p>
+                  <p className="mt-1 font-semibold text-charcoal dark:text-white">{formatCurrency(order.total)}</p>
                 </div>
               </div>
 
               <div className="mt-4 grid gap-4 sm:grid-cols-2">
                 <div>
-                  <p className="text-xs uppercase tracking-[0.16em] text-gray-500">Customer</p>
-                  <p className="mt-1 font-medium text-gray-900 dark:text-white">{order.customer?.name}</p>
-                  <p className="text-sm text-gray-600 dark:text-gray-300">{order.customer?.phone}</p>
+                  <p className="text-xs uppercase tracking-[0.16em] text-brown-400">Customer</p>
+                  <p className="mt-1 font-medium text-charcoal dark:text-white">{order.customer?.name}</p>
+                  <p className="text-sm text-brown-500 dark:text-white/55">{order.customer?.phone}</p>
                 </div>
                 <div>
-                  <p className="text-xs uppercase tracking-[0.16em] text-gray-500">Driver</p>
-                  <p className="mt-1 font-medium text-gray-900 dark:text-white">{order.driver?.name || 'No driver record'}</p>
-                  <p className="text-sm text-gray-600 dark:text-gray-300">{order.driver?.phone || order.driver?.email || 'No contact saved'}</p>
+                  <p className="text-xs uppercase tracking-[0.16em] text-brown-400">Driver</p>
+                  <p className="mt-1 font-medium text-charcoal dark:text-white">{order.driver?.name || 'No driver record'}</p>
+                  <p className="text-sm text-brown-500 dark:text-white/55">{order.driver?.phone || order.driver?.email || 'No contact saved'}</p>
                 </div>
               </div>
 
-              <div className="mt-4 rounded-2xl bg-gray-50 p-4 dark:bg-gray-900">
-                <p className="text-xs uppercase tracking-[0.16em] text-gray-500">Delivery address</p>
-                <p className="mt-1 text-sm text-gray-800 dark:text-gray-100">{order.deliveryAddress?.street}</p>
-                <p className="text-sm text-gray-600 dark:text-gray-300">
+              <div className="mt-4 rounded-2xl bg-ivory p-4 dark:bg-dm-surface">
+                <p className="text-xs uppercase tracking-[0.16em] text-brown-400">Delivery address</p>
+                <p className="mt-1 text-sm text-charcoal dark:text-white">{order.deliveryAddress?.street}</p>
+                <p className="text-sm text-brown-500 dark:text-white/55">
                   {[order.deliveryAddress?.city, order.deliveryAddress?.neighborhood].filter(Boolean).join(', ')}
                 </p>
               </div>
 
-              <div className="mt-4 flex flex-wrap items-center gap-3 text-sm text-gray-600 dark:text-gray-300">
-                <span className="inline-flex items-center gap-2 rounded-full bg-gray-100 px-3 py-1.5 dark:bg-gray-900">
+              <div className="mt-4 flex flex-wrap items-center gap-3 text-sm text-brown-500 dark:text-white/55">
+                <span className="inline-flex items-center gap-2 rounded-full bg-brown-50 px-3 py-1.5 dark:bg-dm-surface">
                   <FaTruck className="text-cyan-600 dark:text-cyan-300" />
                   {(order.items || []).length} item(s)
                 </span>
-                <span className="inline-flex items-center gap-2 rounded-full bg-gray-100 px-3 py-1.5 dark:bg-gray-900">
+                <span className="inline-flex items-center gap-2 rounded-full bg-brown-50 px-3 py-1.5 dark:bg-dm-surface">
                   <FaCalendarAlt className="text-emerald-600 dark:text-emerald-300" />
                   Delivered {formatDate(order.deliveredAt || order.updatedAt)}
                 </span>

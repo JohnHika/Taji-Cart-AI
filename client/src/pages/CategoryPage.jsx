@@ -113,21 +113,21 @@ const CategoryPage = () => {
     )
 
     return (
-        <section className="bg-gray-50 dark:bg-gray-900 min-h-screen transition-colors duration-200">
+        <section className="bg-ivory dark:bg-dm-surface min-h-screen transition-colors duration-200">
             {/* Header with title, search and add button */}
-            <div className="bg-white dark:bg-gray-800 shadow-md p-4 sticky top-0 z-10 transition-colors duration-200">
+            <div className="bg-white dark:bg-dm-card shadow-md p-4 sticky top-0 z-10 transition-colors duration-200">
                 <div className="container mx-auto flex flex-col md:flex-row items-center justify-between gap-3">
                     <h2 className="text-xl font-semibold dark:text-white transition-colors duration-200">Categories</h2>
                     
                     {/* Search input */}
                     <div className="relative flex-grow max-w-md">
                         <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                            <FaSearch className="text-gray-400 dark:text-gray-500 transition-colors duration-200" />
+                            <FaSearch className="text-brown-400 dark:text-white/40 transition-colors duration-200" />
                         </div>
                         <input
                             type="text"
                             placeholder="Search categories..."
-                            className="pl-10 pr-4 py-2 w-full border dark:border-gray-700 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-200 dark:focus:ring-primary-300 transition-colors duration-200"
+                            className="pl-10 pr-4 py-2 w-full border dark:border-dm-border rounded-md bg-white dark:bg-dm-card-2 text-charcoal dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-200 dark:focus:ring-primary-300 transition-colors duration-200"
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
                         />
@@ -151,10 +151,10 @@ const CategoryPage = () => {
                     {filteredCategories.map((category) => (
                         <div 
                             key={category._id} 
-                            className="bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-gray-800/30 overflow-hidden flex flex-col h-full transition-colors duration-200"
+                            className="bg-white dark:bg-dm-card rounded-lg shadow-md overflow-hidden flex flex-col h-full transition-colors duration-200"
                         >
                             {/* Card image with fixed height container */}
-                            <div className="h-44 overflow-hidden bg-gray-100 dark:bg-gray-700 p-2 transition-colors duration-200">
+                            <div className="h-44 overflow-hidden bg-brown-100 dark:bg-dm-card-2 p-2 transition-colors duration-200">
                                 <img 
                                     src={category.image} 
                                     alt={category.name}
@@ -168,11 +168,11 @@ const CategoryPage = () => {
                             
                             {/* Card content */}
                             <div className="p-3 flex-grow">
-                                <h3 className="font-medium text-center text-gray-800 dark:text-white transition-colors duration-200">{category.name}</h3>
+                                <h3 className="font-medium text-center text-charcoal dark:text-white transition-colors duration-200">{category.name}</h3>
                             </div>
                             
                             {/* Card actions - always at the bottom */}
-                            <div className="flex border-t border-gray-100 dark:border-gray-700 transition-colors duration-200">
+                            <div className="flex border-t border-brown-100 dark:border-dm-border transition-colors duration-200">
                                 <button 
                                     onClick={() => {
                                         setOpenEdit(true)

@@ -71,7 +71,7 @@ const CompletedDeliveries = () => {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh]">
         <FaSpinner className="animate-spin text-4xl text-primary-200 mb-4" />
-        <p className="text-lg text-gray-700 dark:text-gray-300">Loading completed deliveries...</p>
+        <p className="text-lg text-charcoal dark:text-white/55">Loading completed deliveries...</p>
       </div>
     );
   }
@@ -95,9 +95,9 @@ const CompletedDeliveries = () => {
       <h1 className="text-2xl font-bold mb-6 dark:text-white">Completed Deliveries</h1>
       
       {completedOrders.length === 0 && !loading ? (
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-8 text-center">
-          <FaCheckCircle className="mx-auto text-gray-400 dark:text-gray-500 mb-4" size={48} />
-          <p className="text-gray-600 dark:text-gray-400">
+        <div className="bg-white dark:bg-dm-card rounded-lg shadow p-8 text-center">
+          <FaCheckCircle className="mx-auto text-brown-400 dark:text-brown-400 mb-4" size={48} />
+          <p className="text-brown-500 dark:text-white/40">
             You don't have any completed deliveries yet.
           </p>
         </div>
@@ -107,16 +107,16 @@ const CompletedDeliveries = () => {
             {completedOrders.map(order => (
               <div 
                 key={order._id} 
-                className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden"
+                className="bg-white dark:bg-dm-card rounded-lg shadow overflow-hidden"
               >
-                <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 bg-green-50 dark:bg-green-900/20">
+                <div className="px-6 py-4 border-b border-brown-100 dark:border-dm-border bg-green-50 dark:bg-green-900/20">
                   <div className="flex items-center justify-between">
                     <div>
-                      <h3 className="text-lg font-semibold text-gray-800 dark:text-white">
+                      <h3 className="text-lg font-semibold text-charcoal dark:text-white">
                         Order #{order.orderId}
                       </h3>
-                      <div className="flex items-center text-sm text-gray-600 dark:text-gray-400 gap-2">
-                        <FaCalendarAlt className="text-gray-400" />
+                      <div className="flex items-center text-sm text-brown-500 dark:text-white/40 gap-2">
+                        <FaCalendarAlt className="text-brown-400" />
                         <span>Delivered: {formatDate(order.deliveredAt)}</span>
                       </div>
                     </div>
@@ -132,33 +132,33 @@ const CompletedDeliveries = () => {
                 <div className="p-6">
                   <div className="flex justify-between mb-4">
                     <div>
-                      <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Customer</h4>
-                      <p className="text-gray-800 dark:text-gray-200">{order.customer.name}</p>
+                      <h4 className="text-sm font-medium text-brown-400 dark:text-white/40 mb-1">Customer</h4>
+                      <p className="text-charcoal dark:text-white/70">{order.customer.name}</p>
                     </div>
                     
                     <div className="text-right">
-                      <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Amount</h4>
-                      <p className="text-gray-800 dark:text-gray-200 font-medium">KSh {order.total.toFixed(2)}</p>
+                      <h4 className="text-sm font-medium text-brown-400 dark:text-white/40 mb-1">Amount</h4>
+                      <p className="text-charcoal dark:text-white/70 font-medium">KSh {order.total.toFixed(2)}</p>
                     </div>
                   </div>
                   
                   <div className="mb-4">
-                    <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Delivered To</h4>
+                    <h4 className="text-sm font-medium text-brown-400 dark:text-white/40 mb-1">Delivered To</h4>
                     <div className="flex items-start">
-                      <FaMapMarkerAlt className="text-gray-400 mt-1 mr-2" />
-                      <p className="text-gray-800 dark:text-gray-200">{order.deliveryAddress}</p>
+                      <FaMapMarkerAlt className="text-brown-400 mt-1 mr-2" />
+                      <p className="text-charcoal dark:text-white/70">{order.deliveryAddress}</p>
                     </div>
                   </div>
                   
-                  <div className="border-t dark:border-gray-700 pt-4 mt-4">
+                  <div className="border-t dark:border-dm-border pt-4 mt-4">
                     <div className="flex justify-between items-center">
                       <div>
-                        <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Customer Rating</h4>
+                        <h4 className="text-sm font-medium text-brown-400 dark:text-white/40 mb-1">Customer Rating</h4>
                         <div className="flex">
                           {[...Array(5)].map((_, i) => (
                             <svg 
                               key={i}
-                              className={`w-5 h-5 ${i < order.rating ? 'text-yellow-400' : 'text-gray-300 dark:text-gray-600'}`}
+                              className={`w-5 h-5 ${i < order.rating ? 'text-yellow-400' : 'text-brown-200 dark:text-brown-500'}`}
                               fill="currentColor"
                               viewBox="0 0 20 20"
                             >
@@ -172,7 +172,7 @@ const CompletedDeliveries = () => {
                         href={`https://maps.google.com/?q=${order.deliveryAddress}`}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="px-3 py-1 border border-gray-300 text-gray-600 dark:border-gray-600 dark:text-gray-300 rounded hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center"
+                        className="px-3 py-1 border border-brown-200 text-brown-500 dark:border-dm-border dark:text-white/55 rounded hover:bg-brown-50 dark:hover:bg-dm-card-2 flex items-center"
                       >
                         <FaMapMarkerAlt className="mr-1" />
                         View on Map
