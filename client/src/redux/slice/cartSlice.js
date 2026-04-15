@@ -2,6 +2,7 @@ import { createAsyncThunk, createSlice } from '@reduxjs/toolkit';
 import { toast } from 'react-toastify';
 import { baseURL } from '../../common/SummaryApi';
 import Axios from '../../utils/Axios';
+import { getGuestCart } from '../../utils/guestCart';
 
 // Fetch cart items thunk
 export const fetchCartItems = createAsyncThunk(
@@ -9,14 +10,19 @@ export const fetchCartItems = createAsyncThunk(
   async (_, { rejectWithValue }) => {
     try {
       const token = localStorage.getItem('accesstoken');
-      if (!token) return [];
-      
-      const response = await Axios({
-        url: `${baseURL}/api/cart/get`,
-        method: 'GET'
-      });
-      
-      return response.data.data || [];
+
+      // If user is logged in, fetch from server
+      if (token) {
+        const response = await Axios({
+          url: `${baseURL}/api/cart/get`,
+          method: 'GET'
+        });
+
+        return response.data.data || [];
+      }
+
+      // If guest, fetch from cookie
+      return getGuestCart();
     } catch (error) {
       const errorMsg = error.response?.data?.message || 'Failed to fetch cart items';
       toast.error(errorMsg);

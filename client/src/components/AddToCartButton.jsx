@@ -1,11 +1,13 @@
 import React, { useEffect, useRef, useState } from 'react'
 import toast from 'react-hot-toast'
 import { FaMinus, FaPlus } from "react-icons/fa6"
-import { useSelector } from 'react-redux'
+import { useDispatch, useSelector } from 'react-redux'
 import SummaryApi from '../common/SummaryApi'
 import { useGlobalContext } from '../provider/GlobalProvider'
 import Axios from '../utils/Axios'
 import Loading from './Loading'
+import { addToGuestCart, removeFromGuestCart, updateGuestCartQuantity } from '../utils/guestCart'
+import { fetchCartItems } from '../redux/slice/cartSlice'
 
 const buildVariantKey = (variant = {}) =>
     JSON.stringify({
@@ -16,6 +18,7 @@ const buildVariantKey = (variant = {}) =>
     })
 
 const AddToCartButton = ({ data, product: productProp, cartData, selectedVariant, sku, showText = true }) => {
+    const dispatch = useDispatch()
     const { fetchCartItem, updateCartItem, deleteCartItem } = useGlobalContext()
     const [loading, setLoading] = useState(false)
     const [updateLoading, setUpdateLoading] = useState(false)
@@ -26,6 +29,7 @@ const AddToCartButton = ({ data, product: productProp, cartData, selectedVariant
     const user = useSelector(state => state.user)
     const addActionLockRef = useRef(false)
     const quantityActionLockRef = useRef(false)
+    const isGuest = !user?._id
 
     const product = data || productProp || cartData?.productId
     const normalizedSku = typeof sku === 'string' ? sku.trim() : ''
@@ -54,11 +58,6 @@ const AddToCartButton = ({ data, product: productProp, cartData, selectedVariant
             return
         }
 
-        if (!user?._id) {
-            toast.error("Please log in to add items to cart")
-            return
-        }
-
         if (!product?._id) {
             toast.error("Product information is missing")
             return
@@ -69,6 +68,7 @@ const AddToCartButton = ({ data, product: productProp, cartData, selectedVariant
             return
         }
 
+        // Check if item already exists in cart (both guest and logged-in)
         const matchingItems = cartItem.filter(isMatchingCartItem)
 
         if (matchingItems.length > 0) {
@@ -80,6 +80,33 @@ const AddToCartButton = ({ data, product: productProp, cartData, selectedVariant
             addActionLockRef.current = true
             setLoading(true)
 
+            // Guest checkout - add to cookie-based cart
+            if (isGuest) {
+                const payload = {
+                    productId: product._id,
+                    quantity: 1,
+                    name: product.name,
+                    price: product.price,
+                    image: product.image || []
+                }
+
+                if (normalizedSku) {
+                    payload.sku = normalizedSku
+                }
+
+                if (selectedVariant && Object.values(selectedVariant).some(value => value)) {
+                    payload.selectedVariant = selectedVariant
+                }
+
+                addToGuestCart(payload)
+                dispatch(fetchCartItems())
+                toast.success("Item added to cart! Create account at checkout to save it permanently.")
+                setLoading(false)
+                addActionLockRef.current = false
+                return
+            }
+
+            // Logged in user - add to server cart
             const payload = {
                 productId: product._id,
                 quantity: 1
@@ -139,7 +166,30 @@ const AddToCartButton = ({ data, product: productProp, cartData, selectedVariant
         e.preventDefault()
         e.stopPropagation()
 
-        if (quantityActionLockRef.current || updateLoading || !cartItemDetails?._id) {
+        if (quantityActionLockRef.current || updateLoading) {
+            return
+        }
+
+        // Guest cart handling
+        if (isGuest && cartItemDetails?.productId) {
+            try {
+                quantityActionLockRef.current = true
+                setUpdateLoading(true)
+                const productId = cartItemDetails.productId?._id || cartItemDetails.productId
+                updateGuestCartQuantity(productId, qty + 1)
+                dispatch(fetchCartItems())
+                toast.success("Quantity increased")
+            } catch (error) {
+                toast.error("Failed to update quantity")
+            } finally {
+                setUpdateLoading(false)
+                quantityActionLockRef.current = false
+            }
+            return
+        }
+
+        // Logged-in user handling
+        if (!cartItemDetails?._id) {
             return
         }
 
@@ -167,7 +217,37 @@ const AddToCartButton = ({ data, product: productProp, cartData, selectedVariant
         e.preventDefault()
         e.stopPropagation()
 
-        if (quantityActionLockRef.current || updateLoading || !cartItemDetails?._id) {
+        if (quantityActionLockRef.current || updateLoading) {
+            return
+        }
+
+        // Guest cart handling
+        if (isGuest && cartItemDetails?.productId) {
+            try {
+                quantityActionLockRef.current = true
+                setUpdateLoading(true)
+                const productId = cartItemDetails.productId?._id || cartItemDetails.productId
+
+                if (qty === 1) {
+                    removeFromGuestCart(productId)
+                    dispatch(fetchCartItems())
+                    toast.success("Item removed from cart")
+                } else {
+                    updateGuestCartQuantity(productId, qty - 1)
+                    dispatch(fetchCartItems())
+                    toast.success("Quantity decreased")
+                }
+            } catch (error) {
+                toast.error("Failed to update quantity")
+            } finally {
+                setUpdateLoading(false)
+                quantityActionLockRef.current = false
+            }
+            return
+        }
+
+        // Logged-in user handling
+        if (!cartItemDetails?._id) {
             return
         }
 
