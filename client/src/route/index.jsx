@@ -40,6 +40,8 @@ import SocialAuthSuccess from '../pages/SocialAuthSuccess'; // Import the Social
 import StaffPOS from '../pages/StaffPOS'; // Import POS component
 import POSDashboard from '../pages/POSDashboard'; // Import POS Dashboard component
 import POSSales from '../pages/POSSales';
+import HairQuiz from '../components/HairQuiz';
+import ShopTheLookGallery from '../components/ShopTheLookGallery';
 
 // Import new staff components
 import StaffDashboard from '../pages/staff/Dashboard';
@@ -68,6 +70,7 @@ import DashboardCart from '../pages/DashboardCart';
 import DashboardCheckout from '../pages/DashboardCheckout';
 import VerifyEmailPage from '../pages/VerifyEmailPage';
 import UserSettings from '../pages/UserSettings';
+import HairCareHub from '../pages/HairCareHub';
 
 function LegacyCheckoutRedirect() {
   const location = useLocation();
@@ -192,6 +195,18 @@ const router = createBrowserRouter([
       {
         path: 'collections',
         element: <CollectionsPage />
+      },
+      {
+        path: 'hair-care-hub',
+        element: <HairCareHub />
+      },
+      {
+        path: 'hair-quiz',
+        element: <RouteDebugger component={HairQuiz} routeName="Hair Quiz" />
+      },
+      {
+        path: 'shop-the-look',
+        element: <RouteDebugger component={ShopTheLookGallery} routeName="Shop the Look Gallery" />
       },
 
       // Staff POS route - must be before category catch-all routes
