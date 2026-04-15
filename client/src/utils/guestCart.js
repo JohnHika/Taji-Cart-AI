@@ -123,23 +123,68 @@ export const getGuestCartTotal = () => {
 };
 
 /**
- * Merge guest cart with user cart on login
- * @param {Function} mergeApiCall - API call to merge carts on server
- * @returns {Promise<Object>} Merge result
+ * Merge guest cart with user cart on login/register
+ * @param {Function} addToCartApi - API function to add items to cart
+ * @returns {Promise<Object>} Merge result with count of merged items
  */
-export const mergeGuestCartWithUser = async (mergeApiCall) => {
+export const mergeGuestCartWithUser = async (addToCartApi) => {
   const guestCart = getGuestCart();
 
   if (guestCart.length === 0) {
-    return { success: true, message: 'No guest cart to merge' };
+    return { success: true, message: 'No guest cart to merge', mergedCount: 0 };
   }
 
   try {
-    const result = await mergeApiCall({ items: guestCart });
+    let mergedCount = 0;
+    let errors = [];
+
+    // Add each guest cart item to user's cart
+    for (const item of guestCart) {
+      try {
+        await addToCartApi({
+          productId: item.productId?._id || item.productId,
+          quantity: item.quantity || 1
+        });
+        mergedCount++;
+      } catch (itemError) {
+        console.error('Failed to merge item:', item.productId?.name, itemError);
+        errors.push(item.productId?.name || 'Unknown item');
+      }
+    }
+
+    // Clear guest cart after merge
     clearGuestCart();
-    return result;
+
+    return {
+      success: true,
+      message: `Merged ${mergedCount} item${mergedCount !== 1 ? 's' : ''} from your guest cart`,
+      mergedCount,
+      errors: errors.length > 0 ? errors : undefined
+    };
   } catch (error) {
     console.error('Error merging guest cart:', error);
     throw error;
   }
+};
+
+/**
+ * Check if there's a guest cart to merge
+ * @returns {Boolean} True if guest cart has items
+ */
+export const hasGuestCart = () => {
+  const cart = getGuestCart();
+  return cart.length > 0;
+};
+
+/**
+ * Get guest cart items count for display
+ * @returns {String} Formatted message about cart items
+ */
+export const getGuestCartMessage = () => {
+  const cart = getGuestCart();
+  const count = cart.reduce((total, item) => total + (item.quantity || 0), 0);
+
+  if (count === 0) return '';
+  if (count === 1) return '1 item in your guest cart';
+  return `${count} items in your guest cart`;
 };

@@ -12,6 +12,7 @@ import Axios from '../utils/Axios';
 import AxiosToastError from '../utils/AxiosToastError';
 import fetchUserDetails from '../utils/fetchUserDetails';
 import { getPostLoginPath } from '../utils/postLoginRedirect';
+import useGuestCartMerge from '../hooks/useGuestCartMerge';
 
 const Login = () => {
     const [data, setData] = useState({ email: "", password: "" });
@@ -20,6 +21,9 @@ const Login = () => {
     const submitLockRef = useRef(false);
     const navigate = useNavigate();
     const dispatch = useDispatch();
+
+    // Auto-merge guest cart on login
+    useGuestCartMerge();
 
     const handleChange = (e) => {
         const { name, value } = e.target;

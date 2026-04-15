@@ -8,6 +8,7 @@ import SummaryApi from '../common/SummaryApi';
 import { clearGuestCart, getGuestCart } from '../utils/guestCart';
 import { fetchCartItems } from '../redux/slice/cartSlice';
 import { nawiriBrand } from '../config/brand';
+import GuestAccountPrompt from '../components/GuestAccountPrompt';
 
 function GuestCheckout() {
   const navigate = useNavigate();
@@ -15,6 +16,7 @@ function GuestCheckout() {
   const cart = useSelector(state => state.cartItem?.cart || []);
   const [loading, setLoading] = useState(false);
   const [step, setStep] = useState(1);
+  const [orderSuccess, setOrderSuccess] = useState(null);
 
   const [formData, setFormData] = useState({
     // Contact Info
@@ -118,15 +120,14 @@ function GuestCheckout() {
         clearGuestCart();
         dispatch(fetchCartItems());
 
-        // Navigate to success page with order info
-        navigate('/order-success', {
-          state: {
-            orderId: response.data.data.orderId,
-            total: response.data.data.totalAmt,
-            isGuest: true,
-            email: formData.guestEmail
-          }
+        // Set order success data to trigger account creation prompt
+        setOrderSuccess({
+          orderId: response.data.data.orderId,
+          total: response.data.data.totalAmt,
+          email: formData.guestEmail
         });
+
+        // Don't navigate yet - let user decide on account creation
       }
     } catch (error) {
       console.error('Guest checkout error:', error);
@@ -586,6 +587,15 @@ function GuestCheckout() {
           </div>
         </div>
       </div>
+
+      {/* Post-Order Account Creation Prompt */}
+      {orderSuccess && (
+        <GuestAccountPrompt
+          guestEmail={orderSuccess.email}
+          orderId={orderSuccess.orderId}
+          totalAmount={orderSuccess.total}
+        />
+      )}
     </div>
   );
 }
