@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { FaSearch, FaPackage, FaEnvelope } from 'react-icons/fa';
+import { FaSearch, FaBox, FaEnvelope } from 'react-icons/fa';
 import Axios from '../utils/Axios';
 import SummaryApi from '../common/SummaryApi';
 import toast from 'react-hot-toast';
@@ -71,7 +71,7 @@ function GuestOrderTracking() {
         {/* Header */}
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gold-100 dark:bg-gold-900/30 mb-4">
-            <FaPackage className="text-2xl text-gold-600" />
+            <FaBox className="text-2xl text-gold-600" />
           </div>
           <h1 className="text-3xl font-bold text-charcoal dark:text-white mb-2">
             Track Your Order
