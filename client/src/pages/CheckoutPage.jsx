@@ -18,6 +18,7 @@ import { clearCartItems } from '../redux/slice/cartSlice';
 import Axios from '../utils/Axios';
 import AxiosToastError from '../utils/AxiosToastError';
 import { DisplayPriceInShillings } from '../utils/DisplayPriceInShillings';
+import { Link } from 'react-router-dom';
 
 const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) => {
   const { notDiscountTotalPrice, totalPrice, totalQty, fetchCartItem, fetchOrder, royalCardData, royalDiscount } = useGlobalContext();
@@ -1060,6 +1061,19 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
             >
               {checkoutAction === 'card' ? 'Processing card payment...' : `Confirm & Pay - KES ${finalPrice?.toLocaleString()}`}
             </button>
+
+            {/* Guest Checkout CTA */}
+            <div className="mt-6 pt-6 border-t border-brown-200 dark:border-brown-700">
+              <p className="text-center text-sm text-brown-500 dark:text-brown-400 mb-3">
+                Don't want to create an account?
+              </p>
+              <Link
+                to="/guest-checkout"
+                className="block w-full py-3 px-4 rounded-pill font-semibold text-center bg-gradient-to-r from-brown-100 to-brown-50 dark:from-brown-800 dark:to-brown-700 text-charcoal dark:text-white hover:from-brown-200 hover:to-brown-100 dark:hover:from-brown-700 dark:hover:to-brown-600 transition-all shadow-sm hover:shadow"
+              >
+                Checkout as Guest →
+              </Link>
+            </div>
           </div>
         </div>
       </div>
