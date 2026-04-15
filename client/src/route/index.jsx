@@ -73,7 +73,6 @@ import DashboardCheckout from '../pages/DashboardCheckout';
 import VerifyEmailPage from '../pages/VerifyEmailPage';
 import UserSettings from '../pages/UserSettings';
 import HairCareHub from '../pages/HairCareHub';
-import GuestCheckout from '../pages/GuestCheckout';
 
 function LegacyCheckoutRedirect() {
   const location = useLocation();
