@@ -16,8 +16,6 @@ import UserMenu from './UserMenu';
 
 const navLinks = [
   { label: 'Shop', path: '/' },
-  { label: 'Hair Quiz', path: '/hair-quiz' },
-  { label: 'Care Hub', path: '/hair-care-hub' },
   { label: 'My Orders', path: '/dashboard/myorders' },
 ];
 
