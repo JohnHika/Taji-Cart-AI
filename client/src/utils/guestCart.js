@@ -45,8 +45,7 @@ export const addToGuestCart = (item) => {
 
   // Check if item already exists in cart
   const existingIndex = cart.findIndex(
-    cartItem => cartItem.productId?._id === item.productId?._id ||
-                cartItem.productId === item.productId
+    cartItem => cartItem.productId?._id === item.productId?._id
   );
 
   if (existingIndex !== -1) {
@@ -69,7 +68,7 @@ export const addToGuestCart = (item) => {
 export const removeFromGuestCart = (productId) => {
   const cart = getGuestCart();
   const updatedCart = cart.filter(
-    item => item.productId?._id !== productId && item.productId !== productId
+    item => item.productId?._id !== productId
   );
   saveGuestCart(updatedCart);
   return updatedCart;
@@ -84,7 +83,7 @@ export const removeFromGuestCart = (productId) => {
 export const updateGuestCartQuantity = (productId, quantity) => {
   const cart = getGuestCart();
   const updatedCart = cart.map(item => {
-    if (item.productId?._id === productId || item.productId === productId) {
+    if (item.productId?._id === productId) {
       return { ...item, quantity: Math.max(0, quantity) };
     }
     return item;

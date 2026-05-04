@@ -3,7 +3,7 @@ import { useDispatch } from 'react-redux';
 import { useLocation } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { mergeGuestCartWithUser, hasGuestCart, getGuestCartMessage } from '../utils/guestCart';
-import { fetchCartItems } from '../redux/slice/cartSlice';
+import { fetchCartItems } from '../store/cartProduct';
 import SummaryApi from '../common/SummaryApi';
 import Axios from '../utils/Axios';
 

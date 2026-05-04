@@ -12,7 +12,7 @@ import CartMobileLink from './components/CartMobile';
 import Footer from './components/Footer';
 import Header from './components/Header';
 import GlobalProvider from './provider/GlobalProvider';
-import { fetchCartItems } from './redux/slice/cartSlice';
+import { fetchCartItems } from './store/cartProduct';
 import { setAllCategory, setAllSubCategory, setLoadingCategory, setLoyaltyDetails } from './store/productSlice';
 import { setUserDetails } from './store/userSlice';
 import Axios from './utils/Axios';

@@ -6,7 +6,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import SummaryApi from '../common/SummaryApi';
 import SocialAuth from '../components/SocialAuth';
 import { nawiriBrand } from '../config/brand';
-import { fetchCartItems } from '../redux/slice/cartSlice';
+import { fetchCartItems } from '../store/cartProduct';
 import { setUserDetails } from '../store/userSlice';
 import Axios from '../utils/Axios';
 import AxiosToastError from '../utils/AxiosToastError';

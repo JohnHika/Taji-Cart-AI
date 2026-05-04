@@ -3,7 +3,7 @@ import { toast } from 'react-hot-toast';
 import { FaSpinner } from 'react-icons/fa';
 import { useDispatch } from 'react-redux';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { fetchCartItems } from '../redux/slice/cartSlice';
+import { fetchCartItems } from '../store/cartProduct';
 import { setUserDetails } from '../store/userSlice';
 import { getPostLoginPath } from '../utils/postLoginRedirect';
 

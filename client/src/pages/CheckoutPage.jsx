@@ -14,7 +14,7 @@ import FulfillmentModal from '../components/FulfillmentModal';
 import MpesaPayment from '../components/MpesaPayment'; // Import the MpesaPayment component
 import { useTheme } from '../context/ThemeContext';
 import { useGlobalContext } from '../provider/GlobalProvider';
-import { clearCartItems } from '../redux/slice/cartSlice';
+import { clearCartItems } from '../store/cartProduct';
 import Axios from '../utils/Axios';
 import AxiosToastError from '../utils/AxiosToastError';
 import { DisplayPriceInShillings } from '../utils/DisplayPriceInShillings';

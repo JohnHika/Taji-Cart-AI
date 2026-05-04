@@ -4,7 +4,7 @@ import { useDispatch } from 'react-redux';
 import toast from 'react-hot-toast';
 import SummaryApi from '../common/SummaryApi';
 import Axios from '../utils/Axios';
-import { fetchCartItems } from '../redux/slice/cartSlice';
+import { fetchCartItems } from '../store/cartProduct';
 
 // Pre-defined bundle configurations
 const BUNDLE_CONFIGS = [

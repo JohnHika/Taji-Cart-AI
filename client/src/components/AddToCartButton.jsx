@@ -7,7 +7,7 @@ import { useGlobalContext } from '../provider/GlobalProvider'
 import Axios from '../utils/Axios'
 import Loading from './Loading'
 import { addToGuestCart, removeFromGuestCart, updateGuestCartQuantity } from '../utils/guestCart'
-import { fetchCartItems } from '../redux/slice/cartSlice'
+import { fetchCartItems } from '../store/cartProduct'
 
 const buildVariantKey = (variant = {}) =>
     JSON.stringify({
@@ -83,11 +83,16 @@ const AddToCartButton = ({ data, product: productProp, cartData, selectedVariant
             // Guest checkout - add to cookie-based cart
             if (isGuest) {
                 const payload = {
-                    productId: product._id,
-                    quantity: 1,
-                    name: product.name,
-                    price: product.price,
-                    image: product.image || []
+                    _id: `guest-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+                    productId: {
+                        _id: product._id,
+                        name: product.name,
+                        price: product.price,
+                        image: product.image || [],
+                        unit: product.unit || 'piece',
+                        discount: product.discount || 0
+                    },
+                    quantity: 1
                 }
 
                 if (normalizedSku) {
@@ -175,7 +180,7 @@ const AddToCartButton = ({ data, product: productProp, cartData, selectedVariant
             try {
                 quantityActionLockRef.current = true
                 setUpdateLoading(true)
-                const productId = cartItemDetails.productId?._id || cartItemDetails.productId
+                const productId = cartItemDetails.productId._id
                 updateGuestCartQuantity(productId, qty + 1)
                 dispatch(fetchCartItems())
                 toast.success("Quantity increased")
@@ -226,7 +231,7 @@ const AddToCartButton = ({ data, product: productProp, cartData, selectedVariant
             try {
                 quantityActionLockRef.current = true
                 setUpdateLoading(true)
-                const productId = cartItemDetails.productId?._id || cartItemDetails.productId
+                const productId = cartItemDetails.productId._id
 
                 if (qty === 1) {
                     removeFromGuestCart(productId)

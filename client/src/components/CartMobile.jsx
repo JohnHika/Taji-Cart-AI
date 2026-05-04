@@ -5,7 +5,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { Link } from 'react-router-dom';
 import { useGlobalContext } from '../provider/GlobalProvider';
 import { DisplayPriceInShillings } from '../utils/DisplayPriceInShillings';
-import { fetchCartItems } from '../redux/slice/cartSlice';
+import { fetchCartItems } from '../store/cartProduct';
 
 const CartMobileLink = () => {
     const { totalPrice, totalQty } = useGlobalContext();
