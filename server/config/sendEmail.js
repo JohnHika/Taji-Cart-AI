@@ -25,6 +25,9 @@ const smtpSecureRaw =
 const smtpSecure = ['true', '1', 'yes'].includes(String(smtpSecureRaw).toLowerCase());
 const emailFrom = process.env.EMAIL_FROM || `${nawiriBrand.companyName} <${smtpUser || nawiriBrand.supportEmail}>`;
 const replyTo = process.env.EMAIL_REPLY_TO || nawiriBrand.supportEmail;
+export const EMAIL_CONFIGURATION_ERROR_MESSAGE =
+    'Email provider is not configured. Set SMTP_USER, SMTP_PASS, and either SMTP_SERVICE or SMTP_HOST in the server environment.';
+export const isEmailConfigured = () => Boolean(smtpUser && smtpPass && (smtpService || smtpHost));
 
 let transporter;
 
@@ -33,10 +36,8 @@ const buildTransport = () => {
         return transporter;
     }
 
-    if (!smtpUser || !smtpPass || (!smtpService && !smtpHost)) {
-        throw new Error(
-            'Email provider is not configured. Set SMTP_USER, SMTP_PASS, and either SMTP_SERVICE or SMTP_HOST in the server environment.'
-        );
+    if (!isEmailConfigured()) {
+        throw new Error(EMAIL_CONFIGURATION_ERROR_MESSAGE);
     }
 
     transporter = nodemailer.createTransport(

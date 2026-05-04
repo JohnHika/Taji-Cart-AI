@@ -1,6 +1,6 @@
 import bcryptjs from 'bcryptjs'
 import jwt from 'jsonwebtoken'
-import sendEmail from '../config/sendEmail.js'
+import sendEmail, { isEmailConfigured } from '../config/sendEmail.js'
 import LoyaltyCard from '../models/loyaltycard.model.js'
 import UserModel from '../models/user.model.js'
 import { nawiriBrand } from '../utils/brand.js'
@@ -14,6 +14,15 @@ import { sendVerificationEmail } from '../utils/sendVerificationEmail.js'
 import uploadImageClodinary from '../utils/uploadImageClodinary.js'
 
 const passwordRegex = /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d@$!%*#?&]{8,}$/
+const verificationEmailUnavailableMessage = `Email verification is temporarily unavailable right now. Please contact ${nawiriBrand.supportEmail} or try again later.`
+const passwordResetUnavailableMessage = `Password reset email is temporarily unavailable right now. Please contact ${nawiriBrand.supportEmail} or try again later.`
+
+const clearForgotPasswordResetState = async (userId) => {
+    await UserModel.findByIdAndUpdate(userId, {
+        forgot_password_otp: null,
+        forgot_password_expiry: null,
+    })
+}
 
 const normalizePhoneNumber = (value = '') => {
     const digits = String(value).replace(/\D/g, '')
@@ -307,7 +316,24 @@ export async function sendVerificationEmailController(request, response) {
             })
         }
 
-        await sendVerificationEmail(user)
+        if (!isEmailConfigured()) {
+            return response.status(503).json({
+                message: verificationEmailUnavailableMessage,
+                error: true,
+                success: false
+            })
+        }
+
+        try {
+            await sendVerificationEmail(user)
+        } catch (emailError) {
+            console.error('Error sending verification email on request:', emailError)
+            return response.status(503).json({
+                message: verificationEmailUnavailableMessage,
+                error: true,
+                success: false
+            })
+        }
 
         return response.json({
             message: 'Verification email sent. Please check your inbox.',
@@ -380,10 +406,23 @@ export async function loginController(request, response) {
         }
 
         if (!user.verify_email && user.authType !== 'google') {
+            if (!isEmailConfigured()) {
+                return response.status(503).json({
+                    message: verificationEmailUnavailableMessage,
+                    error: true,
+                    success: false
+                })
+            }
+
             try {
                 await sendVerificationEmail(user);
             } catch (verificationEmailError) {
                 console.error('Error sending login verification email:', verificationEmailError);
+                return response.status(503).json({
+                    message: verificationEmailUnavailableMessage,
+                    error: true,
+                    success: false
+                })
             }
 
             return response.status(403).json({
@@ -836,6 +875,22 @@ export async function forgotPasswordController(request,response) {
     try {
         const normalizedEmail = normalizeEmail(request.body?.email)
 
+        if(!normalizedEmail){
+            return response.status(400).json({
+                message : "Email address is required",
+                error : true,
+                success : false
+            })
+        }
+
+        if (!isEmailConfigured()) {
+            return response.status(503).json({
+                message: passwordResetUnavailableMessage,
+                error: true,
+                success: false
+            })
+        }
+
         const user = await UserModel.findOne({ email: normalizedEmail })
 
         if(!user){
@@ -849,19 +904,29 @@ export async function forgotPasswordController(request,response) {
         const otp = generatedOtp()
         const expireTime = new Date() + 60 * 60 * 1000 // 1hr
 
-        const update = await UserModel.findByIdAndUpdate(user._id,{
+        await UserModel.findByIdAndUpdate(user._id,{
             forgot_password_otp : otp,
             forgot_password_expiry : new Date(expireTime).toISOString()
         })
 
-        await sendEmail({
-            sendTo : normalizedEmail,
-            subject : "Reset your Nawiri Hair Kenya password",
-            html : forgotPasswordTemplate({
-                name : user.name,
-                otp : otp
+        try {
+            await sendEmail({
+                sendTo : normalizedEmail,
+                subject : "Reset your Nawiri Hair Kenya password",
+                html : forgotPasswordTemplate({
+                    name : user.name,
+                    otp : otp
+                })
             })
-        })
+        } catch (emailError) {
+            console.error('Error sending forgot-password email:', emailError)
+            await clearForgotPasswordResetState(user._id)
+            return response.status(503).json({
+                message: passwordResetUnavailableMessage,
+                error: true,
+                success: false
+            })
+        }
 
         return response.json({
             message : "check your email",
