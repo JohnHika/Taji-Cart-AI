@@ -355,6 +355,20 @@ export async function loginController(request, response) {
             });
         }
 
+        const hasStoredPassword = typeof user.password === 'string' && user.password.trim().length > 0
+
+        if (!hasStoredPassword) {
+            const usesGoogleSignIn = user.authType === 'google' || Boolean(user.googleId)
+
+            return response.status(400).json({
+                message: usesGoogleSignIn
+                    ? "This account uses Google sign-in. Please continue with Google or reset your password to enable email login."
+                    : "This account does not have a valid password saved yet. Please use Forgot password to set one before signing in.",
+                error: true,
+                success: false
+            })
+        }
+
         const checkPassword = await bcryptjs.compare(password, user.password);
 
         if (!checkPassword) {

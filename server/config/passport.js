@@ -72,6 +72,7 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
               name: profile.displayName || profile.name?.givenName + ' ' + profile.name?.familyName,
               email: profile.emails[0].value,
               googleId: profile.id,
+              authType: 'google',
               avatar: profile.photos[0]?.value,
               verify_email: true, // Auto-verify email for Google sign-ups
               status: 'Active'
