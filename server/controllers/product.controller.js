@@ -158,7 +158,122 @@ const buildSubCategoryPathPayload = (subCategoryDoc, categoryDoc) => ({
     category: categoryDoc ? buildCategoryPathPayload(categoryDoc) : null
 });
 
+const normalizeHomeShelfName = (name = '') => {
+    const trimmedName = String(name || '').trim();
+
+    return trimmedName.replace(/\s+\d+\s*inch(?:es)?$/i, '').trim() || trimmedName;
+};
+
+const isPreferredHomeShelfCategory = (shelf) => {
+    const normalizedCategoryName = normalizeHomeShelfName(shelf?.category?.name || '').toLowerCase();
+    const normalizedFamilyName = String(shelf?.familyName || shelf?.name || '').trim().toLowerCase();
+
+    return normalizedCategoryName === normalizedFamilyName;
+};
+
 const hasSellablePrice = (product) => Number.isFinite(Number(product?.price));
+
+const mergeHomeSubcategoryShelves = (shelves = []) => {
+    const groupedShelves = new Map();
+
+    shelves.forEach((item) => {
+        const categoryId = String(item.category?._id || 'uncategorized');
+        const normalizedName = normalizeHomeShelfName(item.name);
+        const groupKey = `${categoryId}::${normalizedName.toLowerCase()}`;
+
+        if (!groupedShelves.has(groupKey)) {
+            groupedShelves.set(groupKey, {
+                _id: item._id,
+                name: normalizedName,
+                familyName: normalizedName,
+                category: item.category || null,
+                coverImage: item.coverImage || '',
+                productCount: 0,
+                products: [],
+                subcategories: [],
+                isGrouped: false
+            });
+        }
+
+        const group = groupedShelves.get(groupKey);
+        group.productCount += item.productCount || 0;
+
+        if (!group.coverImage) {
+            group.coverImage = item.coverImage || '';
+        }
+
+        if (!group.category && item.category) {
+            group.category = item.category;
+        }
+
+        const subcategoryPayload = buildSubCategoryPathPayload(
+            {
+                _id: item._id,
+                name: item.name,
+                image: item.coverImage || ''
+            },
+            item.category
+        );
+
+        if (!group.subcategories.some((sub) => String(sub._id) === String(subcategoryPayload._id))) {
+            group.subcategories.push(subcategoryPayload);
+        }
+
+        item.products.forEach((product) => {
+            if (group.products.length >= 8) {
+                return;
+            }
+
+            if (!group.products.some((entry) => String(entry._id) === String(product._id))) {
+                group.products.push(product);
+            }
+        });
+    });
+
+    const groupedCandidates = Array.from(groupedShelves.values())
+        .map((group) => ({
+            ...group,
+            name: group.subcategories.length > 1
+                ? group.name
+                : group.subcategories[0]?.name || group.name,
+            isGrouped: group.subcategories.length > 1
+        }));
+
+    const preferredShelves = new Map();
+
+    groupedCandidates.forEach((candidate) => {
+        const familyKey = String(candidate.familyName || candidate.name || '').trim().toLowerCase();
+        const current = preferredShelves.get(familyKey);
+
+        if (!current) {
+            preferredShelves.set(familyKey, candidate);
+            return;
+        }
+
+        const candidateIsPreferred = isPreferredHomeShelfCategory(candidate);
+        const currentIsPreferred = isPreferredHomeShelfCategory(current);
+
+        if (candidateIsPreferred && !currentIsPreferred) {
+            preferredShelves.set(familyKey, candidate);
+            return;
+        }
+
+        if (candidateIsPreferred === currentIsPreferred) {
+            if ((candidate.productCount || 0) > (current.productCount || 0)) {
+                preferredShelves.set(familyKey, candidate);
+                return;
+            }
+
+            if ((candidate.productCount || 0) === (current.productCount || 0) && candidate.name.localeCompare(current.name) < 0) {
+                preferredShelves.set(familyKey, candidate);
+            }
+        }
+    });
+
+    return Array.from(preferredShelves.values())
+        .sort((a, b) => b.productCount - a.productCount || a.name.localeCompare(b.name))
+        .slice(0, 6);
+};
 
 export const getHomeCatalogController = async (request, response) => {
     try {
@@ -296,10 +411,10 @@ export const getHomeCatalogController = async (request, response) => {
             }))
             .slice(0, 6);
 
-        const subcategoryShelves = Array.from(subCategoryMap.values())
-            .filter((item) => item.products.length > 0)
-            .sort((a, b) => b.productCount - a.productCount || a.name.localeCompare(b.name))
-            .slice(0, 6);
+        const subcategoryShelves = mergeHomeSubcategoryShelves(
+            Array.from(subCategoryMap.values())
+                .filter((item) => item.products.length > 0)
+        );
 
         return response.json({
             success: true,
@@ -798,15 +913,16 @@ export const searchProduct = async(request,response)=>{
         }
 
         const query = search ? {
-            $text : {
-                $search : search
+            name : {
+                $regex : search.trim(),
+                $options : 'i'
             }
         } : {}
 
         const skip = ( page - 1) * limit
 
         const [data,dataCount] = await Promise.all([
-            ProductModel.find(query).sort({ createdAt  : -1 }).skip(skip).limit(limit).populate('category subCategory'),
+            ProductModel.find(query).sort({ name : 1 }).skip(skip).limit(limit).populate('category subCategory'),
             ProductModel.countDocuments(query)
         ])
 

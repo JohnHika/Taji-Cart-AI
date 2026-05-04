@@ -33,7 +33,11 @@ const DisplayCartItem = ({ close, variant = 'drawer' }) => {
             setShowFulfillmentModal(true)
             return
         }
-        toast("Please Login")
+        // Guest users - redirect to guest checkout
+        navigate('/guest-checkout')
+        if(close){
+            close()
+        }
     }
     
     // Handle fulfillment selection and continue to checkout

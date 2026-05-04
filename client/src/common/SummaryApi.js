@@ -323,6 +323,17 @@ const SummaryApi = {
     resend_otp: {
         url: `${baseURL}/api/user/forgot-password`,
         method: 'PUT'
+    },
+    // Guest checkout (no authentication required)
+    guestCheckout: {
+        url: `${baseURL}/api/order/guest-checkout`,
+        method: 'POST'
+    },
+    // Order tracking for guests (requires orderId and email)
+    trackGuestOrder: {
+        url: `${baseURL}/api/order/track-guest`,
+        method: 'GET',
+        params: {} // will be populated when called
     }
 };
 

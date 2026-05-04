@@ -109,7 +109,19 @@ const orderSchema = new mongoose.Schema({
         verifiedAt: { type: Date }
     },
     pickupCode: { type: String },
-    deliveryMethod: { type: String, enum: ['delivery', 'store-pickup'], default: 'delivery' }
+    deliveryMethod: { type: String, enum: ['delivery', 'store-pickup'], default: 'delivery' },
+    // Guest checkout support
+    isGuest: { type: Boolean, default: false },
+    guestEmail: { type: String },
+    guestPhone: { type: String },
+    guestShipping: {
+        firstName: String,
+        lastName: String,
+        address: String,
+        city: String,
+        zipCode: String,
+        phone: String
+    }
 }, {
     timestamps: true
 })

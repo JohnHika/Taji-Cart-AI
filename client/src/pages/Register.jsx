@@ -7,6 +7,7 @@ import SocialAuth from '../components/SocialAuth';
 import { nawiriBrand } from '../config/brand';
 import Axios from '../utils/Axios';
 import AxiosToastError from '../utils/AxiosToastError';
+import useGuestCartMerge from '../hooks/useGuestCartMerge';
 
 const Register = () => {
     const [data, setData] = useState({ name: "", email: "", password: "", confirmPassword: "" });
@@ -16,6 +17,9 @@ const Register = () => {
     const [isLoading, setIsLoading] = useState(false);
     const submitLockRef = useRef(false);
     const navigate = useNavigate();
+
+    // Auto-merge guest cart on register
+    useGuestCartMerge();
 
     const validateField = (name, value) => {
         if (name === 'name' && value && !/^[a-zA-Z\s'.,-]{1,50}$/.test(value))

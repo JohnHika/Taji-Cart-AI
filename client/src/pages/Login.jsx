@@ -6,12 +6,13 @@ import { Link, useNavigate } from 'react-router-dom';
 import SummaryApi from '../common/SummaryApi';
 import SocialAuth from '../components/SocialAuth';
 import { nawiriBrand } from '../config/brand';
-import { fetchCartItems } from '../redux/slice/cartSlice';
+import { fetchCartItems } from '../store/cartProduct';
 import { setUserDetails } from '../store/userSlice';
 import Axios from '../utils/Axios';
 import AxiosToastError from '../utils/AxiosToastError';
 import fetchUserDetails from '../utils/fetchUserDetails';
 import { getPostLoginPath } from '../utils/postLoginRedirect';
+import useGuestCartMerge from '../hooks/useGuestCartMerge';
 
 const Login = () => {
     const [data, setData] = useState({ email: "", password: "" });
@@ -20,6 +21,9 @@ const Login = () => {
     const submitLockRef = useRef(false);
     const navigate = useNavigate();
     const dispatch = useDispatch();
+
+    // Auto-merge guest cart on login
+    useGuestCartMerge();
 
     const handleChange = (e) => {
         const { name, value } = e.target;

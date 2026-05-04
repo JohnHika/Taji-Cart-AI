@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { FaUsers } from 'react-icons/fa';
+import { FaUsers, FaMagic, FaInstagram, FaBook, FaGift } from 'react-icons/fa';
 import { Link, useNavigate } from 'react-router-dom';
 import SummaryApi from '../common/SummaryApi';
 import CategoryBannerGrid from '../components/CategoryBannerGrid';
@@ -40,6 +40,18 @@ const emptyHomeCatalog = {
   bestSellers: [],
   categoryBanners: [],
   subcategoryShelves: [],
+};
+
+const buildGroupedShelfLabel = (shelf) => {
+  const styleCount = shelf?.productCount || shelf?.products?.length || 0;
+  const lengthCount = shelf?.subcategories?.length || 0;
+  const categoryName = shelf?.category?.name || 'Nawiri Hair';
+
+  if (shelf?.isGrouped && lengthCount > 1) {
+    return `${styleCount} styles across ${lengthCount} lengths in ${categoryName}`;
+  }
+
+  return `${styleCount} styles from ${categoryName}`;
 };
 
 const Home = () => {
@@ -135,6 +147,33 @@ const Home = () => {
     return `/${valideURLConvert(shelf.category.name)}-${shelf.category._id}/${valideURLConvert(shelf.name)}-${shelf._id}`;
   };
 
+  const buildShelfDestination = (shelf) => {
+    if (shelf?.isGrouped && shelf?.category?._id && shelf?.subcategories?.length) {
+      return {
+        to: buildCategoryUrl(shelf.category),
+        state: {
+          categoryId: shelf.category._id,
+          categoryName: shelf.category.name,
+          subcategoryName: shelf.name,
+          matchingSubcategories: shelf.subcategories.map((subCategory) => ({
+            id: subCategory._id,
+            name: subCategory.name,
+          })),
+        },
+      };
+    }
+
+    return {
+      to: buildSubCategoryUrl(shelf),
+      state: {
+        categoryId: shelf.category?._id,
+        categoryName: shelf.category?.name,
+        subcategoryId: shelf._id,
+        subcategoryName: shelf.name,
+      },
+    };
+  };
+
   const handleCategorySelect = (category) => {
     navigate(buildCategoryUrl(category), {
       state: {
@@ -150,6 +189,65 @@ const Home = () => {
 
   return (
     <section className="bg-ivory transition-colors dark:bg-dm-surface">
+      {/* Quick Links Bar - New Feature Highlights */}
+      <div className="bg-white dark:bg-dm-card border-b border-brown-200 dark:border-brown-800">
+        <div className="container mx-auto px-4 py-3">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <Link
+              to="/hair-quiz"
+              className="flex items-center gap-3 bg-gradient-to-r from-gold-100 to-gold-50 dark:from-gold-900/30 dark:to-gold-900/10 rounded-xl p-3 hover:shadow-md transition-shadow"
+            >
+              <div className="w-10 h-10 rounded-full bg-gold-500 flex items-center justify-center flex-shrink-0">
+                <FaMagic className="text-charcoal" />
+              </div>
+              <div>
+                <p className="font-semibold text-charcoal dark:text-white text-sm">Hair Quiz</p>
+                <p className="text-xs text-brown-500">Find your perfect match</p>
+              </div>
+            </Link>
+
+            <Link
+              to="/shop-the-look"
+              className="flex items-center gap-3 bg-gradient-to-r from-pink-100 to-pink-50 dark:from-pink-900/30 dark:to-pink-900/10 rounded-xl p-3 hover:shadow-md transition-shadow"
+            >
+              <div className="w-10 h-10 rounded-full bg-pink-500 flex items-center justify-center flex-shrink-0">
+                <FaInstagram className="text-white" />
+              </div>
+              <div>
+                <p className="font-semibold text-charcoal dark:text-white text-sm">Shop the Look</p>
+                <p className="text-xs text-brown-500">Real customer styles</p>
+              </div>
+            </Link>
+
+            <Link
+              to="/hair-care-hub"
+              className="flex items-center gap-3 bg-gradient-to-r from-blue-100 to-blue-50 dark:from-blue-900/30 dark:to-blue-900/10 rounded-xl p-3 hover:shadow-md transition-shadow"
+            >
+              <div className="w-10 h-10 rounded-full bg-blue-500 flex items-center justify-center flex-shrink-0">
+                <FaBook className="text-white" />
+              </div>
+              <div>
+                <p className="font-semibold text-charcoal dark:text-white text-sm">Care Hub</p>
+                <p className="text-xs text-brown-500">Expert guides & tips</p>
+              </div>
+            </Link>
+
+            <Link
+              to="/collections#bundles"
+              className="flex items-center gap-3 bg-gradient-to-r from-purple-100 to-purple-50 dark:from-purple-900/30 dark:to-purple-900/10 rounded-xl p-3 hover:shadow-md transition-shadow"
+            >
+              <div className="w-10 h-10 rounded-full bg-purple-500 flex items-center justify-center flex-shrink-0">
+                <FaGift className="text-white" />
+              </div>
+              <div>
+                <p className="font-semibold text-charcoal dark:text-white text-sm">Bundles</p>
+                <p className="text-xs text-brown-500">Save up to 20%</p>
+              </div>
+            </Link>
+          </div>
+        </div>
+      </div>
+
       <div className="container mx-auto px-2 pt-4 sm:px-4 sm:pt-6">
         {loadingCatalog ? (
           <div className="h-[280px] animate-pulse rounded-3xl bg-plum-100 dark:bg-plum-900/40 sm:h-[340px]" />
@@ -211,23 +309,22 @@ const Home = () => {
           viewAllLabel="Browse all"
         />
 
-        {homeCatalog.subcategoryShelves.map((shelf) => (
-          <HomeProductShelf
-            key={shelf._id}
-            title={shelf.name}
-            subtitle={`${shelf.productCount || shelf.products?.length || 0} styles from ${shelf.category?.name || 'Nawiri Hair'}`}
-            products={shelf.products || []}
-            loading={loadingCatalog}
-            viewAllTo={buildSubCategoryUrl(shelf)}
-            viewAllState={{
-              categoryId: shelf.category?._id,
-              categoryName: shelf.category?.name,
-              subcategoryId: shelf._id,
-              subcategoryName: shelf.name,
-            }}
-            viewAllLabel="View shelf"
-          />
-        ))}
+        {homeCatalog.subcategoryShelves.map((shelf) => {
+          const shelfDestination = buildShelfDestination(shelf);
+
+          return (
+            <HomeProductShelf
+              key={shelf.isGrouped ? `${shelf.category?._id}-${shelf.name}` : shelf._id}
+              title={shelf.name}
+              subtitle={buildGroupedShelfLabel(shelf)}
+              products={shelf.products || []}
+              loading={loadingCatalog}
+              viewAllTo={shelfDestination.to}
+              viewAllState={shelfDestination.state}
+              viewAllLabel={shelf.isGrouped ? 'View collection' : 'View shelf'}
+            />
+          );
+        })}
 
         {!loadingCatalog && !hasHomeContent && (
           <div className="rounded-3xl border border-dashed border-brown-300 bg-white/80 px-6 py-12 text-center dark:border-dm-border dark:bg-dm-card">

@@ -15,8 +15,10 @@ const server = http.createServer(app);
 initializeSocket(server);
 
 let connectionCheckInterval;
+let retrying = false;
 
 server.listen(PORT, () => {
+    retrying = false;
     console.log(`✅ Server running on port ${PORT}`);
     startKeepalive();
     connectionCheckInterval = setInterval(async () => {
@@ -34,12 +36,15 @@ server.listen(PORT, () => {
 });
 
 server.on('error', (error) => {
-    console.error('Server error:', error);
     if (error.code === 'EADDRINUSE') {
+        if (retrying) return;
+        retrying = true;
         console.log(`Port ${PORT} is already in use. Trying again in 5 seconds...`);
         setTimeout(() => {
             server.close();
             server.listen(PORT);
         }, 5000);
+    } else {
+        console.error('Server error:', error);
     }
 });

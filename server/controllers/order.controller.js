@@ -229,6 +229,226 @@ export const pricewithDiscount = (price,dis = 1)=>{
     return actualPrice
 }
 
+// Guest Order Tracking Controller - allows guests to track their orders
+export async function trackGuestOrderController(request, response) {
+    try {
+        const { orderId, email } = request.query
+
+        if (!orderId || !email) {
+            return response.status(400).json({
+                message: "Order ID and email are required",
+                error: true,
+                success: false
+            })
+        }
+
+        // Find order by orderId and guestEmail
+        const order = await OrderModel.findOne({
+            orderId: orderId.toUpperCase(),
+            guestEmail: email.toLowerCase()
+        }).populate('delivery_address')
+
+        if (!order) {
+            return response.status(404).json({
+                message: "Order not found. Please check your Order ID and Email.",
+                error: true,
+                success: false
+            })
+        }
+
+        // Return order details (excluding sensitive payment info)
+        return response.json({
+            message: "Order found",
+            error: false,
+            success: true,
+            data: {
+                orderId: order.orderId,
+                status: order.status,
+                totalAmt: order.totalAmt,
+                items: order.product_details,
+                shipping: order.guestShipping,
+                statusHistory: order.statusHistory,
+                estimatedDelivery: order.estimatedDeliveryTime,
+                estimatedPickup: order.estimatedPickupTime,
+                fulfillmentType: order.fulfillment_type,
+                pickupLocation: order.pickup_location,
+                createdAt: order.createdAt
+            }
+        })
+
+    } catch (error) {
+        console.error("Guest order tracking error:", error)
+        return response.status(500).json({
+            message: error.message || error,
+            error: true,
+            success: false
+        })
+    }
+}
+
+// Guest Checkout Controller - allows users to purchase without logging in
+export async function guestCheckoutController(request, response) {
+    try {
+        const { items, totalAmt, subTotalAmt, guestEmail, guestPhone, guestShipping, fulfillment_type = 'delivery', pickup_location = '' } = request.body
+
+        // Validate required fields
+        if (!guestEmail || !items || !totalAmt) {
+            return response.status(400).json({
+                message: "Email, items, and total amount are required",
+                error: true,
+                success: false
+            })
+        }
+
+        // Validate email format
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+        if (!emailRegex.test(guestEmail)) {
+            return response.status(400).json({
+                message: "Invalid email format",
+                error: true,
+                success: false
+            })
+        }
+
+        // Check stock availability first
+        for (const item of items) {
+            const product = await ProductModel.findById(item.productId || item.productId?._id)
+            if (!product) {
+                return response.status(404).json({
+                    message: `Product ${item.productId?.name || 'unknown'} not found`,
+                    error: true,
+                    success: false
+                })
+            }
+
+            if (product.stock < item.quantity) {
+                return response.status(400).json({
+                    message: `Insufficient stock for ${product.name}. Available: ${product.stock}, Requested: ${item.quantity}`,
+                    error: true,
+                    success: false
+                })
+            }
+        }
+
+        // Generate verification code for pickup orders
+        const generateVerificationCode = () => {
+            return Math.random().toString(36).substring(2, 8).toUpperCase()
+        }
+
+        const pickupVerificationCode = fulfillment_type === 'pickup' ? generateVerificationCode() : ''
+
+        // Create order ID
+        const orderId = `ORD-${Date.now()}-${Math.random().toString(36).substring(2, 5).toUpperCase()}`
+
+        // Create the order
+        const generatedOrder = await OrderModel.create({
+            orderId,
+            isGuest: true,
+            guestEmail,
+            guestPhone: guestPhone || '',
+            guestShipping: guestShipping || {},
+            fulfillment_type,
+            pickup_location,
+            product_details: {
+                name: items.map(item => item.productId?.name || item.name || 'Product').join(', '),
+                image: items[0]?.productId?.image || []
+            },
+            subTotalAmt: subTotalAmt || totalAmt,
+            totalAmt,
+            status: 'pending',
+            statusHistory: [{
+                status: 'pending',
+                timestamp: new Date(),
+                note: 'Guest order placed'
+            }],
+            pickupVerificationCode,
+            estimatedDeliveryTime: fulfillment_type === 'delivery' ? new Date(Date.now() + 3 * 24 * 60 * 60 * 1000) : undefined,
+            estimatedPickupTime: fulfillment_type === 'pickup' ? new Date(Date.now() + 24 * 60 * 60 * 1000) : undefined
+        })
+
+        // Deduct stock
+        for (const item of items) {
+            const productId = item.productId || item.productId?._id
+            await ProductModel.findByIdAndUpdate(productId, {
+                $inc: { stock: -item.quantity }
+            })
+        }
+
+        // Send order confirmation email to guest
+        try {
+            const customerName = guestShipping?.firstName || guestEmail.split('@')[0]
+            await sendOrderLifecycleEmail({
+                user: {
+                    email: guestEmail,
+                    name: customerName
+                },
+                title: 'Order Confirmed!',
+                intro: `Thank you for your order! We're processing it now. You can track your order using the order ID below.`,
+                orderId,
+                totalAmt,
+                fulfillmentType: fulfillment_type,
+                pickupLocation: pickup_location,
+                verificationCode: pickupVerificationCode
+            })
+
+            // Also send admin notification
+            await sendEmail({
+                sendTo: process.env.EMAIL_FROM || 'admin@nawirihair.com',
+                subject: `🛍️ New Guest Order: ${orderId}`,
+                html: renderOrderNoticeEmail({
+                    name: 'Admin Team',
+                    title: 'New Guest Order Received',
+                    intro: `A guest customer just placed an order worth KSh ${totalAmt.toLocaleString()}.`,
+                    orderId,
+                    total: formatCurrency(totalAmt),
+                    fulfillmentType: fulfillment_type === 'pickup' ? 'Store pickup' : 'Delivery',
+                    pickupLocation: pickup_location,
+                    verificationCode: pickupVerificationCode,
+                    ctaLabel: 'View in Admin Dashboard',
+                    ctaUrl: nawiriBrand.websiteUrl
+                })
+            })
+        } catch (emailError) {
+            console.error('Error sending guest order confirmation email:', emailError)
+        }
+
+        // Emit socket event for real-time updates
+        try {
+            const io = getIO()
+            if (io) {
+                io.emit('new-order', {
+                    orderId,
+                    totalAmt,
+                    isGuest: true,
+                    status: 'pending'
+                })
+            }
+        } catch (socketError) {
+            console.error('Socket emit error:', socketError)
+        }
+
+        return response.json({
+            message: "Guest order placed successfully! Check your email for confirmation.",
+            error: false,
+            success: true,
+            data: {
+                orderId: generatedOrder.orderId,
+                guestEmail,
+                totalAmt: generatedOrder.totalAmt,
+                status: generatedOrder.status
+            }
+        })
+
+    } catch (error) {
+        console.error("Guest checkout error:", error)
+        return response.status(500).json({
+            message: error.message || error,
+            error: true,
+            success: false
+        })
+    }
+}
+
 export async function paymentController(request,response){
     try {
         const userId = request.userId // auth middleware 
