@@ -42,6 +42,18 @@ const emptyHomeCatalog = {
   subcategoryShelves: [],
 };
 
+const buildGroupedShelfLabel = (shelf) => {
+  const styleCount = shelf?.productCount || shelf?.products?.length || 0;
+  const lengthCount = shelf?.subcategories?.length || 0;
+  const categoryName = shelf?.category?.name || 'Nawiri Hair';
+
+  if (shelf?.isGrouped && lengthCount > 1) {
+    return `${styleCount} styles across ${lengthCount} lengths in ${categoryName}`;
+  }
+
+  return `${styleCount} styles from ${categoryName}`;
+};
+
 const Home = () => {
   const navigate = useNavigate();
   const [featuredCampaign, setFeaturedCampaign] = useState(null);
@@ -133,6 +145,33 @@ const Home = () => {
     }
 
     return `/${valideURLConvert(shelf.category.name)}-${shelf.category._id}/${valideURLConvert(shelf.name)}-${shelf._id}`;
+  };
+
+  const buildShelfDestination = (shelf) => {
+    if (shelf?.isGrouped && shelf?.category?._id && shelf?.subcategories?.length) {
+      return {
+        to: buildCategoryUrl(shelf.category),
+        state: {
+          categoryId: shelf.category._id,
+          categoryName: shelf.category.name,
+          subcategoryName: shelf.name,
+          matchingSubcategories: shelf.subcategories.map((subCategory) => ({
+            id: subCategory._id,
+            name: subCategory.name,
+          })),
+        },
+      };
+    }
+
+    return {
+      to: buildSubCategoryUrl(shelf),
+      state: {
+        categoryId: shelf.category?._id,
+        categoryName: shelf.category?.name,
+        subcategoryId: shelf._id,
+        subcategoryName: shelf.name,
+      },
+    };
   };
 
   const handleCategorySelect = (category) => {
@@ -270,23 +309,22 @@ const Home = () => {
           viewAllLabel="Browse all"
         />
 
-        {homeCatalog.subcategoryShelves.map((shelf) => (
-          <HomeProductShelf
-            key={shelf._id}
-            title={shelf.name}
-            subtitle={`${shelf.productCount || shelf.products?.length || 0} styles from ${shelf.category?.name || 'Nawiri Hair'}`}
-            products={shelf.products || []}
-            loading={loadingCatalog}
-            viewAllTo={buildSubCategoryUrl(shelf)}
-            viewAllState={{
-              categoryId: shelf.category?._id,
-              categoryName: shelf.category?.name,
-              subcategoryId: shelf._id,
-              subcategoryName: shelf.name,
-            }}
-            viewAllLabel="View shelf"
-          />
-        ))}
+        {homeCatalog.subcategoryShelves.map((shelf) => {
+          const shelfDestination = buildShelfDestination(shelf);
+
+          return (
+            <HomeProductShelf
+              key={shelf.isGrouped ? `${shelf.category?._id}-${shelf.name}` : shelf._id}
+              title={shelf.name}
+              subtitle={buildGroupedShelfLabel(shelf)}
+              products={shelf.products || []}
+              loading={loadingCatalog}
+              viewAllTo={shelfDestination.to}
+              viewAllState={shelfDestination.state}
+              viewAllLabel={shelf.isGrouped ? 'View collection' : 'View shelf'}
+            />
+          );
+        })}
 
         {!loadingCatalog && !hasHomeContent && (
           <div className="rounded-3xl border border-dashed border-brown-300 bg-white/80 px-6 py-12 text-center dark:border-dm-border dark:bg-dm-card">

@@ -2,11 +2,43 @@ import React, { useEffect, useState } from 'react';
 import { FaEdit, FaEye, FaFilter, FaPlus, FaSearch, FaSortAmountDown, FaSortAmountUp, FaTrash } from 'react-icons/fa';
 import { Link } from 'react-router-dom';
 import SummaryApi from '../common/SummaryApi';
+import ExportButton from '../components/ExportButton';
 import LoadingSpinner from '../components/LoadingSpinner';
 import Pagination from '../components/Pagination';
 import Axios from '../utils/Axios';
 import AxiosToastError from '../utils/AxiosToastError';
 import { DisplayPriceInShillings } from '../utils/DisplayPriceInShillings';
+import { exportToExcel, exportToCSV, exportToPDF, exportToWord, exportToJSON } from '../utils/exportUtils';
+
+const normalizeSearchValue = (value = '') => String(value ?? '')
+  .toLowerCase()
+  .replace(/["'`]/g, '')
+  .replace(/[—–-]+/g, ' ')
+  .replace(/[^a-z0-9#\/\s]+/g, ' ')
+  .replace(/\s+/g, ' ')
+  .trim();
+
+const buildProductSearchText = (product = {}) => {
+  const categoryNames = Array.isArray(product.category)
+    ? product.category.map(cat => cat?.name || cat).filter(Boolean)
+    : [product.category?.name || product.category].filter(Boolean);
+
+  const subCategoryNames = Array.isArray(product.subCategory)
+    ? product.subCategory.map(sub => sub?.name || sub).filter(Boolean)
+    : [product.subCategory?.name || product.subCategory].filter(Boolean);
+
+  return [
+    product.name,
+    product.description,
+    product.sku,
+    product?.variants?.color,
+    product?.variants?.length,
+    ...categoryNames,
+    ...subCategoryNames
+  ]
+    .filter(Boolean)
+    .join(' ');
+};
 
 const DashboardProduct = () => {
   const [products, setProducts] = useState([]);
@@ -107,6 +139,10 @@ const DashboardProduct = () => {
     fetchCategories();
   }, []);
 
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, filterCategory]);
+
   const handleDeleteProduct = async (productId) => {
     if (!window.confirm("Are you sure you want to delete this product?")) {
       return;
@@ -158,10 +194,12 @@ const DashboardProduct = () => {
     }
   };
 
+  const normalizedSearchTerm = normalizeSearchValue(searchTerm);
+
   const filteredProducts = products
     .filter(product => {
-      const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           (product.description?.toLowerCase() || '').includes(searchTerm.toLowerCase());
+      const searchableText = normalizeSearchValue(buildProductSearchText(product));
+      const matchesSearch = !normalizedSearchTerm || searchableText.includes(normalizedSearchTerm);
       
       const matchesCategory = !filterCategory || 
                              (product.category && 
@@ -192,7 +230,13 @@ const DashboardProduct = () => {
   const indexOfLastProduct = currentPage * productsPerPage;
   const indexOfFirstProduct = indexOfLastProduct - productsPerPage;
   const currentProducts = filteredProducts.slice(indexOfFirstProduct, indexOfLastProduct);
-  const totalPages = Math.ceil(filteredProducts.length / productsPerPage);
+  const totalPages = Math.max(1, Math.ceil(filteredProducts.length / productsPerPage));
+
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages);
+    }
+  }, [currentPage, totalPages]);
 
   const handleSelectAll = () => {
     if (selectedProducts.length === currentProducts.length) {
@@ -216,6 +260,28 @@ const DashboardProduct = () => {
     localStorage.setItem('preferredViewMode', newMode);
   };
 
+  const handleExport = (format) => {
+    const exportData = products.map(product => ({
+      name: product.name || '',
+      sku: product.sku || '',
+      price: product.price || 0,
+      stock: product.stock || 0,
+      unit: product.unit || '',
+      description: product.description || '',
+      category: product.category?.map(cat => cat?.name || '').join(', ') || '',
+      createdAt: product.createdAt ? new Date(product.createdAt).toLocaleString() : '',
+      updatedAt: product.updatedAt ? new Date(product.updatedAt).toLocaleString() : ''
+    }));
+    switch (format) {
+      case 'excel': exportToExcel(exportData, 'products'); break;
+      case 'csv':   exportToCSV(exportData, 'products'); break;
+      case 'pdf':   exportToPDF(exportData, 'products'); break;
+      case 'word':  exportToWord(exportData, 'products'); break;
+      case 'json':  exportToJSON(exportData, 'products'); break;
+      default: break;
+    }
+  };
+
   return (
     <div className="p-2 sm:p-4 bg-white dark:bg-dm-surface min-h-screen transition-colors duration-200">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
@@ -230,6 +296,7 @@ const DashboardProduct = () => {
               {viewMode === 'table' ? 'Grid View' : 'Table View'}
             </button>
           )}
+          <ExportButton data={products} onExport={handleExport} />
           <Link 
             to="/dashboard/upload-product" 
             className="bg-plum-700 hover:bg-plum-600 text-white px-3 sm:px-4 py-2 rounded-md flex items-center transition-colors duration-200"
