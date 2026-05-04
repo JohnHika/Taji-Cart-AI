@@ -40,7 +40,6 @@ import SocialAuthSuccess from '../pages/SocialAuthSuccess'; // Import the Social
 import StaffPOS from '../pages/StaffPOS'; // Import POS component
 import POSDashboard from '../pages/POSDashboard'; // Import POS Dashboard component
 import POSSales from '../pages/POSSales';
-import HairQuiz from '../components/HairQuiz';
 import ShopTheLookGallery from '../components/ShopTheLookGallery';
 import GuestCheckout from '../pages/GuestCheckout';
 import GuestOrderTracking from '../pages/GuestOrderTracking';
@@ -72,7 +71,6 @@ import DashboardCart from '../pages/DashboardCart';
 import DashboardCheckout from '../pages/DashboardCheckout';
 import VerifyEmailPage from '../pages/VerifyEmailPage';
 import UserSettings from '../pages/UserSettings';
-import HairCareHub from '../pages/HairCareHub';
 
 function LegacyCheckoutRedirect() {
   const location = useLocation();
@@ -98,6 +96,8 @@ function isCategoryRoute(path) {
   // More lenient check for alphanumeric IDs at the end
   return /[a-f0-9]{12,}$/.test(path) || /-[a-f0-9]{12,}$/.test(path);
 }
+
+const isMongoObjectId = (value = '') => /^[a-f0-9]{24}$/i.test(value);
 
 // Get the current path
 const currentPath = window.location.pathname;
@@ -199,14 +199,6 @@ const router = createBrowserRouter([
         element: <CollectionsPage />
       },
       {
-        path: 'hair-care-hub',
-        element: <HairCareHub />
-      },
-      {
-        path: 'hair-quiz',
-        element: <RouteDebugger component={HairQuiz} routeName="Hair Quiz" />
-      },
-      {
         path: 'shop-the-look',
         element: <RouteDebugger component={ShopTheLookGallery} routeName="Shop the Look Gallery" />
       },
@@ -245,12 +237,24 @@ const router = createBrowserRouter([
       // Primary category pattern with name and ID
       {
         path: ':categoryName-:categoryId',
-        element: <RouteDebugger component={ProductListPage} routeName="Category by name-id" />
+        element: <RouteDebugger component={ProductListPage} routeName="Category by name-id" />,
+        loader: ({ params }) => {
+          if (!isMongoObjectId(params.categoryId)) {
+            throw new Response("Not Found", { status: 404 });
+          }
+          return null;
+        }
       },
       // Subcategory pattern
       {
         path: ':categoryName-:categoryId/:subcategoryName-:subcategoryId',
-        element: <RouteDebugger component={ProductListPage} routeName="Category with subcategory" />
+        element: <RouteDebugger component={ProductListPage} routeName="Category with subcategory" />,
+        loader: ({ params }) => {
+          if (!isMongoObjectId(params.categoryId) || !isMongoObjectId(params.subcategoryId)) {
+            throw new Response("Not Found", { status: 404 });
+          }
+          return null;
+        }
       },
       // Generic pattern for category routes with ObjectId-like IDs at the end (24 chars hex)
       // This should only match actual category slugs, not app routes like staff-pos
