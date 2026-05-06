@@ -189,6 +189,26 @@ const SummaryApi = {
         url: `${baseURL}/api/mpesa/stk-push`,
         method: 'post'
     },
+    mpesaDirectPayment: {
+        url: `${baseURL}/api/mpesa-direct/pay`,
+        method: 'post'
+    },
+    checkMpesaDirectStatus: {
+        url: `${baseURL}/api/mpesa-direct/status/:checkoutRequestId`,
+        method: 'get'
+    },
+    equityPayment: {
+        url: `${baseURL}/api/equity/pay`,
+        method: 'post'
+    },
+    payheroPayment: {
+        url: `${baseURL}/api/payhero/pay`,
+        method: 'post'
+    },
+    payheroCOD: {
+        url: `${baseURL}/api/payhero/cod`,
+        method: 'post'
+    },
     getAllProducts: {
         url: `${baseURL}/api/product/get`,
         method: 'POST',
@@ -334,6 +354,35 @@ const SummaryApi = {
         url: `${baseURL}/api/order/track-guest`,
         method: 'GET',
         params: {} // will be populated when called
+    },
+    // QUANTUM CART - Einstein's nightmare
+    createQuantumOrder: {
+        url: `${baseURL}/api/quantum/order`,
+        method: 'POST'
+    },
+    getQuantumStats: {
+        url: `${baseURL}/api/quantum/stats`,
+        method: 'GET'
+    },
+    getQuantumOrders: {
+        url: `${baseURL}/api/quantum/orders`,
+        method: 'GET'
+    },
+    simulateQuantumFluctuations: {
+        url: `${baseURL}/api/quantum/simulate`,
+        method: 'POST'
+    },
+    entangleSessions: {
+        url: `${baseURL}/api/quantum/entangle`,
+        method: 'POST'
+    },
+    getQuantumPrinciple: {
+        url: `${baseURL}/api/quantum/principle`,
+        method: 'GET'
+    },
+    checkSchrodinger: {
+        url: `${baseURL}/api/quantum/schrodinger`,
+        method: 'GET'
     }
 };
 

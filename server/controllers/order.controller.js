@@ -4,6 +4,8 @@ import sendEmail from "../config/sendEmail.js";
 import Stripe from "../config/stripe.js";
 import CartProductModel from "../models/cartproduct.model.js";
 import DeliveryPersonnelModel from "../models/deliverypersonnel.model.js"; // Add this import
+import DriverPerformanceModel from "../models/driverperformance.model.js";
+import DriverFinancialModel from "../models/driverfinancial.model.js";
 import LoyaltyCardModel from "../models/loyaltycard.model.js"; // Add this import
 import NotificationModel from "../models/notification.model.js"; // Add this import
 import OrderModel from "../models/order.model.js";
@@ -1029,9 +1031,18 @@ export async function updateOrderStatus(request, response) {
       // Implement product stock restoration logic here if needed
     }
     
-    // If order is delivered, mark delivery date
+    // If order is delivered, mark delivery date and update driver performance
     if (status === 'delivered') {
       order.deliveredAt = new Date();
+
+      // Update driver performance if this order has a delivery personnel assigned
+      if (order.deliveryPersonnel) {
+        try {
+          await updateDriverPerformanceOnDelivery(order, order.deliveryPersonnel);
+        } catch (performanceError) {
+          console.error("Error updating driver performance:", performanceError);
+        }
+      }
     }
     
     await order.save();
@@ -1984,3 +1995,75 @@ export const getAllPickupOrdersHistory = async (req, res) => {
     });
   }
 };
+
+// Helper function to update driver performance when delivery is completed
+async function updateDriverPerformanceOnDelivery(order, deliveryPersonnelId) {
+    try {
+        // Calculate delivery time (in minutes)
+        const createdAt = new Date(order.createdAt);
+        const deliveredAt = new Date(order.deliveredAt);
+        const deliveryTimeMinutes = Math.round((deliveredAt - createdAt) / (1000 * 60));
+
+        // Determine if delivery was on time (assuming 60 minutes is the target)
+        const isOnTime = deliveryTimeMinutes <= 60;
+
+        // Get or create performance record
+        let performance = await DriverPerformanceModel.findOne({ driverId: deliveryPersonnelId });
+        if (!performance) {
+            performance = new DriverPerformanceModel({ driverId: deliveryPersonnelId });
+        }
+
+        // Update metrics
+        performance.currentMetrics.successfulDeliveries += 1;
+
+        if (isOnTime) {
+            performance.currentMetrics.onTimeDeliveries += 1;
+        } else {
+            performance.currentMetrics.lateDeliveries += 1;
+        }
+
+        // Update delivery time average
+        const totalDeliveries = performance.currentMetrics.successfulDeliveries;
+        const currentAvgTime = performance.currentMetrics.averageDeliveryTime;
+        performance.currentMetrics.averageDeliveryTime =
+            ((currentAvgTime * (totalDeliveries - 1)) + deliveryTimeMinutes) / totalDeliveries;
+
+        // Calculate reliability score (0-100)
+        const onTimeRate = performance.currentMetrics.onTimeDeliveries / totalDeliveries;
+        performance.currentMetrics.reliabilityScore = Math.round(onTimeRate * 100);
+
+        // Update last performance update
+        performance.lastPerformanceUpdate = new Date();
+
+        await performance.save();
+
+        // Also add commission to financials
+        const driverPersonnel = await DeliveryPersonnelModel.findById(deliveryPersonnelId);
+        const commissionRate = driverPersonnel?.financials?.commissionRate || 10;
+        const deliveryFee = order.deliveryFee || 50; // Default delivery fee if not specified
+        const commissionAmount = (deliveryFee * commissionRate) / 100;
+
+        let financials = await DriverFinancialModel.findOne({ driverId: deliveryPersonnelId });
+        if (!financials) {
+            financials = new DriverFinancialModel({ driverId: deliveryPersonnelId });
+        }
+
+        financials.commissions.push({
+            orderId: order._id,
+            amount: commissionAmount,
+            rate: commissionRate,
+            date: new Date()
+        });
+
+        financials.earnings.total += commissionAmount;
+        financials.earnings.pending += commissionAmount;
+
+        await financials.save();
+
+        console.log(`Updated performance and financials for driver ${deliveryPersonnelId}`);
+
+    } catch (error) {
+        console.error('Error in updateDriverPerformanceOnDelivery:', error);
+        throw error;
+    }
+}

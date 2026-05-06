@@ -1,0 +1,18 @@
+{
+  "generatedAt": "2026-05-04T11:43:13.196Z",
+  "sheetName": "3RDMAY",
+  "totalSheetItems": 541,
+  "totalProductsInDb": 541,
+  "missingProducts": [],
+  "duplicateCanonicalProducts": [],
+  "stockMismatches": [],
+  "globalExactNameDuplicates": [],
+  "productsNotInSheet": [],
+  "summary": {
+    "missingProducts": 0,
+    "duplicateCanonicalProducts": 0,
+    "stockMismatches": 0,
+    "globalExactNameDuplicates": 0,
+    "productsNotInSheet": 0
+  }
+}

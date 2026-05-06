@@ -10,6 +10,7 @@ export const fetchCartItems = createAsyncThunk(
   async (_, { rejectWithValue }) => {
     try {
       const token = localStorage.getItem('accesstoken');
+      console.log('fetchCartItems - token exists:', !!token);
 
       // If user is logged in, fetch from server
       if (token) {
@@ -17,12 +18,14 @@ export const fetchCartItems = createAsyncThunk(
           url: `${baseURL}/api/cart/get`,
           method: 'GET'
         });
-
+        console.log('Server cart response:', response.data.data);
         return response.data.data || [];
       }
 
       // If guest, fetch from cookie
-      return getGuestCart();
+      const guestCart = getGuestCart();
+      console.log('Guest cart from cookie:', guestCart);
+      return guestCart;
     } catch (error) {
       const errorMsg = error.response?.data?.message || 'Failed to fetch cart items';
       toast.error(errorMsg);
@@ -110,10 +113,12 @@ const cartSlice = createSlice({
         state.loading = true;
       })
       .addCase(fetchCartItems.fulfilled, (state, action) => {
+        console.log('fetchCartItems.fulfilled - payload:', action.payload);
         state.loading = false;
         state.cart = action.payload;
       })
       .addCase(fetchCartItems.rejected, (state) => {
+        console.log('fetchCartItems.rejected');
         state.loading = false;
         state.cart = []; // Reset cart on error
       })

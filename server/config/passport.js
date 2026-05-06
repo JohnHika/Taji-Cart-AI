@@ -15,8 +15,9 @@ const SERVER_BASE_URL =
 const GOOGLE_CALLBACK_URL =
   process.env.GOOGLE_CALLBACK_URL || `${SERVER_BASE_URL}/api/auth/google/callback`;
 
-// Debug: Check if JWT_SECRET is loaded
-console.log('JWT_SECRET in passport config:', process.env.JWT_SECRET);
+if (!process.env.JWT_SECRET) {
+  console.warn('JWT_SECRET is not configured; passport JWT strategy will use fallback-secret.');
+}
 
 // JWT Strategy for authenticating API requests
 const jwtOptions = {

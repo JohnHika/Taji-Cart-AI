@@ -1,0 +1,483 @@
+- generic [active] [ref=e1]:
+  - generic:
+    - generic:
+      - link "Nenda kwenye maudhui makuu" [ref=e2] [cursor=pointer]
+      - link "Usaidizi wa zana za walio na matatizo ya kuona au kusikia" [ref=e3] [cursor=pointer]:
+        - /url: https://support.google.com/websearch/answer/181196?hl=sw-KE
+      - link "Maoni kuhusu ufikivu" [ref=e4] [cursor=pointer]
+  - generic [ref=e9]:
+    - search [ref=e10]:
+      - generic [ref=e13]:
+        - link "Nenda kwenye ukurasa wa kwanza wa Google" [ref=e14] [cursor=pointer]:
+          - /url: https://www.google.com/webhp?hl=sw&ictx=0&sa=X&ved=0ahUKEwiVipK2tJ-UAxWVN4YAHboAD7sQpYkNCAs
+          - img "Nenda kwenye ukurasa wa kwanza wa Google" [ref=e15]
+        - generic [ref=e20]:
+          - combobox "Tafuta" [ref=e23]: how to update yourself in a codebase to take your skills to the next level how to update yourself in a codebase to take your skills to the next level
+          - generic [ref=e24]:
+            - button "Futa" [ref=e26] [cursor=pointer]:
+              - img [ref=e28]
+            - generic [ref=e31]:
+              - button "Zana za kuingiza" [ref=e32] [cursor=pointer]:
+                - img [ref=e34]
+              - button "Tafuta kwa kutamka" [ref=e36] [cursor=pointer]:
+                - img [ref=e37]
+              - button "Tafuta kwa picha" [ref=e39] [cursor=pointer]:
+                - img [ref=e40]
+        - button "Tafuta" [ref=e42] [cursor=pointer]:
+          - img [ref=e45]
+    - generic [ref=e47]:
+      - button "Mipangilio" [ref=e49] [cursor=pointer]:
+        - img [ref=e52]
+      - generic [ref=e55]:
+        - button "Programu za Google" [ref=e57] [cursor=pointer]:
+          - img [ref=e58]
+        - link "Ingia" [ref=e62] [cursor=pointer]:
+          - /url: https://accounts.google.com/ServiceLogin?hl=sw&passive=true&continue=https://www.google.com/search%3Fq%3Dhow%2Bto%2Bupdate%2Byourself%2Bin%2Ba%2Bcodebase%2Bto%2Btake%2Byour%2Bskills%2Bto%2Bthe%2Bnext%2Blevel%26sei%3D3XL4aZLNHeyRruEPwMSeqQY&ec=futura_srp_og_si_72236_p
+  - generic [ref=e64]:
+    - navigation [ref=e70]:
+      - generic [ref=e76]:
+        - list [ref=e77]:
+          - listitem [ref=e78]:
+            - link "Modi ya AI" [ref=e81] [cursor=pointer]:
+              - /url: /search?q=how+to+update+yourself+in+a+codebase+to+take+your+skills+to+the+next+level&sca_esv=1432227f7e5641c8&udm=50&fbs=ADc_l-Yk1zBjq9gOlAW7i0Q0BWiACh_RlUHaUJtCLD8ezcqeF2YhkEiILMOWAVduanXrxhExb6PuWOJ_lyHA6Ktn9wFWUFy4mJ2whi8emQTJNvALl3aVhoo6bY_PgMx7EMMngkylMPjqJI2_8FH-Q0OvG5TcLCCWWeIJHWkMZoIeykSKa2X-apo1vDcrq-ycHJUeN4fnsTQy&aep=1&ntc=1&sa=X&ved=2ahUKEwiVipK2tJ-UAxWVN4YAHboAD7sQ2J8OegQIEBAD
+              - generic [ref=e84]: Modi ya AI
+          - listitem [ref=e85]:
+            - link "Zote" [disabled] [ref=e86]:
+              - generic [ref=e88]: Zote
+          - listitem [ref=e89]:
+            - link "Video fupi" [ref=e90] [cursor=pointer]:
+              - /url: /search?sca_esv=1432227f7e5641c8&udm=39&fbs=ADc_l-Yk1zBjq9gOlAW7i0Q0BWiACh_RlUHaUJtCLD8ezcqeF2YhkEiILMOWAVduanXrxhExb6PuWOJ_lyHA6Ktn9wFWUFy4mJ2whi8emQTJNvALl3aVhoo6bY_PgMx7EMMngkylMPjqJI2_8FH-Q0OvG5TcLCCWWeIJHWkMZoIeykSKa2X-apo1vDcrq-ycHJUeN4fnsTQy&q=how+to+update+yourself+in+a+codebase+to+take+your+skills+to+the+next+level&sa=X&ved=2ahUKEwiVipK2tJ-UAxWVN4YAHboAD7sQs6gLegQIFhAB
+              - generic [ref=e92]: Video fupi
+          - listitem [ref=e93]:
+            - link "Video" [ref=e94] [cursor=pointer]:
+              - /url: /search?sca_esv=1432227f7e5641c8&udm=7&fbs=ADc_l-Yk1zBjq9gOlAW7i0Q0BWiACh_RlUHaUJtCLD8ezcqeF2YhkEiILMOWAVduanXrxhExb6PuWOJ_lyHA6Ktn9wFWUFy4mJ2whi8emQTJNvALl3aVhoo6bY_PgMx7EMMngkylMPjqJI2_8FH-Q0OvG5TcLCCWWeIJHWkMZoIeykSKa2X-apo1vDcrq-ycHJUeN4fnsTQy&q=how+to+update+yourself+in+a+codebase+to+take+your+skills+to+the+next+level&sa=X&ved=2ahUKEwiVipK2tJ-UAxWVN4YAHboAD7sQtKgLegQIFRAB
+              - generic [ref=e96]: Video
+          - listitem [ref=e97]:
+            - link "Picha" [ref=e98] [cursor=pointer]:
+              - /url: /search?sca_esv=1432227f7e5641c8&udm=2&fbs=ADc_l-Yk1zBjq9gOlAW7i0Q0BWiACh_RlUHaUJtCLD8ezcqeF2YhkEiILMOWAVduanXrxhExb6PuWOJ_lyHA6Ktn9wFWUFy4mJ2whi8emQTJNvALl3aVhoo6bY_PgMx7EMMngkylMPjqJI2_8FH-Q0OvG5TcLCCWWeIJHWkMZoIeykSKa2X-apo1vDcrq-ycHJUeN4fnsTQy&q=how+to+update+yourself+in+a+codebase+to+take+your+skills+to+the+next+level&sa=X&ved=2ahUKEwiVipK2tJ-UAxWVN4YAHboAD7sQtKgLegQIFBAB
+              - generic [ref=e100]: Picha
+          - listitem [ref=e101]:
+            - link "Vitabu" [ref=e102] [cursor=pointer]:
+              - /url: /search?sca_esv=1432227f7e5641c8&q=how+to+update+yourself+in+a+codebase+to+take+your+skills+to+the+next+level&udm=36&source=lnms&fbs=ADc_l-Yk1zBjq9gOlAW7i0Q0BWiACh_RlUHaUJtCLD8ezcqeF2YhkEiILMOWAVduanXrxhExb6PuWOJ_lyHA6Ktn9wFWUFy4mJ2whi8emQTJNvALl3aVhoo6bY_PgMx7EMMngkylMPjqJI2_8FH-Q0OvG5TcLCCWWeIJHWkMZoIeykSKa2X-apo1vDcrq-ycHJUeN4fnsTQy&sa=X&ved=2ahUKEwiVipK2tJ-UAxWVN4YAHboAD7sQ0pQJegQIEhAB
+              - generic [ref=e104]: Vitabu
+          - listitem [ref=e105]:
+            - link "Wavuti" [ref=e106] [cursor=pointer]:
+              - /url: /search?sca_esv=1432227f7e5641c8&udm=web&fbs=ADc_l-Yk1zBjq9gOlAW7i0Q0BWiACh_RlUHaUJtCLD8ezcqeF2YhkEiILMOWAVduanXrxhExb6PuWOJ_lyHA6Ktn9wFWUFy4mJ2whi8emQTJNvALl3aVhoo6bY_PgMx7EMMngkylMPjqJI2_8FH-Q0OvG5TcLCCWWeIJHWkMZoIeykSKa2X-apo1vDcrq-ycHJUeN4fnsTQy&q=how+to+update+yourself+in+a+codebase+to+take+your+skills+to+the+next+level&sa=X&ved=2ahUKEwiVipK2tJ-UAxWVN4YAHboAD7sQs6gLegQIExAB
+              - generic [ref=e108]: Wavuti
+          - listitem [ref=e109]:
+            - button "Vichujio zaidi" [ref=e110] [cursor=pointer]:
+              - generic "Vichujio zaidi" [ref=e111]:
+                - generic [ref=e112]:
+                  - generic [ref=e113]: Mengineyo
+                  - img [ref=e115]
+        - button "Zana" [ref=e118] [cursor=pointer]:
+          - generic [ref=e120]:
+            - generic [ref=e121]: Zana
+            - img [ref=e123]
+    - heading "Matokeo ya Utafutaji" [level=1] [ref=e125]
+    - generic [ref=e131]:
+      - generic [ref=e132]: Looking for results in English?
+      - link [ref=e133] [cursor=pointer]:
+        - /url: "#"
+        - img [ref=e135]
+      - link "Change to English" [ref=e137] [cursor=pointer]:
+        - /url: /setprefs?sig=0_QJrYfi7JiKM_huf61VZFMMNFDV8%3D&source=en_ignored_notification&prev=https://www.google.com/search?q%3Dhow%2Bto%2Bupdate%2Byourself%2Bin%2Ba%2Bcodebase%2Bto%2Btake%2Byour%2Bskills%2Bto%2Bthe%2Bnext%2Blevel%26sei%3D3XL4aZLNHeyRruEPwMSeqQY&hl=en&sa=X&ved=2ahUKEwiVipK2tJ-UAxWVN4YAHboAD7sQhoQCKAF6BAgNEAQ
+      - link "Salia katika Kiswahili" [ref=e138] [cursor=pointer]:
+        - /url: "#"
+      - link "Mipangilio ya lugha" [ref=e140] [cursor=pointer]:
+        - /url: /preferences?lang=1&hl=sw-KE&sa=X&ved=2ahUKEwiVipK2tJ-UAxWVN4YAHboAD7sQiIQCKAN6BAgNEAY#languages
+    - generic [ref=e141]:
+      - generic [ref=e160]:
+        - heading "Inatafuta Inafikiria kwa muda zaidi" [level=2] [ref=e164]:
+          - generic [ref=e165]:
+            - generic [ref=e167]: Inatafuta
+            - generic [ref=e177]: Inafikiria kwa muda zaidi
+        - progressbar [ref=e179]
+      - main [ref=e221]:
+        - generic [ref=e225]:
+          - generic [ref=e229]:
+            - generic [ref=e231]:
+              - heading "Video" [level=2] [ref=e232]
+              - button "Kuhusu tokeo hili" [ref=e233] [cursor=pointer]:
+                - img [ref=e236]
+            - generic [ref=e239]:
+              - generic [ref=e245]:
+                - generic [ref=e246]:
+                  - generic [ref=e247]:
+                    - 'link "Level Up Your Coding Skills: How to Take Your Code to the ... YouTube CodeNoobs: Learn Programming with AI 19 Okt 2024" [ref=e249] [cursor=pointer]':
+                      - /url: https://www.youtube.com/watch?v=J7FR4xG2Vis
+                      - 'heading "Level Up Your Coding Skills: How to Take Your Code to the ... YouTube CodeNoobs: Learn Programming with AI 19 Okt 2024" [level=3] [ref=e250]':
+                        - generic [ref=e253]: "Level Up Your Coding Skills: How to Take Your Code to the ..."
+                        - generic [ref=e255]:
+                          - generic [ref=e256]:
+                            - text: YouTube
+                            - generic [ref=e257]: "· CodeNoobs: Learn Programming with AI"
+                          - generic [ref=e258]: 19 Okt 2024
+                    - generic:
+                      - generic:
+                        - generic:
+                          - generic:
+                            - generic:
+                              - text: YouTube
+                              - generic: "· CodeNoobs: Learn Programming with AI"
+                        - button "Kuhusu tokeo hili" [ref=e259] [cursor=pointer]:
+                          - img [ref=e262]
+                  - 'button "Level Up Your Coding Skills: How to Take Your Code to the ... ya CodeNoobs: Learn Programming with AI kwenye YouTube. Cheza kwenye Google. 48:29" [ref=e264] [cursor=pointer]':
+                    - generic [ref=e265]:
+                      - img [ref=e271]
+                      - generic [ref=e274]:
+                        - generic [ref=e275]: 48:29
+                        - img [ref=e278]
+                - button "Matukio 10 makuu katika video hii" [ref=e284] [cursor=pointer]:
+                  - generic [ref=e293]:
+                    - generic [ref=e296]: Matukio 10 makuu katika video hii
+                    - img [ref=e298]
+              - generic [ref=e305]:
+                - generic [ref=e306]:
+                  - generic [ref=e307]:
+                    - link "My Favorite Way to Learn a New Codebase YouTube ForrestKnight 4 Jun 2025" [ref=e309] [cursor=pointer]:
+                      - /url: https://www.youtube.com/watch?v=jqHXJ3O7WGw
+                      - heading "My Favorite Way to Learn a New Codebase YouTube ForrestKnight 4 Jun 2025" [level=3] [ref=e310]:
+                        - generic [ref=e313]: My Favorite Way to Learn a New Codebase
+                        - generic [ref=e315]:
+                          - generic [ref=e316]:
+                            - text: YouTube
+                            - generic [ref=e317]: · ForrestKnight
+                          - generic [ref=e318]: 4 Jun 2025
+                    - generic:
+                      - generic:
+                        - generic:
+                          - generic:
+                            - generic:
+                              - text: YouTube
+                              - generic: · ForrestKnight
+                        - button "Kuhusu tokeo hili" [ref=e319] [cursor=pointer]:
+                          - img [ref=e322]
+                  - button "My Favorite Way to Learn a New Codebase ya ForrestKnight kwenye YouTube. Cheza kwenye Google. 18:16" [ref=e324] [cursor=pointer]:
+                    - generic [ref=e325]:
+                      - img [ref=e331]
+                      - generic [ref=e334]:
+                        - generic [ref=e335]: 18:16
+                        - img [ref=e338]
+                - button "Matukio 22 makuu katika video hii" [ref=e344] [cursor=pointer]:
+                  - generic [ref=e353]:
+                    - generic [ref=e356]: Matukio 22 makuu katika video hii
+                    - img [ref=e358]
+              - generic [ref=e364]:
+                - generic [ref=e365]:
+                  - generic [ref=e366]:
+                    - link "I Stopped Writing Code - These 5 Skills Are All That Matter YouTube Dave Ebbelaar Mwezi 1 uliopita" [ref=e368] [cursor=pointer]:
+                      - /url: https://www.youtube.com/watch?v=mz73sVy6-X8
+                      - heading "I Stopped Writing Code - These 5 Skills Are All That Matter YouTube Dave Ebbelaar Mwezi 1 uliopita" [level=3] [ref=e369]:
+                        - generic [ref=e372]: I Stopped Writing Code - These 5 Skills Are All That Matter
+                        - generic [ref=e374]:
+                          - generic [ref=e375]:
+                            - text: YouTube
+                            - generic [ref=e376]: · Dave Ebbelaar
+                          - generic [ref=e377]: Mwezi 1 uliopita
+                    - generic:
+                      - generic:
+                        - generic:
+                          - generic:
+                            - generic:
+                              - text: YouTube
+                              - generic: · Dave Ebbelaar
+                        - button "Kuhusu tokeo hili" [ref=e378] [cursor=pointer]:
+                          - img [ref=e381]
+                  - button "I Stopped Writing Code - These 5 Skills Are All That Matter ya Dave Ebbelaar kwenye YouTube. Cheza kwenye Google. 10:30" [ref=e383] [cursor=pointer]:
+                    - generic [ref=e384]:
+                      - img [ref=e387]
+                      - generic [ref=e390]:
+                        - generic [ref=e391]: 10:30
+                        - img [ref=e394]
+                - button "Matukio 8 makuu katika video hii" [ref=e400] [cursor=pointer]:
+                  - generic [ref=e403]:
+                    - generic [ref=e406]: Matukio 8 makuu katika video hii
+                    - img [ref=e408]
+            - link "Tazama video zote" [ref=e412] [cursor=pointer]:
+              - /url: /search?sca_esv=1432227f7e5641c8&udm=7&q=how+to+update+yourself+in+a+codebase+to+take+your+skills+to+the+next+level&sa=X&ved=2ahUKEwiVipK2tJ-UAxWVN4YAHboAD7sQ8ccDKAJ6BAgaEAQ
+              - separator [ref=e413]
+              - generic [ref=e414]:
+                - generic [ref=e415]: Angalia yote
+                - img [ref=e417]
+          - generic [ref=e423]:
+            - heading "Maswali zaidi" [level=2] [ref=e425]
+            - generic [ref=e426]:
+              - button "What is the 80/20 rule in programming?" [ref=e432] [cursor=pointer]:
+                - generic [ref=e434]: What is the 80/20 rule in programming?
+                - img [ref=e437]
+              - button "What is the 40 20 40 rule in software engineering?" [ref=e446] [cursor=pointer]:
+                - generic [ref=e448]: What is the 40 20 40 rule in software engineering?
+                - img [ref=e451]
+              - button "Is Elon Musk a coder?" [ref=e460] [cursor=pointer]:
+                - generic [ref=e462]: Is Elon Musk a coder?
+                - img [ref=e465]
+              - button "What is L1, L2, L3, and L4 developer?" [ref=e474] [cursor=pointer]:
+                - generic [ref=e476]: What is L1, L2, L3, and L4 developer?
+                - img [ref=e479]
+          - generic [ref=e484]:
+            - heading "Web results" [level=2] [ref=e485]
+            - generic [ref=e486]:
+              - generic [ref=e489]:
+                - link "Make Your Codebase a Little Better Every Day Medium · Robert Chang Imependwa mara 2 · mwaka 1 uliopita" [ref=e491] [cursor=pointer]:
+                  - /url: https://medium.com/@rchang/make-your-codebase-a-little-better-every-day-3e158f917c26
+                  - heading "Make Your Codebase a Little Better Every Day" [level=3] [ref=e492]
+                  - generic [ref=e497]:
+                    - generic [ref=e499]: Medium · Robert Chang
+                    - generic [ref=e501]: Imependwa mara 2 · mwaka 1 uliopita
+                - button "Kuhusu tokeo hili" [ref=e502] [cursor=pointer]:
+                  - img [ref=e505]
+              - generic [ref=e509]:
+                - emphasis [ref=e510]: Here's a non-exhaustive list of actions starting today
+                - text: to make your codebase cleaner everyday, using strategic mindset.
+          - generic [ref=e514]:
+            - generic [ref=e517]:
+              - link "How did you take your programming skills to the next level? Quora Majibu 3 · miaka 7 iliyopita" [ref=e519] [cursor=pointer]:
+                - /url: https://www.quora.com/How-did-you-take-your-programming-skills-to-the-next-level
+                - heading "How did you take your programming skills to the next level?" [level=3] [ref=e520]
+                - generic [ref=e525]:
+                  - generic [ref=e527]: Quora
+                  - generic [ref=e529]: Majibu 3 · miaka 7 iliyopita
+              - button "Kuhusu tokeo hili" [ref=e530] [cursor=pointer]:
+                - img [ref=e533]
+            - generic [ref=e537]:
+              - emphasis [ref=e538]: Never limit yourself to one language
+              - text: . Keep learning multiple languages - one procedural, one object-oriented, one scripting, one functional, etc ...
+            - generic [ref=e543]:
+              - link "Majibu 3" [ref=e544] [cursor=pointer]:
+                - /url: https://www.quora.com/How-did-you-take-your-programming-skills-to-the-next-level?top_ans=85607551
+              - generic [ref=e545]: ·
+              - generic [ref=e546]: "Jibu bora:"
+              - generic [ref=e547]: I practiced like hell. TL;DR; When I joined college, my knowledge of programming and programming ...
+            - generic [ref=e550]:
+              - generic [ref=e551]:
+                - link "How to go about improving my software development ..." [ref=e554] [cursor=pointer]:
+                  - /url: https://www.quora.com/How-do-I-go-about-improving-my-software-development-skills-given-that-I-have-learnt-fairly-enough
+                  - generic [ref=e555]:
+                    - text: How to go about improving
+                    - emphasis [ref=e556]: my
+                    - text: software development ...
+                - generic [ref=e558]: Majibu 4
+                - generic [ref=e560]: 6 Ago 2014
+              - generic [ref=e561]:
+                - link "How to improve your coding skills - Quora" [ref=e564] [cursor=pointer]:
+                  - /url: https://www.quora.com/How-do-you-improve-your-coding-skills-1
+                  - generic [ref=e565]:
+                    - text: How to improve
+                    - emphasis [ref=e566]: your
+                    - text: coding
+                    - emphasis [ref=e567]: skills
+                    - text: "- Quora"
+                - generic [ref=e569]: Majibu 3
+                - generic [ref=e571]: 23 Des 2023
+              - link "Matokeo zaidi kutoka www.quora.com" [ref=e575] [cursor=pointer]:
+                - /url: /search?q=how+to+update+yourself+in+a+codebase+to+take+your+skills+to+the+next+level+site:www.quora.com&sca_esv=1432227f7e5641c8&sa=X&ved=2ahUKEwiVipK2tJ-UAxWVN4YAHboAD7sQrQIoAnoECEIQAw
+          - generic [ref=e579]:
+            - generic [ref=e582]:
+              - link "How to Take Your Coding Skills to the Next Level? wolfgang-ziegler.com https://wolfgang-ziegler.com › blog" [ref=e584] [cursor=pointer]:
+                - /url: https://wolfgang-ziegler.com/blog/how-to-take-your-coding-skills-to-the-next-level
+                - heading "How to Take Your Coding Skills to the Next Level?" [level=3] [ref=e585]
+                - generic [ref=e590]:
+                  - generic [ref=e592]: wolfgang-ziegler.com
+                  - generic [ref=e594]: https://wolfgang-ziegler.com › blog
+              - generic [ref=e595]:
+                - generic [ref=e596]: ·
+                - link "Tafsiri ukurasa huu" [ref=e597] [cursor=pointer]:
+                  - /url: https://wolfgang-ziegler.com/blog/how-to-take-your-coding-skills-to-the-next-level
+              - button "Kuhusu tokeo hili" [ref=e598] [cursor=pointer]:
+                - img [ref=e601]
+            - generic [ref=e604]:
+              - generic [ref=e605]: 25 Sep 2013 —
+              - generic [ref=e606]:
+                - text: So do whatever you can to sharpen your skills and get practice!
+                - emphasis [ref=e607]: Get involved, start your own projects, do open source work
+                - text: ", read and try to ..."
+            - generic [ref=e609]:
+              - text: "Haipo: yourself ‎| Tafuta ukitumia:"
+              - link "yourself" [ref=e610] [cursor=pointer]:
+                - /url: /search?sca_esv=1432227f7e5641c8&q=how+to+update+%22yourself%22+in+a+codebase+to+take+your+skills+to+the+next+level&sa=X&ved=2ahUKEwiVipK2tJ-UAxWVN4YAHboAD7sQ5t4CegQIWxAB
+          - generic [ref=e614]:
+            - generic [ref=e617]:
+              - link "How to get up to speed in a new codebase, fast DEV Community https://dev.to › kev_mcg › how-t..." [ref=e619] [cursor=pointer]:
+                - /url: https://dev.to/kev_mcg/how-to-get-up-to-speed-in-a-new-codebase-fast-31ep
+                - heading "How to get up to speed in a new codebase, fast" [level=3] [ref=e620]
+                - generic [ref=e625]:
+                  - generic [ref=e627]: DEV Community
+                  - generic [ref=e629]: https://dev.to › kev_mcg › how-t...
+              - generic [ref=e630]:
+                - generic [ref=e631]: ·
+                - link "Tafsiri ukurasa huu" [ref=e632] [cursor=pointer]:
+                  - /url: https://dev.to/kev_mcg/how-to-get-up-to-speed-in-a-new-codebase-fast-31ep
+              - button "Kuhusu tokeo hili" [ref=e633] [cursor=pointer]:
+                - img [ref=e636]
+            - generic [ref=e639]:
+              - generic [ref=e640]: 20 Feb 2023 —
+              - generic [ref=e641]:
+                - emphasis [ref=e642]: Look for common landmark types
+                - text: · Make a visual map · Leave only footprints · Use developer tools to scout · Make a campsite · By the way…
+          - generic [ref=e646]:
+            - generic [ref=e649]:
+              - 'link "How to revamp your codebase: a step-by-step guide LinkedIn · Sarthak Karandikar Majibu 70 na zaidi · miezi 11 iliyopita" [ref=e651] [cursor=pointer]':
+                - /url: https://www.linkedin.com/posts/sarthak-karandikar-0223b7228_how-to-revamp-your-entire-codebase-the-right-activity-7336321217747939329-gvkx
+                - 'heading "How to revamp your codebase: a step-by-step guide" [level=3] [ref=e652]'
+                - generic [ref=e657]:
+                  - generic [ref=e659]: LinkedIn · Sarthak Karandikar
+                  - generic [ref=e661]: Majibu 70 na zaidi · miezi 11 iliyopita
+              - button "Kuhusu tokeo hili" [ref=e662] [cursor=pointer]:
+                - img [ref=e665]
+            - generic [ref=e669]:
+              - emphasis [ref=e670]: Backup the Old Codebase
+              - text: ": Before diving into any major overhaul, safeguard your existing code. Use tools like Git for version control and backups ..."
+          - generic [ref=e674]:
+            - generic [ref=e677]:
+              - link "How to you guys sharpen your coding skills? Reddit · r/learnprogramming Maoni 20 na zaidi · mwaka 1 uliopita" [ref=e679] [cursor=pointer]:
+                - /url: https://www.reddit.com/r/learnprogramming/comments/1eduu58/how_to_you_guys_sharpen_your_coding_skills/
+                - heading "How to you guys sharpen your coding skills?" [level=3] [ref=e680]
+                - generic [ref=e685]:
+                  - generic [ref=e687]: Reddit · r/learnprogramming
+                  - generic [ref=e689]: Maoni 20 na zaidi · mwaka 1 uliopita
+              - button "Kuhusu tokeo hili" [ref=e690] [cursor=pointer]:
+                - img [ref=e693]
+            - generic [ref=e697]:
+              - emphasis [ref=e698]: Participate in weekly and bi-weekly coding contests
+              - text: to challenge yourself and gain experience. and finally Consistency is key, so make it a ...
+            - generic [ref=e703]:
+              - link "Majibu 28" [ref=e704] [cursor=pointer]:
+                - /url: https://www.reddit.com/r/learnprogramming/comments/1eduu58/how_to_you_guys_sharpen_your_coding_skills/lf9orf0/
+              - generic [ref=e705]: ·
+              - generic [ref=e706]: "Jibu bora:"
+              - generic [ref=e707]: This is probably not a useful answer, but the thing that has improved my skill the most ...
+            - generic [ref=e710]:
+              - generic [ref=e711]:
+                - link "How Do I Rebuild My Coding Skills After Relying ..." [ref=e714] [cursor=pointer]:
+                  - /url: https://www.reddit.com/r/learnprogramming/comments/1ieqbdv/how_do_i_rebuild_my_coding_skills_after_relying/
+                  - generic [ref=e715]:
+                    - text: How Do I Rebuild
+                    - emphasis [ref=e716]: My
+                    - text: Coding
+                    - emphasis [ref=e717]: Skills
+                    - text: After Relying ...
+                - generic [ref=e719]: Majibu 107
+                - generic [ref=e721]: 31 Jan 2025
+              - generic [ref=e722]:
+                - link "How can I take my programming to the next level ..." [ref=e725] [cursor=pointer]:
+                  - /url: https://www.reddit.com/r/learnpython/comments/iokfxn/how_can_i_take_my_programming_to_the_next_level/
+                  - generic [ref=e726]:
+                    - text: How can I
+                    - emphasis [ref=e727]: take my
+                    - text: programming to the
+                    - emphasis [ref=e728]: next level
+                    - text: ...
+                - generic [ref=e730]: Majibu 35
+                - generic [ref=e732]: 8 Sep 2020
+              - link "Matokeo zaidi kutoka www.reddit.com" [ref=e736] [cursor=pointer]:
+                - /url: /search?q=how+to+update+yourself+in+a+codebase+to+take+your+skills+to+the+next+level+site:www.reddit.com&sca_esv=1432227f7e5641c8&sa=X&ved=2ahUKEwiVipK2tJ-UAxWVN4YAHboAD7sQrQIoAnoECEUQAw
+          - generic [ref=e740]:
+            - generic [ref=e743]:
+              - link "How to Level Up Your Technical Skills in This AI Era Towards Data Science https://towardsdatascience.com › ..." [ref=e745] [cursor=pointer]:
+                - /url: https://towardsdatascience.com/how-to-level-up-your-technical-skills-in-this-ai-era/
+                - heading "How to Level Up Your Technical Skills in This AI Era" [level=3] [ref=e746]
+                - generic [ref=e751]:
+                  - generic [ref=e753]: Towards Data Science
+                  - generic [ref=e755]: https://towardsdatascience.com › ...
+              - generic [ref=e756]:
+                - generic [ref=e757]: ·
+                - link "Tafsiri ukurasa huu" [ref=e758] [cursor=pointer]:
+                  - /url: https://towardsdatascience.com/how-to-level-up-your-technical-skills-in-this-ai-era/
+              - button "Kuhusu tokeo hili" [ref=e759] [cursor=pointer]:
+                - img [ref=e762]
+            - generic [ref=e765]:
+              - generic [ref=e766]: 29 Apr 2025 —
+              - generic [ref=e767]:
+                - emphasis [ref=e768]: Set up your local environment
+                - text: . Fork the project, clone it locally, and get it running. Understand where logs are and how to test changes. Get a ...
+          - generic [ref=e772]:
+            - generic [ref=e775]:
+              - link "How can I grow as a software engineer and achieve my career ... Substack · Level Up Software Engineering 🚀 Kupendwa zaidi ya 10 · miaka 2 iliyopita" [ref=e777] [cursor=pointer]:
+                - /url: https://levelupsoftwareengineering.substack.com/p/how-can-i-grow-as-a-software-engineer-in-my-career
+                - heading "How can I grow as a software engineer and achieve my career ..." [level=3] [ref=e778]
+                - generic [ref=e783]:
+                  - generic [ref=e785]: Substack · Level Up Software Engineering 🚀
+                  - generic [ref=e787]: Kupendwa zaidi ya 10 · miaka 2 iliyopita
+              - button "Kuhusu tokeo hili" [ref=e788] [cursor=pointer]:
+                - img [ref=e791]
+            - generic [ref=e795]:
+              - emphasis [ref=e796]: Here are 7 things I've found that have been really helpful
+              - text: to level up my skills and grow rapidly to the next level in my career. 1. Study ...
+          - generic [ref=e800]:
+            - generic [ref=e803]:
+              - link "5 Practices to Improve Your Programming Skills Better Programming https://betterprogramming.pub › ..." [ref=e805] [cursor=pointer]:
+                - /url: https://betterprogramming.pub/5-practices-to-improve-your-programming-skills-e2ed9b8463db
+                - heading "5 Practices to Improve Your Programming Skills" [level=3] [ref=e806]
+                - generic [ref=e811]:
+                  - generic [ref=e813]: Better Programming
+                  - generic [ref=e815]: https://betterprogramming.pub › ...
+              - generic [ref=e816]:
+                - generic [ref=e817]: ·
+                - link "Tafsiri ukurasa huu" [ref=e818] [cursor=pointer]:
+                  - /url: https://betterprogramming.pub/5-practices-to-improve-your-programming-skills-e2ed9b8463db
+              - button "Kuhusu tokeo hili" [ref=e819] [cursor=pointer]:
+                - img [ref=e822]
+            - generic [ref=e825]:
+              - generic [ref=e826]: 18 Jun 2021 —
+              - generic [ref=e827]:
+                - text: 5 Practices to Improve Your Programming Skills.
+                - emphasis [ref=e828]: Starting programming is easy, but you need a lot more
+                - text: to get onto the next level.
+        - navigation [ref=e831]:
+          - heading "Usogezaji Kurasa" [level=1] [ref=e832]
+          - text: "1"
+          - link "Page 2" [ref=e835] [cursor=pointer]:
+            - /url: /search?q=how+to+update+yourself+in+a+codebase+to+take+your+skills+to+the+next+level&sca_esv=1432227f7e5641c8&ei=3nL4aZWjIpXvmLQPuoG82As&start=10&sa=N&sstk=Af77f_cm8BvUxj_3WlyIU2ltxe5FUkzYM07cV5Z4HUcZ9ZMkNFiUyr8zMlvYWW7412rI7wHnb_FWAW2lnXx2LsNwJl4hMekU_DJr9Q&ved=2ahUKEwiVipK2tJ-UAxWVN4YAHboAD7sQ8tMDegQIShAE
+            - text: "2"
+          - link "Page 3" [ref=e837] [cursor=pointer]:
+            - /url: /search?q=how+to+update+yourself+in+a+codebase+to+take+your+skills+to+the+next+level&sca_esv=1432227f7e5641c8&ei=3nL4aZWjIpXvmLQPuoG82As&start=20&sa=N&sstk=Af77f_cm8BvUxj_3WlyIU2ltxe5FUkzYM07cV5Z4HUcZ9ZMkNFiUyr8zMlvYWW7412rI7wHnb_FWAW2lnXx2LsNwJl4hMekU_DJr9Q&ved=2ahUKEwiVipK2tJ-UAxWVN4YAHboAD7sQ8tMDegQIShAG
+            - text: "3"
+          - link "Page 4" [ref=e839] [cursor=pointer]:
+            - /url: /search?q=how+to+update+yourself+in+a+codebase+to+take+your+skills+to+the+next+level&sca_esv=1432227f7e5641c8&ei=3nL4aZWjIpXvmLQPuoG82As&start=30&sa=N&sstk=Af77f_cm8BvUxj_3WlyIU2ltxe5FUkzYM07cV5Z4HUcZ9ZMkNFiUyr8zMlvYWW7412rI7wHnb_FWAW2lnXx2LsNwJl4hMekU_DJr9Q&ved=2ahUKEwiVipK2tJ-UAxWVN4YAHboAD7sQ8tMDegQIShAI
+            - text: "4"
+          - link "Page 5" [ref=e841] [cursor=pointer]:
+            - /url: /search?q=how+to+update+yourself+in+a+codebase+to+take+your+skills+to+the+next+level&sca_esv=1432227f7e5641c8&ei=3nL4aZWjIpXvmLQPuoG82As&start=40&sa=N&sstk=Af77f_cm8BvUxj_3WlyIU2ltxe5FUkzYM07cV5Z4HUcZ9ZMkNFiUyr8zMlvYWW7412rI7wHnb_FWAW2lnXx2LsNwJl4hMekU_DJr9Q&ved=2ahUKEwiVipK2tJ-UAxWVN4YAHboAD7sQ8tMDegQIShAK
+            - text: "5"
+          - link "Page 6" [ref=e843] [cursor=pointer]:
+            - /url: /search?q=how+to+update+yourself+in+a+codebase+to+take+your+skills+to+the+next+level&sca_esv=1432227f7e5641c8&ei=3nL4aZWjIpXvmLQPuoG82As&start=50&sa=N&sstk=Af77f_cm8BvUxj_3WlyIU2ltxe5FUkzYM07cV5Z4HUcZ9ZMkNFiUyr8zMlvYWW7412rI7wHnb_FWAW2lnXx2LsNwJl4hMekU_DJr9Q&ved=2ahUKEwiVipK2tJ-UAxWVN4YAHboAD7sQ8tMDegQIShAM
+            - text: "6"
+          - link "Page 7" [ref=e845] [cursor=pointer]:
+            - /url: /search?q=how+to+update+yourself+in+a+codebase+to+take+your+skills+to+the+next+level&sca_esv=1432227f7e5641c8&ei=3nL4aZWjIpXvmLQPuoG82As&start=60&sa=N&sstk=Af77f_cm8BvUxj_3WlyIU2ltxe5FUkzYM07cV5Z4HUcZ9ZMkNFiUyr8zMlvYWW7412rI7wHnb_FWAW2lnXx2LsNwJl4hMekU_DJr9Q&ved=2ahUKEwiVipK2tJ-UAxWVN4YAHboAD7sQ8tMDegQIShAO
+            - text: "7"
+          - link "Page 8" [ref=e847] [cursor=pointer]:
+            - /url: /search?q=how+to+update+yourself+in+a+codebase+to+take+your+skills+to+the+next+level&sca_esv=1432227f7e5641c8&ei=3nL4aZWjIpXvmLQPuoG82As&start=70&sa=N&sstk=Af77f_cm8BvUxj_3WlyIU2ltxe5FUkzYM07cV5Z4HUcZ9ZMkNFiUyr8zMlvYWW7412rI7wHnb_FWAW2lnXx2LsNwJl4hMekU_DJr9Q&ved=2ahUKEwiVipK2tJ-UAxWVN4YAHboAD7sQ8tMDegQIShAQ
+            - text: "8"
+          - link "Page 9" [ref=e849] [cursor=pointer]:
+            - /url: /search?q=how+to+update+yourself+in+a+codebase+to+take+your+skills+to+the+next+level&sca_esv=1432227f7e5641c8&ei=3nL4aZWjIpXvmLQPuoG82As&start=80&sa=N&sstk=Af77f_cm8BvUxj_3WlyIU2ltxe5FUkzYM07cV5Z4HUcZ9ZMkNFiUyr8zMlvYWW7412rI7wHnb_FWAW2lnXx2LsNwJl4hMekU_DJr9Q&ved=2ahUKEwiVipK2tJ-UAxWVN4YAHboAD7sQ8tMDegQIShAS
+            - text: "9"
+          - link "Page 10" [ref=e851] [cursor=pointer]:
+            - /url: /search?q=how+to+update+yourself+in+a+codebase+to+take+your+skills+to+the+next+level&sca_esv=1432227f7e5641c8&ei=3nL4aZWjIpXvmLQPuoG82As&start=90&sa=N&sstk=Af77f_cm8BvUxj_3WlyIU2ltxe5FUkzYM07cV5Z4HUcZ9ZMkNFiUyr8zMlvYWW7412rI7wHnb_FWAW2lnXx2LsNwJl4hMekU_DJr9Q&ved=2ahUKEwiVipK2tJ-UAxWVN4YAHboAD7sQ8tMDegQIShAU
+            - text: "10"
+          - heading "Mbele" [level=2] [ref=e853]:
+            - link "Mbele" [ref=e854] [cursor=pointer]:
+              - /url: /search?q=how+to+update+yourself+in+a+codebase+to+take+your+skills+to+the+next+level&sca_esv=1432227f7e5641c8&ei=3nL4aZWjIpXvmLQPuoG82As&start=10&sa=N&sstk=Af77f_cm8BvUxj_3WlyIU2ltxe5FUkzYM07cV5Z4HUcZ9ZMkNFiUyr8zMlvYWW7412rI7wHnb_FWAW2lnXx2LsNwJl4hMekU_DJr9Q&ved=2ahUKEwiVipK2tJ-UAxWVN4YAHboAD7sQ8NMDegQIShAW
+              - generic [ref=e856]: Mbele
+        - navigation
+    - contentinfo [ref=e857]:
+      - heading "Viungo vya Kijachini" [level=1] [ref=e858]
+      - generic [ref=e862]:
+        - generic [ref=e864]:
+          - text: Kenya
+          - generic [ref=e866]:
+            - button "Embakasi, Nairobi - Kutoka kwenye Anwani yako ya IP" [ref=e868] [cursor=pointer]:
+              - generic [ref=e869]: Embakasi, Nairobi
+              - generic [ref=e871]:
+                - text: "-"
+                - generic [ref=e872]: Kutoka kwenye Anwani yako ya IP
+            - text: "-"
+            - button "Sasisha eneo" [ref=e874] [cursor=pointer]: Sasisha eneo
+        - generic [ref=e877]:
+          - link "Usaidizi" [ref=e878] [cursor=pointer]:
+            - /url: https://support.google.com/websearch/?p=ws_results_help&hl=sw-KE&fg=1
+          - link "Tuma maoni" [ref=e879] [cursor=pointer]:
+            - /url: "#"
+          - link "Faragha" [ref=e880] [cursor=pointer]:
+            - /url: https://policies.google.com/privacy?hl=sw-KE&fg=1
+          - link "Masharti" [ref=e881] [cursor=pointer]:
+            - /url: https://policies.google.com/terms?hl=sw-KE&fg=1

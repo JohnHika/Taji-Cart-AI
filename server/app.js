@@ -16,10 +16,18 @@ import categoryRouter from './route/category.route.js';
 import chatRoutes from './route/chat.route.js';
 import campaignRouter from './route/communitycampaign.routes.js';
 import deliveryRoutes from './route/delivery.route.js';
+import driverVerificationRoutes from './route/driverVerification.route.js';
+import driverFinancialRoutes from './route/driverFinancial.route.js';
+import driverPerformanceRoutes from './route/driverPerformance.route.js';
 import loyaltyRouter from './route/loyalty.routes.js';
 import mpesaRouter from './route/mpesa.route.js';
+import mpesaDirectRouter from './route/mpesaDirect.route.js';
+import mpesaPayoutRouter from './route/mpesaPayout.route.js';
+import routeOptimizationRouter from './route/routeOptimization.route.js';
 import orderRouter from './route/order.route.js';
 import pesapalRouter from './route/pesapal.route.js';
+import equityRouter from './route/equity.route.js';
+import payheroRouter from './route/payhero.route.js';
 import productRouter from './route/product.route.js';
 import stripeRouter from './route/stripe.route.js';
 import subCategoryRouter from './route/subCategory.route.js';
@@ -78,7 +86,7 @@ if (FRONTEND_URL && !allowedOrigins.includes(FRONTEND_URL)) {
 app.use(cors({
     credentials: true,
     origin: (origin, callback) => {
-        if (!origin) return callback(null, true);
+        if (!origin) return callback(null, true); // Allow file:// and curl requests
         if (allowedOrigins.includes(origin)) return callback(null, true);
         // Allow all Vercel preview deployments for this project
         if (origin.match(/^https:\/\/nawiri-hair.*\.vercel\.app$/)) return callback(null, true);
@@ -132,12 +140,20 @@ app.use('/api/stripe', stripeRouter);
 app.use('/api/pesapal', pesapalRouter);
 app.post('/api/init-pesapal', auth, pesapalInitiate);
 app.use('/api/mpesa', mpesaRouter);
+app.use('/api/mpesa-direct', mpesaDirectRouter);
+app.use('/api/mpesa-payouts', mpesaPayoutRouter);
+app.use('/api/route-optimization', routeOptimizationRouter);
+app.use('/api/equity', equityRouter);
+app.use('/api/payhero', payheroRouter);
 app.use('/api/chat', chatRoutes);
 app.use('/api/loyalty', loyaltyRouter);
 app.use('/api', campaignRouter);
 app.use('/api/tracking', trackingRouter);
 app.use('/api/pos', posRouter);
 app.use('/api/delivery', deliveryRoutes);
+app.use('/api/driver-verification', driverVerificationRoutes);
+app.use('/api/driver-financials', driverFinancialRoutes);
+app.use('/api/driver-performance', driverPerformanceRoutes);
 
 // ── Admin loyalty routes ─────────────────────────────────────────────────────
 app.get('/api/admin/loyalty/cards', auth, admin, getLoyaltyCards);
