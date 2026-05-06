@@ -1,4 +1,4 @@
-# Taji Cart AI
+# Nawiri Hari
 
 Full-stack e-commerce and retail platform with an AI-assisted shopping experience. It combines a React storefront, a Node.js API, MongoDB, real-time features, and optional Python-based recommendations.
 
