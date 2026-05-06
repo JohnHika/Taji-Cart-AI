@@ -1,37 +1,70 @@
-import axios from 'axios';
 import React, { useCallback, useEffect, useState } from 'react';
 import { BiTargetLock } from 'react-icons/bi';
 import { FaBoxOpen, FaCalculator, FaCalendarCheck, FaCheck, FaClock, FaMapMarkerAlt, FaRedo, FaShoppingCart, FaTruck, FaUserCircle } from 'react-icons/fa';
 import { HiOutlineStatusOnline } from 'react-icons/hi';
 import { useSelector } from 'react-redux';
 import { Link } from 'react-router-dom';
-import { buildApiUrl } from '../../common/apiBaseUrl';
+import Axios from '../../utils/Axios';
+
+const defaultDashboardData = {
+  counts: {
+    pendingOrders: 0,
+    dispatchedOrders: 0,
+    activeDeliveries: 0,
+    completedToday: 0,
+    availableDrivers: 0,
+    totalDrivers: 0
+  },
+  recentOrders: [],
+  activeDrivers: [],
+  deliveryPerformance: {
+    avgDeliveryTime: 0,
+    deliveriesLast7Days: 0,
+    dailyStats: []
+  },
+  lastUpdated: new Date()
+};
+
+const getStoredAccessToken = () =>
+  sessionStorage.getItem('accesstoken') ||
+  localStorage.getItem('accesstoken') ||
+  sessionStorage.getItem('token') ||
+  localStorage.getItem('token');
+
+const hasStoredSession = () =>
+  Boolean(
+    getStoredAccessToken() ||
+    sessionStorage.getItem('refreshToken') ||
+    localStorage.getItem('refreshToken')
+  );
+
+const normalizeDashboardData = (data = {}) => ({
+  ...defaultDashboardData,
+  ...data,
+  counts: {
+    ...defaultDashboardData.counts,
+    ...(data.counts || {})
+  },
+  recentOrders: Array.isArray(data.recentOrders) ? data.recentOrders : [],
+  activeDrivers: Array.isArray(data.activeDrivers) ? data.activeDrivers : [],
+  deliveryPerformance: {
+    ...defaultDashboardData.deliveryPerformance,
+    ...(data.deliveryPerformance || {}),
+    dailyStats: Array.isArray(data.deliveryPerformance?.dailyStats)
+      ? data.deliveryPerformance.dailyStats
+      : []
+  },
+  lastUpdated: data.lastUpdated || new Date()
+});
 
 // Dashboard component for staff members
 const Dashboard = () => {
   const user = useSelector((state) => state.user);
   
   // State management for dashboard data
-  const [dashboardData, setDashboardData] = useState({
-    counts: {
-      pendingOrders: 0,
-      dispatchedOrders: 0,
-      activeDeliveries: 0,
-      completedToday: 0,
-      availableDrivers: 0,
-      totalDrivers: 0
-    },
-    recentOrders: [],
-    activeDrivers: [],
-    deliveryPerformance: {
-      avgDeliveryTime: 0,
-      deliveriesLast7Days: 0,
-      dailyStats: []
-    }
-  });
+  const [dashboardData, setDashboardData] = useState(defaultDashboardData);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [refreshInterval, setRefreshInterval] = useState(null);
   const [showDriversMap, setShowDriversMap] = useState(false);
   
   // Colors for visual elements
@@ -42,23 +75,43 @@ const Dashboard = () => {
     try {
       setLoading(true);
       setError(null);
-      
-      const token = localStorage.getItem('token') || sessionStorage.getItem('token');
-      const response = await axios.get(
-        buildApiUrl('/api/delivery/dashboard-stats'),
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      
-      if (response.data.success) {
-        setDashboardData(response.data.data);
+
+      if (!hasStoredSession()) {
+        setError('Authentication required. Please login to access the dashboard.');
+        return;
       }
-      
-      setLoading(false);
+
+      const response = await Axios({
+        url: '/api/delivery/dashboard-stats',
+        method: 'GET'
+      });
+
+      if (response.data?.success) {
+        setDashboardData(normalizeDashboardData(response.data.data));
+      } else {
+        setError(response.data?.message || 'Failed to load dashboard data. Server returned an error.');
+      }
     } catch (error) {
-      console.error("Error fetching dashboard data:", error);
-      setError("Failed to load dashboard data. Please try again later.");
-      setLoading(false);
-      
+      console.error('Error fetching dashboard data:', error);
+
+      let errorMessage = 'Failed to load dashboard data. Please try again later.';
+
+      if (error.response) {
+        if (error.response.status === 401) {
+          errorMessage = 'Session expired. Please login again to access the dashboard.';
+        } else if (error.response.status === 403) {
+          errorMessage = "Access denied. You don't have permission to view this dashboard.";
+        } else if (error.response.status === 404) {
+          errorMessage = 'Dashboard endpoint not found. Please contact support.';
+        } else if (error.response.status >= 500) {
+          errorMessage = 'Server error. Please try again later or contact support.';
+        }
+      } else if (error.request) {
+        errorMessage = 'Network error. Please check your internet connection.';
+      }
+
+      setError(errorMessage);
+
       // Use placeholder data for development if API fails
       if (import.meta.env.DEV) {
         setDashboardData({
@@ -95,6 +148,8 @@ const Dashboard = () => {
           lastUpdated: new Date()
         });
       }
+    } finally {
+      setLoading(false);
     }
   }, []);
 
@@ -107,13 +162,10 @@ const Dashboard = () => {
     const interval = setInterval(() => {
       fetchDashboardData();
     }, 30000);
-    
-    setRefreshInterval(interval);
-    
+
     // Clean up interval on unmount
     return () => {
-      if (refreshInterval) clearInterval(refreshInterval);
-      if (interval) clearInterval(interval);
+      clearInterval(interval);
     };
   }, [fetchDashboardData]);
   

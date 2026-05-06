@@ -1,4 +1,4 @@
-name: Deploy Taji-Cart-AI
+name: Deploy Nawiri Hari
 
 on:
   push:
@@ -121,7 +121,7 @@ jobs:
         context: ./server
         file: ./server/Dockerfile
         push: true
-        tags: ${{ secrets.DOCKER_USERNAME }}/taji-cart-backend:latest
+        tags: ${{ secrets.DOCKER_USERNAME }}/nawiri-hari-backend:latest
       if: ${{ secrets.DOCKER_USERNAME }}
     
     - name: Build and push Frontend Docker image
@@ -130,5 +130,5 @@ jobs:
         context: ./client
         file: ./client/Dockerfile
         push: true
-        tags: ${{ secrets.DOCKER_USERNAME }}/taji-cart-frontend:latest
+        tags: ${{ secrets.DOCKER_USERNAME }}/nawiri-hari-frontend:latest
       if: ${{ secrets.DOCKER_USERNAME }}
