@@ -3,8 +3,16 @@ import { IoSearchOutline } from "react-icons/io5"
 import SummaryApi from '../common/SummaryApi'
 import Loading from '../components/Loading'
 import ProductCardAdmin from '../components/ProductCardAdmin'
+import ExportButton from '../components/ExportButton'
 import Axios from '../utils/Axios'
 import AxiosToastError from '../utils/AxiosToastError'
+import {
+  exportToExcel,
+  exportToCSV,
+  exportToPDF,
+  exportToWord,
+  exportToJSON
+} from '../utils/exportUtils'
 
 const ProductAdmin = () => {
   const [productData,setProductData] = useState([])
@@ -60,6 +68,52 @@ const ProductAdmin = () => {
     setPage(1)
   }
 
+  const handleExport = (format) => {
+    // Prepare data for export - flatten the product data
+    const exportData = productData.map(product => ({
+      name: product.name || '',
+      sku: product.sku || '',
+      handle: product.handle || '',
+      barcode: product.barcode || '',
+      qrCode: product.qrCode || '',
+      price: product.price || 0,
+      costPrice: product.costPrice || 0,
+      discount: product.discount || 0,
+      stock: product.stock || 0,
+      unit: product.unit || '',
+      description: product.description || '',
+      category: product.category?.map(cat => cat?.name || '').join(', ') || '',
+      variants: product.variants ? `
+        Color: ${product.variants.color || 'N/A'}
+        Length: ${product.variants.length || 'N/A'}
+        Density: ${product.variants.density || 'N/A'}
+        Lace: ${product.variants.laceSpecification || 'N/A'}
+      ` : '',
+      createdAt: product.createdAt ? new Date(product.createdAt).toLocaleString() : '',
+      updatedAt: product.updatedAt ? new Date(product.updatedAt).toLocaleString() : ''
+    }));
+
+    switch (format) {
+      case 'excel':
+        exportToExcel(exportData, 'taji-cart-products');
+        break;
+      case 'pdf':
+        exportToPDF(exportData, 'taji-cart-products');
+        break;
+      case 'word':
+        exportToWord(exportData, 'taji-cart-products');
+        break;
+      case 'csv':
+        exportToCSV(exportData, 'taji-cart-products');
+        break;
+      case 'json':
+        exportToJSON(exportData, 'taji-cart-products');
+        break;
+      default:
+        break;
+    }
+  };
+
   useEffect(()=>{
     let flag = true 
 
@@ -79,14 +133,20 @@ const ProductAdmin = () => {
     <section className='min-h-screen dark:bg-dm-surface'>
         <div className='p-2 bg-white dark:bg-dm-card border-b border-brown-100 dark:border-dm-border shadow-md flex items-center justify-between gap-4'>
                 <h2 className='font-semibold dark:text-white'>Product</h2>
-                <div className='h-full min-w-24 max-w-56 w-full ml-auto bg-plum-50 dark:bg-dm-card-2 px-4 flex items-center gap-3 py-2 rounded border focus-within:border-plum-500 dark:border-dm-border dark:focus-within:border-plum-400'>
-                  <IoSearchOutline size={25} className="dark:text-white/55"/>
-                  <input
-                    type='text'
-                    placeholder='Search product here ...' 
-                    className='h-full w-full outline-none bg-transparent dark:text-white placeholder:text-brown-300 dark:placeholder:text-white/30'
-                    value={search}
-                    onChange={handleOnChange}
+                <div className='flex items-center gap-4'>
+                  <div className='h-full min-w-24 max-w-56 w-full bg-plum-50 dark:bg-dm-card-2 px-4 flex items-center gap-3 py-2 rounded border focus-within:border-plum-500 dark:border-dm-border dark:focus-within:border-plum-400'>
+                    <IoSearchOutline size={25} className="dark:text-white/55"/>
+                    <input
+                      type='text'
+                      placeholder='Search product here ...'
+                      className='h-full w-full outline-none bg-transparent dark:text-white placeholder:text-brown-300 dark:placeholder:text-white/30'
+                      value={search}
+                      onChange={handleOnChange}
+                    />
+                  </div>
+                  <ExportButton
+                    data={productData}
+                    onExport={handleExport}
                   />
                 </div>
         </div>

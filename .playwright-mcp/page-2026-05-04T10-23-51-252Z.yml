@@ -1,0 +1,497 @@
+- generic [active] [ref=e1]:
+  - generic:
+    - generic:
+      - link "Nenda kwenye maudhui makuu" [ref=e2] [cursor=pointer]
+      - link "Usaidizi wa zana za walio na matatizo ya kuona au kusikia" [ref=e3] [cursor=pointer]:
+        - /url: https://support.google.com/websearch/answer/181196?hl=sw-KE
+      - link "Maoni kuhusu ufikivu" [ref=e4] [cursor=pointer]
+  - generic [ref=e9]:
+    - search [ref=e10]:
+      - generic [ref=e13]:
+        - link "Nenda kwenye ukurasa wa kwanza wa Google" [ref=e14] [cursor=pointer]:
+          - /url: https://www.google.com/webhp?hl=sw&ictx=0&sa=X&ved=0ahUKEwjrnLectZ-UAxUwiSsGHS2bFAkQpYkNCAs
+          - img "Nenda kwenye ukurasa wa kwanza wa Google" [ref=e15]
+        - generic [ref=e20]:
+          - combobox "Tafuta" [ref=e23]: how to improve axon code assistant how to improve axon code assistant
+          - generic [ref=e24]:
+            - button "Futa" [ref=e26] [cursor=pointer]:
+              - img [ref=e28]
+            - generic [ref=e31]:
+              - button "Zana za kuingiza" [ref=e32] [cursor=pointer]:
+                - img [ref=e34]
+              - button "Tafuta kwa kutamka" [ref=e36] [cursor=pointer]:
+                - img [ref=e37]
+              - button "Tafuta kwa picha" [ref=e39] [cursor=pointer]:
+                - img [ref=e40]
+        - button "Tafuta" [ref=e42] [cursor=pointer]:
+          - img [ref=e45]
+    - generic [ref=e47]:
+      - button "Mipangilio" [ref=e49] [cursor=pointer]:
+        - img [ref=e52]
+      - generic [ref=e55]:
+        - button "Programu za Google" [ref=e57] [cursor=pointer]:
+          - img [ref=e58]
+        - link "Ingia" [ref=e62] [cursor=pointer]:
+          - /url: https://accounts.google.com/ServiceLogin?hl=sw&passive=true&continue=https://www.google.com/search%3Fq%3Dhow%2Bto%2Bimprove%2Baxon%2Bcode%2Bassistant&ec=futura_srp_og_si_72236_p
+  - generic [ref=e64]:
+    - navigation [ref=e70]:
+      - generic [ref=e76]:
+        - list [ref=e77]:
+          - listitem [ref=e78]:
+            - link "Modi ya AI" [ref=e81] [cursor=pointer]:
+              - /url: /search?q=how+to+improve+axon+code+assistant&sca_esv=1432227f7e5641c8&udm=50&fbs=ADc_l-bWMklbPI68dI9kMP7N-Y1P99BqXKJrnO50U0XmsYpUTtRQ9a8OJz5unoVk-3tP5NZhG3N70XeOd-jLAuvhWdi4UyR0H0PwGo9yxSDj6B95aNw4MJfzJm8XRd63e1tYmCAFomzdembqXud_5_7KxNtXq18D0xvhl-zN_ewgrPEGy5te-p8&aep=1&ntc=1&sa=X&ved=2ahUKEwjrnLectZ-UAxUwiSsGHS2bFAkQ2J8OegQIDhAD
+              - generic [ref=e84]: Modi ya AI
+          - listitem [ref=e85]:
+            - link "Zote" [disabled] [ref=e86]:
+              - generic [ref=e88]: Zote
+          - listitem [ref=e89]:
+            - link "Video" [ref=e90] [cursor=pointer]:
+              - /url: /search?sca_esv=1432227f7e5641c8&udm=7&fbs=ADc_l-bWMklbPI68dI9kMP7N-Y1P99BqXKJrnO50U0XmsYpUTtRQ9a8OJz5unoVk-3tP5NZhG3N70XeOd-jLAuvhWdi4UyR0H0PwGo9yxSDj6B95aNw4MJfzJm8XRd63e1tYmCAFomzdembqXud_5_7KxNtXq18D0xvhl-zN_ewgrPEGy5te-p8&q=how+to+improve+axon+code+assistant&sa=X&ved=2ahUKEwjrnLectZ-UAxUwiSsGHS2bFAkQtKgLegQIEhAB
+              - generic [ref=e92]: Video
+          - listitem [ref=e93]:
+            - link "Picha" [ref=e94] [cursor=pointer]:
+              - /url: /search?sca_esv=1432227f7e5641c8&udm=2&fbs=ADc_l-bWMklbPI68dI9kMP7N-Y1P99BqXKJrnO50U0XmsYpUTtRQ9a8OJz5unoVk-3tP5NZhG3N70XeOd-jLAuvhWdi4UyR0H0PwGo9yxSDj6B95aNw4MJfzJm8XRd63e1tYmCAFomzdembqXud_5_7KxNtXq18D0xvhl-zN_ewgrPEGy5te-p8&q=how+to+improve+axon+code+assistant&sa=X&ved=2ahUKEwjrnLectZ-UAxUwiSsGHS2bFAkQtKgLegQIERAB
+              - generic [ref=e96]: Picha
+          - listitem [ref=e97]:
+            - link "Video fupi" [ref=e98] [cursor=pointer]:
+              - /url: /search?sca_esv=1432227f7e5641c8&udm=39&fbs=ADc_l-bWMklbPI68dI9kMP7N-Y1P99BqXKJrnO50U0XmsYpUTtRQ9a8OJz5unoVk-3tP5NZhG3N70XeOd-jLAuvhWdi4UyR0H0PwGo9yxSDj6B95aNw4MJfzJm8XRd63e1tYmCAFomzdembqXud_5_7KxNtXq18D0xvhl-zN_ewgrPEGy5te-p8&q=how+to+improve+axon+code+assistant&sa=X&ved=2ahUKEwjrnLectZ-UAxUwiSsGHS2bFAkQs6gLegQIExAB
+              - generic [ref=e100]: Video fupi
+          - listitem [ref=e101]:
+            - link "Vitabu" [ref=e102] [cursor=pointer]:
+              - /url: /search?sca_esv=1432227f7e5641c8&q=how+to+improve+axon+code+assistant&udm=36&source=lnms&fbs=ADc_l-bWMklbPI68dI9kMP7N-Y1P99BqXKJrnO50U0XmsYpUTtRQ9a8OJz5unoVk-3tP5NZhG3N70XeOd-jLAuvhWdi4UyR0H0PwGo9yxSDj6B95aNw4MJfzJm8XRd63e1tYmCAFomzdembqXud_5_7KxNtXq18D0xvhl-zN_ewgrPEGy5te-p8&sa=X&ved=2ahUKEwjrnLectZ-UAxUwiSsGHS2bFAkQ0pQJegQIFRAB
+              - generic [ref=e104]: Vitabu
+          - listitem [ref=e105]:
+            - link "Wavuti" [ref=e106] [cursor=pointer]:
+              - /url: /search?sca_esv=1432227f7e5641c8&udm=web&fbs=ADc_l-bWMklbPI68dI9kMP7N-Y1P99BqXKJrnO50U0XmsYpUTtRQ9a8OJz5unoVk-3tP5NZhG3N70XeOd-jLAuvhWdi4UyR0H0PwGo9yxSDj6B95aNw4MJfzJm8XRd63e1tYmCAFomzdembqXud_5_7KxNtXq18D0xvhl-zN_ewgrPEGy5te-p8&q=how+to+improve+axon+code+assistant&sa=X&ved=2ahUKEwjrnLectZ-UAxUwiSsGHS2bFAkQs6gLegQIFBAB
+              - generic [ref=e108]: Wavuti
+          - listitem [ref=e109]:
+            - button "Vichujio zaidi" [ref=e110] [cursor=pointer]:
+              - generic "Vichujio zaidi" [ref=e111]:
+                - generic [ref=e112]:
+                  - generic [ref=e113]: Mengineyo
+                  - img [ref=e115]
+        - button "Zana" [ref=e118] [cursor=pointer]:
+          - generic [ref=e120]:
+            - generic [ref=e121]: Zana
+            - img [ref=e123]
+    - heading "Matokeo ya Utafutaji" [level=1] [ref=e125]
+    - generic [ref=e131]:
+      - generic [ref=e132]: Looking for results in English?
+      - link [ref=e133] [cursor=pointer]:
+        - /url: "#"
+        - img [ref=e135]
+      - link "Change to English" [ref=e137] [cursor=pointer]:
+        - /url: /setprefs?sig=0_QJrYfi7JiKM_huf61VZFMMNFDV8%3D&source=en_ignored_notification&prev=https://www.google.com/search?q%3Dhow%2Bto%2Bimprove%2Baxon%2Bcode%2Bassistant&hl=en&sa=X&ved=2ahUKEwjrnLectZ-UAxUwiSsGHS2bFAkQhoQCKAF6BAgNEAQ
+      - link "Salia katika Kiswahili" [ref=e138] [cursor=pointer]:
+        - /url: "#"
+      - link "Mipangilio ya lugha" [ref=e140] [cursor=pointer]:
+        - /url: /preferences?lang=1&hl=sw-KE&sa=X&ved=2ahUKEwjrnLectZ-UAxUwiSsGHS2bFAkQiIQCKAN6BAgNEAY#languages
+    - generic [ref=e141]:
+      - generic [ref=e160]:
+        - generic [ref=e163]:
+          - generic [ref=e165]:
+            - generic [ref=e167]:
+              - generic [ref=e168]:
+                - img [ref=e169]
+                - heading "Muhtasari wa AI" [level=2] [ref=e171]
+              - button "Kuhusu tokeo hili" [ref=e175]:
+                - img [ref=e177]
+            - generic [ref=e202]:
+              - generic [ref=e203]:
+                - text: Improving the
+                - link "Orbital AI Coding Agent (formerly Axon Code)" [ref=e205] [cursor=pointer]:
+                  - /url: https://open-vsx.org/extension/matterai/axon-code/changes
+                - text: involves maximizing its context awareness, utilizing its autonomous agent capabilities, and refining prompt engineering. As of early 2026, the tool (found on
+                - link "VS Code Marketplace" [ref=e207] [cursor=pointer]:
+                  - /url: https://marketplace.visualstudio.com/items?itemName=MatterAI.axon-code
+                - text: ) has been updated for enhanced context-awareness and better handling of large codebases through
+                - link "semantic indexing" [ref=e209] [cursor=pointer]:
+                  - /url: https://www.linkedin.com/posts/harshkedia17_i-just-open-sourced-a-tool-ive-been-building-activity-7430895155584602112-GyS0
+                - text: .
+                - button "Angalia viungo vinavyohusiana" [disabled] [ref=e212]:
+                  - img [ref=e214]
+              - generic [ref=e216]: "Here are specific ways to improve the performance of the Axon/Orbital code assistant:"
+              - heading "1. Maximize Context Awareness" [level=3] [ref=e218]
+              - list [ref=e220]:
+                - listitem [ref=e221]:
+                  - generic [ref=e222]:
+                    - strong [ref=e223]: "Use \"Agent Mode\" for Complex Tasks:"
+                    - text: Instead of simple auto-complete, enable
+                    - link "Agent Mode" [ref=e225] [cursor=pointer]:
+                      - /url: https://www.matterai.so/axon-vscode
+                    - text: to allow the assistant to make autonomous, multi-step decisions and operate on multiple files.
+                  - generic [ref=e227]:
+                    - link "MatterAI - Angalia viungo vinavyohusiana" [ref=e228] [cursor=pointer]:
+                      - /url: https://www.matterai.so/axon-vscode
+                    - button "MatterAI - Angalia viungo vinavyohusiana" [disabled] [ref=e229]:
+                      - generic [ref=e232]: MatterAI
+                - listitem [ref=e233]:
+                  - generic [ref=e234]:
+                    - strong [ref=e235]: "Enable Comprehensive Indexing:"
+                    - text: Ensure the assistant has indexed your entire project. This enables it to understand connections between functions, paths, and arguments across the repository rather than just the currently open file.
+                  - generic [ref=e237]:
+                    - link "MatterAI (+1) - Angalia viungo vinavyohusiana" [ref=e238] [cursor=pointer]:
+                      - /url: https://www.matterai.so/axon-vscode
+                    - button "MatterAI (+1) - Angalia viungo vinavyohusiana" [disabled] [ref=e239]:
+                      - generic [ref=e241]:
+                        - generic [ref=e242]: MatterAI
+                        - generic [ref=e243]: "+1"
+                - listitem [ref=e244]:
+                  - generic [ref=e245]:
+                    - strong [ref=e246]: "Utilize \"Plan Mode\":"
+                    - text: Before asking for code generation, use Plan Mode to generate a strategic plan. This improves architecture decisions and reduces the "loop of despair" where the AI suggests multiple failing solutions.
+                  - generic [ref=e248]:
+                    - link "MatterAI (+1) - Angalia viungo vinavyohusiana" [ref=e249] [cursor=pointer]:
+                      - /url: https://www.matterai.so/axon-vscode
+                    - button "MatterAI (+1) - Angalia viungo vinavyohusiana" [disabled] [ref=e250]:
+                      - generic [ref=e252]:
+                        - generic [ref=e253]: MatterAI
+                        - generic [ref=e254]: "+1"
+          - progressbar [ref=e260]
+        - button "Onyesha Muhtasari zaidi wa AI" [ref=e284]:
+          - generic [ref=e286] [cursor=pointer]:
+            - generic [ref=e287]: Onyesha zaidi
+            - img [ref=e289]
+      - main [ref=e292]:
+        - generic [ref=e296]:
+          - generic [ref=e300]:
+            - generic [ref=e302]:
+              - heading "Video" [level=2] [ref=e303]
+              - button "Kuhusu tokeo hili" [ref=e304] [cursor=pointer]:
+                - img [ref=e307]
+            - generic [ref=e310]:
+              - generic [ref=e316]:
+                - generic [ref=e317]:
+                  - link "Build Your First Axon Framework 5 App – Live with Mitchell ... YouTube Axoniq Mwezi 1 uliopita" [ref=e319] [cursor=pointer]:
+                    - /url: https://www.youtube.com/watch?v=e-KuCG2i-dU
+                    - heading "Build Your First Axon Framework 5 App – Live with Mitchell ... YouTube Axoniq Mwezi 1 uliopita" [level=3] [ref=e320]:
+                      - generic [ref=e323]: Build Your First Axon Framework 5 App – Live with Mitchell ...
+                      - generic [ref=e325]:
+                        - generic [ref=e326]:
+                          - text: YouTube
+                          - generic [ref=e327]: · Axoniq
+                        - generic [ref=e328]: Mwezi 1 uliopita
+                  - generic:
+                    - generic:
+                      - generic:
+                        - generic:
+                          - generic:
+                            - text: YouTube
+                            - generic: · Axoniq
+                      - button "Kuhusu tokeo hili" [ref=e329] [cursor=pointer]:
+                        - img [ref=e332]
+                - button "Build Your First Axon Framework 5 App – Live with Mitchell ... ya Axoniq kwenye YouTube. Cheza kwenye Google. 55:48" [ref=e334] [cursor=pointer]:
+                  - generic [ref=e335]:
+                    - img [ref=e338]
+                    - generic [ref=e341]:
+                      - generic [ref=e342]: 55:48
+                      - img [ref=e345]
+              - generic [ref=e352]:
+                - generic [ref=e353]:
+                  - link "AI Fixes My Code Better than Me Now?! (Here's How) YouTube Cole Medin 20 Nov 2025" [ref=e355] [cursor=pointer]:
+                    - /url: https://www.youtube.com/watch?v=d40gE6bKxPk
+                    - heading "AI Fixes My Code Better than Me Now?! (Here's How) YouTube Cole Medin 20 Nov 2025" [level=3] [ref=e356]:
+                      - generic [ref=e359]: AI Fixes My Code Better than Me Now?! (Here's How)
+                      - generic [ref=e361]:
+                        - generic [ref=e362]:
+                          - text: YouTube
+                          - generic [ref=e363]: · Cole Medin
+                        - generic [ref=e364]: 20 Nov 2025
+                  - generic:
+                    - generic:
+                      - generic:
+                        - generic:
+                          - generic:
+                            - text: YouTube
+                            - generic: · Cole Medin
+                      - button "Kuhusu tokeo hili" [ref=e365] [cursor=pointer]:
+                        - img [ref=e368]
+                - button "AI Fixes My Code Better than Me Now?! (Here's How) ya Cole Medin kwenye YouTube. Cheza kwenye Google. 12:52" [ref=e370] [cursor=pointer]:
+                  - generic [ref=e371]:
+                    - img [ref=e374]
+                    - generic [ref=e377]:
+                      - generic [ref=e378]: 12:52
+                      - img [ref=e381]
+              - generic [ref=e389]:
+                - generic [ref=e390]:
+                  - link "Code 100x Faster with AI, Here's How (No Hype, FULL Process) YouTube Cole Medin 31 Mac 2025" [ref=e392] [cursor=pointer]:
+                    - /url: https://www.youtube.com/watch?v=SS5DYx6mPw8
+                    - heading "Code 100x Faster with AI, Here's How (No Hype, FULL Process) YouTube Cole Medin 31 Mac 2025" [level=3] [ref=e393]:
+                      - generic [ref=e396]: Code 100x Faster with AI, Here's How (No Hype, FULL Process)
+                      - generic [ref=e398]:
+                        - generic [ref=e399]:
+                          - text: YouTube
+                          - generic [ref=e400]: · Cole Medin
+                        - generic [ref=e401]: 31 Mac 2025
+                  - generic:
+                    - generic:
+                      - generic:
+                        - generic:
+                          - generic:
+                            - text: YouTube
+                            - generic: · Cole Medin
+                      - button "Kuhusu tokeo hili" [ref=e402] [cursor=pointer]:
+                        - img [ref=e405]
+                - button "Code 100x Faster with AI, Here's How (No Hype, FULL Process) ya Cole Medin kwenye YouTube. Cheza kwenye Google. 32:09" [ref=e407] [cursor=pointer]:
+                  - generic [ref=e408]:
+                    - img [ref=e414]
+                    - generic [ref=e417]:
+                      - generic [ref=e418]: 32:09
+                      - img [ref=e421]
+            - link "Tazama video zote" [ref=e425] [cursor=pointer]:
+              - /url: /search?sca_esv=1432227f7e5641c8&udm=7&q=how+to+improve+axon+code+assistant&sa=X&ved=2ahUKEwjrnLectZ-UAxUwiSsGHS2bFAkQ8ccDKAJ6BAgaEAQ
+              - separator [ref=e426]
+              - generic [ref=e427]:
+                - generic [ref=e428]: Angalia yote
+                - img [ref=e430]
+          - generic [ref=e436]:
+            - heading "Maswali zaidi" [level=2] [ref=e438]
+            - generic [ref=e439]:
+              - button "How to increase the performance of code?" [ref=e445] [cursor=pointer]:
+                - generic [ref=e447]: How to increase the performance of code?
+                - img [ref=e450]
+              - button "Can ChatGPT optimize code?" [ref=e459] [cursor=pointer]:
+                - generic [ref=e461]: Can ChatGPT optimize code?
+                - img [ref=e464]
+              - button "How to build a code assistant?" [ref=e473] [cursor=pointer]:
+                - generic [ref=e475]: How to build a code assistant?
+                - img [ref=e478]
+              - button "How can I improve my code?" [ref=e487] [cursor=pointer]:
+                - generic [ref=e489]: How can I improve my code?
+                - img [ref=e492]
+          - generic [ref=e497]:
+            - heading "Web results" [level=2] [ref=e498]
+            - generic [ref=e499]:
+              - generic [ref=e502]:
+                - link "Codebase Knowledge Graph for AI Coding Agents LinkedIn · Harsh Kedia Majibu 320 na zaidi · miezi 2 iliyopita" [ref=e504] [cursor=pointer]:
+                  - /url: https://www.linkedin.com/posts/harshkedia17_i-just-open-sourced-a-tool-ive-been-building-activity-7430895155584602112-GyS0
+                  - heading "Codebase Knowledge Graph for AI Coding Agents" [level=3] [ref=e505]
+                  - generic [ref=e510]:
+                    - generic [ref=e512]: LinkedIn · Harsh Kedia
+                    - generic [ref=e514]: Majibu 320 na zaidi · miezi 2 iliyopita
+                - button "Kuhusu tokeo hili" [ref=e515] [cursor=pointer]:
+                  - img [ref=e518]
+              - generic [ref=e522]:
+                - emphasis [ref=e523]: Axon
+                - text: fixes this. It indexes your entire codebase into a knowledge graph - every function, class, import, call chain, type reference, and ...
+          - generic [ref=e527]:
+            - generic [ref=e530]:
+              - link "Axon Framework - DDD, CQRS and Event Sourcing, all in ... Axoniq https://www.axoniq.io › axon-fram..." [ref=e532] [cursor=pointer]:
+                - /url: https://www.axoniq.io/axon-framework
+                - heading "Axon Framework - DDD, CQRS and Event Sourcing, all in ..." [level=3] [ref=e533]
+                - generic [ref=e538]:
+                  - generic [ref=e540]: Axoniq
+                  - generic [ref=e542]: https://www.axoniq.io › axon-fram...
+              - generic [ref=e543]:
+                - generic [ref=e544]: ·
+                - link "Tafsiri ukurasa huu" [ref=e545] [cursor=pointer]:
+                  - /url: https://www.axoniq.io/axon-framework
+              - button "Kuhusu tokeo hili" [ref=e546] [cursor=pointer]:
+                - img [ref=e549]
+            - generic [ref=e553]:
+              - text: With over 70M downloads,
+              - emphasis [ref=e554]: Axon
+              - text: Framework is the most widely adopted open-source Java toolkit for building event-driven systems using CQRS and event sourcing.
+          - generic [ref=e558]:
+            - generic [ref=e561]:
+              - link "Axon AI Era Plan MyAxon https://my.axon.com › product-ax..." [ref=e563] [cursor=pointer]:
+                - /url: https://my.axon.com/s/product-axon-ai-era-plan?language=th
+                - heading "Axon AI Era Plan" [level=3] [ref=e564]
+                - generic [ref=e569]:
+                  - generic [ref=e571]: MyAxon
+                  - generic [ref=e573]: https://my.axon.com › product-ax...
+              - generic [ref=e574]:
+                - generic [ref=e575]: ·
+                - link "Tafsiri ukurasa huu" [ref=e576] [cursor=pointer]:
+                  - /url: https://my.axon.com/s/product-axon-ai-era-plan?language=th
+              - button "Kuhusu tokeo hili" [ref=e577] [cursor=pointer]:
+                - img [ref=e580]
+            - generic [ref=e584]:
+              - emphasis [ref=e585]: Axon Assistant
+              - text: . Voice-activated AI companion available via
+              - emphasis [ref=e586]: Axon
+              - text: Body 4 with Real-Time Translation. Other skills, including General Q&A, voice access to ...
+          - generic [ref=e590]:
+            - generic [ref=e593]:
+              - link "Axon framework Expert Help Online (April 2026) Codementor https://www.codementor.io › axo..." [ref=e595] [cursor=pointer]:
+                - /url: https://www.codementor.io/axon-framework-experts
+                - heading "Axon framework Expert Help Online (April 2026)" [level=3] [ref=e596]
+                - generic [ref=e601]:
+                  - generic [ref=e603]: Codementor
+                  - generic [ref=e605]: https://www.codementor.io › axo...
+              - generic [ref=e606]:
+                - generic [ref=e607]: ·
+                - link "Tafsiri ukurasa huu" [ref=e608] [cursor=pointer]:
+                  - /url: https://www.codementor.io/axon-framework-experts
+              - button "Kuhusu tokeo hili" [ref=e609] [cursor=pointer]:
+                - img [ref=e612]
+            - generic [ref=e616]:
+              - emphasis [ref=e617]: Get Online Axon framework Expert Help in 6 Minutes
+              - text: . Codementor is a leading on-demand mentorship platform, offering help from top Axon framework experts.
+          - generic [ref=e621]:
+            - generic [ref=e624]:
+              - link "ali-kamali/Axon.MCP.Server GitHub https://github.com › ali-kamali › A..." [ref=e626] [cursor=pointer]:
+                - /url: https://github.com/ali-kamali/Axon.MCP.Server
+                - heading "ali-kamali/Axon.MCP.Server" [level=3] [ref=e627]
+                - generic [ref=e632]:
+                  - generic [ref=e634]: GitHub
+                  - generic [ref=e636]: https://github.com › ali-kamali › A...
+              - generic [ref=e637]:
+                - generic [ref=e638]: ·
+                - link "Tafsiri ukurasa huu" [ref=e639] [cursor=pointer]:
+                  - /url: https://github.com/ali-kamali/Axon.MCP.Server
+              - button "Kuhusu tokeo hili" [ref=e640] [cursor=pointer]:
+                - img [ref=e643]
+            - generic [ref=e647]:
+              - emphasis [ref=e648]: Transform your codebase into an intelligent knowledge base
+              - text: for AI-powered development with Cursor IDE, Google AntiGravity, and MCP-enabled assistants ...
+          - generic [ref=e652]:
+            - generic [ref=e655]:
+              - link "Orbital AI Coding Agent | AI Code Reviews Open VSX https://open-vsx.org › axon-code" [ref=e657] [cursor=pointer]:
+                - /url: https://open-vsx.org/extension/matterai/axon-code
+                - heading "Orbital AI Coding Agent | AI Code Reviews" [level=3] [ref=e658]
+                - generic [ref=e663]:
+                  - generic [ref=e665]: Open VSX
+                  - generic [ref=e667]: https://open-vsx.org › axon-code
+              - generic [ref=e668]:
+                - generic [ref=e669]: ·
+                - link "Tafsiri ukurasa huu" [ref=e670] [cursor=pointer]:
+                  - /url: https://open-vsx.org/extension/matterai/axon-code
+              - button "Kuhusu tokeo hili" [ref=e671] [cursor=pointer]:
+                - img [ref=e674]
+            - generic [ref=e678]:
+              - text: Install the extension for your preferred IDE ; Sign in with your MatterAI account ; Select your preferred model from settings ; Start coding with AI
+              - emphasis [ref=e679]: assistance
+              - text: ...
+          - generic [ref=e683]:
+            - generic [ref=e686]:
+              - link "3 recommendations to improve productivity with Gen AI ... Medium · Babak Hosseinzadeh miezi 9 iliyopita" [ref=e688] [cursor=pointer]:
+                - /url: https://medium.com/@babakhoss/3-recommendations-to-improve-productivity-with-gen-ai-code-assistants-f495b043c122
+                - heading "3 recommendations to improve productivity with Gen AI ..." [level=3] [ref=e689]
+                - generic [ref=e694]:
+                  - generic [ref=e696]: Medium · Babak Hosseinzadeh
+                  - generic [ref=e698]: miezi 9 iliyopita
+              - button "Kuhusu tokeo hili" [ref=e699] [cursor=pointer]:
+                - img [ref=e702]
+            - generic [ref=e706]:
+              - text: ✓ The more context you provide, the
+              - emphasis [ref=e707]: better
+              - text: the
+              - emphasis [ref=e708]: assistants
+              - text: perform. 2. Review the generated
+              - emphasis [ref=e709]: code
+              - text: carefully BEFORE accepting. Models &
+              - emphasis [ref=e710]: Code
+              - text: ...
+            - generic [ref=e712]:
+              - text: "Haipo: axon ‎| Tafuta ukitumia:"
+              - link "axon" [ref=e713] [cursor=pointer]:
+                - /url: /search?sca_esv=1432227f7e5641c8&q=how+to+improve+%22axon%22+code+assistant&sa=X&ved=2ahUKEwjrnLectZ-UAxUwiSsGHS2bFAkQ5t4CegQIRBAB
+          - generic [ref=e717]:
+            - generic [ref=e720]:
+              - link "The Saga of understanding how to apply Axon Stack Overflow Majibu 2 · miaka 4 iliyopita" [ref=e722] [cursor=pointer]:
+                - /url: https://stackoverflow.com/questions/69624709/the-saga-of-understanding-how-to-apply-axon
+                - heading "The Saga of understanding how to apply Axon" [level=3] [ref=e723]
+                - generic [ref=e728]:
+                  - generic [ref=e730]: Stack Overflow
+                  - generic [ref=e732]: Majibu 2 · miaka 4 iliyopita
+              - button "Kuhusu tokeo hili" [ref=e733] [cursor=pointer]:
+                - img [ref=e736]
+            - generic [ref=e739]: I know what Saga means conceptually and what it solves. What I'm unable to understand from the documentation is how to apply that concept using Axon's ...
+            - generic [ref=e744]:
+              - link "Majibu 2" [ref=e745] [cursor=pointer]:
+                - /url: https://stackoverflow.com/a/69626515
+              - generic [ref=e746]: ·
+              - generic [ref=e747]: "Jibu bora:"
+              - generic [ref=e748]: I wrote this blog about Saga's with code samples I hope this helps you to get started.
+          - generic [ref=e752]:
+            - generic [ref=e755]:
+              - 'link "Axon from the trenches: how to keep your code compatible ... Trifork Amsterdam https://trifork.nl › blog › axon-fr..." [ref=e757] [cursor=pointer]':
+                - /url: https://trifork.nl/blog/axon-from-the-trenches-how-to-keep-your-code-compatible-with-legacy-events-and-sagas/
+                - 'heading "Axon from the trenches: how to keep your code compatible ..." [level=3] [ref=e758]'
+                - generic [ref=e763]:
+                  - generic [ref=e765]: Trifork Amsterdam
+                  - generic [ref=e767]: https://trifork.nl › blog › axon-fr...
+              - generic [ref=e768]:
+                - generic [ref=e769]: ·
+                - link "Tafsiri ukurasa huu" [ref=e770] [cursor=pointer]:
+                  - /url: https://trifork.nl/blog/axon-from-the-trenches-how-to-keep-your-code-compatible-with-legacy-events-and-sagas/
+              - button "Kuhusu tokeo hili" [ref=e771] [cursor=pointer]:
+                - img [ref=e774]
+            - generic [ref=e777]:
+              - generic [ref=e778]: 8 Jun 2015 —
+              - generic [ref=e779]:
+                - text: These small compatibility issues are usually solved by using
+                - emphasis [ref=e780]: Upcasters
+                - text: ", classes that convert the payload of older events to their state-of-the-art counterpart."
+        - generic [ref=e782]:
+          - generic [ref=e787]:
+            - heading "Watu pia wanatafuta" [level=2] [ref=e789]
+            - generic [ref=e791]:
+              - link "Axon-code intelligence" [ref=e796] [cursor=pointer]:
+                - /url: /search?sca_esv=1432227f7e5641c8&q=Axon-code+intelligence&sa=X&ved=2ahUKEwjrnLectZ-UAxUwiSsGHS2bFAkQ1QJ6BAhIEAE
+                - generic [ref=e797]:
+                  - generic [ref=e802]: Axon-code intelligence
+                  - img [ref=e806]
+              - link "Axon cli" [ref=e812] [cursor=pointer]:
+                - /url: /search?sca_esv=1432227f7e5641c8&q=Axon+cli&sa=X&ved=2ahUKEwjrnLectZ-UAxUwiSsGHS2bFAkQ1QJ6BAhHEAE
+                - generic [ref=e813]:
+                  - generic [ref=e818]: Axon cli
+                  - img [ref=e822]
+          - navigation [ref=e824]:
+            - heading "Usogezaji Kurasa" [level=1] [ref=e825]
+            - text: "1"
+            - link "Page 2" [ref=e828] [cursor=pointer]:
+              - /url: /search?q=how+to+improve+axon+code+assistant&sca_esv=1432227f7e5641c8&ei=tXP4aavuBLCSruEPrbbSSA&start=10&sa=N&sstk=Af77f_fVh3cFtFtzjG3O0f-vWfmwj5pB1oC1ZNJl2OabbJC8r_lTkWSRRSbtxZj8VUcrZIkBqPWTnORQp5YZi7OFxAV-UWMZbD8Cbw&ved=2ahUKEwjrnLectZ-UAxUwiSsGHS2bFAkQ8tMDegQIRRAE
+              - text: "2"
+            - link "Page 3" [ref=e830] [cursor=pointer]:
+              - /url: /search?q=how+to+improve+axon+code+assistant&sca_esv=1432227f7e5641c8&ei=tXP4aavuBLCSruEPrbbSSA&start=20&sa=N&sstk=Af77f_fVh3cFtFtzjG3O0f-vWfmwj5pB1oC1ZNJl2OabbJC8r_lTkWSRRSbtxZj8VUcrZIkBqPWTnORQp5YZi7OFxAV-UWMZbD8Cbw&ved=2ahUKEwjrnLectZ-UAxUwiSsGHS2bFAkQ8tMDegQIRRAG
+              - text: "3"
+            - link "Page 4" [ref=e832] [cursor=pointer]:
+              - /url: /search?q=how+to+improve+axon+code+assistant&sca_esv=1432227f7e5641c8&ei=tXP4aavuBLCSruEPrbbSSA&start=30&sa=N&sstk=Af77f_fVh3cFtFtzjG3O0f-vWfmwj5pB1oC1ZNJl2OabbJC8r_lTkWSRRSbtxZj8VUcrZIkBqPWTnORQp5YZi7OFxAV-UWMZbD8Cbw&ved=2ahUKEwjrnLectZ-UAxUwiSsGHS2bFAkQ8tMDegQIRRAI
+              - text: "4"
+            - link "Page 5" [ref=e834] [cursor=pointer]:
+              - /url: /search?q=how+to+improve+axon+code+assistant&sca_esv=1432227f7e5641c8&ei=tXP4aavuBLCSruEPrbbSSA&start=40&sa=N&sstk=Af77f_fVh3cFtFtzjG3O0f-vWfmwj5pB1oC1ZNJl2OabbJC8r_lTkWSRRSbtxZj8VUcrZIkBqPWTnORQp5YZi7OFxAV-UWMZbD8Cbw&ved=2ahUKEwjrnLectZ-UAxUwiSsGHS2bFAkQ8tMDegQIRRAK
+              - text: "5"
+            - link "Page 6" [ref=e836] [cursor=pointer]:
+              - /url: /search?q=how+to+improve+axon+code+assistant&sca_esv=1432227f7e5641c8&ei=tXP4aavuBLCSruEPrbbSSA&start=50&sa=N&sstk=Af77f_fVh3cFtFtzjG3O0f-vWfmwj5pB1oC1ZNJl2OabbJC8r_lTkWSRRSbtxZj8VUcrZIkBqPWTnORQp5YZi7OFxAV-UWMZbD8Cbw&ved=2ahUKEwjrnLectZ-UAxUwiSsGHS2bFAkQ8tMDegQIRRAM
+              - text: "6"
+            - link "Page 7" [ref=e838] [cursor=pointer]:
+              - /url: /search?q=how+to+improve+axon+code+assistant&sca_esv=1432227f7e5641c8&ei=tXP4aavuBLCSruEPrbbSSA&start=60&sa=N&sstk=Af77f_fVh3cFtFtzjG3O0f-vWfmwj5pB1oC1ZNJl2OabbJC8r_lTkWSRRSbtxZj8VUcrZIkBqPWTnORQp5YZi7OFxAV-UWMZbD8Cbw&ved=2ahUKEwjrnLectZ-UAxUwiSsGHS2bFAkQ8tMDegQIRRAO
+              - text: "7"
+            - link "Page 8" [ref=e840] [cursor=pointer]:
+              - /url: /search?q=how+to+improve+axon+code+assistant&sca_esv=1432227f7e5641c8&ei=tXP4aavuBLCSruEPrbbSSA&start=70&sa=N&sstk=Af77f_fVh3cFtFtzjG3O0f-vWfmwj5pB1oC1ZNJl2OabbJC8r_lTkWSRRSbtxZj8VUcrZIkBqPWTnORQp5YZi7OFxAV-UWMZbD8Cbw&ved=2ahUKEwjrnLectZ-UAxUwiSsGHS2bFAkQ8tMDegQIRRAQ
+              - text: "8"
+            - link "Page 9" [ref=e842] [cursor=pointer]:
+              - /url: /search?q=how+to+improve+axon+code+assistant&sca_esv=1432227f7e5641c8&ei=tXP4aavuBLCSruEPrbbSSA&start=80&sa=N&sstk=Af77f_fVh3cFtFtzjG3O0f-vWfmwj5pB1oC1ZNJl2OabbJC8r_lTkWSRRSbtxZj8VUcrZIkBqPWTnORQp5YZi7OFxAV-UWMZbD8Cbw&ved=2ahUKEwjrnLectZ-UAxUwiSsGHS2bFAkQ8tMDegQIRRAS
+              - text: "9"
+            - link "Page 10" [ref=e844] [cursor=pointer]:
+              - /url: /search?q=how+to+improve+axon+code+assistant&sca_esv=1432227f7e5641c8&ei=tXP4aavuBLCSruEPrbbSSA&start=90&sa=N&sstk=Af77f_fVh3cFtFtzjG3O0f-vWfmwj5pB1oC1ZNJl2OabbJC8r_lTkWSRRSbtxZj8VUcrZIkBqPWTnORQp5YZi7OFxAV-UWMZbD8Cbw&ved=2ahUKEwjrnLectZ-UAxUwiSsGHS2bFAkQ8tMDegQIRRAU
+              - text: "10"
+            - heading "Mbele" [level=2] [ref=e846]:
+              - link "Mbele" [ref=e847] [cursor=pointer]:
+                - /url: /search?q=how+to+improve+axon+code+assistant&sca_esv=1432227f7e5641c8&ei=tXP4aavuBLCSruEPrbbSSA&start=10&sa=N&sstk=Af77f_fVh3cFtFtzjG3O0f-vWfmwj5pB1oC1ZNJl2OabbJC8r_lTkWSRRSbtxZj8VUcrZIkBqPWTnORQp5YZi7OFxAV-UWMZbD8Cbw&ved=2ahUKEwjrnLectZ-UAxUwiSsGHS2bFAkQ8NMDegQIRRAW
+                - generic [ref=e849]: Mbele
+        - navigation
+    - contentinfo [ref=e850]:
+      - heading "Viungo vya Kijachini" [level=1] [ref=e851]
+      - generic [ref=e855]:
+        - generic [ref=e857]:
+          - text: Kenya
+          - generic [ref=e859]:
+            - button "Makadara, Nairobi - Kutoka kwenye Anwani yako ya IP" [ref=e861] [cursor=pointer]:
+              - generic [ref=e862]: Makadara, Nairobi
+              - generic [ref=e864]:
+                - text: "-"
+                - generic [ref=e865]: Kutoka kwenye Anwani yako ya IP
+            - text: "-"
+            - button "Sasisha eneo" [ref=e867] [cursor=pointer]: Sasisha eneo
+        - generic [ref=e870]:
+          - link "Usaidizi" [ref=e871] [cursor=pointer]:
+            - /url: https://support.google.com/websearch/?p=ws_results_help&hl=sw-KE&fg=1
+          - link "Tuma maoni" [ref=e872] [cursor=pointer]:
+            - /url: "#"
+          - link "Faragha" [ref=e873] [cursor=pointer]:
+            - /url: https://policies.google.com/privacy?hl=sw-KE&fg=1
+          - link "Masharti" [ref=e874] [cursor=pointer]:
+            - /url: https://policies.google.com/terms?hl=sw-KE&fg=1

@@ -5,7 +5,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { buildApiUrl } from '../common/apiBaseUrl';
 import SummaryApi from '../common/SummaryApi';
 import { useGlobalContext } from '../provider/GlobalProvider';
-import { clearCartItems, fetchCartItems } from '../redux/slice/cartSlice';
+import { clearCartItems, fetchCartItems } from '../store/cartProduct';
 import Axios from '../utils/Axios';
 
 const PaymentSuccess = () => {

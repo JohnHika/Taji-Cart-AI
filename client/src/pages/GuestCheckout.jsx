@@ -2,13 +2,18 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { FaUser, FaEnvelope, FaPhone, FaMapMarkerAlt, FaLock, FaCheckCircle } from 'react-icons/fa';
+import { FaMoneyBillWave, FaBuilding } from 'react-icons/fa6';
 import toast from 'react-hot-toast';
 import Axios from '../utils/Axios';
 import SummaryApi from '../common/SummaryApi';
 import { clearGuestCart, getGuestCart } from '../utils/guestCart';
-import { fetchCartItems } from '../redux/slice/cartSlice';
+import { fetchCartItems } from '../store/cartProduct';
 import { nawiriBrand } from '../config/brand';
 import GuestAccountPrompt from '../components/GuestAccountPrompt';
+import MpesaPayment from '../components/MpesaPayment';
+import EquityPayment from '../components/EquityPayment';
+import PayHeroPayment from '../components/PayHeroPayment';
+import MpesaDirectPayment from '../components/MpesaDirectPayment';
 
 function GuestCheckout() {
   const navigate = useNavigate();
@@ -17,6 +22,7 @@ function GuestCheckout() {
   const [loading, setLoading] = useState(false);
   const [step, setStep] = useState(1);
   const [orderSuccess, setOrderSuccess] = useState(null);
+  const [paymentMethod, setPaymentMethod] = useState('payhero'); // 'mpesa', 'equity', 'payhero', or 'cod'
 
   const [formData, setFormData] = useState({
     // Contact Info
@@ -82,59 +88,19 @@ function GuestCheckout() {
     return true;
   };
 
-  const handlePlaceOrder = async () => {
-    if (!validateStep2()) return;
+  const handlePaymentSuccess = (paymentData) => {
+    toast.success('Payment completed successfully!');
+    clearGuestCart();
+    dispatch(fetchCartItems());
+    setOrderSuccess({
+      orderId: paymentData.transactionId,
+      total: calculateTotal(),
+      email: formData.guestEmail
+    });
+  };
 
-    setLoading(true);
-
-    try {
-      const guestShipping = {
-        firstName: formData.firstName,
-        lastName: formData.lastName,
-        address: formData.address,
-        city: formData.city,
-        zipCode: formData.zipCode,
-        phone: formData.guestPhone
-      };
-
-      const orderData = {
-        items: cart,
-        subTotalAmt: calculateTotal(),
-        totalAmt: calculateTotal(),
-        guestEmail: formData.guestEmail,
-        guestPhone: formData.guestPhone,
-        guestShipping,
-        fulfillment_type: formData.fulfillment_type,
-        pickup_location: formData.fulfillment_type === 'pickup' ? formData.pickup_location : ''
-      };
-
-      const response = await Axios({
-        ...SummaryApi.guestCheckout,
-        data: orderData
-      });
-
-      if (response.data.success) {
-        toast.success('Order placed successfully! Check your email for confirmation.');
-
-        // Clear guest cart
-        clearGuestCart();
-        dispatch(fetchCartItems());
-
-        // Set order success data to trigger account creation prompt
-        setOrderSuccess({
-          orderId: response.data.data.orderId,
-          total: response.data.data.totalAmt,
-          email: formData.guestEmail
-        });
-
-        // Don't navigate yet - let user decide on account creation
-      }
-    } catch (error) {
-      console.error('Guest checkout error:', error);
-      toast.error(error.response?.data?.message || 'Failed to place order. Please try again.');
-    } finally {
-      setLoading(false);
-    }
+  const handlePaymentError = (errorMessage) => {
+    toast.error(errorMessage || 'Payment failed. Please try again.');
   };
 
   const total = calculateTotal();
@@ -423,38 +389,13 @@ function GuestCheckout() {
                 <div>
                   <h2 className="text-xl font-bold text-charcoal dark:text-white mb-6 flex items-center gap-2">
                     <FaCheckCircle className="text-gold-500" />
-                    Review & Place Order
+                    Payment & Review
                   </h2>
 
-                  <div className="space-y-4">
-                    {/* Contact Summary */}
+                  <div className="space-y-6">
+                    {/* Order Summary */}
                     <div className="bg-brown-50 dark:bg-dm-surface rounded-lg p-4">
-                      <h3 className="font-semibold text-charcoal dark:text-white mb-2">Contact Information</h3>
-                      <p className="text-sm text-brown-600 dark:text-brown-300">Email: {formData.guestEmail}</p>
-                      <p className="text-sm text-brown-600 dark:text-brown-300">Phone: {formData.guestPhone}</p>
-                    </div>
-
-                    {/* Shipping Summary */}
-                    <div className="bg-brown-50 dark:bg-dm-surface rounded-lg p-4">
-                      <h3 className="font-semibold text-charcoal dark:text-white mb-2">
-                        {formData.fulfillment_type === 'delivery' ? 'Delivery Address' : 'Pickup Location'}
-                      </h3>
-                      <p className="text-sm text-brown-600 dark:text-brown-300">
-                        {formData.fulfillment_type === 'delivery' ? (
-                          <>
-                            {formData.firstName} {formData.lastName}<br />
-                            {formData.address}<br />
-                            {formData.city}, {formData.zipCode}
-                          </>
-                        ) : (
-                          formData.pickup_location
-                        )}
-                      </p>
-                    </div>
-
-                    {/* Order Items */}
-                    <div className="bg-brown-50 dark:bg-dm-surface rounded-lg p-4">
-                      <h3 className="font-semibold text-charcoal dark:text-white mb-2">Order Items ({cart.length})</h3>
+                      <h3 className="font-semibold text-charcoal dark:text-white mb-2">Order Summary</h3>
                       <div className="space-y-2 max-h-40 overflow-y-auto">
                         {cart.map((item, index) => (
                           <div key={index} className="flex justify-between text-sm">
@@ -467,6 +408,184 @@ function GuestCheckout() {
                           </div>
                         ))}
                       </div>
+                      <div className="border-t border-brown-200 dark:border-brown-700 mt-3 pt-3 flex justify-between font-semibold">
+                        <span className="text-charcoal dark:text-white">Total:</span>
+                        <span className="text-gold-600">KSh {total.toLocaleString()}</span>
+                      </div>
+                    </div>
+
+                    {/* Payment Method Selection */}
+                    <div>
+                      <h3 className="font-semibold text-charcoal dark:text-white mb-3">Select Payment Method</h3>
+                      <div className="grid grid-cols-2 gap-3 mb-4">
+                        {/* M-Pesa Direct - LOWEST FEE */}
+                        <button
+                          onClick={() => setPaymentMethod('mpesa-direct')}
+                          className={`p-4 rounded-lg border-2 flex flex-col items-center gap-2 transition-all relative ${
+                            paymentMethod === 'mpesa-direct'
+                              ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-900/20'
+                              : 'border-brown-200 dark:border-brown-700 hover:border-emerald-300'
+                          }`}
+                        >
+                          <div className="absolute -top-2 right-2 bg-emerald-500 text-white text-xs px-2 py-0.5 rounded-full font-semibold">
+                            BEST VALUE
+                          </div>
+                          <FaMoneyBillWave className={`text-2xl ${
+                            paymentMethod === 'mpesa-direct' ? 'text-emerald-600' : 'text-brown-400'
+                          }`} />
+                          <span className={`text-sm font-semibold ${
+                            paymentMethod === 'mpesa-direct' ? 'text-emerald-700' : 'text-brown-500'
+                          }`}>M-Pesa Direct</span>
+                          <p className="text-xs text-brown-400 text-center">0.55% fee • Secure</p>
+                        </button>
+
+                        {/* PayHero */}
+                        <button
+                          onClick={() => setPaymentMethod('payhero')}
+                          className={`p-4 rounded-lg border-2 flex flex-col items-center gap-2 transition-all ${
+                            paymentMethod === 'payhero'
+                              ? 'border-purple-500 bg-purple-50 dark:bg-purple-900/20'
+                              : 'border-brown-200 dark:border-brown-700 hover:border-purple-300'
+                          }`}
+                        >
+                          <div className="flex items-center gap-2">
+                            <FaMoneyBillWave className={`text-xl ${
+                              paymentMethod === 'payhero' ? 'text-purple-600' : 'text-brown-400'
+                            }`} />
+                            <FaBuilding className={`text-xl ${
+                              paymentMethod === 'payhero' ? 'text-purple-600' : 'text-brown-400'
+                            }`} />
+                          </div>
+                          <span className={`text-sm font-semibold ${
+                            paymentMethod === 'payhero' ? 'text-purple-700' : 'text-brown-500'
+                          }`}>PayHero</span>
+                          <p className="text-xs text-brown-400 text-center">Online or Cash</p>
+                        </button>
+
+                        {/* M-Pesa (Legacy) */}
+                        <button
+                          onClick={() => setPaymentMethod('mpesa')}
+                          className={`p-4 rounded-lg border-2 flex flex-col items-center gap-2 transition-all ${
+                            paymentMethod === 'mpesa'
+                              ? 'border-green-500 bg-green-50 dark:bg-green-900/20'
+                              : 'border-brown-200 dark:border-brown-700 hover:border-green-300'
+                          }`}
+                        >
+                          <FaMoneyBillWave className={`text-2xl ${
+                            paymentMethod === 'mpesa' ? 'text-green-600' : 'text-brown-400'
+                          }`} />
+                          <span className={`text-sm font-semibold ${
+                            paymentMethod === 'mpesa' ? 'text-green-700' : 'text-brown-500'
+                          }`}>M-Pesa</span>
+                          <p className="text-xs text-brown-400 text-center">STK Push</p>
+                        </button>
+
+                        {/* Equity Bank */}
+                        <button
+                          onClick={() => setPaymentMethod('equity')}
+                          className={`p-4 rounded-lg border-2 flex flex-col items-center gap-2 transition-all ${
+                            paymentMethod === 'equity'
+                              ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
+                              : 'border-brown-200 dark:border-brown-700 hover:border-blue-300'
+                          }`}
+                        >
+                          <FaBuilding className={`text-2xl ${
+                            paymentMethod === 'equity' ? 'text-blue-600' : 'text-brown-400'
+                          }`} />
+                          <span className={`text-sm font-semibold ${
+                            paymentMethod === 'equity' ? 'text-blue-700' : 'text-brown-500'
+                          }`}>Equity Bank</span>
+                          <p className="text-xs text-brown-400 text-center">EazzyPay direct payment</p>
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Payment Form */}
+                    <div className="bg-white dark:bg-dm-card rounded-lg p-4 border border-brown-200 dark:border-brown-700">
+                      {paymentMethod === 'mpesa-direct' && (
+                        <MpesaDirectPayment
+                          cartItems={cart}
+                          totalAmount={total}
+                          addressId={undefined}
+                          guestEmail={formData.guestEmail}
+                          guestPhone={formData.guestPhone}
+                          guestShipping={{
+                            firstName: formData.firstName,
+                            lastName: formData.lastName,
+                            address: formData.address,
+                            city: formData.city,
+                            zipCode: formData.zipCode,
+                            phone: formData.guestPhone,
+                            name: `${formData.firstName} ${formData.lastName}`
+                          }}
+                          fulfillment_type={formData.fulfillment_type}
+                          pickup_location={formData.pickup_location}
+                          onSuccess={handlePaymentSuccess}
+                          onError={handlePaymentError}
+                        />
+                      )}
+                      {paymentMethod === 'mpesa' && (
+                        <MpesaPayment
+                          cartItems={cart}
+                          totalAmount={total}
+                          guestEmail={formData.guestEmail}
+                          guestPhone={formData.guestPhone}
+                          guestShipping={{
+                            firstName: formData.firstName,
+                            lastName: formData.lastName,
+                            address: formData.address,
+                            city: formData.city,
+                            zipCode: formData.zipCode,
+                            phone: formData.guestPhone
+                          }}
+                          fulfillment_type={formData.fulfillment_type}
+                          pickup_location={formData.pickup_location}
+                          onSuccess={handlePaymentSuccess}
+                          onError={handlePaymentError}
+                        />
+                      )}
+                      {paymentMethod === 'equity' && (
+                        <EquityPayment
+                          cartItems={cart}
+                          totalAmount={total}
+                          guestEmail={formData.guestEmail}
+                          guestPhone={formData.guestPhone}
+                          guestShipping={{
+                            firstName: formData.firstName,
+                            lastName: formData.lastName,
+                            address: formData.address,
+                            city: formData.city,
+                            zipCode: formData.zipCode,
+                            phone: formData.guestPhone
+                          }}
+                          fulfillment_type={formData.fulfillment_type}
+                          pickup_location={formData.pickup_location}
+                          onSuccess={handlePaymentSuccess}
+                          onError={handlePaymentError}
+                        />
+                      )}
+                      {paymentMethod === 'payhero' && (
+                        <PayHeroPayment
+                          cartItems={cart}
+                          totalAmount={total}
+                          addressId={undefined}
+                          guestEmail={formData.guestEmail}
+                          guestPhone={formData.guestPhone}
+                          guestShipping={{
+                            firstName: formData.firstName,
+                            lastName: formData.lastName,
+                            address: formData.address,
+                            city: formData.city,
+                            zipCode: formData.zipCode,
+                            phone: formData.guestPhone,
+                            name: `${formData.firstName} ${formData.lastName}`
+                          }}
+                          fulfillment_type={formData.fulfillment_type}
+                          pickup_location={formData.pickup_location}
+                          onSuccess={handlePaymentSuccess}
+                          onError={handlePaymentError}
+                        />
+                      )}
                     </div>
 
                     {/* Security Notice */}
@@ -478,7 +597,7 @@ function GuestCheckout() {
                             Secure Checkout
                           </p>
                           <p className="text-xs text-green-600 dark:text-green-400 mt-1">
-                            Your payment information is encrypted and secure. We never store your card details.
+                            Your payment information is encrypted and secure.
                           </p>
                         </div>
                       </div>
@@ -491,17 +610,6 @@ function GuestCheckout() {
                       className="flex-1 bg-brown-100 dark:bg-brown-800 text-brown-600 dark:text-brown-300 font-semibold py-3 rounded-lg hover:bg-brown-200 dark:hover:bg-brown-700 transition-colors"
                     >
                       Back
-                    </button>
-                    <button
-                      onClick={handlePlaceOrder}
-                      disabled={loading || cart.length === 0}
-                      className={`flex-1 font-semibold py-3 rounded-lg transition-colors ${
-                        loading || cart.length === 0
-                          ? 'bg-brown-300 cursor-not-allowed'
-                          : 'bg-gold-500 hover:bg-gold-400 text-charcoal'
-                      }`}
-                    >
-                      {loading ? 'Processing...' : `Place Order - KSh ${total.toLocaleString()}`}
                     </button>
                   </div>
 

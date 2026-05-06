@@ -121,7 +121,33 @@ const orderSchema = new mongoose.Schema({
         city: String,
         zipCode: String,
         phone: String
-    }
+    },
+    // QUANTUM CART SUPPORT - Einstein's nightmare
+    isQuantumOrder: { type: Boolean, default: false },
+    quantumMetadata: {
+        observationId: { type: String },
+        expectedValue: { type: Number },
+        observedValue: { type: Number },
+        quantumSavings: { type: Number, default: 0 },
+        waveFunctionCollapseTime: { type: Date },
+        uncertaintyBeforeCollapse: { type: Number },
+        entanglementId: { type: String },
+        coherenceDuration: { type: Number }, // in milliseconds
+        tunnelingEvents: [{
+            productId: { type: mongoose.Schema.ObjectId, ref: 'product' },
+            tunnelTime: { type: Date },
+            tunnelMethod: { type: String }
+        }]
+    },
+    superpositionHistory: [{
+        timestamp: { type: Date, default: Date.now },
+        possibilities: [{
+            quantity: Number,
+            price: Number,
+            probability: Number
+        }],
+        expectedValue: Number
+    }]
 }, {
     timestamps: true
 })
