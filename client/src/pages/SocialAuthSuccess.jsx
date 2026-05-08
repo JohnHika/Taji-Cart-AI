@@ -7,6 +7,35 @@ import { fetchCartItems } from '../store/cartProduct';
 import { setUserDetails } from '../store/userSlice';
 import { getPostLoginPath } from '../utils/postLoginRedirect';
 
+const createParamsFromSource = (rawValue = '') => {
+  if (!rawValue) {
+    return new URLSearchParams();
+  }
+
+  const normalizedValue = rawValue.startsWith('?') || rawValue.startsWith('#')
+    ? rawValue.slice(1)
+    : rawValue;
+
+  return new URLSearchParams(normalizedValue);
+};
+
+const getAuthParams = (location) => {
+  const mergedParams = new URLSearchParams();
+  const paramSources = [location.hash, location.search];
+
+  paramSources.forEach((source) => {
+    const params = createParamsFromSource(source);
+
+    params.forEach((value, key) => {
+      if (!mergedParams.has(key)) {
+        mergedParams.set(key, value);
+      }
+    });
+  });
+
+  return mergedParams;
+};
+
 const SocialAuthSuccess = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
@@ -15,8 +44,9 @@ const SocialAuthSuccess = () => {
   useEffect(() => {
     const handleAuthSuccess = async () => {
       try {
-        // Get token and user details from URL parameters
-        const params = new URLSearchParams(location.search);
+        // Get token and user details from either hash or query parameters.
+        // Hash parameters are preferred because they do not hit the server.
+        const params = getAuthParams(location);
         const token = params.get('token') || params.get('accessToken');
         const refreshToken = params.get('refreshToken');
         const userData = params.get('userData');
@@ -25,6 +55,14 @@ const SocialAuthSuccess = () => {
           toast.error('Authentication failed. Missing token.');
           navigate('/login');
           return;
+        }
+
+        // Remove sensitive auth payloads from the visible URL as soon as they are read.
+        const hasSensitiveAuthParams = ['token', 'accessToken', 'refreshToken', 'userData', 'userId', 'email', 'name']
+          .some((key) => params.has(key));
+
+        if (hasSensitiveAuthParams && typeof window !== 'undefined') {
+          window.history.replaceState(null, document.title, location.pathname);
         }
 
         // Save tokens to session storage
@@ -80,7 +118,7 @@ const SocialAuthSuccess = () => {
     };
 
     handleAuthSuccess();
-  }, [dispatch, navigate, location.search]);
+  }, [dispatch, navigate, location]);
 
   return (
     <div className="h-screen flex flex-col items-center justify-center">
