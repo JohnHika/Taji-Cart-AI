@@ -14,6 +14,7 @@ import CommunityCampaignProgress from '../components/CommunityCampaignProgress';
 import FulfillmentModal from '../components/FulfillmentModal';
 import MpesaPayment from '../components/MpesaPayment'; // Import the MpesaPayment component
 import { useTheme } from '../context/ThemeContext';
+import useCriteriaGate from '../hooks/useCriteriaGate';
 import { useGlobalContext } from '../provider/GlobalProvider';
 import { clearCartItems } from '../store/cartProduct';
 import Axios from '../utils/Axios';
@@ -48,6 +49,7 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const user = useSelector(state => state.user);
+  const { ensureCriteria, gateModal } = useCriteriaGate();
 
   const [usePoints, setUsePoints] = useState(false);
   const [availablePoints, setAvailablePoints] = useState(0);
@@ -196,6 +198,7 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
   };
 
   const handleCashOnDelivery = async() => {
+    if (!(await ensureCriteria('checkout'))) return;
     if (!validateAddress()) return;
 
     await runCheckoutAction('cash', async () => {
@@ -250,6 +253,7 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
   }
 
   const handleOnlinePayment = async() => {
+    if (!(await ensureCriteria('checkout'))) return;
     if (!validateAddress()) return;
 
     await runCheckoutAction('card', async () => {
@@ -315,8 +319,9 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
     });
   }
 
-  const handleShowMpesaForm = () => {
+  const handleShowMpesaForm = async () => {
     if (isCheckoutBusy) return;
+    if (!(await ensureCriteria('checkout'))) return;
     if (!validateAddress()) return;
     setShowMpesaForm(true);
   };
@@ -348,6 +353,7 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
   }
 
   const handlePesapalPayment = async () => {
+    if (!(await ensureCriteria('checkout'))) return;
     if (!validateAddress()) return;
 
     await runCheckoutAction('pesapal', async () => {
@@ -450,8 +456,9 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
   // Render cut view or full page based on prop
   if (isCutView) {
     return (
-      <div className="fixed inset-0 bg-plum-900/50 z-50 flex justify-end backdrop-blur-[2px]">
-        <div className="bg-ivory dark:bg-dm-surface w-full max-w-md h-full overflow-y-auto transition-colors duration-200 border-l border-brown-100 dark:border-dm-border">
+      <>
+        <div className="fixed inset-0 bg-plum-900/50 z-50 flex justify-end backdrop-blur-[2px]">
+          <div className="bg-ivory dark:bg-dm-surface w-full max-w-md h-full overflow-y-auto transition-colors duration-200 border-l border-brown-100 dark:border-dm-border">
           {/* Cut View Header */}
           <div className="sticky top-0 z-20 bg-white dark:bg-dm-card p-4 flex justify-between items-center border-b border-brown-100 dark:border-dm-border shadow-sm transition-colors duration-200">
             <h2 className="font-semibold text-lg dark:text-white">Checkout</h2>
@@ -721,8 +728,10 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
               </button>
             </div>
           </div>
+          </div>
         </div>
-      </div>
+        {gateModal}
+      </>
     );
   }
 
@@ -851,8 +860,9 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
 
   // Full page render (original implementation)
   return (
-    <section className={sectionShell}>
-      <div className={containerShell}>
+    <>
+      <section className={sectionShell}>
+        <div className={containerShell}>
         <div className='w-full'>
           {/* Address or Pickup Section */}
           {renderAddressOrPickupSection()}
@@ -1076,50 +1086,52 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
             </div>
           </div>
         </div>
-      </div>
-
-      {/* M-Pesa Payment Modal */}
-      {showMpesaForm && (
-        <div className="fixed inset-0 bg-plum-900/60 flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-dm-card p-6 rounded-card shadow-hover max-w-md w-full transition-colors duration-200 animate-scale-in">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-bold dark:text-white">M-Pesa Payment</h3>
-              <button 
-                onClick={() => setShowMpesaForm(false)}
-                className="text-brown-400 hover:text-charcoal dark:text-white/50 dark:hover:text-white"
-              ><FaXmark /></button>
-            </div>
-            <MpesaPayment
-              cartItems={cartItemsList}
-              totalAmount={totalPrice}
-              addressId={fulfillmentMethod === 'delivery' ? addressList[selectAddress]?._id : null}
-              onSuccess={handleMpesaSuccess}
-              onError={handleMpesaError}
-              communityRewardId={selectedReward?._id}
-              communityDiscountAmount={selectedReward?.type === 'discount' ? communityDiscount : 0}
-              fulfillment_type={fulfillmentMethod}
-              pickup_location={pickupLocation}
-              pickup_instructions={pickupInstructions}
-            />
-          </div>
         </div>
-      )}
 
-      {/* Fulfillment Method Modal */}
-      <FulfillmentModal 
-        isOpen={showFulfillmentModal}
-        onClose={() => setShowFulfillmentModal(false)}
-        onSelect={handleFulfillmentSelect}
-        pickupLocations={pickupLocations}
-      />
+        {/* M-Pesa Payment Modal */}
+        {showMpesaForm && (
+          <div className="fixed inset-0 bg-plum-900/60 flex items-center justify-center z-50 p-4">
+            <div className="bg-white dark:bg-dm-card p-6 rounded-card shadow-hover max-w-md w-full transition-colors duration-200 animate-scale-in">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-lg font-bold dark:text-white">M-Pesa Payment</h3>
+                <button 
+                  onClick={() => setShowMpesaForm(false)}
+                  className="text-brown-400 hover:text-charcoal dark:text-white/50 dark:hover:text-white"
+                ><FaXmark /></button>
+              </div>
+              <MpesaPayment
+                cartItems={cartItemsList}
+                totalAmount={totalPrice}
+                addressId={fulfillmentMethod === 'delivery' ? addressList[selectAddress]?._id : null}
+                onSuccess={handleMpesaSuccess}
+                onError={handleMpesaError}
+                communityRewardId={selectedReward?._id}
+                communityDiscountAmount={selectedReward?.type === 'discount' ? communityDiscount : 0}
+                fulfillment_type={fulfillmentMethod}
+                pickup_location={pickupLocation}
+                pickup_instructions={pickupInstructions}
+              />
+            </div>
+          </div>
+        )}
 
-      {/* Address Modal */}
-      {
-        openAddress && (
-          <AddAddress close={() => setOpenAddress(false)} />
-        )
-      }
-    </section>
+        {/* Fulfillment Method Modal */}
+        <FulfillmentModal 
+          isOpen={showFulfillmentModal}
+          onClose={() => setShowFulfillmentModal(false)}
+          onSelect={handleFulfillmentSelect}
+          pickupLocations={pickupLocations}
+        />
+
+        {/* Address Modal */}
+        {
+          openAddress && (
+            <AddAddress close={() => setOpenAddress(false)} />
+          )
+        }
+      </section>
+      {gateModal}
+    </>
   )
 }
 

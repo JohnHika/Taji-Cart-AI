@@ -25,6 +25,7 @@ import {
 } from 'react-icons/fa';
 import { format } from 'date-fns';
 import { buildApiUrl } from '../../common/apiBaseUrl';
+import useCriteriaGate from '../../hooks/useCriteriaGate';
 import useMobile from '../../hooks/useMobile';
 import Axios from '../../utils/Axios';
 
@@ -35,11 +36,12 @@ const formatDate = (dateString) => {
   return date.toLocaleString();
 };
 
-const OrderDetailModal = ({ order, onClose, onStatusChange }) => {
+const OrderDetailModal = ({ order, onClose, onStatusChange, onDispatchStateSync }) => {
   const [availableDrivers, setAvailableDrivers] = useState([]);
   const [selectedDriver, setSelectedDriver] = useState('');
   const [loadingDrivers, setLoadingDrivers] = useState(false);
   const [dispatchingOrder, setDispatchingOrder] = useState(false);
+  const { ensureCriteria, gateModal } = useCriteriaGate();
   
   // Fetch available drivers when the order is in shipped status
   useEffect(() => {
@@ -70,19 +72,47 @@ const OrderDetailModal = ({ order, onClose, onStatusChange }) => {
   };
   
   const handleDispatchOrder = async () => {
+    if (!(await ensureCriteria('dispatch_order'))) {
+      return;
+    }
+
     try {
       setDispatchingOrder(true);
-      const response = await Axios({
-        url: `/api/delivery/dispatch/${order._id}`,
+      const dispatchResponse = await Axios({
+        url: '/api/delivery/dispatch',
         method: 'POST',
-        data: selectedDriver ? { driverId: selectedDriver } : {}
+        data: { orderId: order._id }
       });
-      
-      if (response.data.success) {
+
+      if (!dispatchResponse.data?.success) {
+        toast.error(dispatchResponse.data?.message || 'Failed to dispatch order');
+        return;
+      }
+
+      if (selectedDriver) {
+        const assignResponse = await Axios({
+          url: '/api/delivery/assign-driver',
+          method: 'POST',
+          data: {
+            orderId: order._id,
+            driverId: selectedDriver,
+            notes: 'Assigned during dispatch from admin order management',
+          },
+        });
+
+        if (!assignResponse.data?.success) {
+          toast.error(assignResponse.data?.message || 'Order dispatched, but driver assignment failed');
+          return;
+        }
+      }
+
+      if (dispatchResponse.data?.success) {
+        const nextStatus = selectedDriver ? 'driver_assigned' : 'dispatched';
         toast.success('Order dispatched successfully');
-        onStatusChange(order._id, 'driver_assigned');
-      } else {
-        toast.error(response.data.message || 'Failed to dispatch order');
+
+        if (typeof onDispatchStateSync === 'function') {
+          onDispatchStateSync(order._id, { status: nextStatus });
+        }
       }
     } catch (error) {
       console.error('Error dispatching order:', error);
@@ -663,6 +693,7 @@ const OrderDetailModal = ({ order, onClose, onStatusChange }) => {
             Close
           </button>
         </div>
+        {gateModal}
       </div>
     </div>
   );
@@ -968,6 +999,20 @@ const AllOrdersAdmin = () => {
   };
   
   const updateOrderStatus = async (orderId, status) => {
+    const patchOrderState = (targetOrderId, updates) => {
+      setOrders(prevOrders =>
+        prevOrders.map(order =>
+          order._id === targetOrderId ? { ...order, ...updates } : order
+        )
+      );
+
+      setSelectedOrder((current) => (
+        current && current._id === targetOrderId
+          ? { ...current, ...updates }
+          : current
+      ));
+    };
+
     try {
       const response = await Axios({
         url: `/api/order/status/${orderId}`,
@@ -977,18 +1022,7 @@ const AllOrdersAdmin = () => {
       
       if (response.data.success) {
         toast.success('Order status updated successfully');
-        
-        // Update orders in state
-        setOrders(prevOrders => 
-          prevOrders.map(order => 
-            order._id === orderId ? { ...order, status } : order
-          )
-        );
-        
-        // If viewing a specific order, update it too
-        if (selectedOrder && selectedOrder._id === orderId) {
-          setSelectedOrder({ ...selectedOrder, status });
-        }
+        patchOrderState(orderId, { status });
       } else {
         toast.error(response.data.message || 'Failed to update order status');
       }
@@ -1539,6 +1573,19 @@ const AllOrdersAdmin = () => {
           order={selectedOrder} 
           onClose={() => setSelectedOrder(null)} 
           onStatusChange={updateOrderStatus}
+          onDispatchStateSync={(orderId, updates) => {
+            setOrders((prevOrders) =>
+              prevOrders.map((order) =>
+                order._id === orderId ? { ...order, ...updates } : order
+              )
+            );
+
+            setSelectedOrder((current) => (
+              current && current._id === orderId
+                ? { ...current, ...updates }
+                : current
+            ));
+          }}
         />
       )}
     </div>

@@ -3,6 +3,7 @@ import toast from 'react-hot-toast';
 import { FaCalendarCheck, FaMapMarkerAlt, FaSpinner, FaTruck, FaUser } from 'react-icons/fa';
 import io from 'socket.io-client';
 import { socketBaseUrl } from '../../common/apiBaseUrl';
+import useCriteriaGate from '../../hooks/useCriteriaGate';
 import Axios from '../../utils/Axios';
 import AxiosToastError from '../../utils/AxiosToastError';
 
@@ -11,6 +12,7 @@ const ActiveDeliveries = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const socketRef = useRef(null);
+  const { ensureCriteria, gateModal } = useCriteriaGate();
 
   useEffect(() => {
     // Connect to Socket.IO for real-time updates
@@ -153,6 +155,10 @@ const ActiveDeliveries = () => {
   };
   
   const handleStatusUpdate = async (orderId, newStatus) => {
+    if (!(await ensureCriteria('delivery_progress'))) {
+      return;
+    }
+
     try {
       const response = await Axios({
         url: '/api/delivery/update-status',
@@ -320,6 +326,7 @@ const ActiveDeliveries = () => {
           ))}
         </div>
       )}
+      {gateModal}
     </div>
   );
 };

@@ -1,6 +1,9 @@
 import React from 'react';
 import { useSelector } from 'react-redux';
 import { Navigate, useLocation } from 'react-router-dom';
+import CriteriaGateModal from './CriteriaGateModal';
+import { evaluateCriteria, getRouteGateTaskKey } from '../utils/criteriaGates';
+import fetchUserDetails from '../utils/fetchUserDetails';
 
 /**
  * A wrapper component that redirects to login if user is not authenticated
@@ -76,6 +79,29 @@ const PrivateRoute = ({ children, requireAdmin = false, requireStaff = false, re
       return <Navigate to="/dashboard/staff/delivery" replace />;
     }
     return <Navigate to="/dashboard/profile" replace />;
+  }
+
+  const routeGateTaskKey = getRouteGateTaskKey({ requireAdmin, requireStaff, requireDelivery });
+  const routeGateEvaluation = routeGateTaskKey ? evaluateCriteria(user, routeGateTaskKey) : null;
+
+  if (routeGateEvaluation && !routeGateEvaluation.allowed) {
+    return (
+      <>
+        <div className="min-h-[50vh] flex flex-col items-center justify-center px-4 py-10 text-center">
+          <h2 className="text-xl font-semibold text-charcoal dark:text-white">A few details still need attention</h2>
+          <p className="mt-2 max-w-lg text-sm text-brown-500 dark:text-white/50">
+            Complete the required account details to continue to this workspace.
+          </p>
+        </div>
+        <CriteriaGateModal
+          isOpen
+          evaluation={routeGateEvaluation}
+          onClose={() => {}}
+          onRefreshUser={fetchUserDetails}
+          blocking
+        />
+      </>
+    );
   }
 
   // User is authenticated and authorized, render the protected component

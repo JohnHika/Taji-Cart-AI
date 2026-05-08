@@ -4,6 +4,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
 import { FaBoxOpen, FaBullseye, FaCalendarCheck, FaChartLine, FaCheck, FaCloud, FaCloudRain, FaCloudSun, FaCompressAlt, FaExchangeAlt, FaExpandAlt, FaList, FaLocationArrow, FaMapMarkerAlt, FaRoute, FaSpinner, FaStar, FaStopwatch, FaSun, FaThermometerHalf, FaTimes, FaTrafficLight, FaTruck, FaUserAlt, FaWind } from 'react-icons/fa';
 import { MapContainer, Marker, Polyline, Popup, TileLayer, useMap, ZoomControl } from 'react-leaflet';
+import useCriteriaGate from '../../hooks/useCriteriaGate';
 import Axios from '../../utils/Axios';
 import AxiosToastError from '../../utils/AxiosToastError';
 import { getCurrentWeather, getForecast } from '../../utils/WeatherService';
@@ -84,6 +85,7 @@ const DeliveryMap = () => {
   const [clickedLocation, setClickedLocation] = useState(null);
   const weatherApiKey = import.meta.env.VITE_WEATHERAPI_KEY;
   const hasWeatherApiKey = Boolean(weatherApiKey && weatherApiKey !== 'your_weatherapi_key_here');
+  const { ensureCriteria, gateModal } = useCriteriaGate();
 
   // Available tile layers
   const tileLayers = {
@@ -308,6 +310,10 @@ const DeliveryMap = () => {
   };
   
   const handleStatusUpdate = async (orderId, newStatus) => {
+    if (!(await ensureCriteria('delivery_progress'))) {
+      return;
+    }
+
     try {
       const response = await Axios({
         url: '/api/delivery/update-status',
@@ -1567,6 +1573,7 @@ const DeliveryMap = () => {
           </div>
         </div>
       )}
+      {gateModal}
     </div>
   );
 };

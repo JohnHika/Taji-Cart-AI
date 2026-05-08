@@ -12,6 +12,7 @@ import {
     FaUser
 } from 'react-icons/fa';
 import { useSelector } from 'react-redux';
+import useCriteriaGate from '../../hooks/useCriteriaGate';
 import Axios from '../../utils/Axios';
 import AxiosToastError from '../../utils/AxiosToastError';
 
@@ -21,6 +22,7 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const user = useSelector(state => state.user);
+  const { ensureCriteria, gateModal } = useCriteriaGate();
   
   useEffect(() => {
     const fetchDashboardData = async () => {
@@ -108,6 +110,10 @@ const Dashboard = () => {
   };
   
   const handleStatusUpdate = async (orderId, newStatus) => {
+    if (!(await ensureCriteria('delivery_progress'))) {
+      return;
+    }
+
     try {
       const response = await Axios({
         url: '/api/delivery/update-status',
@@ -345,6 +351,7 @@ const Dashboard = () => {
           </div>
         )}
       </div>
+      {gateModal}
     </div>
   );
 };

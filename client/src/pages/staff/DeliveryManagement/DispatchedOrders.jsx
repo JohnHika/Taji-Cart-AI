@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import toast from 'react-hot-toast';
 import { FaMapMarkerAlt, FaRedo, FaSearch, FaSpinner, FaTruck, FaUserTie } from 'react-icons/fa';
+import useCriteriaGate from '../../../hooks/useCriteriaGate';
 import Axios from '../../../utils/Axios';
 import AxiosToastError from '../../../utils/AxiosToastError';
 
@@ -22,6 +23,7 @@ const DispatchedOrders = () => {
   const [selectedDriver, setSelectedDriver] = useState('');
   const [assignmentNote, setAssignmentNote] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
+  const { ensureCriteria, gateModal } = useCriteriaGate();
 
   const fetchDispatchedOrders = async () => {
     try {
@@ -77,6 +79,10 @@ const DispatchedOrders = () => {
   const handleAssignDriver = async () => {
     if (!selectedOrder || !selectedDriver) {
       toast.error('Choose both an order and a driver');
+      return;
+    }
+
+    if (!(await ensureCriteria('dispatch_order'))) {
       return;
     }
 
@@ -398,6 +404,7 @@ const DispatchedOrders = () => {
           </div>
         </div>
       )}
+      {gateModal}
     </section>
   );
 };

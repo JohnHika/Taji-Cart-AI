@@ -65,6 +65,120 @@ const buildDeliveryPersonnelProfile = (user = {}) => {
     }
 }
 
+const DELIVERY_PROFILE_SELECT = [
+    '_id',
+    'phoneNumber',
+    'verificationStatus',
+    'isActive',
+    'isAvailable',
+    'isOnline',
+    'activeOrdersCount',
+    'lastActive',
+    'vehicleDetails',
+    'licenseNumber',
+    'licenseExpiry',
+    'idNumber',
+    'kraPin',
+].join(' ')
+
+const resolveLoyaltyInfo = async (userId) => {
+    try {
+        const loyaltyCard = await LoyaltyCard.findOne({ userId })
+
+        if (loyaltyCard) {
+            return {
+                points: loyaltyCard.points,
+                tier: loyaltyCard.tier,
+            }
+        }
+    } catch (error) {
+        console.error('Error fetching loyalty card:', error)
+    }
+
+    return { points: 0, tier: 'Basic' }
+}
+
+const ensureDeliveryProfileForUser = async (user, { syncProfile = false } = {}) => {
+    if (!user?._id || !(user.isDelivery || user.role === 'delivery')) {
+        return null
+    }
+
+    const syncedProfile = buildDeliveryPersonnelProfile(user)
+    const seedProfile = {
+        userId: user._id,
+        isActive: true,
+        isAvailable: true,
+        isOnline: false,
+        ...syncedProfile,
+    }
+
+    const update = syncProfile
+        ? {
+            $set: syncedProfile,
+            $setOnInsert: seedProfile,
+        }
+        : {
+            $setOnInsert: seedProfile,
+        }
+
+    return DeliveryPersonnelModel.findOneAndUpdate(
+        { userId: user._id },
+        update,
+        {
+            new: true,
+            upsert: true,
+            runValidators: true,
+            setDefaultsOnInsert: true,
+        }
+    ).select(DELIVERY_PROFILE_SELECT)
+}
+
+const serializeDeliveryProfile = (profile, user = {}) => {
+    if (!profile) {
+        return null
+    }
+
+    return {
+        _id: profile._id,
+        phoneNumber: normalizePhoneNumber(profile.phoneNumber || user.mobile || user.phone || ''),
+        verificationStatus: profile.verificationStatus || 'pending',
+        isActive: profile.isActive !== false,
+        isAvailable: profile.isAvailable !== false,
+        isOnline: profile.isOnline === true,
+        activeOrdersCount: profile.activeOrdersCount || 0,
+        lastActive: profile.lastActive || null,
+        hasVehicleDetails: Boolean(profile.vehicleDetails?.type || profile.vehicleDetails?.plateNumber || profile.vehicleDetails?.model),
+        hasLicenseNumber: Boolean(profile.licenseNumber),
+        hasIdNumber: Boolean(profile.idNumber),
+        hasKraPin: Boolean(profile.kraPin),
+    }
+}
+
+const buildUserDetailsPayload = async (user, {
+    loyaltyInfo = null,
+    syncDeliveryProfile = false,
+} = {}) => {
+    const plainUser = typeof user?.toObject === 'function'
+        ? user.toObject()
+        : { ...user }
+
+    const nextLoyaltyInfo = loyaltyInfo || await resolveLoyaltyInfo(plainUser._id)
+    const deliveryProfile = await ensureDeliveryProfileForUser(plainUser, { syncProfile: syncDeliveryProfile })
+
+    return {
+        ...plainUser,
+        loyaltyPoints: nextLoyaltyInfo.points,
+        loyaltyClass: nextLoyaltyInfo.tier,
+        isAdmin: Boolean(plainUser.isAdmin),
+        isDelivery: Boolean(plainUser.isDelivery || plainUser.role === 'delivery'),
+        isStaff: Boolean(plainUser.isStaff || plainUser.role === 'staff' || plainUser.isAdmin),
+        mobile_verified: Boolean(plainUser.mobile_verified),
+        verify_email: Boolean(plainUser.verify_email),
+        role: plainUser.role || 'user',
+        deliveryProfile: serializeDeliveryProfile(deliveryProfile, plainUser),
+    }
+}
+
 const sendPhoneVerificationCodeEmail = async ({ user, phoneNumber, otp }) =>
     sendEmail({
         sendTo: user.email,
@@ -744,6 +858,14 @@ export async function updateUserDetails(request, response) {
             }
         }
 
+        const loyaltyInfo = await resolveLoyaltyInfo(userId)
+        const responseUser = updatedUser
+            ? await buildUserDetailsPayload(updatedUser, {
+                loyaltyInfo,
+                syncDeliveryProfile: true,
+            })
+            : updatedUser
+
         return response.json({
             message: emailChanged
                 ? verificationEmailFailed
@@ -754,7 +876,7 @@ export async function updateUserDetails(request, response) {
                     : "Updated successfully",
             error: false,
             success: true,
-            data: updatedUser
+                    data: responseUser
         });
 
     } catch (error) {
@@ -1228,38 +1350,17 @@ export async function userDetails(request,response){
             });
         }
         
-        // Get the user's loyalty card if it exists
-        let loyaltyInfo = { points: 0, tier: 'Basic' };
-        
-        try {
-            const loyaltyCard = await LoyaltyCard.findOne({ userId });
-            if (loyaltyCard) {
-                loyaltyInfo = {
-                    points: loyaltyCard.points,
-                    tier: loyaltyCard.tier
-                };
-            }
-        } catch (error) {
-            console.error("Error fetching loyalty card:", error);
-        }
-
-        // Make sure admin status is correctly included in the response
-        // Explicitly include both isAdmin and role fields
-        const userWithLoyalty = {
-            ...user.toObject(),
-            loyaltyPoints: loyaltyInfo.points,
-            loyaltyClass: loyaltyInfo.tier,
-            isAdmin: Boolean(user.isAdmin),  // Ensure boolean type
-            isDelivery: Boolean(user.isDelivery),
-            isStaff: Boolean(user.isStaff),
-            mobile_verified: Boolean(user.mobile_verified),
-            role: user.role || 'user'        // Provide default if missing
-        };
+        const loyaltyInfo = await resolveLoyaltyInfo(userId)
+        const userWithLoyalty = await buildUserDetailsPayload(user, {
+            loyaltyInfo,
+            syncDeliveryProfile: true,
+        })
 
         console.log(`User details for ${userId}:`, {
             role: userWithLoyalty.role,
             isAdmin: userWithLoyalty.isAdmin,
-            isDelivery: userWithLoyalty.isDelivery
+            isDelivery: userWithLoyalty.isDelivery,
+            hasDeliveryProfile: Boolean(userWithLoyalty.deliveryProfile)
         });
 
         return response.json({
@@ -1289,33 +1390,11 @@ export const getUserDetails = async (req, res) => {
             });
         }
 
-        // Get loyalty information
-        let loyaltyInfo = { points: 0, tier: 'Basic' };
-        try {
-            const loyaltyCard = await LoyaltyCard.findOne({ userId: req.userId });
-            if (loyaltyCard) {
-                loyaltyInfo = {
-                    points: loyaltyCard.points,
-                    tier: loyaltyCard.tier
-                };
-            }
-        } catch (error) {
-            console.error("Error fetching loyalty card:", error);
-        }
-
-        // Ensure isAdmin is explicitly included
-        const userDetails = {
-            _id: user._id,
-            name: user.name,
-            email: user.email,
-            mobile: user.mobile,
-            mobile_verified: Boolean(user.mobile_verified),
-            isAdmin: Boolean(user.isAdmin), // Force boolean conversion
-            role: user.role,
-            avatar: user.avatar,
-            loyaltyPoints: loyaltyInfo.points,
-            loyaltyClass: loyaltyInfo.tier
-        };
+        const loyaltyInfo = await resolveLoyaltyInfo(req.userId)
+        const userDetails = await buildUserDetailsPayload(user, {
+            loyaltyInfo,
+            syncDeliveryProfile: true,
+        })
 
         return res.status(200).json({
             success: true,
