@@ -52,7 +52,7 @@ const ActiveDeliveries = () => {
           console.log('Order status updated', data);
           
           if (data.status === 'cancelled') {
-            toast.info(`Order #${data.orderId} has been cancelled`);
+            toast.error(`Order #${data.orderId} has been cancelled`);
             // Remove from active orders
             setActiveOrders(prevOrders => 
               prevOrders.filter(order => order._id !== data._id)

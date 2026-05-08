@@ -425,29 +425,7 @@ const RoyalCard = () => {
     }
   };
   
-  // Add early access badge/indicator component 
-  const EarlyAccessIndicator = () => {
-    if (!thresholdsLoaded) return null;
-    
-    // Only show for admin users when disabled, to let them know it's off
-    if (!isEarlyAccessEnabled() && !isAdmin && !isInTierViaEarlyAccess()) return null;
-    
-    return (
-      <div className={`absolute top-0 left-0 w-full z-20 flex justify-center`}>
-        <div className={`px-3 py-1 rounded-b-lg text-xs font-semibold shadow-md ${
-          isEarlyAccessEnabled() 
-            ? 'bg-green-500 text-white' 
-            : isInTierViaEarlyAccess()
-              ? 'bg-yellow-500 text-white'
-              : 'bg-red-500 text-white'
-        }`}>
-          {getEarlyAccessStatusText()}
-        </div>
-      </div>
-    );
-  };
-  
-  // Render the loyalty card with updated early access indicator
+  // Render the loyalty card
   return (
     <div className="relative flex flex-col items-center w-full max-w-sm mx-auto px-2 sm:max-w-md sm:px-0">
       {/* Card container with the tier-specific background */}
@@ -455,9 +433,6 @@ const RoyalCard = () => {
         className={`w-full rounded-[1.5rem] overflow-hidden shadow-2xl relative ${tierBackground}`}
         style={{ minHeight: 'auto' }}
       >
-        {/* Add early access status indicator */}
-        <EarlyAccessIndicator />
-        
         {/* Rest of your card component */}
         <div className="relative p-3 pt-6 sm:p-4 sm:pt-8"> {/* Reduced padding on mobile */}
           <div className="absolute top-2 right-2 flex space-x-1 z-10">
@@ -607,63 +582,14 @@ const RoyalCard = () => {
             </div>
           </div>
           
-          {/* Early access information - only show when enabled */}
-          {thresholdsLoaded && isEarlyAccessEnabled() && (
-            <div className="mt-2">
-              {cardData.tier === 'Basic' && cardData.points >= getEarlyBronzeThreshold() && cardData.points < getBronzeThreshold() && (
-                <div className="p-2 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-900 rounded-md mt-2">
-                  <p className="text-xs text-amber-800 dark:text-amber-300 font-medium flex items-center">
-                    <FaInfoCircle className="mr-1" /> Early Bronze Access Available!
-                  </p>
-                  <p className="text-xs mt-1 text-brown-500 dark:text-white/55">
-                    With {formatNumber(cardData.points)} points, you're enjoying early Bronze tier benefits! You'll be automatically upgraded to full Bronze status at {formatNumber(getBronzeThreshold())} points.
-                  </p>
-                </div>
-              )}
-              
-              {cardData.tier === 'Bronze' && cardData.points >= getEarlySilverThreshold() && cardData.points < getSilverThreshold() && (
-                <div className="p-2 bg-ivory dark:bg-dm-card-2/50 border border-brown-100 dark:border-dm-border rounded-md mt-2">
-                  <p className="text-xs text-charcoal dark:text-white/55 font-medium flex items-center">
-                    <FaInfoCircle className="mr-1" /> Early Silver Access Available!
-                  </p>
-                  <p className="text-xs mt-1 text-brown-500 dark:text-white/55">
-                    With {formatNumber(cardData.points)} points, you're enjoying early Silver tier benefits! You'll be automatically upgraded to full Silver status at {formatNumber(getSilverThreshold())} points.
-                  </p>
-                </div>
-              )}
-              
-              {cardData.tier === 'Silver' && cardData.points >= getEarlyGoldThreshold() && cardData.points < getGoldThreshold() && (
-                <div className="p-2 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-900 rounded-md mt-2">
-                  <p className="text-xs text-amber-800 dark:text-amber-300 font-medium flex items-center">
-                    <FaInfoCircle className="mr-1" /> Early Gold Access Available!
-                  </p>
-                  <p className="text-xs mt-1 text-brown-500 dark:text-white/55">
-                    With {formatNumber(cardData.points)} points, you're enjoying early Gold tier benefits! You'll be automatically upgraded to full Gold status at {formatNumber(getGoldThreshold())} points.
-                  </p>
-                </div>
-              )}
-              
-              {cardData.tier === 'Gold' && cardData.points >= getEarlyPlatinumThreshold() && cardData.points < getPlatinumThreshold() && (
-                <div className="p-2 bg-plum-50 dark:bg-plum-900/25 border border-plum-200 dark:border-plum-800 rounded-md mt-2">
-                  <p className="text-xs text-plum-800 dark:text-plum-200 font-medium flex items-center">
-                    <FaInfoCircle className="mr-1" /> Early Platinum Access Available!
-                  </p>
-                  <p className="text-xs mt-1 text-brown-500 dark:text-white/55">
-                    With {formatNumber(cardData.points)} points, you're enjoying early Platinum tier benefits! You'll be automatically upgraded to full Platinum status at {formatNumber(getPlatinumThreshold())} points.
-                  </p>
-                </div>
-              )}
-            </div>
-          )}
-          
           <p className="mt-2 text-xs text-brown-500 dark:text-white/40 italic">
             {cardData.tier === 'Basic' ? 
-              `Earn discounts of 2% with the Bronze tier${cardData.points >= getEarlyBronzeThreshold() && isEarlyAccessEnabled() ? ' (early access active)' : ''}` :
+              'Earn discounts of 2% with the Bronze tier' :
              cardData.tier === 'Bronze' ? 
-              `Unlock free shipping with the Silver tier${cardData.points >= getEarlySilverThreshold() && isEarlyAccessEnabled() ? ' (early access active)' : ''}` :
+              'Unlock free shipping with the Silver tier' :
              cardData.tier === 'Silver' ? 
-              `Get priority customer service with the Gold tier${cardData.points >= getEarlyGoldThreshold() && isEarlyAccessEnabled() ? ' (early access active)' : ''}` :
-              `Enjoy exclusive events with the Platinum tier${cardData.points >= getEarlyPlatinumThreshold() && isEarlyAccessEnabled() ? ' (early access active)' : ''}`
+              'Get priority customer service with the Gold tier' :
+              'Enjoy exclusive events with the Platinum tier'
             }
           </p>
         </div>
@@ -674,17 +600,6 @@ const RoyalCard = () => {
         <h3 className="font-display font-semibold text-charcoal dark:text-white mb-1 text-base">Royal Card ranks</h3>
         <p className="text-xs text-brown-500 dark:text-white/45 mb-3">Your tier, discount, and points needed — Nawiri Hair loyalty.</p>
         
-        {thresholdsLoaded && isEarlyAccessEnabled() && (
-          <div className="mb-4 p-3 rounded-card border border-plum-200 dark:border-plum-700 bg-plum-50/90 dark:bg-plum-900/35">
-            <p className="text-xs flex items-center gap-1.5 text-plum-800 dark:text-plum-200 font-semibold">
-              <FaInfoCircle className="text-gold-500 shrink-0" /> Early access program active
-            </p>
-            <p className="text-xs mt-1.5 text-brown-700 dark:text-white/60 leading-relaxed">
-              You can unlock tier benefits before standard thresholds. Use the Early access column below.
-            </p>
-          </div>
-        )}
-        
         <div className="overflow-x-auto -mx-1 sm:mx-0 rounded-card border border-brown-100 dark:border-dm-border">
           <table className="min-w-full divide-y divide-brown-100 dark:divide-dm-border">
             <thead>
@@ -692,11 +607,6 @@ const RoyalCard = () => {
                 <th className="px-3 py-2.5 text-left text-[0.65rem] font-semibold uppercase tracking-wider text-brown-600 dark:text-white/55">Rank</th>
                 <th className="px-3 py-2.5 text-left text-[0.65rem] font-semibold uppercase tracking-wider text-brown-600 dark:text-white/55">Discount</th>
                 <th className="px-3 py-2.5 text-left text-[0.65rem] font-semibold uppercase tracking-wider text-brown-600 dark:text-white/55">Required points</th>
-                {thresholdsLoaded && (isEarlyAccessEnabled() || isAdmin) && (
-                  <th className="px-3 py-2.5 text-left text-[0.65rem] font-semibold uppercase tracking-wider text-gold-700 dark:text-gold-400">
-                    {isEarlyAccessEnabled() ? 'Early access' : 'Previous early access'}
-                  </th>
-                )}
               </tr>
             </thead>
             <tbody className="bg-white dark:bg-dm-card divide-y divide-brown-100 dark:divide-dm-border">
@@ -709,9 +619,6 @@ const RoyalCard = () => {
                 </td>
                 <td className="px-3 py-2.5 whitespace-nowrap text-charcoal dark:text-white/75 text-xs sm:text-sm">0%</td>
                 <td className="px-3 py-2.5 whitespace-nowrap text-charcoal dark:text-white/75 text-xs sm:text-sm">0</td>
-                {thresholdsLoaded && (isEarlyAccessEnabled() || isAdmin) && (
-                  <td className="px-3 py-2.5 whitespace-nowrap text-charcoal dark:text-white/55 text-xs sm:text-sm">—</td>
-                )}
               </tr>
               <tr className={cardData.tier === 'Bronze' ? 'bg-plum-50/50 dark:bg-plum-900/20' : ''}>
                 <td className="px-3 py-2.5 whitespace-nowrap">
@@ -724,18 +631,6 @@ const RoyalCard = () => {
                 <td className="px-3 py-2.5 whitespace-nowrap text-charcoal dark:text-white/75 text-xs sm:text-sm">
                   {formatNumber(getBronzeThreshold())}
                 </td>
-                {thresholdsLoaded && (isEarlyAccessEnabled() || isAdmin) && (
-                  <td className="px-3 py-2.5 whitespace-nowrap text-charcoal dark:text-white/75 text-xs sm:text-sm">
-                    {formatNumber(getEarlyBronzeThreshold())} pts
-                    {isEarlyAccessEnabled() && 
-                     cardData.points >= getEarlyBronzeThreshold() && 
-                     cardData.points < getBronzeThreshold() && (
-                      <span className="ml-1 sm:ml-2 text-[0.65rem] bg-emerald-100 dark:bg-emerald-900/35 text-emerald-800 dark:text-emerald-300 px-2 py-0.5 rounded-pill font-medium">
-                        Active
-                      </span>
-                    )}
-                  </td>
-                )}
               </tr>
               <tr className={cardData.tier === 'Silver' ? 'bg-plum-50/50 dark:bg-plum-900/20' : ''}>
                 <td className="px-3 py-2.5 whitespace-nowrap">
@@ -748,18 +643,6 @@ const RoyalCard = () => {
                 <td className="px-3 py-2.5 whitespace-nowrap text-charcoal dark:text-white/75 text-xs sm:text-sm">
                   {formatNumber(getSilverThreshold())}
                 </td>
-                {thresholdsLoaded && (isEarlyAccessEnabled() || isAdmin) && (
-                  <td className="px-3 py-2.5 whitespace-nowrap text-charcoal dark:text-white/75 text-xs sm:text-sm">
-                    {formatNumber(getEarlySilverThreshold())} pts
-                    {isEarlyAccessEnabled() && 
-                     cardData.points >= getEarlySilverThreshold() && 
-                     cardData.points < getSilverThreshold() && (
-                      <span className="ml-1 sm:ml-2 text-[0.65rem] bg-emerald-100 dark:bg-emerald-900/35 text-emerald-800 dark:text-emerald-300 px-2 py-0.5 rounded-pill font-medium">
-                        Active
-                      </span>
-                    )}
-                  </td>
-                )}
               </tr>
               <tr className={cardData.tier === 'Gold' ? 'bg-plum-50/50 dark:bg-plum-900/20' : ''}>
                 <td className="px-3 py-2.5 whitespace-nowrap">
@@ -772,18 +655,6 @@ const RoyalCard = () => {
                 <td className="px-3 py-2.5 whitespace-nowrap text-charcoal dark:text-white/75 text-xs sm:text-sm">
                   {formatNumber(getGoldThreshold())}
                 </td>
-                {thresholdsLoaded && (isEarlyAccessEnabled() || isAdmin) && (
-                  <td className="px-3 py-2.5 whitespace-nowrap text-charcoal dark:text-white/75 text-xs sm:text-sm">
-                    {formatNumber(getEarlyGoldThreshold())} pts
-                    {isEarlyAccessEnabled() && 
-                     cardData.points >= getEarlyGoldThreshold() && 
-                     cardData.points < getGoldThreshold() && (
-                      <span className="ml-1 sm:ml-2 text-[0.65rem] bg-emerald-100 dark:bg-emerald-900/35 text-emerald-800 dark:text-emerald-300 px-2 py-0.5 rounded-pill font-medium">
-                        Active
-                      </span>
-                    )}
-                  </td>
-                )}
               </tr>
               <tr className={cardData.tier === 'Platinum' ? 'bg-plum-50/70 dark:bg-plum-900/25 font-semibold' : ''}>
                 <td className="px-3 py-2.5 whitespace-nowrap">
@@ -810,85 +681,16 @@ const RoyalCard = () => {
                     </span>
                   )}
                 </td>
-                {thresholdsLoaded && (isEarlyAccessEnabled() || isAdmin) && (
-                  <td className="px-3 py-2.5 whitespace-nowrap text-charcoal dark:text-white/75">
-                    {formatNumber(getEarlyPlatinumThreshold())} pts
-                    {isEarlyAccessEnabled() && 
-                     cardData.points >= getEarlyPlatinumThreshold() && 
-                     cardData.points < getPlatinumThreshold() && 
-                     !isAdmin && (
-                      <span className="ml-2 text-[0.65rem] bg-emerald-100 dark:bg-emerald-900/35 text-emerald-800 dark:text-emerald-300 px-2 py-0.5 rounded-pill font-medium">
-                        Active
-                      </span>
-                    )}
-                  </td>
-                )}
+
               </tr>
             </tbody>
           </table>
         </div>
         
-        {/* Early Access Warning for Non-Enabled State - only visible to users who had early access previously */}
-        {thresholdsLoaded && !isEarlyAccessEnabled() && (
-          <div className="mt-3 p-3 rounded-card border border-gold-200/80 dark:border-gold-800/40 bg-gold-50/80 dark:bg-gold-950/20">
-            <p className="text-xs flex items-center gap-1.5 text-charcoal dark:text-gold-200 font-semibold">
-              <FaInfoCircle className="text-gold-600 dark:text-gold-400 shrink-0" /> Early access program inactive
-            </p>
-            <p className="text-xs mt-1.5 text-brown-700 dark:text-white/55 leading-relaxed">
-              {isInTierViaEarlyAccess() ? 
-                `The early access program is currently unavailable. You'll maintain your ${cardData.tier} tier benefits as long as you stay above ${formatNumber(getCurrentTierEarlyThreshold())} points.` :
-                "The early access program is currently unavailable. All tier upgrades now require the standard point thresholds shown above."
-              }
-            </p>
-          </div>
-        )}
-        
-        {/* Status notice for users who are in a tier through early access when the program is disabled */}
-        {isInTierViaEarlyAccess() && (
-          <div className="mt-2 p-2 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded text-xs">
-            <p className="flex items-center text-yellow-800 dark:text-yellow-300 font-medium">
-              <FaInfoCircle className="mr-1" /> 
-              Early Access Status Protected
-            </p>
-            <p className="mt-1 text-charcoal dark:text-white/55">
-              You're currently enjoying {cardData.tier} tier benefits through our previous early access program. To maintain this status, please keep your points above {formatNumber(getCurrentTierEarlyThreshold())} points.
-            </p>
-          </div>
-        )}
-        
-        {/* Only show early access info for next tier if the feature is enabled */}
-        {thresholdsLoaded && 
-          isEarlyAccessEnabled() && 
-          cardData.tier !== 'Platinum' &&
-          cardData.tier !== 'Basic' && (
-          <div className="mt-2 text-xs text-brown-400 dark:text-white/40 italic">
-            <p className="flex items-center">
-              <FaInfoCircle className="mr-1 text-plum-500" />
-              Your next tier: <span className="ml-1 font-medium text-plum-700 dark:text-plum-300">
-                {getNextTierName()}
-              </span>
-              <span className="mx-2">•</span>
-              <span>
-                Standard: {formatNumber(getNextTierThreshold())} pts
-              </span>
-              <span className="mx-2">•</span>
-              <span className="text-plum-700 dark:text-plum-300">
-                Early Access: {formatNumber(getNextTierEarlyThreshold())} pts
-              </span>
-            </p>
-          </div>
-        )}
-        
         <p className="mt-4 text-xs text-brown-600 dark:text-white/50 leading-relaxed space-y-1">
           <span className="block">Earn 1 point for every KES 100 spent in our store.</span>
           {isAdmin && <span className="block mt-1 text-plum-700 dark:text-plum-300/90">Admin accounts automatically receive Platinum status.</span>}
-          {thresholdsLoaded && (
-            <span className="block mt-1">
-              {isEarlyAccessEnabled()
-                ? 'Early access thresholds are set by administrators to reward loyal customers.'
-                : 'Early access is currently disabled — use the standard point thresholds above.'}
-            </span>
-          )}
+          <span className="block mt-1">Tier benefits unlock automatically as you accumulate points.</span>
         </p>
       </div>
 
@@ -952,9 +754,7 @@ const RoyalCard = () => {
           <div className="mt-3 text-xs text-charcoal dark:text-white/55">
             <p>You need <span className="font-bold text-plum-700 dark:text-plum-300">{formatNumber(getPlatinumThreshold() - cardData.points)}</span> more points to fully secure your Platinum status.</p>
             <p className="mt-1">
-              {isEarlyAccessEnabled() 
-                ? "Your Platinum benefits are currently active through early access, but we encourage reaching the standard threshold for full status security."
-                : "Your Platinum benefits are protected through our loyalty program. Please maintain at least your current points to keep your status."}
+              Your Platinum benefits are protected through our loyalty program. Please maintain at least your current points to keep your status.
             </p>
           </div>
           
@@ -1034,7 +834,7 @@ const RoyalCard = () => {
                 clearInterval(interval);
                 setPreviewCountdown(0);
                 setCardData(originalCardData);
-                toast.info("Reverted to your actual tier", { duration: 3000 });
+                toast("Reverted to your actual tier", { duration: 3000 });
               }, 5000);
             }}
             className="w-full max-w-md mx-auto bg-gradient-to-r from-plum-700 to-plum-600 hover:from-plum-600 hover:to-plum-500 text-white py-3 rounded-pill text-sm font-semibold border border-plum-500/50 shadow-md transition"

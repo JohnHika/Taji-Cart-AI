@@ -123,7 +123,7 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
       // If clicking the same reward, deselect it
       setSelectedReward(null);
       setCommunityDiscount(0);
-      toast.info(`Removed ${reward.type === 'discount' ? `${reward.value}% discount` : 'reward'}`);
+      toast(`Removed ${reward.type === 'discount' ? `${reward.value}% discount` : 'reward'}`);
     } else {
       // Select the reward and calculate discount if applicable
       setSelectedReward(reward);
