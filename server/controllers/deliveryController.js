@@ -26,6 +26,45 @@ const availableDriverFilter = {
   ]
 };
 
+const buildDeliveryPersonnelSeed = (user) => ({
+  userId: user._id,
+  name: user.name?.trim() || user.email || 'Delivery Driver',
+  ...(user.profile_pic ? { profileImage: user.profile_pic } : {}),
+  ...(user.mobile || user.phone ? { phoneNumber: user.mobile || user.phone } : {}),
+  isActive: true,
+  isAvailable: true
+});
+
+const ensureDeliveryPersonnelRecords = async () => {
+  const deliveryUsers = await User.find({
+    $or: [
+      { isDelivery: true },
+      { role: 'delivery' }
+    ]
+  }).select('name email mobile phone profile_pic');
+
+  if (!deliveryUsers.length) {
+    return;
+  }
+
+  await Promise.all(
+    deliveryUsers.map((user) =>
+      DeliveryPersonnelModel.findOneAndUpdate(
+        { userId: user._id },
+        {
+          $setOnInsert: buildDeliveryPersonnelSeed(user)
+        },
+        {
+          upsert: true,
+          new: false,
+          runValidators: true,
+          setDefaultsOnInsert: true
+        }
+      )
+    )
+  );
+};
+
 const formatDeliveryItems = (order) => {
   if (Array.isArray(order.items) && order.items.length > 0) {
     return order.items.map((item) => ({
@@ -436,23 +475,41 @@ export const updateDriverLocation = async (req, res) => {
         });
     }
     
-    // Update driver location
-    await DeliveryPersonnelModel.findOneAndUpdate(
-        { userId: driverId },
-        {
-            currentLocation: {
-                lat: latitude,
-                lng: longitude,
-                lastUpdated: new Date()
-            }
-        }
+    const driverUser = await User.findById(driverId).select('name email mobile phone profile_pic');
+
+    // Update driver location and create a delivery profile if a legacy account is missing one
+    const driverProfile = await DeliveryPersonnelModel.findOneAndUpdate(
+      { userId: driverId },
+      {
+        $set: {
+          currentLocation: {
+            lat: latitude,
+            lng: longitude,
+            lastUpdated: new Date()
+          },
+          isActive: true
+        },
+        $setOnInsert: buildDeliveryPersonnelSeed(driverUser || { _id: driverId })
+      },
+      {
+        new: true,
+        upsert: true,
+        runValidators: true,
+        setDefaultsOnInsert: true
+      }
     );
     
     // If order ID is provided, update order location as well
     if (orderId) {
+      const driverIdentifiers = [driverId];
+
+      if (driverProfile?._id) {
+        driverIdentifiers.push(driverProfile._id);
+      }
+
         const order = await OrderModel.findOne({
             _id: orderId,
-            deliveryPersonnel: driverId
+        deliveryPersonnel: { $in: driverIdentifiers }
         });
         
         if (order) {
@@ -772,17 +829,7 @@ export const dispatchOrder = async (req, res) => {
 // Get list of available delivery drivers for admin/staff to choose from
 export const getAvailableDrivers = async (req, res) => {
   try {
-    // Try to import the DeliveryPersonnel model
-    let DeliveryPersonnelModel;
-    try {
-      DeliveryPersonnelModel = mongoose.model('DeliveryPersonnel');
-    } catch (err) {
-      return res.status(500).json({
-        success: false,
-        message: 'Delivery personnel system is not available',
-        error: err.message
-      });
-    }
+    await ensureDeliveryPersonnelRecords();
     
     // Find all active delivery personnel
     const allDrivers = await DeliveryPersonnelModel.find(activeDriverFilter)

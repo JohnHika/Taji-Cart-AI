@@ -82,6 +82,8 @@ const DeliveryMap = () => {
   const [locationWeatherData, setLocationWeatherData] = useState(null);
   const [showLocationWeather, setShowLocationWeather] = useState(false);
   const [clickedLocation, setClickedLocation] = useState(null);
+  const weatherApiKey = import.meta.env.VITE_WEATHERAPI_KEY;
+  const hasWeatherApiKey = Boolean(weatherApiKey && weatherApiKey !== 'your_weatherapi_key_here');
 
   // Available tile layers
   const tileLayers = {
@@ -227,6 +229,9 @@ const DeliveryMap = () => {
         url: '/api/delivery/update-location',
         method: 'POST',
         data: {
+          latitude: locationToUpdate.lat,
+          longitude: locationToUpdate.lng,
+          orderId: selectedDelivery?._id,
           location: locationToUpdate
         }
       });
@@ -480,16 +485,13 @@ const DeliveryMap = () => {
   const fetchWeatherData = async (lat, lng) => {
     try {
       setLoadingWeather(true);
-      // Using WeatherAPI.com with environment variable
-      const apiKey = import.meta.env.VITE_WEATHERAPI_KEY;
-      
-      if (!apiKey || apiKey === 'your_weatherapi_key_here') {
-        console.warn('WeatherAPI.com key is missing or invalid. Please configure it in your .env file.');
+      if (!hasWeatherApiKey) {
+        setWeatherData(null);
         return;
       }
       
       const response = await fetch(
-        `https://api.weatherapi.com/v1/current.json?key=${apiKey}&q=${lat},${lng}&aqi=no`
+        `https://api.weatherapi.com/v1/current.json?key=${weatherApiKey}&q=${lat},${lng}&aqi=no`
       );
       
       if (response.ok) {
@@ -630,18 +632,17 @@ const DeliveryMap = () => {
   const fetchLocationWeather = async (lat, lng) => {
     try {
       setLocationWeatherData(null);
-      const apiKey = import.meta.env.VITE_WEATHERAPI_KEY;
-      
-      if (!apiKey || apiKey === 'your_weatherapi_key_here') {
-        toast.error('WeatherAPI key is missing. Please configure it in your .env file.');
+
+      if (!hasWeatherApiKey) {
+        toast.error('Weather is temporarily unavailable right now.');
         return;
       }
       
       toast.loading('Fetching weather data...');
       
       try {
-        const weatherData = await getCurrentWeather(apiKey, { lat, lng });
-        const forecastData = await getForecast(apiKey, { lat, lng }, 3, false, true);
+        const weatherData = await getCurrentWeather(weatherApiKey, { lat, lng });
+        const forecastData = await getForecast(weatherApiKey, { lat, lng }, 3, false, true);
         
         setLocationWeatherData({ 
           current: weatherData.current,
@@ -667,6 +668,11 @@ const DeliveryMap = () => {
   
   // Toggle weather mode for map clicks
   const toggleWeatherMode = () => {
+    if (!weatherMode && !hasWeatherApiKey) {
+      toast.error('Weather is temporarily unavailable right now.');
+      return;
+    }
+
     setWeatherMode(!weatherMode);
     toast.success(weatherMode ? 'Weather check mode disabled' : 'Click anywhere on map to check weather');
   };

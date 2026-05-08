@@ -1,6 +1,7 @@
 import bcryptjs from 'bcryptjs'
 import jwt from 'jsonwebtoken'
 import sendEmail, { isEmailConfigured } from '../config/sendEmail.js'
+import DeliveryPersonnelModel from '../models/deliverypersonnel.model.js'
 import LoyaltyCard from '../models/loyaltycard.model.js'
 import UserModel from '../models/user.model.js'
 import { nawiriBrand } from '../utils/brand.js'
@@ -52,6 +53,16 @@ const maskPhoneNumber = (value = '') => {
     }
 
     return `${normalized.slice(0, 4)} ${'*'.repeat(Math.max(normalized.length - 7, 1))}${normalized.slice(-3)}`
+}
+
+const buildDeliveryPersonnelProfile = (user = {}) => {
+    const normalizedPhone = normalizePhoneNumber(user.mobile || user.phone || '')
+
+    return {
+        name: user.name?.trim() || user.email || 'Delivery Driver',
+        ...(user.profile_pic ? { profileImage: user.profile_pic } : {}),
+        ...(normalizedPhone ? { phoneNumber: normalizedPhone } : {}),
+    }
 }
 
 const sendPhoneVerificationCodeEmail = async ({ user, phoneNumber, otp }) =>
@@ -2090,6 +2101,37 @@ export async function setDeliveryRoleController(req, res) {
             isAdmin: updatedUser.isAdmin,
             isDelivery: updatedUser.isDelivery
         });
+
+        if (updatedUser.isDelivery) {
+            await DeliveryPersonnelModel.findOneAndUpdate(
+                { userId: updatedUser._id },
+                {
+                    $set: {
+                        userId: updatedUser._id,
+                        ...buildDeliveryPersonnelProfile(updatedUser),
+                        isActive: true,
+                        isAvailable: true,
+                    },
+                },
+                {
+                    new: true,
+                    upsert: true,
+                    runValidators: true,
+                    setDefaultsOnInsert: true,
+                }
+            )
+        } else {
+            await DeliveryPersonnelModel.findOneAndUpdate(
+                { userId: updatedUser._id },
+                {
+                    $set: {
+                        isActive: false,
+                        isAvailable: false,
+                        lastActive: new Date(),
+                    },
+                }
+            )
+        }
         
         return res.status(200).json({
             message: `User delivery role ${updatedUser.isDelivery ? 'assigned' : 'removed'} successfully`,
