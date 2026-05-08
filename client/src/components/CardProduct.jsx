@@ -50,12 +50,6 @@ const CardProduct = ({ data }) => {
       </div>
 
       <div className="min-w-0 overflow-hidden">
-        {data.sku && (
-          <div className="mb-1 truncate rounded bg-plum-50 px-2 py-1 font-mono text-[10px] text-brown-600 dark:bg-dm-card-2 dark:text-white/50 sm:text-xs" title={`SKU: ${data.sku}`}>
-            SKU: {data.sku}
-          </div>
-        )}
-
         {unitName && (
           <p className="text-xs leading-tight text-brown-400 dark:text-white/40">
             {unitName}
@@ -66,14 +60,20 @@ const CardProduct = ({ data }) => {
       <div className="mt-auto flex min-w-0 flex-col gap-2 overflow-hidden text-xs sm:text-sm lg:text-base">
         <div className="min-w-0 flex flex-col">
           {hasValidPrice ? (
-            <>
-              <div className={`${hasDiscount ? 'font-medium line-through text-brown-400 dark:text-white/45' : 'text-brown-400 dark:text-white/45'} truncate text-xs`}>
+            hasDiscount ? (
+              <>
+                <div className="truncate text-xs font-medium line-through text-brown-400 dark:text-white/45">
+                  {DisplayPriceInShillings(data.price)}
+                </div>
+                <div className="truncate font-semibold text-green-600 dark:text-green-400 sm:text-base">
+                  {DisplayPriceInShillings(discountedPrice)}
+                </div>
+              </>
+            ) : (
+              <div className="truncate font-semibold text-charcoal dark:text-white sm:text-base">
                 {DisplayPriceInShillings(data.price)}
               </div>
-              <div className="truncate font-semibold text-green-600 dark:text-green-400 sm:text-base">
-                {DisplayPriceInShillings(discountedPrice)}
-              </div>
-            </>
+            )
           ) : (
             <>
               <div className="truncate text-xs text-brown-400 dark:text-white/45">
@@ -87,21 +87,17 @@ const CardProduct = ({ data }) => {
         </div>
 
         <div className="flex w-full min-w-0 flex-col gap-2">
-          {hasValidPrice ? (
+          {hasValidPrice && hasDiscount ? (
             <div
-              className={`w-fit max-w-full truncate rounded-full px-2 py-1 text-[11px] font-bold shadow-sm sm:px-2.5 sm:text-xs ${
-                hasDiscount
-                  ? 'bg-gradient-to-r from-plum-700 to-plum-600 text-white'
-                  : 'bg-brown-100 text-brown-700 dark:bg-dm-border dark:text-white/70'
-              }`}
+              className="w-fit max-w-full truncate rounded-full bg-gradient-to-r from-plum-700 to-plum-600 px-2 py-1 text-[11px] font-bold text-white shadow-sm sm:px-2.5 sm:text-xs"
             >
-              {data.discount || 0}% off
+              {data.discount}% off
             </div>
-          ) : (
+          ) : !hasValidPrice ? (
             <div className="w-fit max-w-full truncate rounded-full bg-brown-100 px-2 py-1 text-[11px] font-bold text-brown-700 shadow-sm dark:bg-dm-border dark:text-white/70 sm:px-2.5 sm:text-xs">
               Catalog preview
             </div>
-          )}
+          ) : null}
 
           <div className="w-full min-w-0 max-w-full" onClick={(e) => e.preventDefault()}>
             {!hasValidPrice ? (
