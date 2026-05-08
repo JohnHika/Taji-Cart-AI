@@ -9,13 +9,24 @@ import welcomeEmailTemplate from '../utils/welcomeEmailTemplate.js';
 
 dotenv.config();
 
+const trimTrailingSlash = (value = '') => value.replace(/\/$/, '');
+const isBrandedGoogleCallbackReady = process.env.GOOGLE_CALLBACK_BRANDED_READY === 'true';
+const configuredGoogleCallbackUrl = trimTrailingSlash(process.env.GOOGLE_CALLBACK_URL || '');
+const shouldUseConfiguredGoogleCallbackUrl =
+  Boolean(configuredGoogleCallbackUrl) &&
+  (isBrandedGoogleCallbackReady ||
+    /onrender\.com/i.test(configuredGoogleCallbackUrl) ||
+    /localhost/i.test(configuredGoogleCallbackUrl));
+
 const SERVER_BASE_URL =
-  process.env.RENDER_EXTERNAL_URL?.replace(/\/$/, '') ||
-  process.env.BACKEND_URL?.replace(/\/$/, '') ||
-  process.env.SERVER_URL?.replace(/\/$/, '') ||
+  trimTrailingSlash(process.env.RENDER_EXTERNAL_URL || '') ||
+  trimTrailingSlash(process.env.BACKEND_URL || '') ||
+  trimTrailingSlash(process.env.SERVER_URL || '') ||
   `http://localhost:${process.env.PORT || 5000}`;
 const GOOGLE_CALLBACK_URL =
-  process.env.GOOGLE_CALLBACK_URL || `${SERVER_BASE_URL}/api/auth/google/callback`;
+  shouldUseConfiguredGoogleCallbackUrl
+    ? configuredGoogleCallbackUrl
+    : `${SERVER_BASE_URL}/api/auth/google/callback`;
 
 if (!process.env.JWT_SECRET) {
   console.warn('JWT_SECRET is not configured; passport JWT strategy will use fallback-secret.');
