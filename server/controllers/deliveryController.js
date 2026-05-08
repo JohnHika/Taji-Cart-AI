@@ -534,17 +534,23 @@ export const updateDriverLocation = async (req, res) => {
   try {
     const driverId = req.userId;
     const { latitude, longitude, orderId } = req.body;
-    
+
     if (!latitude || !longitude) {
-        return res.status(400).json({
-            success: false,
-            message: 'Latitude and longitude are required'
-        });
+      return res.status(400).json({
+        success: false,
+        message: 'Latitude and longitude are required'
+      });
     }
-    
+
     const driverUser = await User.findById(driverId).select('name email mobile phone profile_pic');
 
-    // Update driver location and create a delivery profile if a legacy account is missing one
+    // Build seed data for profile creation on upsert-insert only.
+    // Exclude userId (MongoDB merges it from the query filter automatically)
+    // and isActive (already handled by $set) to avoid path conflicts.
+    const { userId: _omitUserId, isActive: _omitActive, ...insertOnlyFields } =
+      buildDeliveryPersonnelSeed(driverUser || { _id: driverId });
+
+    // Update driver location; create a delivery profile for legacy accounts that lack one
     const driverProfile = await DeliveryPersonnelModel.findOneAndUpdate(
       { userId: driverId },
       {
@@ -556,7 +562,7 @@ export const updateDriverLocation = async (req, res) => {
           },
           isActive: true
         },
-        $setOnInsert: buildDeliveryPersonnelSeed(driverUser || { _id: driverId })
+        $setOnInsert: insertOnlyFields
       },
       {
         new: true,
@@ -564,51 +570,48 @@ export const updateDriverLocation = async (req, res) => {
         setDefaultsOnInsert: true
       }
     );
-    
+
     // If order ID is provided, update order location as well
     if (orderId) {
       const driverIdentifiers = [driverId];
+      if (driverProfile?._id) driverIdentifiers.push(driverProfile._id);
 
-      if (driverProfile?._id) {
-        driverIdentifiers.push(driverProfile._id);
-      }
-
-        const order = await OrderModel.findOne({
-            _id: orderId,
+      const order = await OrderModel.findOne({
+        _id: orderId,
         deliveryPersonnel: { $in: driverIdentifiers }
-        });
-        
-        if (order) {
-            order.currentLocation = {
-                lat: latitude,
-                lng: longitude,
-                lastUpdated: new Date()
-            };
-            
-            await order.save();
-            
-            // Send real-time location update via socket
-            const io = getIO();
-            io.to(`order_${orderId}`).emit('locationUpdated', {
-                orderId,
-                location: {
-                    lat: latitude,
-                    lng: longitude
-                },
-                timestamp: new Date()
-            });
+      });
+
+      if (order) {
+        order.currentLocation = {
+          lat: latitude,
+          lng: longitude,
+          lastUpdated: new Date()
+        };
+        await order.save();
+
+        // Emit real-time location update — guard against socket not yet initialised
+        try {
+          const io = getIO();
+          io.to(`order_${orderId}`).emit('locationUpdated', {
+            orderId,
+            location: { lat: latitude, lng: longitude },
+            timestamp: new Date()
+          });
+        } catch (socketErr) {
+          console.warn('Socket unavailable for location update:', socketErr.message);
         }
+      }
     }
-    
+
     return res.json({
-        success: true,
-        message: 'Location updated successfully'
+      success: true,
+      message: 'Location updated successfully'
     });
   } catch (error) {
     console.error('Error updating driver location:', error);
     return res.status(500).json({
-        success: false,
-        message: 'Error updating driver location'
+      success: false,
+      message: 'Error updating driver location'
     });
   }
 };
