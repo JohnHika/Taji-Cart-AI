@@ -3,6 +3,26 @@
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
   "rewrites": [
+    {
+      "source": "/api/(.*)",
+      "has": [
+        {
+          "type": "host",
+          "value": "api.nawirihairke.com"
+        }
+      ],
+      "destination": "https://taji-cart-api.onrender.com/api/$1"
+    },
+    {
+      "source": "/auth/(.*)",
+      "has": [
+        {
+          "type": "host",
+          "value": "api.nawirihairke.com"
+        }
+      ],
+      "destination": "https://taji-cart-api.onrender.com/auth/$1"
+    },
     { "source": "/(.*)", "destination": "/index.html" }
   ]
 }
