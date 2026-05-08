@@ -5,6 +5,7 @@ import { buildApiUrl } from '../common/apiBaseUrl';
 const trimTrailingSlash = (value = '') => value.replace(/\/+$/, '');
 
 const brandedOAuthBaseUrl = trimTrailingSlash(import.meta.env.VITE_OAUTH_BASE_URL || '');
+const isBrandedOAuthReady = import.meta.env.VITE_BRANDED_OAUTH_READY === 'true';
 
 const GoogleIcon = () => (
   <svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -21,7 +22,7 @@ const SocialAuth = () => {
   const handleGoogleLogin = () => {
     setIsLoading(true);
     try {
-      const authUrl = brandedOAuthBaseUrl
+      const authUrl = brandedOAuthBaseUrl && isBrandedOAuthReady
         ? `${brandedOAuthBaseUrl}/api/auth/google`
         : buildApiUrl('/api/auth/google');
       window.location.assign(authUrl);
