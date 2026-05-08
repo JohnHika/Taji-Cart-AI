@@ -16,6 +16,13 @@ const DELIVERY_ORDER_FILTER = {
   ]
 };
 
+const buildDeliveryQuery = (criteria = {}) => {
+  const query = { ...criteria };
+  const existingAnd = Array.isArray(query.$and) ? query.$and : [];
+  query.$and = [...existingAnd, DELIVERY_ORDER_FILTER];
+  return query;
+};
+
 const activeDriverFilter = {
   $or: [
     { isActive: true },
@@ -542,13 +549,19 @@ export const getDeliveryStats = async (req, res) => {
     
     // Get driver info including current location and availability status
     const driverInfo = await DeliveryPersonnelModel.findOne({ userId: driverId });
+    const averageRating = Number(driverInfo?.averageRating || 0);
     
     return res.json({
         success: true,
         data: {
             activeOrders,
+        activeDeliveries: activeOrders,
+        pendingDeliveries: activeOrders,
             completedToday,
+        todayDeliveries: completedToday,
             totalCompleted,
+        totalDeliveries: totalCompleted,
+        averageRating,
           isOnline: driverInfo?.isOnline || false,
             isAvailable: driverInfo?.isAvailable || false,
             currentLocation: driverInfo?.currentLocation || null
@@ -1587,26 +1600,22 @@ export const getDashboardStats = async (req, res) => {
     
     // Count orders by status - Include all orders with delivery as fulfillment type
     // that haven't been dispatched yet (pending, processing, confirmed)
-    const pendingOrders = await Order.countDocuments({
-      status: { $in: ['pending', 'processing', 'confirmed'] },
-      fulfillment_type: 'delivery'
-    });
+    const pendingOrders = await Order.countDocuments(buildDeliveryQuery({
+      status: { $in: ['pending', 'processing', 'confirmed'] }
+    }));
     
-    const dispatchedOrders = await Order.countDocuments({
-      status: 'dispatched',
-      fulfillment_type: 'delivery'
-    });
+    const dispatchedOrders = await Order.countDocuments(buildDeliveryQuery({
+      status: 'dispatched'
+    }));
     
-    const activeDeliveries = await Order.countDocuments({
-      status: { $in: ['driver_assigned', 'out_for_delivery', 'nearby'] },
-      fulfillment_type: 'delivery'
-    });
+    const activeDeliveries = await Order.countDocuments(buildDeliveryQuery({
+      status: { $in: ['driver_assigned', 'out_for_delivery', 'nearby'] }
+    }));
     
-    const completedToday = await Order.countDocuments({
+    const completedToday = await Order.countDocuments(buildDeliveryQuery({
       status: 'delivered',
-      fulfillment_type: 'delivery',
       deliveredAt: { $gte: today }
-    });
+    }));
     
     // Get driver availability stats
     let DeliveryPersonnelModel;
@@ -1622,10 +1631,9 @@ export const getDashboardStats = async (req, res) => {
     }
     
     // Get recent orders for delivery (last 5)
-    const recentOrders = await Order.find({
-      fulfillment_type: 'delivery',
+    const recentOrders = await Order.find(buildDeliveryQuery({
       status: { $in: ['confirmed', 'pending', 'processing', 'dispatched', 'driver_assigned', 'out_for_delivery', 'nearby', 'delivered'] }
-    })
+    }))
     .sort({ createdAt: -1 })
     .limit(5)
     .populate('userId', 'name email')
@@ -1695,10 +1703,10 @@ const getDeliveryPerformance = async () => {
   sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
   
   // Get all completed deliveries in the last 7 days
-  const completedDeliveries = await Order.find({
+  const completedDeliveries = await Order.find(buildDeliveryQuery({
     status: 'delivered',
     deliveredAt: { $gte: sevenDaysAgo }
-  }).select('createdAt deliveredAt');
+  })).select('createdAt deliveredAt');
   
   // Calculate average delivery time
   let totalMinutes = 0;
@@ -1726,13 +1734,13 @@ const getDeliveryPerformance = async () => {
     const nextDay = new Date(date);
     nextDay.setDate(nextDay.getDate() + 1);
     
-    const count = await Order.countDocuments({
+    const count = await Order.countDocuments(buildDeliveryQuery({
       status: 'delivered',
       deliveredAt: {
         $gte: date,
         $lt: nextDay
       }
-    });
+    }));
     
     dailyStats.push({
       date: date.toISOString().split('T')[0],
@@ -1758,10 +1766,9 @@ export const getPendingOrders = async (req, res) => {
     
     // Find all orders that are confirmed/pending/processing and haven't been dispatched
     // Only include delivery orders
-    const pendingOrders = await Order.find({
-      status: { $in: ['pending', 'processing', 'confirmed'] },
-      fulfillment_type: 'delivery'
-    })
+    const pendingOrders = await Order.find(buildDeliveryQuery({
+      status: { $in: ['pending', 'processing', 'confirmed'] }
+    }))
     .populate('userId', 'name email phone')
     .populate('delivery_address')
     .sort(sortConfig)
@@ -1836,10 +1843,9 @@ export const getPendingOrders = async (req, res) => {
 
 export const getDispatchedOrders = async (req, res) => {
   try {
-    const orders = await Order.find({
-      status: 'dispatched',
-      fulfillment_type: 'delivery'
-    })
+    const orders = await Order.find(buildDeliveryQuery({
+      status: 'dispatched'
+    }))
       .populate('userId', 'name email mobile phone')
       .populate('delivery_address')
       .sort({ 'dispatchInfo.dispatchedAt': -1, updatedAt: -1 })
@@ -1861,10 +1867,9 @@ export const getDispatchedOrders = async (req, res) => {
 
 export const getActiveDeliveriesForStaff = async (req, res) => {
   try {
-    const orders = await Order.find({
-      status: { $in: ['driver_assigned', 'out_for_delivery', 'nearby'] },
-      fulfillment_type: 'delivery'
-    })
+    const orders = await Order.find(buildDeliveryQuery({
+      status: { $in: ['driver_assigned', 'out_for_delivery', 'nearby'] }
+    }))
       .populate('userId', 'name email mobile phone')
       .populate('delivery_address')
       .populate({
@@ -1894,10 +1899,9 @@ export const getActiveDeliveriesForStaff = async (req, res) => {
 export const getCompletedDeliveriesForStaff = async (req, res) => {
   try {
     const { startDate, endDate } = req.query;
-    const query = {
-      status: 'delivered',
-      fulfillment_type: 'delivery'
-    };
+    const query = buildDeliveryQuery({
+      status: 'delivered'
+    });
 
     if (startDate || endDate) {
       query.deliveredAt = {};

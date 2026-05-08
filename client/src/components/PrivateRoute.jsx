@@ -9,9 +9,10 @@ import { Navigate, useLocation } from 'react-router-dom';
  * @param {React.ReactNode} props.children - The component or elements to render when authenticated
  * @param {boolean} [props.requireAdmin=false] - Whether the route requires admin privileges
  * @param {boolean} [props.requireStaff=false] - Whether the route requires staff privileges
+ * @param {boolean} [props.requireDelivery=false] - Whether the route requires delivery privileges
  * @returns {React.ReactNode}
  */
-const PrivateRoute = ({ children, requireAdmin = false, requireStaff = false }) => {
+const PrivateRoute = ({ children, requireAdmin = false, requireStaff = false, requireDelivery = false }) => {
   const user = useSelector(state => state.user);
   const location = useLocation();
   const hasStoredSession = Boolean(
@@ -38,6 +39,10 @@ const PrivateRoute = ({ children, requireAdmin = false, requireStaff = false }) 
     user?.role === 'staff' || 
     user?.isStaff === true || 
     isAdmin; // Admins can do everything staff can do
+
+  const isDelivery =
+    user?.role === 'delivery' ||
+    user?.isDelivery === true;
   
   // Check if logged in
   if (!isAuthenticated) {
@@ -61,6 +66,15 @@ const PrivateRoute = ({ children, requireAdmin = false, requireStaff = false }) 
   // Check if staff is required but user is not staff
   if (requireStaff && !isStaff) {
     console.log('Staff required but user is not staff, redirecting');
+    return <Navigate to="/dashboard/profile" replace />;
+  }
+
+  // Check if delivery role is required but user is not a delivery driver
+  if (requireDelivery && !isDelivery) {
+    console.log('Delivery role required but user is not delivery, redirecting');
+    if (isStaff) {
+      return <Navigate to="/dashboard/staff/delivery" replace />;
+    }
     return <Navigate to="/dashboard/profile" replace />;
   }
 

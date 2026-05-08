@@ -339,7 +339,11 @@ const router = createBrowserRouter([
       // Delivery routes with specialized layout
       {
         path: 'delivery',
-        element: <DeliveryLayout />,
+        element: (
+          <PrivateRoute requireDelivery={true}>
+            <DeliveryLayout />
+          </PrivateRoute>
+        ),
         children: [
           {
             path: 'dashboard',
@@ -504,23 +508,43 @@ const router = createBrowserRouter([
           // Delivery specific routes
           {
             path: 'delivery/dashboard',
-            element: <DeliveryDashboard />
+            element: (
+              <PrivateRoute requireDelivery={true}>
+                <DeliveryDashboard />
+              </PrivateRoute>
+            )
           },
           {
             path: 'delivery/active',
-            element: <ActiveDeliveries />
+            element: (
+              <PrivateRoute requireDelivery={true}>
+                <ActiveDeliveries />
+              </PrivateRoute>
+            )
           },
           {
             path: 'delivery/completed',
-            element: <CompletedDeliveries />
+            element: (
+              <PrivateRoute requireDelivery={true}>
+                <CompletedDeliveries />
+              </PrivateRoute>
+            )
           },
           {
             path: 'delivery/history',
-            element: <DeliveryHistory />
+            element: (
+              <PrivateRoute requireDelivery={true}>
+                <DeliveryHistory />
+              </PrivateRoute>
+            )
           },
           {
             path: 'delivery/map',
-            element: <DeliveryMap />
+            element: (
+              <PrivateRoute requireDelivery={true}>
+                <DeliveryMap />
+              </PrivateRoute>
+            )
           },
           
           // Staff specific routes - redirects for backward compatibility

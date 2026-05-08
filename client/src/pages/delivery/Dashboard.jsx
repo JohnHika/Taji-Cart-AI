@@ -28,15 +28,10 @@ const Dashboard = () => {
         setLoading(true);
         setError(null);
         
-        const token = sessionStorage.getItem('token');
-
         // Get delivery driver stats
         const statsResponse = await Axios({
           url: '/api/delivery/stats',
-          method: 'GET',
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
+          method: 'GET'
         });
         
         if (statsResponse.data.success) {
@@ -48,10 +43,7 @@ const Dashboard = () => {
         // Get active deliveries
         const activeResponse = await Axios({
           url: '/api/delivery/active-orders',
-          method: 'GET',
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
+          method: 'GET'
         });
         
         if (activeResponse.data.success) {
