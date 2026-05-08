@@ -22,7 +22,8 @@ The current `server` is not a clean Vercel fit because it runs a long-lived Expr
 
 - Frontend production URL: `https://nawirihairke.com`
 - Frontend redirect URL: `https://www.nawirihairke.com`
-- Backend API URL: `https://api.nawirihairke.com`
+- Backend runtime URL: `https://taji-cart-api.onrender.com`
+- Branded API / OAuth relay URL: `https://api.nawirihairke.com`
 
 ## 1. Deploy the backend first
 
@@ -67,6 +68,7 @@ Set these environment variables on the backend host:
 - `PESAPAL_NOTIFICATION_ID`
 - `GOOGLE_CLIENT_ID`
 - `GOOGLE_CLIENT_SECRET`
+- `SERVER_URL=https://taji-cart-api.onrender.com` if you want a stable fallback origin for generated callback URLs
 - `SMTP_SERVICE` or `SMTP_HOST`
 - `SMTP_PORT`
 - `SMTP_SECURE`
@@ -103,9 +105,21 @@ Once that backend is live, test:
 2. Keep the project root as the repo root
 3. Vercel will use the root `vercel.json`
 4. Add frontend environment variables:
-   - `VITE_SERVER_URL=https://api.nawirihairke.com`
-   - `VITE_BACKEND_URL=https://api.nawirihairke.com`
+   - `VITE_SERVER_URL=https://taji-cart-api.onrender.com`
+   - `VITE_BACKEND_URL=https://taji-cart-api.onrender.com`
 5. Deploy
+
+### Branded Google sign-in while the backend stays on Render
+
+If you want Google to show `api.nawirihairke.com` instead of the raw Render hostname, keep the backend running on Render and use Vercel only as a branded relay for HTTP auth/API traffic:
+
+1. Attach `api.nawirihairke.com` to the same Vercel project that serves the frontend.
+2. Deploy this repo so the root `vercel.json` host-based rewrites are active.
+3. Add `VITE_OAUTH_BASE_URL=https://api.nawirihairke.com` to the frontend environment.
+4. Set `GOOGLE_CALLBACK_URL=https://api.nawirihairke.com/api/auth/google/callback` on the backend.
+5. Keep `VITE_SERVER_URL` / `VITE_BACKEND_URL` on the Render backend until you intentionally move regular HTTP traffic to the branded relay.
+
+This gives you a branded Google OAuth prompt without forcing Socket.IO traffic through Vercel.
 
 ### Option B: Vercel CLI
 
@@ -147,10 +161,12 @@ Example:
 - if Render gives you `nawiri-hair-api.onrender.com`, set `api` -> `nawiri-hair-api.onrender.com`
 - if Railway gives you `nawiri-hair-api.up.railway.app`, set `api` -> `nawiri-hair-api.up.railway.app`
 
+If you instead use the Vercel relay approach above, point `api.nawirihairke.com` at Vercel and make sure that custom domain is attached to the frontend project; otherwise the hostname will resolve to Vercel but return `DEPLOYMENT_NOT_FOUND`.
+
 ## 4. Final production checklist
 
 - Frontend loads on `nawirihairke.com`
-- API requests go to `api.nawirihairke.com`
+- API requests go to the intended public origin (`taji-cart-api.onrender.com` or `api.nawirihairke.com`, depending on your rollout)
 - CORS allows the frontend domain
 - Google OAuth callback returns to the frontend domain
 - Cloudinary uploads work

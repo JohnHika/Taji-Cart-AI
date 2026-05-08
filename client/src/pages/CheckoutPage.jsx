@@ -6,6 +6,7 @@ import { FaXmark } from 'react-icons/fa6';
 import { useDispatch, useSelector } from 'react-redux';
 import { useLocation, useNavigate } from 'react-router-dom';
 import SummaryApi from '../common/SummaryApi';
+import { buildApiUrl } from '../common/apiBaseUrl';
 import { nawiriBrand } from '../config/brand';
 import ActiveRewards from '../components/ActiveRewards'; // Import the ActiveRewards component
 import AddAddress from '../components/AddAddress';
@@ -353,10 +354,9 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
       try {
         const orderId = `ORD-${Date.now()}-${Math.floor(Math.random()*1000)}`;
         const token = localStorage.getItem('accesstoken') || localStorage.getItem('token');
-        const baseUrl = import.meta.env.VITE_API_URL || '';
 
         const res = await Axios({
-          url: `${baseUrl}/api/pesapal/initiate`,
+          url: buildApiUrl('/api/pesapal/initiate'),
           method: 'POST',
           headers: { Authorization: `Bearer ${token}` },
           data: {
