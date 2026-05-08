@@ -560,10 +560,20 @@ const DeliveryMap = () => {
     try {
       setIsOptimizing(true);
       
+      // Filter to deliveries that have valid geocoded coordinates
+      const deliveriesWithCoords = selectedDeliveries.filter(
+        d => d?.coordinates?.lat != null && d?.coordinates?.lng != null
+      );
+      if (deliveriesWithCoords.length === 0) {
+        toast.error('No deliveries with location coordinates available. Please wait for geocoding to complete.');
+        setIsOptimizing(false);
+        return;
+      }
+
       // Prepare waypoints including current location as start
       const waypoints = [
         `${currentLocation.lng},${currentLocation.lat}`,
-        ...selectedDeliveries.map(delivery => 
+        ...deliveriesWithCoords.map(delivery =>
           `${delivery.coordinates.lng},${delivery.coordinates.lat}`
         )
       ];
@@ -590,10 +600,9 @@ const DeliveryMap = () => {
           .slice(1); // Remove the first waypoint (current location)
         
         // Reorder the selected deliveries based on optimization
-        const optimizedDeliveries = waypointOrder.map(index => 
-          // Index - 1 because we removed the current location from the ordering
-          selectedDeliveries[index - 1]
-        );
+        const optimizedDeliveries = waypointOrder
+          .map(index => deliveriesWithCoords[index - 1])
+          .filter(Boolean);
         
         // Update the order of selected deliveries
         setSelectedDeliveries(optimizedDeliveries);

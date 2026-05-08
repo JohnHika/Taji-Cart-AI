@@ -525,7 +525,6 @@ export const updateDriverLocation = async (req, res) => {
       {
         new: true,
         upsert: true,
-        runValidators: true,
         setDefaultsOnInsert: true
       }
     );
