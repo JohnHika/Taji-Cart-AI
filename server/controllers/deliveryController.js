@@ -312,7 +312,7 @@ export const getCompletedOrders = async (req, res) => {
 export const getDeliveryHistory = async (req, res) => {
   try {
     const driverId = req.userId;
-    const { page = 1, limit = 10 } = req.query;
+    const { page = 1, limit = 10, startDate, endDate } = req.query;
     
     // Pagination setup
     const skip = (page - 1) * limit;
@@ -320,26 +320,61 @@ export const getDeliveryHistory = async (req, res) => {
     // Resolve both User._id and DeliveryPersonnel._id
     const personnelFilter = await getDriverPersonnelFilter(driverId);
     
+    // Build date filter from query params (client sends startDate/endDate)
+    const dateFilter = {};
+    if (startDate) dateFilter.$gte = new Date(startDate);
+    if (endDate) {
+        const end = new Date(endDate);
+        end.setHours(23, 59, 59, 999);
+        dateFilter.$lte = end;
+    }
+    const query = { deliveryPersonnel: personnelFilter };
+    if (Object.keys(dateFilter).length > 0) query.createdAt = dateFilter;
+
     // Find all orders for this driver (including completed and cancelled)
-    const orders = await OrderModel.find({
-        deliveryPersonnel: personnelFilter
-    })
-    .populate({
-        path: 'userId',
-        select: 'name'
-    })
+    const orders = await OrderModel.find(query)
+    .populate({ path: 'userId', select: 'name' })
+    .populate({ path: 'delivery_address', select: 'address_line city' })
     .sort({ createdAt: -1 })
     .skip(skip)
     .limit(parseInt(limit));
     
     // Get total count for pagination
-    const totalOrders = await OrderModel.countDocuments({
-        deliveryPersonnel: personnelFilter
-    });
+    const totalOrders = await OrderModel.countDocuments(query);
     
+    // Transform to the shape the client expects
+    const data = orders.map(order => {
+        const addr = order.delivery_address;
+        const addrStr = addr
+            ? [addr.address_line, addr.city].filter(Boolean).join(', ')
+            : (order.guestShipping
+                ? [order.guestShipping.address, order.guestShipping.city].filter(Boolean).join(', ')
+                : 'N/A');
+
+        // Derive customer name — registered user takes priority, then guest shipping, then unknown
+        const customerName = order.userId?.name
+            || (order.guestShipping
+                ? `${order.guestShipping.firstName || ''} ${order.guestShipping.lastName || ''}`.trim() || 'Guest'
+                : 'Unknown');
+
+        // Find the timestamp when the order was marked delivered
+        const deliveredEntry = order.statusHistory?.slice().reverse().find(h => h.status === 'delivered');
+
+        return {
+            _id: order._id,
+            orderId: order.orderId,
+            customer: { name: customerName },
+            deliveryAddress: addrStr,
+            deliveredAt: deliveredEntry?.timestamp || order.updatedAt,
+            total: order.totalAmt ?? 0,
+            rating: order.rating ?? 0,
+            status: order.status
+        };
+    });
+
     return res.json({
         success: true,
-        data: orders,
+        data,
         pagination: {
             total: totalOrders,
             page: parseInt(page),
