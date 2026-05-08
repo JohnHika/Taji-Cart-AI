@@ -4,8 +4,32 @@ import { buildApiUrl } from '../common/apiBaseUrl';
 
 const trimTrailingSlash = (value = '') => value.replace(/\/+$/, '');
 
-const brandedOAuthBaseUrl = trimTrailingSlash(import.meta.env.VITE_OAUTH_BASE_URL || '');
+const getAutomaticBrandedOAuthBaseUrl = () => {
+  if (typeof window === 'undefined') {
+    return '';
+  }
+
+  const { protocol, hostname } = window.location;
+  const normalizedHost = hostname.toLowerCase();
+
+  if (
+    normalizedHost === 'nawirihairke.com' ||
+    normalizedHost === 'www.nawirihairke.com' ||
+    normalizedHost === 'api.nawirihairke.com'
+  ) {
+    return `${protocol}//api.nawirihairke.com`;
+  }
+
+  return '';
+};
+
+const configuredBrandedOAuthBaseUrl = trimTrailingSlash(import.meta.env.VITE_OAUTH_BASE_URL || '');
+const automaticBrandedOAuthBaseUrl = trimTrailingSlash(getAutomaticBrandedOAuthBaseUrl());
+const brandedOAuthBaseUrl = configuredBrandedOAuthBaseUrl || automaticBrandedOAuthBaseUrl;
 const isBrandedOAuthReady = import.meta.env.VITE_BRANDED_OAUTH_READY === 'true';
+const shouldUseBrandedOAuth = Boolean(
+  brandedOAuthBaseUrl && (isBrandedOAuthReady || automaticBrandedOAuthBaseUrl)
+);
 
 const GoogleIcon = () => (
   <svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -22,7 +46,7 @@ const SocialAuth = () => {
   const handleGoogleLogin = () => {
     setIsLoading(true);
     try {
-      const authUrl = brandedOAuthBaseUrl && isBrandedOAuthReady
+      const authUrl = shouldUseBrandedOAuth
         ? `${brandedOAuthBaseUrl}/api/auth/google`
         : buildApiUrl('/api/auth/google');
       window.location.assign(authUrl);
