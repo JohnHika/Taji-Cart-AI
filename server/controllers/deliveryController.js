@@ -35,6 +35,18 @@ const buildDeliveryPersonnelSeed = (user) => ({
   isAvailable: true
 });
 
+/**
+ * Returns a MongoDB $in filter that matches orders assigned to a driver
+ * whether the order stores the User._id or the DeliveryPersonnel._id.
+ * This bridges the two-model architecture used by dispatch vs. driver queries.
+ */
+const getDriverPersonnelFilter = async (userId) => {
+  const profile = await DeliveryPersonnelModel.findOne({ userId });
+  const ids = [userId];
+  if (profile?._id) ids.push(profile._id);
+  return { $in: ids };
+};
+
 const ensureDeliveryPersonnelRecords = async () => {
   const deliveryUsers = await User.find({
     $or: [
@@ -147,6 +159,10 @@ const sendDispatchUpdateEmail = async (order, user) => {
 export const getDeliveryStats = async (req, res) => {
   try {
     const driverId = req.userId;
+
+    // Resolve both User._id and DeliveryPersonnel._id so queries match regardless
+    // of which ID was stored when the order was assigned.
+    const personnelFilter = await getDriverPersonnelFilter(driverId);
     
     // Get counts for different order statuses
     const todayStart = new Date();
@@ -154,20 +170,20 @@ export const getDeliveryStats = async (req, res) => {
     
     // Active orders count
     const activeOrders = await OrderModel.countDocuments({
-        deliveryPersonnel: driverId,
+        deliveryPersonnel: personnelFilter,
         status: { $in: ['driver_assigned', 'out_for_delivery', 'nearby'] }
     });
     
     // Completed today count
     const completedToday = await OrderModel.countDocuments({
-        deliveryPersonnel: driverId,
+        deliveryPersonnel: personnelFilter,
         status: 'delivered',
         deliveredAt: { $gte: todayStart }
     });
     
     // Total completed all time
     const totalCompleted = await OrderModel.countDocuments({
-        deliveryPersonnel: driverId,
+        deliveryPersonnel: personnelFilter,
         status: 'delivered'
     });
     
@@ -197,10 +213,13 @@ export const getDeliveryStats = async (req, res) => {
 export const getActiveOrders = async (req, res) => {
   try {
     const driverId = req.userId;
+
+    // Resolve both User._id and DeliveryPersonnel._id
+    const personnelFilter = await getDriverPersonnelFilter(driverId);
     
     // Find orders assigned to this driver that are not completed or cancelled
     const orders = await OrderModel.find({
-        deliveryPersonnel: driverId,
+        deliveryPersonnel: personnelFilter,
         status: { $in: ['driver_assigned', 'out_for_delivery', 'nearby'] }
     })
     .populate({
@@ -259,10 +278,13 @@ export const getCompletedOrders = async (req, res) => {
             }
         };
     }
+
+    // Resolve both User._id and DeliveryPersonnel._id
+    const personnelFilter = await getDriverPersonnelFilter(driverId);
     
     // Find completed orders for this driver
     const orders = await OrderModel.find({
-        deliveryPersonnel: driverId,
+        deliveryPersonnel: personnelFilter,
         status: 'delivered',
         ...dateFilter
     })
@@ -293,10 +315,13 @@ export const getDeliveryHistory = async (req, res) => {
     
     // Pagination setup
     const skip = (page - 1) * limit;
+
+    // Resolve both User._id and DeliveryPersonnel._id
+    const personnelFilter = await getDriverPersonnelFilter(driverId);
     
     // Find all orders for this driver (including completed and cancelled)
     const orders = await OrderModel.find({
-        deliveryPersonnel: driverId
+        deliveryPersonnel: personnelFilter
     })
     .populate({
         path: 'userId',
@@ -308,7 +333,7 @@ export const getDeliveryHistory = async (req, res) => {
     
     // Get total count for pagination
     const totalOrders = await OrderModel.countDocuments({
-        deliveryPersonnel: driverId
+        deliveryPersonnel: personnelFilter
     });
     
     return res.json({
@@ -342,10 +367,13 @@ export const exportDeliveryHistory = async (req, res) => {
             message: 'Start date and end date are required'
         });
     }
+
+    // Resolve both User._id and DeliveryPersonnel._id
+    const personnelFilter = await getDriverPersonnelFilter(driverId);
     
     // Find orders within the date range
     const orders = await OrderModel.find({
-        deliveryPersonnel: driverId,
+        deliveryPersonnel: personnelFilter,
         createdAt: {
             $gte: new Date(startDate),
             $lte: new Date(endDate)
@@ -404,11 +432,14 @@ export const updateOrderStatus = async (req, res) => {
             message: 'Invalid status. Must be one of: out_for_delivery, nearby, delivered'
         });
     }
+
+    // Resolve both User._id and DeliveryPersonnel._id
+    const personnelFilter = await getDriverPersonnelFilter(driverId);
     
     // Find the order and verify it's assigned to this driver
     const order = await OrderModel.findOne({
         _id: orderId,
-        deliveryPersonnel: driverId,
+        deliveryPersonnel: personnelFilter,
         status: { $ne: 'delivered' } // Can't update if already delivered
     });
     
