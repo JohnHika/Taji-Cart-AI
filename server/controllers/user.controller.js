@@ -103,34 +103,39 @@ const ensureDeliveryProfileForUser = async (user, { syncProfile = false } = {}) 
         return null
     }
 
-    const syncedProfile = buildDeliveryPersonnelProfile(user)
-    const seedProfile = {
-        userId: user._id,
-        isActive: true,
-        isAvailable: true,
-        isOnline: false,
-        ...syncedProfile,
+    try {
+        const syncedProfile = buildDeliveryPersonnelProfile(user)
+        const seedProfile = {
+            userId: user._id,
+            isActive: true,
+            isAvailable: true,
+            isOnline: false,
+            ...syncedProfile,
+        }
+
+        const update = syncProfile
+            ? {
+                $set: syncedProfile,
+                $setOnInsert: seedProfile,
+            }
+            : {
+                $setOnInsert: seedProfile,
+            }
+
+        return await DeliveryPersonnelModel.findOneAndUpdate(
+            { userId: user._id },
+            update,
+            {
+                new: true,
+                upsert: true,
+                runValidators: true,
+                setDefaultsOnInsert: true,
+            }
+        ).select(DELIVERY_PROFILE_SELECT)
+    } catch (error) {
+        console.error('Error ensuring delivery profile for user:', user._id, error.message)
+        return null
     }
-
-    const update = syncProfile
-        ? {
-            $set: syncedProfile,
-            $setOnInsert: seedProfile,
-        }
-        : {
-            $setOnInsert: seedProfile,
-        }
-
-    return DeliveryPersonnelModel.findOneAndUpdate(
-        { userId: user._id },
-        update,
-        {
-            new: true,
-            upsert: true,
-            runValidators: true,
-            setDefaultsOnInsert: true,
-        }
-    ).select(DELIVERY_PROFILE_SELECT)
 }
 
 const serializeDeliveryProfile = (profile, user = {}) => {
