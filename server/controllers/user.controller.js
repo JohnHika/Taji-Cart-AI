@@ -915,6 +915,14 @@ export async function requestPhoneVerificationOtpController(request, response) {
             })
         }
 
+        if (!isEmailConfigured()) {
+            return response.status(503).json({
+                message: verificationEmailUnavailableMessage,
+                error: true,
+                success: false
+            })
+        }
+
         const otp = String(generatedOtp())
         const expiry = new Date(Date.now() + 10 * 60 * 1000)
 
@@ -924,11 +932,20 @@ export async function requestPhoneVerificationOtpController(request, response) {
         user.mobile_verification_expiry = expiry
         await user.save()
 
-        await sendPhoneVerificationCodeEmail({
-            user,
-            phoneNumber: requestedMobile,
-            otp,
-        })
+        try {
+            await sendPhoneVerificationCodeEmail({
+                user,
+                phoneNumber: requestedMobile,
+                otp,
+            })
+        } catch (emailError) {
+            console.error('Error sending phone verification email:', emailError)
+            return response.status(503).json({
+                message: verificationEmailUnavailableMessage,
+                error: true,
+                success: false
+            })
+        }
 
         return response.json({
             message: `Verification code sent for ${maskPhoneNumber(requestedMobile)}. Check your email inbox.`,
