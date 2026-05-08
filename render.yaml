@@ -8,3 +8,10 @@ services:
     envVars:
       - key: NODE_ENV
         value: production
+      - key: SMTP_SERVICE
+        value: gmail
+      - key: SMTP_USER
+        value: nawirihairke@gmail.com
+      # SMTP_PASS must be set manually in Render dashboard (Gmail App Password)
+      - key: SMTP_PASS
+        sync: false
