@@ -16,6 +16,9 @@ const getPrimaryForwardedValue = (value = '') =>
 
 const trimTrailingSlash = (value = '') => value.replace(/\/$/, '');
 
+const LOCAL_FRONTEND_URL = 'http://localhost:5173';
+const CANONICAL_FRONTEND_URL = 'https://nawirihairke.com';
+
 const getRequestOrigin = (req) => {
   const forwardedProto = getPrimaryForwardedValue(req.headers['x-forwarded-proto'] || '');
   const forwardedHost = getPrimaryForwardedValue(req.headers['x-forwarded-host'] || req.headers.host || '');
@@ -31,6 +34,51 @@ const getRequestOrigin = (req) => {
 const getGoogleCallbackUrlForRequest = (req) => {
   const requestOrigin = trimTrailingSlash(getRequestOrigin(req));
   return requestOrigin ? `${requestOrigin}/api/auth/google/callback` : undefined;
+};
+
+const getFrontendBaseUrl = () => {
+  const configuredFrontendUrl = trimTrailingSlash(process.env.FRONTEND_URL || '');
+
+  if (!configuredFrontendUrl) {
+    return process.env.NODE_ENV === 'production' ? CANONICAL_FRONTEND_URL : LOCAL_FRONTEND_URL;
+  }
+
+  try {
+    const parsedUrl = new URL(configuredFrontendUrl);
+    const hostname = parsedUrl.hostname.toLowerCase();
+
+    if (hostname === 'nawirihairke.com' || hostname === 'www.nawirihairke.com') {
+      return CANONICAL_FRONTEND_URL;
+    }
+
+    return trimTrailingSlash(parsedUrl.origin);
+  } catch {
+    return configuredFrontendUrl;
+  }
+};
+
+const buildFrontendRedirectUrl = (path, { query = {}, hash = {} } = {}) => {
+  const frontendBaseUrl = getFrontendBaseUrl();
+  const normalizedPath = path.startsWith('/') ? path : `/${path}`;
+  const queryParams = new URLSearchParams();
+  const hashParams = new URLSearchParams();
+
+  Object.entries(query).forEach(([key, value]) => {
+    if (value !== undefined && value !== null && value !== '') {
+      queryParams.set(key, String(value));
+    }
+  });
+
+  Object.entries(hash).forEach(([key, value]) => {
+    if (value !== undefined && value !== null && value !== '') {
+      hashParams.set(key, String(value));
+    }
+  });
+
+  const queryString = queryParams.toString();
+  const hashString = hashParams.toString();
+
+  return `${frontendBaseUrl}${normalizedPath}${queryString ? `?${queryString}` : ''}${hashString ? `#${hashString}` : ''}`;
 };
 
 // Helper function to generate tokens and create response
@@ -61,16 +109,31 @@ const handleSocialAuthSuccess = async (req, res) => {
     const loyaltyCard = await LoyaltyCard.findOne({ userId: user._id });
     const loyaltyPoints = loyaltyCard?.points || 0;
     const loyaltyClass = loyaltyCard?.tier || "Basic";
-    
-    // Redirect to frontend with tokens as URL parameters
-    // The frontend will extract these and store them in sessionStorage
-    const frontendURL = process.env.FRONTEND_URL || 'http://localhost:5173';
-    
-    res.redirect(`${frontendURL}/social-auth-success?accessToken=${accessToken}&refreshToken=${refreshToken}&userId=${user._id}&name=${encodeURIComponent(user.name)}&email=${encodeURIComponent(user.email)}&loyaltyPoints=${loyaltyPoints}&loyaltyClass=${encodeURIComponent(loyaltyClass)}`);
+
+    // Redirect to frontend with tokens in the URL hash so edge/CDN layers do not
+    // receive sensitive JWT query parameters (which can trigger 403 blocks).
+    res.redirect(
+      buildFrontendRedirectUrl('/social-auth-success', {
+        hash: {
+          accessToken,
+          refreshToken,
+          userId: user._id,
+          name: user.name,
+          email: user.email,
+          loyaltyPoints,
+          loyaltyClass,
+        },
+      })
+    );
   } catch (error) {
     console.error('Social auth error:', error);
-    const frontendURL = process.env.FRONTEND_URL || 'http://localhost:5173';
-    res.redirect(`${frontendURL}/login?error=Authentication%20failed`);
+    res.redirect(
+      buildFrontendRedirectUrl('/login', {
+        query: {
+          error: 'Authentication failed',
+        },
+      })
+    );
   }
 };
 
@@ -102,7 +165,11 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
       const callbackURL = getGoogleCallbackUrlForRequest(req);
 
       return passport.authenticate('google', {
-        failureRedirect: '/login',
+        failureRedirect: buildFrontendRedirectUrl('/login', {
+          query: {
+            error: 'Authentication failed',
+          },
+        }),
         session: false,
         ...(callbackURL ? { callbackURL } : {}),
       })(req, res, next);
@@ -121,7 +188,13 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
   });
   
   router.get('/google/callback', (req, res) => {
-    res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}/login?error=oauth_not_configured`);
+    res.redirect(
+      buildFrontendRedirectUrl('/login', {
+        query: {
+          error: 'oauth_not_configured',
+        },
+      })
+    );
   });
 }
 
