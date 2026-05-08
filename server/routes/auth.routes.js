@@ -9,6 +9,30 @@ import genertedRefreshToken from '../utils/generatedRefreshToken.js';
 dotenv.config();
 const router = express.Router();
 
+const getPrimaryForwardedValue = (value = '') =>
+  value
+    .split(',')[0]
+    .trim();
+
+const trimTrailingSlash = (value = '') => value.replace(/\/$/, '');
+
+const getRequestOrigin = (req) => {
+  const forwardedProto = getPrimaryForwardedValue(req.headers['x-forwarded-proto'] || '');
+  const forwardedHost = getPrimaryForwardedValue(req.headers['x-forwarded-host'] || req.headers.host || '');
+  const protocol = forwardedProto || req.protocol || 'https';
+
+  if (!forwardedHost) {
+    return '';
+  }
+
+  return `${protocol}://${forwardedHost}`;
+};
+
+const getGoogleCallbackUrlForRequest = (req) => {
+  const requestOrigin = trimTrailingSlash(getRequestOrigin(req));
+  return requestOrigin ? `${requestOrigin}/api/auth/google/callback` : undefined;
+};
+
 // Helper function to generate tokens and create response
 const handleSocialAuthSuccess = async (req, res) => {
   try {
@@ -63,11 +87,26 @@ const generateToken = (user) => {
 if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
   // Availability probe for clients using HEAD
   router.head('/google', (req, res) => res.sendStatus(200));
-  router.get('/google', passport.authenticate('google', { scope: ['profile', 'email'] }));
+  router.get('/google', (req, res, next) => {
+    const callbackURL = getGoogleCallbackUrlForRequest(req);
+
+    return passport.authenticate('google', {
+      scope: ['profile', 'email'],
+      ...(callbackURL ? { callbackURL } : {}),
+    })(req, res, next);
+  });
 
   router.get(
     '/google/callback',
-    passport.authenticate('google', { failureRedirect: '/login', session: false }),
+    (req, res, next) => {
+      const callbackURL = getGoogleCallbackUrlForRequest(req);
+
+      return passport.authenticate('google', {
+        failureRedirect: '/login',
+        session: false,
+        ...(callbackURL ? { callbackURL } : {}),
+      })(req, res, next);
+    },
     // Use the unified success handler that generates tokens with the correct secrets
     handleSocialAuthSuccess
   );
