@@ -10,9 +10,9 @@ import welcomeEmailTemplate from '../utils/welcomeEmailTemplate.js';
 dotenv.config();
 
 const SERVER_BASE_URL =
+  process.env.RENDER_EXTERNAL_URL?.replace(/\/$/, '') ||
   process.env.BACKEND_URL?.replace(/\/$/, '') ||
   process.env.SERVER_URL?.replace(/\/$/, '') ||
-  process.env.RENDER_EXTERNAL_URL?.replace(/\/$/, '') ||
   `http://localhost:${process.env.PORT || 5000}`;
 const GOOGLE_CALLBACK_URL =
   process.env.GOOGLE_CALLBACK_URL || `${SERVER_BASE_URL}/api/auth/google/callback`;
