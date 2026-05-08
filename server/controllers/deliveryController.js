@@ -1571,6 +1571,16 @@ export const toggleDriverStatusForStaff = async (req, res) => {
     driver.lastActive = new Date();
     await driver.save();
 
+    // Sync User model so the delivery middleware (which checks User.isDelivery / User.role)
+    // allows this driver to access their own endpoints.
+    // Activating a driver ensures they have the delivery role; deactivating preserves it
+    // (they remain a delivery driver, just not available today).
+    if (driver.userId && nextActiveState) {
+      await User.findByIdAndUpdate(driver.userId, {
+        $set: { isDelivery: true, role: 'delivery' }
+      });
+    }
+
     return res.status(200).json({
       success: true,
       message: `Driver ${nextActiveState ? 'activated' : 'deactivated'} successfully`,
