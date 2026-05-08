@@ -1,5 +1,10 @@
 import React, { useState } from 'react';
 import { toast } from 'react-hot-toast';
+import { buildApiUrl } from '../common/apiBaseUrl';
+
+const trimTrailingSlash = (value = '') => value.replace(/\/+$/, '');
+
+const brandedOAuthBaseUrl = trimTrailingSlash(import.meta.env.VITE_OAUTH_BASE_URL || '');
 
 const GoogleIcon = () => (
   <svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -13,37 +18,15 @@ const GoogleIcon = () => (
 const SocialAuth = () => {
   const [isLoading, setIsLoading] = useState(false);
 
-  // Resolve backend URL — must be absolute for Google OAuth redirect to work.
-  // Falls back through VITE_API_URL → VITE_SERVER_URL → VITE_BACKEND_URL.
-  const resolveApiUrl = () => {
-    const raw =
-      import.meta.env.VITE_API_URL ||
-      import.meta.env.VITE_SERVER_URL ||
-      import.meta.env.VITE_BACKEND_URL ||
-      '';
-    if (!raw) return null;
-    const base = raw.replace(/\/$/, '');
-    return base.endsWith('/api') ? base : `${base}/api`;
-  };
-  const API_URL = resolveApiUrl();
-
-  const handleGoogleLogin = async () => {
+  const handleGoogleLogin = () => {
     setIsLoading(true);
     try {
-      if (!API_URL) {
-        toast.error('Google login is not configured. Please use email login.');
-        setIsLoading(false);
-        return;
-      }
-      const response = await fetch(`${API_URL}/auth/google`, { method: 'HEAD' });
-      if (response.status === 503) {
-        toast.error('Google login is currently not available. Please use email login.');
-        setIsLoading(false);
-        return;
-      }
-      window.location.href = `${API_URL}/auth/google`;
+      const authUrl = brandedOAuthBaseUrl
+        ? `${brandedOAuthBaseUrl}/api/auth/google`
+        : buildApiUrl('/api/auth/google');
+      window.location.assign(authUrl);
     } catch (error) {
-      console.error('Error checking Google OAuth availability:', error);
+      console.error('Error starting Google OAuth flow:', error);
       toast.error('Google login is currently not available. Please use email login.');
       setIsLoading(false);
     }
