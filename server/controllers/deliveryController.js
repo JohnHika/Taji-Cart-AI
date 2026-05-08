@@ -3,9 +3,18 @@ import sendEmail from '../config/sendEmail.js';
 import DeliveryPersonnelModel from '../models/deliverypersonnel.model.js';
 import { default as Order, default as OrderModel } from '../models/order.model.js';
 import User from '../models/user.model.js';
-import { emitOrderStatusUpdated, getIO } from '../socket/socket.js';
+import { emitNewDeliveryAssigned, emitOrderStatusUpdated, getIO } from '../socket/socket.js';
 import { nawiriBrand } from '../utils/brand.js';
 import { renderOrderNoticeEmail } from '../utils/emailTemplates.js';
+
+const DELIVERY_DRIVER_CAPACITY = 5;
+const DISPATCH_CONFLICT_STATUSES = ['dispatched', 'driver_assigned', 'out_for_delivery', 'nearby', 'delivered'];
+const DELIVERY_ORDER_FILTER = {
+  $or: [
+    { fulfillment_type: 'delivery' },
+    { deliveryMethod: 'delivery' }
+  ]
+};
 
 const activeDriverFilter = {
   $or: [
@@ -32,7 +41,8 @@ const buildDeliveryPersonnelSeed = (user) => ({
   ...(user.profile_pic ? { profileImage: user.profile_pic } : {}),
   ...(user.mobile || user.phone ? { phoneNumber: user.mobile || user.phone } : {}),
   isActive: true,
-  isAvailable: true
+  isAvailable: true,
+  isOnline: false
 });
 
 /**
@@ -156,6 +166,348 @@ const sendDispatchUpdateEmail = async (order, user) => {
   });
 };
 
+const buildEstimatedDeliveryTime = () => {
+  const estimatedDelivery = new Date();
+  estimatedDelivery.setMinutes(estimatedDelivery.getMinutes() + 45);
+  return estimatedDelivery;
+};
+
+const isUnassignedDeliveryOrderFilter = {
+  $or: [
+    { deliveryPersonnel: { $exists: false } },
+    { deliveryPersonnel: null }
+  ]
+};
+
+const getDriverProfileForUser = async (userId, { createIfMissing = false } = {}) => {
+  let driverProfile = await DeliveryPersonnelModel.findOne({ userId });
+
+  if (driverProfile || !createIfMissing) {
+    return driverProfile;
+  }
+
+  const driverUser = await User.findById(userId).select('name email mobile phone profile_pic');
+  if (!driverUser) {
+    return null;
+  }
+
+  driverProfile = await DeliveryPersonnelModel.findOneAndUpdate(
+    { userId },
+    { $setOnInsert: buildDeliveryPersonnelSeed(driverUser) },
+    {
+      new: true,
+      upsert: true,
+      runValidators: true,
+      setDefaultsOnInsert: true
+    }
+  );
+
+  return driverProfile;
+};
+
+const getDriverEligibility = (driver, {
+  requireVerified = false,
+  requireOnline = false,
+  requireAvailable = true,
+  allowLegacyOffline = false,
+  context = 'assignment'
+} = {}) => {
+  const target = context === 'claim' ? 'You' : 'The selected driver';
+
+  if (!driver) {
+    return {
+      ok: false,
+      status: 404,
+      message: context === 'claim'
+        ? 'Delivery driver profile not found'
+        : 'Selected delivery driver not found'
+    };
+  }
+
+  if (driver.verificationStatus === 'rejected') {
+    return {
+      ok: false,
+      status: 400,
+      message: context === 'claim'
+        ? 'Your delivery account is not approved to claim orders'
+        : 'The selected driver is not approved to receive delivery assignments'
+    };
+  }
+
+  if (requireVerified && driver.verificationStatus !== 'verified') {
+    return {
+      ok: false,
+      status: 400,
+      message: context === 'claim'
+        ? 'Only verified drivers can claim available deliveries'
+        : 'Only verified drivers can receive this assignment'
+    };
+  }
+
+  if (driver.isActive === false) {
+    return {
+      ok: false,
+      status: 400,
+      message: `${target} ${context === 'claim' ? 'are' : 'is'} not active`
+    };
+  }
+
+  if (requireOnline && driver.isOnline !== true) {
+    return {
+      ok: false,
+      status: 400,
+      message: 'You must be online to claim delivery orders'
+    };
+  }
+
+  if (!requireOnline && driver.isOnline === false && !allowLegacyOffline) {
+    return {
+      ok: false,
+      status: 400,
+      message: 'The selected driver is currently offline'
+    };
+  }
+
+  if (requireAvailable && driver.isAvailable === false) {
+    return {
+      ok: false,
+      status: 400,
+      message: context === 'claim'
+        ? 'You are currently unavailable to claim deliveries'
+        : 'The selected driver is currently unavailable'
+    };
+  }
+
+  if ((driver.activeOrdersCount || 0) >= DELIVERY_DRIVER_CAPACITY) {
+    return {
+      ok: false,
+      status: 400,
+      message: context === 'claim'
+        ? 'You have reached your active delivery capacity'
+        : 'The selected driver has reached the active delivery capacity'
+    };
+  }
+
+  return { ok: true };
+};
+
+const getAssignableDriverQuery = ({ requireVerified = false, requireOnline = false } = {}) => {
+  const query = {
+    isActive: true,
+    isAvailable: true,
+    activeOrdersCount: { $lt: DELIVERY_DRIVER_CAPACITY },
+    verificationStatus: requireVerified ? 'verified' : { $ne: 'rejected' }
+  };
+
+  if (requireOnline) {
+    query.isOnline = true;
+  } else {
+    query.$or = [
+      { isOnline: true },
+      { isOnline: { $exists: false } }
+    ];
+  }
+
+  return query;
+};
+
+const findAssignmentFailure = async (orderId) => {
+  const order = await Order.findById(orderId).select('status fulfillment_type deliveryMethod deliveryPersonnel');
+
+  if (!order) {
+    return {
+      status: 404,
+      message: 'Order not found'
+    };
+  }
+
+  if (order.fulfillment_type !== 'delivery' && order.deliveryMethod !== 'delivery') {
+    return {
+      status: 400,
+      message: 'This order is not marked for delivery'
+    };
+  }
+
+  if (order.deliveryPersonnel || order.status !== 'dispatched') {
+    return {
+      status: 409,
+      message: 'This order has already been claimed or assigned'
+    };
+  }
+
+  return {
+    status: 409,
+    message: 'This order is no longer available for assignment'
+  };
+};
+
+const updateDriverAssignmentState = async (driverId, orderId) => {
+  const updatedDriver = await DeliveryPersonnelModel.findByIdAndUpdate(
+    driverId,
+    {
+      $inc: { activeOrdersCount: 1 },
+      $addToSet: { activeOrders: orderId },
+      $set: { lastActive: new Date() }
+    },
+    {
+      new: true,
+      runValidators: true
+    }
+  );
+
+  if (!updatedDriver) {
+    throw new Error('Assigned driver profile could not be updated');
+  }
+
+  if (updatedDriver.activeOrdersCount >= DELIVERY_DRIVER_CAPACITY && updatedDriver.isAvailable !== false) {
+    updatedDriver.isAvailable = false;
+    await updatedDriver.save();
+  }
+
+  return updatedDriver;
+};
+
+const rollbackOrderAssignment = async (orderId, driverId, updatedBy, note) => {
+  await Order.findOneAndUpdate(
+    {
+      _id: orderId,
+      deliveryPersonnel: driverId,
+      status: 'driver_assigned'
+    },
+    {
+      $set: { status: 'dispatched' },
+      $unset: {
+        deliveryPersonnel: '',
+        estimatedDeliveryTime: ''
+      },
+      $push: {
+        statusHistory: {
+          status: 'dispatched',
+          timestamp: new Date(),
+          updatedBy,
+          note
+        }
+      }
+    }
+  );
+};
+
+const notifyAssignment = async ({ order, driver, estimatedDelivery, driverNotificationMessage }) => {
+  await createNotificationIfPossible(
+    {
+      type: 'order_update',
+      title: 'Delivery Driver Assigned',
+      message: `Your order has been assigned to a delivery driver and will be delivered soon. Estimated delivery time: ${estimatedDelivery.toLocaleTimeString()}`,
+      isRead: false,
+      userId: order.userId
+    },
+    'customer assignment notification'
+  );
+
+  if (driver?.userId) {
+    await createNotificationIfPossible(
+      {
+        type: 'new_delivery',
+        title: 'New Delivery Assignment',
+        message: driverNotificationMessage || `You have been assigned a new delivery order (#${order.orderId}).`,
+        isRead: false,
+        userId: driver.userId
+      },
+      'driver assignment notification'
+    );
+  }
+
+  emitOrderStatusUpdated(order);
+  if (driver?.userId) {
+    emitNewDeliveryAssigned(order, driver.userId.toString());
+  }
+};
+
+const assignOrderToDriver = async ({
+  orderId,
+  driver,
+  updatedBy,
+  note,
+  driverNotificationMessage
+}) => {
+  const estimatedDelivery = buildEstimatedDeliveryTime();
+
+  const order = await Order.findOneAndUpdate(
+    {
+      _id: orderId,
+      status: 'dispatched',
+      $and: [DELIVERY_ORDER_FILTER, isUnassignedDeliveryOrderFilter]
+    },
+    {
+      $set: {
+        deliveryPersonnel: driver._id,
+        status: 'driver_assigned',
+        estimatedDeliveryTime: estimatedDelivery
+      },
+      $push: {
+        statusHistory: {
+          status: 'driver_assigned',
+          timestamp: new Date(),
+          updatedBy,
+          note
+        }
+      }
+    },
+    {
+      new: true,
+      runValidators: true
+    }
+  );
+
+  if (!order) {
+    return {
+      ok: false,
+      ...(await findAssignmentFailure(orderId))
+    };
+  }
+
+  let updatedDriver;
+  try {
+    updatedDriver = await updateDriverAssignmentState(driver._id, order._id);
+  } catch (driverUpdateError) {
+    await rollbackOrderAssignment(
+      order._id,
+      driver._id,
+      updatedBy,
+      'Assignment rollback triggered because the driver state update failed'
+    );
+    throw driverUpdateError;
+  }
+
+  await notifyAssignment({
+    order,
+    driver: updatedDriver,
+    estimatedDelivery,
+    driverNotificationMessage
+  });
+
+  return {
+    ok: true,
+    order,
+    driver: updatedDriver,
+    estimatedDelivery
+  };
+};
+
+const formatAvailableDeliveryOrder = (order) => ({
+  _id: order._id,
+  orderId: order.orderId || order._id.toString().slice(-6).toUpperCase(),
+  status: order.status,
+  customer: formatDeliveryCustomer(order),
+  deliveryAddress: formatDeliveryAddress(order),
+  items: formatDeliveryItems(order),
+  total: order.totalAmt || order.total || 0,
+  paymentStatus: order.payment_status || order.paymentStatus || 'unknown',
+  createdAt: order.createdAt,
+  updatedAt: order.updatedAt,
+  dispatchedAt: order.dispatchInfo?.dispatchedAt || null
+});
+
 // Get delivery driver statistics
 export const getDeliveryStats = async (req, res) => {
   try {
@@ -197,6 +549,7 @@ export const getDeliveryStats = async (req, res) => {
             activeOrders,
             completedToday,
             totalCompleted,
+          isOnline: driverInfo?.isOnline || false,
             isAvailable: driverInfo?.isAvailable || false,
             currentLocation: driverInfo?.currentLocation || null
         }
@@ -499,14 +852,20 @@ export const updateOrderStatus = async (req, res) => {
     if (status === 'delivered') {
         order.deliveredAt = new Date();
         
-        // Update driver availability
-        await DeliveryPersonnelModel.findOneAndUpdate(
-            { userId: driverId },
-            { 
-                $pull: { activeOrders: orderId },
-                $set: { isAvailable: true } 
-            }
+      // Release driver capacity now that this delivery is complete
+      const driverProfile = await DeliveryPersonnelModel.findOne({ userId: driverId });
+
+      if (driverProfile) {
+        driverProfile.activeOrders = (driverProfile.activeOrders || []).filter(
+          (activeOrderId) => activeOrderId?.toString() !== orderId.toString()
         );
+        driverProfile.activeOrdersCount = Math.max(0, (driverProfile.activeOrdersCount || 0) - 1);
+        driverProfile.isAvailable = driverProfile.isActive !== false
+          && driverProfile.isOnline === true
+          && driverProfile.activeOrdersCount < DELIVERY_DRIVER_CAPACITY;
+        driverProfile.lastActive = new Date();
+        await driverProfile.save();
+      }
     }
     
     await order.save();
@@ -616,6 +975,165 @@ export const updateDriverLocation = async (req, res) => {
   }
 };
 
+export const updateDriverPresence = async (req, res) => {
+  try {
+    const driverId = req.userId;
+    const { isOnline, isAvailable } = req.body;
+
+    if (typeof isOnline !== 'boolean') {
+      return res.status(400).json({
+        success: false,
+        message: 'isOnline must be provided as a boolean value'
+      });
+    }
+
+    const driverProfile = await getDriverProfileForUser(driverId, { createIfMissing: true });
+
+    if (!driverProfile) {
+      return res.status(404).json({
+        success: false,
+        message: 'Delivery driver profile not found'
+      });
+    }
+
+    driverProfile.isOnline = isOnline;
+    driverProfile.lastActive = new Date();
+
+    const canTakeMoreOrders = (driverProfile.activeOrdersCount || 0) < DELIVERY_DRIVER_CAPACITY;
+
+    if (!isOnline) {
+      driverProfile.isAvailable = false;
+    } else if (typeof isAvailable === 'boolean') {
+      driverProfile.isAvailable = isAvailable && canTakeMoreOrders && driverProfile.isActive !== false;
+    } else {
+      driverProfile.isAvailable = canTakeMoreOrders && driverProfile.isActive !== false;
+    }
+
+    await driverProfile.save();
+
+    return res.status(200).json({
+      success: true,
+      message: `Driver presence updated to ${isOnline ? 'online' : 'offline'}`,
+      data: {
+        _id: driverProfile._id,
+        isOnline: driverProfile.isOnline,
+        isAvailable: driverProfile.isAvailable,
+        activeOrdersCount: driverProfile.activeOrdersCount || 0,
+        verificationStatus: driverProfile.verificationStatus,
+        lastActive: driverProfile.lastActive
+      }
+    });
+  } catch (error) {
+    console.error('Error updating driver presence:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Error updating driver presence',
+      error: error.message
+    });
+  }
+};
+
+export const getAvailableDeliveryOrders = async (req, res) => {
+  try {
+    const driverProfile = await getDriverProfileForUser(req.userId, { createIfMissing: true });
+    const eligibility = getDriverEligibility(driverProfile, {
+      requireVerified: true,
+      requireOnline: true,
+      context: 'claim'
+    });
+
+    if (!eligibility.ok) {
+      return res.status(eligibility.status).json({
+        success: false,
+        message: eligibility.message
+      });
+    }
+
+    const availableOrders = await Order.find({
+      status: 'dispatched',
+      $and: [DELIVERY_ORDER_FILTER, isUnassignedDeliveryOrderFilter]
+    })
+      .populate('userId', 'name email mobile phone')
+      .populate('delivery_address')
+      .sort({ 'dispatchInfo.dispatchedAt': -1, createdAt: -1 })
+      .limit(100);
+
+    return res.status(200).json({
+      success: true,
+      data: availableOrders.map(formatAvailableDeliveryOrder)
+    });
+  } catch (error) {
+    console.error('Error fetching available delivery orders:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Error fetching available delivery orders',
+      error: error.message
+    });
+  }
+};
+
+export const acceptAvailableDeliveryOrder = async (req, res) => {
+  try {
+    const { orderId } = req.params;
+    const driverUserId = req.userId;
+
+    if (!orderId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Order ID is required'
+      });
+    }
+
+    const driverProfile = await getDriverProfileForUser(driverUserId, { createIfMissing: true });
+    const eligibility = getDriverEligibility(driverProfile, {
+      requireVerified: true,
+      requireOnline: true,
+      context: 'claim'
+    });
+
+    if (!eligibility.ok) {
+      return res.status(eligibility.status).json({
+        success: false,
+        message: eligibility.message
+      });
+    }
+
+    const assignment = await assignOrderToDriver({
+      orderId,
+      driver: driverProfile,
+      updatedBy: driverUserId,
+      note: `Claimed by driver ${driverProfile.name}`,
+      driverNotificationMessage: 'You accepted a new delivery order.'
+    });
+
+    if (!assignment.ok) {
+      return res.status(assignment.status).json({
+        success: false,
+        message: assignment.message
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: 'Delivery order accepted successfully',
+      data: {
+        orderId: assignment.order._id,
+        deliveryPersonnelId: assignment.driver._id,
+        deliveryPersonnelName: assignment.driver.name,
+        status: assignment.order.status,
+        estimatedDelivery: assignment.order.estimatedDeliveryTime
+      }
+    });
+  } catch (error) {
+    console.error('Error accepting available delivery order:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to accept available delivery order',
+      error: error.message
+    });
+  }
+};
+
 // Auto-assign delivery personnel to an order
 export const assignDeliveryPersonnel = async (req, res) => {
   try {
@@ -628,33 +1146,29 @@ export const assignDeliveryPersonnel = async (req, res) => {
       });
     }
     
-    // Find the order
-    const order = await Order.findById(orderId);
-    
+    const order = await Order.findById(orderId).select('status fulfillment_type deliveryMethod deliveryPersonnel');
+
     if (!order) {
       return res.status(404).json({
         success: false,
         message: 'Order not found'
       });
     }
-    
-    // Check if the order is already assigned to a delivery person
-    if (order.deliveryPersonnel) {
-      return res.status(400).json({
-        success: false,
-        message: 'This order is already assigned to a delivery person'
-      });
-    }
-    
-    // Check if order is for delivery
-    if (order.fulfillment_type !== 'delivery') {
+
+    if (order.fulfillment_type !== 'delivery' && order.deliveryMethod !== 'delivery') {
       return res.status(400).json({
         success: false,
         message: 'This order is not marked for delivery'
       });
     }
-    
-    // NEW CHECK: Verify that the order has been dispatched first
+
+    if (order.deliveryPersonnel) {
+      return res.status(409).json({
+        success: false,
+        message: 'This order has already been claimed or assigned'
+      });
+    }
+
     if (order.status !== 'dispatched') {
       return res.status(400).json({
         success: false,
@@ -662,109 +1176,42 @@ export const assignDeliveryPersonnel = async (req, res) => {
         currentStatus: order.status
       });
     }
-    
-    // Find available delivery personnel who can take this order
-    // First try to import the DeliveryPersonnel model
-    let DeliveryPersonnelModel;
-    try {
-      DeliveryPersonnelModel = mongoose.model('DeliveryPersonnel');
-    } catch (err) {
-      return res.status(500).json({
+
+    const assignedPersonnel = await DeliveryPersonnelModel.find(getAssignableDriverQuery())
+      .sort({ activeOrdersCount: 1, createdAt: 1 })
+      .limit(1)
+      .then((drivers) => drivers[0]);
+
+    if (!assignedPersonnel) {
+      return res.status(404).json({
         success: false,
-        message: 'Delivery personnel system is not available',
-        error: err.message
+        message: 'No delivery personnel available at the moment'
       });
     }
-    
-    // Find an available delivery person
-    // Logic: Find someone who is active and has the fewest active orders
-    const availablePersonnel = await DeliveryPersonnelModel.find({
-      isActive: true,
-      isAvailable: true
-    }).sort({ activeOrdersCount: 1 }).limit(1);
-    
-    // If no one is available, try to find someone with the lowest number of active orders
-    let assignedPersonnel;
-    if (availablePersonnel.length === 0) {
-      const anyPersonnel = await DeliveryPersonnelModel.find({
-        isActive: true
-      }).sort({ activeOrdersCount: 1 }).limit(1);
-      
-      if (anyPersonnel.length === 0) {
-        return res.status(404).json({
-          success: false,
-          message: 'No delivery personnel available at the moment'
-        });
-      }
-      
-      assignedPersonnel = anyPersonnel[0];
-    } else {
-      assignedPersonnel = availablePersonnel[0];
-    }
-    
-    // Assign the order to the delivery person
-    order.deliveryPersonnel = assignedPersonnel._id;
-    order.status = 'driver_assigned';
-    
-    // Add entry to status history if it exists
-    if (order.statusHistory) {
-      order.statusHistory.push({
-        status: 'driver_assigned',
-        timestamp: new Date(),
-        updatedBy: req.userId,
-        note: `Assigned to delivery personnel ${assignedPersonnel.name}`
+
+    const assignment = await assignOrderToDriver({
+      orderId,
+      driver: assignedPersonnel,
+      updatedBy: req.userId,
+      note: `Assigned to delivery personnel ${assignedPersonnel.name}`
+    });
+
+    if (!assignment.ok) {
+      return res.status(assignment.status).json({
+        success: false,
+        message: assignment.message
       });
     }
-    
-    // Set estimated delivery time (e.g., 45 minutes from now)
-    const estimatedDelivery = new Date();
-    estimatedDelivery.setMinutes(estimatedDelivery.getMinutes() + 45);
-    order.estimatedDeliveryTime = estimatedDelivery;
-    
-    await order.save();
-    
-    // Update the delivery personnel record
-    assignedPersonnel.activeOrdersCount = (assignedPersonnel.activeOrdersCount || 0) + 1;
-    
-    // If the personnel has too many active orders, mark them as unavailable
-    if (assignedPersonnel.activeOrdersCount >= 5) {
-      assignedPersonnel.isAvailable = false;
-    }
-    
-    // Add this order to their active orders array if it exists
-    if (assignedPersonnel.activeOrders) {
-      assignedPersonnel.activeOrders.push(orderId);
-    } else {
-      assignedPersonnel.activeOrders = [orderId];
-    }
-    
-    await assignedPersonnel.save();
-    
-    // Create notification for the user
-    try {
-      const NotificationModel = mongoose.model('Notification');
-      await NotificationModel.create({
-        type: 'order_update',
-        title: 'Delivery Driver Assigned',
-        message: `Your order has been assigned to a delivery driver and will be delivered soon. Estimated delivery time: ${estimatedDelivery.toLocaleTimeString()}`,
-        isRead: false,
-        userId: order.userId
-      });
-    } catch (notificationError) {
-      console.log('Could not create notification:', notificationError.message);
-      // Continue with the flow even if notification creation fails
-    }
-    
-    // Return success response
+
     return res.status(200).json({
       success: true,
       message: 'Order assigned to delivery personnel successfully',
       data: {
-        orderId: order._id,
-        deliveryPersonnelId: assignedPersonnel._id,
-        deliveryPersonnelName: assignedPersonnel.name,
+        orderId: assignment.order._id,
+        deliveryPersonnelId: assignment.driver._id,
+        deliveryPersonnelName: assignment.driver.name,
         status: 'driver_assigned',
-        estimatedDelivery: order.estimatedDeliveryTime
+        estimatedDelivery: assignment.order.estimatedDeliveryTime
       }
     });
     
@@ -791,35 +1238,6 @@ export const dispatchOrder = async (req, res) => {
       });
     }
     
-    // Find the order
-    const order = await Order.findById(orderId);
-    
-    if (!order) {
-      return res.status(404).json({
-        success: false,
-        message: 'Order not found'
-      });
-    }
-    
-    // Check if order is already dispatched
-    if (order.status === 'dispatched' || 
-        order.status === 'driver_assigned' || 
-        order.status === 'out_for_delivery' || 
-        order.status === 'delivered') {
-      return res.status(400).json({
-        success: false,
-        message: `This order has already been ${order.status}`
-      });
-    }
-    
-    // Check if order fulfillment type is delivery
-    if (order.fulfillment_type !== 'delivery' && order.deliveryMethod !== 'delivery') {
-      return res.status(400).json({
-        success: false,
-        message: 'This order is not for delivery'
-      });
-    }
-
     // Get staff information for the record
     const staff = await User.findById(staffId).select('name email');
     
@@ -830,40 +1248,79 @@ export const dispatchOrder = async (req, res) => {
       });
     }
     
-    // Update the order status to dispatched
-    order.status = 'dispatched';
-    
-    // Record dispatch information
-    order.dispatchInfo = {
-      dispatchedAt: new Date(),
-      dispatchedBy: staffId,
-      dispatchNotes: notes || `Dispatched by ${staff.name || staff.email}`
-    };
-    
-    // Add to status history
-    order.statusHistory.push({
-      status: 'dispatched',
-      timestamp: new Date(),
-      updatedBy: staffId,
-      note: notes || `Dispatched by ${staff.name || staff.email}`
-    });
-    
-    await order.save();
-    
-    // Create notification for the user
-    try {
-      const NotificationModel = mongoose.model('Notification');
-      await NotificationModel.create({
-        type: 'order_update',
-        title: 'Order Dispatched',
-        message: 'Your order has been dispatched and will be assigned to a delivery person shortly.',
-        isRead: false,
-        userId: order.userId
+    const dispatchedAt = new Date();
+    const dispatchNote = notes || `Dispatched by ${staff.name || staff.email}`;
+
+    const order = await Order.findOneAndUpdate(
+      {
+        _id: orderId,
+        $or: [
+          { fulfillment_type: 'delivery' },
+          { deliveryMethod: 'delivery' }
+        ],
+        status: { $nin: DISPATCH_CONFLICT_STATUSES }
+      },
+      {
+        $set: {
+          status: 'dispatched',
+          dispatchInfo: {
+            dispatchedAt,
+            dispatchedBy: staffId,
+            dispatchNotes: dispatchNote
+          }
+        },
+        $push: {
+          statusHistory: {
+            status: 'dispatched',
+            timestamp: dispatchedAt,
+            updatedBy: staffId,
+            note: dispatchNote
+          }
+        }
+      },
+      {
+        new: true,
+        runValidators: true
+      }
+    );
+
+    if (!order) {
+      const existingOrder = await Order.findById(orderId).select('status fulfillment_type deliveryMethod');
+
+      if (!existingOrder) {
+        return res.status(404).json({
+          success: false,
+          message: 'Order not found'
+        });
+      }
+
+      if (existingOrder.fulfillment_type !== 'delivery' && existingOrder.deliveryMethod !== 'delivery') {
+        return res.status(400).json({
+          success: false,
+          message: 'This order is not for delivery'
+        });
+      }
+
+      if (DISPATCH_CONFLICT_STATUSES.includes(existingOrder.status)) {
+        return res.status(409).json({
+          success: false,
+          message: `This order has already been ${existingOrder.status}`
+        });
+      }
+
+      return res.status(409).json({
+        success: false,
+        message: 'This order is no longer eligible for dispatch'
       });
-    } catch (notificationError) {
-      console.log('Could not create notification:', notificationError.message);
-      // Continue with the flow even if notification creation fails
     }
+    
+    await createNotificationIfPossible({
+      type: 'order_update',
+      title: 'Order Dispatched',
+      message: 'Your order has been dispatched and will be assigned to a delivery person shortly.',
+      isRead: false,
+      userId: order.userId
+    }, 'dispatch notification');
 
     try {
       const customer = await User.findById(order.userId).select('name email');
@@ -871,6 +1328,8 @@ export const dispatchOrder = async (req, res) => {
     } catch (emailError) {
       console.log('Could not send dispatch email:', emailError.message);
     }
+
+    emitOrderStatusUpdated(order);
     
     // Return success response
     return res.status(200).json({
@@ -902,7 +1361,7 @@ export const getAvailableDrivers = async (req, res) => {
     
     // Find all active delivery personnel
     const allDrivers = await DeliveryPersonnelModel.find(activeDriverFilter)
-    .select('name userId profileImage phoneNumber activeOrdersCount isAvailable isActive currentLocation lastActive')
+    .select('name userId profileImage phoneNumber activeOrdersCount isAvailable isActive isOnline verificationStatus currentLocation lastActive')
     .sort({ isAvailable: -1, activeOrdersCount: 1 });
     
     if (!allDrivers || allDrivers.length === 0) {
@@ -979,7 +1438,9 @@ export const getAvailableDrivers = async (req, res) => {
         _id: driver._id,
         name: driver.name || userDetails.name || 'Unknown Driver',
         profileImage: driver.profileImage || userDetails.profilePic,
+        isOnline: driver.isOnline === true,
         isAvailable: driver.isAvailable,
+        verificationStatus: driver.verificationStatus || 'pending',
         activeOrdersCount: activeOrders || driver.activeOrdersCount || 0,
         currentLocation: driver.currentLocation || userDetails.currentLocation,
         lastActive: driver.lastActive || userDetails.lastLogin,
@@ -1021,33 +1482,29 @@ export const manuallyAssignDriver = async (req, res) => {
       });
     }
     
-    // Find the order
-    const order = await Order.findById(orderId);
-    
+    const order = await Order.findById(orderId).select('status fulfillment_type deliveryMethod deliveryPersonnel');
+
     if (!order) {
       return res.status(404).json({
         success: false,
         message: 'Order not found'
       });
     }
-    
-    // Check if the order is already assigned to a delivery person
-    if (order.deliveryPersonnel) {
-      return res.status(400).json({
-        success: false,
-        message: 'This order is already assigned to a delivery person'
-      });
-    }
-    
-    // Check if order is for delivery
-    if (order.fulfillment_type !== 'delivery') {
+
+    if (order.fulfillment_type !== 'delivery' && order.deliveryMethod !== 'delivery') {
       return res.status(400).json({
         success: false,
         message: 'This order is not marked for delivery'
       });
     }
-    
-    // Check if order has been dispatched
+
+    if (order.deliveryPersonnel) {
+      return res.status(409).json({
+        success: false,
+        message: 'This order has already been claimed or assigned'
+      });
+    }
+
     if (order.status !== 'dispatched') {
       return res.status(400).json({
         success: false,
@@ -1056,18 +1513,6 @@ export const manuallyAssignDriver = async (req, res) => {
       });
     }
 
-    // Try to import the DeliveryPersonnel model
-    let DeliveryPersonnelModel;
-    try {
-      DeliveryPersonnelModel = mongoose.model('DeliveryPersonnel');
-    } catch (err) {
-      return res.status(500).json({
-        success: false,
-        message: 'Delivery personnel system is not available',
-        error: err.message
-      });
-    }
-    
     // Find the selected delivery personnel
     const selectedDriver = await DeliveryPersonnelModel.findById(driverId);
     
@@ -1078,96 +1523,47 @@ export const manuallyAssignDriver = async (req, res) => {
       });
     }
     
-    // Check if the driver is active
-    if (selectedDriver.isActive === false) {
-      return res.status(400).json({
+    const eligibility = getDriverEligibility(selectedDriver, {
+      requireVerified: false,
+      requireOnline: false,
+      allowLegacyOffline: false,
+      context: 'assignment'
+    });
+
+    if (!eligibility.ok) {
+      return res.status(eligibility.status).json({
         success: false,
-        message: 'The selected driver is not active'
+        message: eligibility.message
       });
     }
     
     // Get staff information for the record
     const staff = await User.findById(staffId).select('name email');
     
-    // Assign the order to the selected driver
-    order.deliveryPersonnel = selectedDriver._id;
-    order.status = 'driver_assigned';
-    
-    // Add entry to status history
-    if (order.statusHistory) {
-      order.statusHistory.push({
-        status: 'driver_assigned',
-        timestamp: new Date(),
-        updatedBy: staffId,
-        note: notes || `Manually assigned to driver ${selectedDriver.name} by ${staff?.name || staff?.email || 'Admin/Staff'}`
+    const assignment = await assignOrderToDriver({
+      orderId,
+      driver: selectedDriver,
+      updatedBy: staffId,
+      note: notes || `Manually assigned to driver ${selectedDriver.name} by ${staff?.name || staff?.email || 'Admin/Staff'}`,
+      driverNotificationMessage: `You have been assigned a new delivery order (#${orderId}).`
+    });
+
+    if (!assignment.ok) {
+      return res.status(assignment.status).json({
+        success: false,
+        message: assignment.message
       });
     }
-    
-    // Set estimated delivery time (45 minutes from now by default)
-    const estimatedDelivery = new Date();
-    estimatedDelivery.setMinutes(estimatedDelivery.getMinutes() + 45);
-    order.estimatedDeliveryTime = estimatedDelivery;
-    
-    await order.save();
-    
-    // Update the delivery personnel record
-    selectedDriver.activeOrdersCount = (selectedDriver.activeOrdersCount || 0) + 1;
-    
-    // If the personnel has too many active orders, mark them as unavailable
-    if (selectedDriver.activeOrdersCount >= 5) {
-      selectedDriver.isAvailable = false;
-    }
-    
-    // Add this order to their active orders array if it exists
-    if (selectedDriver.activeOrders) {
-      selectedDriver.activeOrders.push(orderId);
-    } else {
-      selectedDriver.activeOrders = [orderId];
-    }
-    
-    await selectedDriver.save();
-    
-    // Create notification for the customer
-    try {
-      const NotificationModel = mongoose.model('Notification');
-      await NotificationModel.create({
-        type: 'order_update',
-        title: 'Delivery Driver Assigned',
-        message: `Your order has been assigned to a delivery driver and will be delivered soon. Estimated delivery time: ${estimatedDelivery.toLocaleTimeString()}`,
-        isRead: false,
-        userId: order.userId
-      });
-    } catch (notificationError) {
-      console.log('Could not create notification:', notificationError.message);
-    }
-    
-    // Create notification for the driver
-    try {
-      // If the driver has a user account, notify them
-      if (selectedDriver.userId) {
-        const NotificationModel = mongoose.model('Notification');
-        await NotificationModel.create({
-          type: 'new_delivery',
-          title: 'New Delivery Assignment',
-          message: `You have been assigned a new delivery order (#${order.orderId}).`,
-          isRead: false,
-          userId: selectedDriver.userId
-        });
-      }
-    } catch (driverNotificationError) {
-      console.log('Could not create driver notification:', driverNotificationError.message);
-    }
-    
-    // Return success response
+
     return res.status(200).json({
       success: true,
       message: 'Order manually assigned to selected driver successfully',
       data: {
-        orderId: order._id,
-        deliveryPersonnelId: selectedDriver._id,
-        deliveryPersonnelName: selectedDriver.name,
+        orderId: assignment.order._id,
+        deliveryPersonnelId: assignment.driver._id,
+        deliveryPersonnelName: assignment.driver.name,
         status: 'driver_assigned',
-        estimatedDelivery: order.estimatedDeliveryTime,
+        estimatedDelivery: assignment.order.estimatedDeliveryTime,
         assignedBy: staff?.name || staff?.email || 'Admin/Staff'
       }
     });
@@ -1564,6 +1960,7 @@ export const toggleDriverStatusForStaff = async (req, res) => {
 
     if (!nextActiveState) {
       driver.isAvailable = false;
+      driver.isOnline = false;
     } else if (driver.isAvailable === undefined) {
       driver.isAvailable = true;
     }
@@ -1587,7 +1984,8 @@ export const toggleDriverStatusForStaff = async (req, res) => {
       data: {
         _id: driver._id,
         isActive: driver.isActive,
-        isAvailable: driver.isAvailable
+        isAvailable: driver.isAvailable,
+        isOnline: driver.isOnline === true
       }
     });
   } catch (error) {

@@ -117,6 +117,10 @@ const deliveryPersonnelSchema = new mongoose.Schema({
         type: Boolean,
         default: true
     },
+    isOnline: {
+        type: Boolean,
+        default: false
+    },
 
     // Verification System
     verificationStatus: {

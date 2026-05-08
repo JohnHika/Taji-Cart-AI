@@ -6,7 +6,9 @@ import staff from '../middleware/Staff.js'; // Fixed import - staff is a default
 
 // Import controller functions from deliveryController.js
 import {
+    acceptAvailableDeliveryOrder,
     getActiveDeliveriesForStaff,
+    getAvailableDeliveryOrders,
     assignDeliveryPersonnel,
     getCompletedDeliveriesForStaff,
     getDispatchedOrders,
@@ -21,6 +23,7 @@ import {
     getPendingOrders,
     manuallyAssignDriver,
     toggleDriverStatusForStaff,
+    updateDriverPresence,
     updateDriverLocation,
     updateOrderStatus
 } from '../controllers/deliveryController.js';
@@ -55,6 +58,15 @@ deliveryRouter.get('/export-history', auth, delivery, exportDeliveryHistory);
 
 // Update order status
 deliveryRouter.post('/update-status', auth, delivery, updateOrderStatus);
+
+// Driver online/offline presence
+deliveryRouter.post('/presence', auth, delivery, updateDriverPresence);
+
+// Driver claimable delivery pool
+deliveryRouter.get('/available', auth, delivery, getAvailableDeliveryOrders);
+
+// Driver self-accept available delivery
+deliveryRouter.post('/accept/:orderId', auth, delivery, acceptAvailableDeliveryOrder);
 
 // Update driver location
 deliveryRouter.post('/update-location', auth, delivery, updateDriverLocation);
