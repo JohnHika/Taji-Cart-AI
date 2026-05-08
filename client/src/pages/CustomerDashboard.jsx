@@ -113,12 +113,6 @@ const CustomerDashboard = () => {
             >
               Cart
             </Link>
-            <Link
-              to="/dashboard/settings"
-              className="rounded-full border border-brown-200 px-3 py-1.5 text-xs font-medium text-charcoal transition hover:border-plum-300 hover:bg-plum-50 dark:border-dm-border dark:text-white/80 dark:hover:bg-plum-900/30"
-            >
-              Settings
-            </Link>
           </div>
         </div>
       </div>

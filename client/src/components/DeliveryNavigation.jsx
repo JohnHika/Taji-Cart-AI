@@ -3,7 +3,6 @@ import toast from 'react-hot-toast';
 import {
     FaBars,
     FaBoxOpen,
-    FaCog,
     FaHistory,
     FaMapMarkedAlt,
     FaSignOutAlt,
@@ -121,13 +120,6 @@ const DeliveryNavigation = () => {
               >
                 <FaUserCircle size={20} />
               </Link>
-              <Link
-                to="/dashboard/settings"
-                className="text-charcoal hover:text-primary-200 dark:text-white/70 dark:hover:text-primary-300"
-                title="Settings"
-              >
-                <FaCog size={20} />
-              </Link>
               <button 
                 onClick={handleLogout}
                 className="text-charcoal hover:text-red-500 dark:text-white/70 dark:hover:text-red-400"
@@ -200,14 +192,6 @@ const DeliveryNavigation = () => {
               >
                 <FaUserCircle className="mr-2" />
                 <span>My Profile</span>
-              </Link>
-              <Link
-                to="/dashboard/settings"
-                className="p-2 text-charcoal dark:text-white/55 hover:bg-brown-50 dark:hover:bg-dm-card-2 rounded flex items-center"
-                onClick={toggleMobileMenu}
-              >
-                <FaCog className="mr-2" />
-                <span>Settings</span>
               </Link>
               <button
                 onClick={() => {

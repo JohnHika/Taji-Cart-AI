@@ -151,7 +151,6 @@ const UserMenu = ({ close, variant = 'dropdown' }) => {
           <>
             <p className={sectionClass}>Account</p>
             <MenuLink to="/dashboard/profile" icon={FaUser} label="My profile" />
-            <MenuLink to="/dashboard/settings" icon={FaCog} label="Settings" />
 
             {showStaffFunctions && (
               <>
@@ -187,7 +186,6 @@ const UserMenu = ({ close, variant = 'dropdown' }) => {
             <MenuLink to="/dashboard/profile" icon={FaUser} label="My profile" />
             <MenuLink to="/dashboard/myorders" icon={FaShoppingBag} label="My orders" />
             <MenuLink to="/dashboard/address" icon={FaMapMarkerAlt} label="My addresses" />
-            <MenuLink to="/dashboard/settings" icon={FaCog} label="Settings" />
 
             <p className={sectionClass}>Rewards & community</p>
             <MenuLink to="/dashboard/loyalty-program" icon={FaCrown} label="Loyalty program" />

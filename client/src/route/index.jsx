@@ -70,7 +70,6 @@ import CartMobile from '../pages/CartMobile';
 import DashboardCart from '../pages/DashboardCart';
 import DashboardCheckout from '../pages/DashboardCheckout';
 import VerifyEmailPage from '../pages/VerifyEmailPage';
-import UserSettings from '../pages/UserSettings';
 
 function LegacyCheckoutRedirect() {
   const location = useLocation();
@@ -391,10 +390,6 @@ const router = createBrowserRouter([
           {
             path: 'checkout',
             element: <DashboardCheckout />
-          },
-          {
-            path: 'settings',
-            element: <UserSettings />
           },
 
           // Admin routes
