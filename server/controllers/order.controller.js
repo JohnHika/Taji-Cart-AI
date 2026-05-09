@@ -1111,10 +1111,7 @@ export async function getOrderTrackingDetails(request, response) {
         // Fetch order with populated delivery personnel and status history
         const order = await OrderModel.findById(id)
             .populate('deliveryPersonnel')
-            .populate({
-                path: 'items.productId',
-                select: 'name price image'
-            })
+          .populate('productId', 'name price image')
             .populate('delivery_address');
         
         if (!order) {
@@ -1126,9 +1123,18 @@ export async function getOrderTrackingDetails(request, response) {
             });
         }
         
+        const isAdmin = request.isAdmin === true || request.userRole === 'admin';
+        const isOwner = Boolean(
+          order.userId &&
+          request.userId &&
+          order.userId.toString() === request.userId.toString()
+        );
+
         // Check if user is authorized to view this order
-        if (order.userId.toString() !== request.userId.toString() && request.userRole !== 'admin') {
-            console.log(`Unauthorized access attempt: User ${request.userId} tried to access order ${id} belonging to ${order.userId}`);
+        if (!isAdmin && !isOwner) {
+          console.log(
+            `Unauthorized access attempt: User ${request.userId} tried to access order ${id} belonging to ${order.userId || 'guest-order'}`
+          );
             return response.status(403).json({
                 message: "You are not authorized to view this order",
                 success: false,
