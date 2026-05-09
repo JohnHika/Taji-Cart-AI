@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
 import {
   FaBell,
@@ -247,7 +247,7 @@ const UserProfile = () => {
     if (!dateString) return 'N/A';
     
     try {
-      return new Date(dateString).toLocaleDateString('en-US', {
+      return new Date(dateString).toLocaleString('en-KE', {
         year: 'numeric',
         month: 'long',
         day: 'numeric',
@@ -259,6 +259,9 @@ const UserProfile = () => {
       return 'Invalid Date';
     }
   };
+
+  const accountCreatedAt = user.createdAt || user.created_at;
+  const lastLoginAt = user.lastLogin || user.last_login_date;
 
   // Add function to request email verification
   const handleRequestVerification = async () => {
@@ -547,8 +550,8 @@ const UserProfile = () => {
                         <div>
                           <p className="text-sm text-brown-500 dark:text-white/50">Account Created</p>
                           <p className="font-medium text-charcoal dark:text-white">
-                            {user.createdAt 
-                              ? formatDate(user.createdAt)
+                            {accountCreatedAt 
+                              ? formatDate(accountCreatedAt)
                               : 'N/A'}
                           </p>
                         </div>
@@ -575,8 +578,8 @@ const UserProfile = () => {
                         <div>
                           <p className="text-sm text-brown-500 dark:text-white/50">Last Login</p>
                           <p className="font-medium text-charcoal dark:text-white">
-                            {user.lastLogin 
-                              ? formatDate(user.lastLogin)
+                            {lastLoginAt 
+                              ? formatDate(lastLoginAt)
                               : 'N/A'}
                           </p>
                         </div>

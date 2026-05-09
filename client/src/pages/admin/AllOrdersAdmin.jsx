@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
 import {
   FaBoxes,
@@ -116,7 +116,13 @@ const OrderDetailModal = ({ order, onClose, onStatusChange, onDispatchStateSync 
       }
     } catch (error) {
       console.error('Error dispatching order:', error);
-      toast.error('Failed to dispatch order');
+
+      const conflictStatus = error?.response?.data?.currentStatus;
+      if (conflictStatus && typeof onDispatchStateSync === 'function') {
+        onDispatchStateSync(order._id, { status: conflictStatus });
+      }
+
+      toast.error(error?.response?.data?.message || 'Failed to dispatch order');
     } finally {
       setDispatchingOrder(false);
     }

@@ -125,6 +125,13 @@ const PendingDispatch = () => {
       toast.error(response.data?.message || 'Failed to dispatch order');
       return false;
     } catch (error) {
+      if (error?.response?.data?.currentStatus) {
+        toast.error(error.response.data.message || 'This order is no longer pending dispatch');
+        await fetchPendingOrders();
+        setSelectedOrders((prev) => prev.filter((id) => id !== orderId));
+        return false;
+      }
+
       AxiosToastError(error);
       return false;
     } finally {

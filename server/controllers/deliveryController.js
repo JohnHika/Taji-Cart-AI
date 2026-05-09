@@ -1,6 +1,7 @@
 import mongoose from 'mongoose';
 import sendEmail from '../config/sendEmail.js';
 import DeliveryPersonnelModel from '../models/deliverypersonnel.model.js';
+import NotificationModel from '../models/notification.model.js';
 import { default as Order, default as OrderModel } from '../models/order.model.js';
 import User from '../models/user.model.js';
 import { emitNewDeliveryAssigned, emitOrderStatusUpdated, getIO } from '../socket/socket.js';
@@ -8,7 +9,7 @@ import { nawiriBrand } from '../utils/brand.js';
 import { renderOrderNoticeEmail } from '../utils/emailTemplates.js';
 
 const DELIVERY_DRIVER_CAPACITY = 5;
-const DISPATCH_CONFLICT_STATUSES = ['dispatched', 'driver_assigned', 'out_for_delivery', 'nearby', 'delivered'];
+const DISPATCH_CONFLICT_STATUSES = ['dispatched', 'driver_assigned', 'out_for_delivery', 'nearby', 'delivered', 'cancelled'];
 const DELIVERY_ORDER_FILTER = {
   $or: [
     { fulfillment_type: 'delivery' },
@@ -113,18 +114,107 @@ const formatDeliveryItems = (order) => {
   return [];
 };
 
+const normalizeText = (value) => {
+  if (value === null || value === undefined) {
+    return '';
+  }
+
+  return `${value}`.trim();
+};
+
+const firstNonEmptyValue = (...values) => {
+  for (const value of values) {
+    const normalized = normalizeText(value);
+    if (normalized) {
+      return normalized;
+    }
+  }
+
+  return '';
+};
+
+const getGuestCustomerName = (order) => {
+  const fullName = [order.guestShipping?.firstName, order.guestShipping?.lastName]
+    .map(normalizeText)
+    .filter(Boolean)
+    .join(' ');
+
+  return firstNonEmptyValue(
+    order.guestShipping?.name,
+    fullName,
+    order.guestEmail?.split('@')[0],
+    'Guest Customer'
+  );
+};
+
 const formatDeliveryAddress = (order) => ({
-  street: order.delivery_address?.street || order.delivery_address?.address || 'Address not specified',
-  city: order.delivery_address?.city || '',
-  neighborhood: order.delivery_address?.neighborhood || order.delivery_address?.area || '',
-  landmark: order.delivery_address?.landmark || '',
-  fullAddress: order.delivery_address?.fullAddress || ''
+  street: firstNonEmptyValue(
+    order.delivery_address?.address_line,
+    order.delivery_address?.street,
+    order.delivery_address?.address,
+    order.guestShipping?.address,
+    order.guestShipping?.address_line,
+    order.guestShipping?.street
+  ) || 'Address not specified',
+  city: firstNonEmptyValue(
+    order.delivery_address?.city,
+    order.guestShipping?.city
+  ),
+  neighborhood: firstNonEmptyValue(
+    order.delivery_address?.neighborhood,
+    order.delivery_address?.area,
+    order.delivery_address?.state,
+    order.guestShipping?.neighborhood,
+    order.guestShipping?.area,
+    order.guestShipping?.state,
+    order.guestShipping?.zipCode
+  ),
+  landmark: firstNonEmptyValue(
+    order.delivery_address?.landmark,
+    order.guestShipping?.landmark
+  ),
+  fullAddress: [
+    firstNonEmptyValue(
+      order.delivery_address?.address_line,
+      order.delivery_address?.street,
+      order.delivery_address?.address,
+      order.guestShipping?.address,
+      order.guestShipping?.address_line,
+      order.guestShipping?.street
+    ) || 'Address not specified',
+    firstNonEmptyValue(order.delivery_address?.city, order.guestShipping?.city),
+    firstNonEmptyValue(
+      order.delivery_address?.neighborhood,
+      order.delivery_address?.area,
+      order.delivery_address?.state,
+      order.guestShipping?.neighborhood,
+      order.guestShipping?.area,
+      order.guestShipping?.state,
+      order.guestShipping?.zipCode
+    ),
+    firstNonEmptyValue(order.delivery_address?.country, order.guestShipping?.country)
+  ].filter(Boolean).join(', ')
 });
 
 const formatDeliveryCustomer = (order) => ({
-  name: order.userId?.name || 'Unknown Customer',
-  phone: order.userId?.phone || order.userId?.mobile || 'No Contact',
-  email: order.userId?.email || 'No Email'
+  name: firstNonEmptyValue(
+    order.userId?.name,
+    getGuestCustomerName(order),
+    'Unknown Customer'
+  ),
+  phone: firstNonEmptyValue(
+    order.userId?.mobile,
+    order.userId?.phone,
+    order.delivery_address?.mobile,
+    order.guestPhone,
+    order.guestShipping?.phone,
+    'No Contact'
+  ),
+  email: firstNonEmptyValue(
+    order.userId?.email,
+    order.guestEmail,
+    'No Email'
+  )
 });
 
 const formatStaffDeliveryOrder = (order) => ({
@@ -177,6 +267,18 @@ const buildEstimatedDeliveryTime = () => {
   const estimatedDelivery = new Date();
   estimatedDelivery.setMinutes(estimatedDelivery.getMinutes() + 45);
   return estimatedDelivery;
+};
+
+const createNotificationIfPossible = async (notificationPayload, context = 'notification') => {
+  if (!notificationPayload?.userId) {
+    return;
+  }
+
+  try {
+    await NotificationModel.create(notificationPayload);
+  } catch (notificationError) {
+    console.log(`Could not create ${context}:`, notificationError.message);
+  }
 };
 
 const isUnassignedDeliveryOrderFilter = {
@@ -591,23 +693,22 @@ export const getActiveOrders = async (req, res) => {
     })
     .populate({
         path: 'userId',
-        select: 'name phone email'
+      select: 'name phone mobile email'
     })
     .populate('delivery_address')
     .sort({ updatedAt: -1 });
     
     // Format the customer information and delivery address for each order
     const formattedOrders = orders.map(order => {
+      const customer = formatDeliveryCustomer(order);
+      const deliveryAddress = formatDeliveryAddress(order);
+
         return {
             _id: order._id,
             orderId: order.orderId,
             status: order.status,
-            customer: {
-                name: order.userId?.name || "Unknown Customer",
-                phone: order.userId?.phone || "N/A",
-                email: order.userId?.email || "N/A"
-            },
-            deliveryAddress: order.delivery_address?.fullAddress || "No address provided",
+        customer,
+        deliveryAddress: deliveryAddress.fullAddress || deliveryAddress.street || 'No address provided',
             total: order.totalAmt,
             createdAt: order.createdAt,
             currentLocation: order.currentLocation || null,
@@ -1250,6 +1351,13 @@ export const dispatchOrder = async (req, res) => {
         message: 'Order ID is required'
       });
     }
+
+    if (!mongoose.isValidObjectId(orderId)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid order ID'
+      });
+    }
     
     // Get staff information for the record
     const staff = await User.findById(staffId).select('name email');
@@ -1317,7 +1425,8 @@ export const dispatchOrder = async (req, res) => {
       if (DISPATCH_CONFLICT_STATUSES.includes(existingOrder.status)) {
         return res.status(409).json({
           success: false,
-          message: `This order has already been ${existingOrder.status}`
+          message: `This order has already been ${existingOrder.status}`,
+          currentStatus: existingOrder.status
         });
       }
 
@@ -1335,11 +1444,13 @@ export const dispatchOrder = async (req, res) => {
       userId: order.userId
     }, 'dispatch notification');
 
-    try {
-      const customer = await User.findById(order.userId).select('name email');
-      await sendDispatchUpdateEmail(order, customer);
-    } catch (emailError) {
-      console.log('Could not send dispatch email:', emailError.message);
+    if (order.userId) {
+      try {
+        const customer = await User.findById(order.userId).select('name email');
+        await sendDispatchUpdateEmail(order, customer);
+      } catch (emailError) {
+        console.log('Could not send dispatch email:', emailError.message);
+      }
     }
 
     emitOrderStatusUpdated(order);
@@ -1641,17 +1752,22 @@ export const getDashboardStats = async (req, res) => {
     .populate('delivery_address');
     
     // Format recent orders for display
-    const formattedRecentOrders = recentOrders.map(order => ({
-      _id: order._id,
-      orderId: order.orderId || order._id,
-      status: order.status,
-      customerName: order.userId?.name || 'Unknown Customer',
-      customerEmail: order.userId?.email || 'N/A',
-      deliveryAddress: order.delivery_address?.fullAddress || 'No address provided',
-      driverName: order.deliveryPersonnel?.name || 'Not assigned',
-      createdAt: order.createdAt,
-      total: order.totalAmt
-    }));
+    const formattedRecentOrders = recentOrders.map((order) => {
+      const customer = formatDeliveryCustomer(order);
+      const deliveryAddress = formatDeliveryAddress(order);
+
+      return {
+        _id: order._id,
+        orderId: order.orderId || order._id,
+        status: order.status,
+        customerName: customer.name,
+        customerEmail: customer.email,
+        deliveryAddress: deliveryAddress.fullAddress || deliveryAddress.street || 'No address provided',
+        driverName: order.deliveryPersonnel?.name || 'Not assigned',
+        createdAt: order.createdAt,
+        total: order.totalAmt
+      };
+    });
     
     // Get active drivers with their current locations
     let activeDrivers = [];
@@ -1769,7 +1885,7 @@ export const getPendingOrders = async (req, res) => {
     const pendingOrders = await Order.find(buildDeliveryQuery({
       status: { $in: ['pending', 'processing', 'confirmed'] }
     }))
-    .populate('userId', 'name email phone')
+    .populate('userId', 'name email phone mobile')
     .populate('delivery_address')
     .sort(sortConfig)
     .limit(100); // Limit for performance
@@ -1782,54 +1898,9 @@ export const getPendingOrders = async (req, res) => {
       });
     }
     
-    // Format the data for frontend display
-    const formattedOrders = pendingOrders.map(order => {
-      // Get delivery address details
-      let deliveryAddress = {
-        street: 'No address available',
-        city: '',
-        neighborhood: '',
-        landmark: ''
-      };
-      
-      if (order.delivery_address) {
-        deliveryAddress = {
-          street: order.delivery_address.street || order.delivery_address.address || 'Address not specified',
-          city: order.delivery_address.city || '',
-          neighborhood: order.delivery_address.neighborhood || order.delivery_address.area || '',
-          landmark: order.delivery_address.landmark || ''
-        };
-      }
-      
-      // Extract order items
-      const items = Array.isArray(order.items) ? order.items.map(item => ({
-        name: item.name || item.productName || (item.productId && item.productId.name) || 'Unknown Product',
-        quantity: item.quantity || 1
-      })) : [];
-      
-      // Create customer object
-      const customer = {
-        name: order.userId?.name || 'Unknown Customer',
-        phone: order.userId?.phone || order.userId?.mobile || 'No Contact',
-        email: order.userId?.email || 'No Email'
-      };
-      
-      return {
-        _id: order._id,
-        orderId: order.orderId || order._id.toString().slice(-6).toUpperCase(),
-        customer,
-        deliveryAddress,
-        items,
-        total: order.totalAmt || order.total || 0,
-        createdAt: order.createdAt,
-        status: order.status,
-        paymentStatus: order.payment_status || order.paymentStatus || 'unknown'
-      };
-    });
-    
     return res.status(200).json({
       success: true,
-      data: formattedOrders
+      data: pendingOrders.map(formatStaffDeliveryOrder)
     });
   } catch (error) {
     console.error('Error fetching pending orders:', error);

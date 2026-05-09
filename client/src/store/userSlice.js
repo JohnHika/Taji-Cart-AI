@@ -5,6 +5,9 @@ const initialValue = {
     name : "",
     email : "",
     avatar : "",
+    createdAt : "",
+    updatedAt : "",
+    lastLogin : "",
     mobile : "",
     deliveryProfile: null,
     mobile_verified: false,
@@ -59,6 +62,9 @@ const userSlice  = createSlice({
             state.name  = userData?.name
             state.email = userData?.email
             state.avatar = userData?.avatar
+            state.createdAt = userData?.createdAt || ''
+            state.updatedAt = userData?.updatedAt || ''
+            state.lastLogin = userData?.lastLogin || userData?.last_login_date || ''
             state.mobile = userData?.mobile
             state.deliveryProfile = userData?.deliveryProfile || null
             state.mobile_verified = Boolean(userData?.mobile_verified)
@@ -83,6 +89,9 @@ const userSlice  = createSlice({
             state.name  = ""
             state.email = ""
             state.avatar = ""
+            state.createdAt = ""
+            state.updatedAt = ""
+            state.lastLogin = ""
             state.mobile = ""
             state.deliveryProfile = null
             state.mobile_verified = false
@@ -104,6 +113,9 @@ const userSlice  = createSlice({
             state.name = '';
             state.email = '';
             state.avatar = '';
+            state.createdAt = '';
+            state.updatedAt = '';
+            state.lastLogin = '';
             state.mobile = '';
             state.deliveryProfile = null;
             state.mobile_verified = false;
