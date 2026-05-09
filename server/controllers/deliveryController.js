@@ -625,6 +625,7 @@ export const getDeliveryStats = async (req, res) => {
     // Resolve both User._id and DeliveryPersonnel._id so queries match regardless
     // of which ID was stored when the order was assigned.
     const personnelFilter = await getDriverPersonnelFilter(driverId);
+    const driverProfile = await getDriverProfileForUser(driverId, { createIfMissing: true });
     
     // Get counts for different order statuses
     const todayStart = new Date();
@@ -648,25 +649,40 @@ export const getDeliveryStats = async (req, res) => {
         deliveryPersonnel: personnelFilter,
         status: 'delivered'
     });
+
+    const visibilityEligibility = getDriverEligibility(driverProfile, {
+      requireVerified: false,
+      requireOnline: false,
+      requireAvailable: false,
+      allowLegacyOffline: true,
+      context: 'claim'
+    });
+
+    const pendingOrders = visibilityEligibility.ok
+      ? await OrderModel.countDocuments({
+          status: 'dispatched',
+          $and: [DELIVERY_ORDER_FILTER, isUnassignedDeliveryOrderFilter]
+        })
+      : 0;
     
     // Get driver info including current location and availability status
-    const driverInfo = await DeliveryPersonnelModel.findOne({ userId: driverId });
-    const averageRating = Number(driverInfo?.averageRating || 0);
+    const averageRating = Number(driverProfile?.averageRating || 0);
     
     return res.json({
         success: true,
         data: {
             activeOrders,
         activeDeliveries: activeOrders,
-        pendingDeliveries: activeOrders,
+        pendingDeliveries: pendingOrders,
+        availableToClaim: pendingOrders,
             completedToday,
         todayDeliveries: completedToday,
             totalCompleted,
         totalDeliveries: totalCompleted,
         averageRating,
-          isOnline: driverInfo?.isOnline || false,
-            isAvailable: driverInfo?.isAvailable || false,
-            currentLocation: driverInfo?.currentLocation || null
+          isOnline: driverProfile?.isOnline || false,
+            isAvailable: driverProfile?.isAvailable || false,
+            currentLocation: driverProfile?.currentLocation || null
         }
     });
   } catch (error) {
@@ -1151,8 +1167,10 @@ export const getAvailableDeliveryOrders = async (req, res) => {
   try {
     const driverProfile = await getDriverProfileForUser(req.userId, { createIfMissing: true });
     const eligibility = getDriverEligibility(driverProfile, {
-      requireVerified: true,
-      requireOnline: true,
+      requireVerified: false,
+      requireOnline: false,
+      requireAvailable: false,
+      allowLegacyOffline: true,
       context: 'claim'
     });
 

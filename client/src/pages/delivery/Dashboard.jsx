@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
 import {
     FaBox,
@@ -205,7 +205,7 @@ const Dashboard = () => {
               <FaCalendarCheck className="text-green-500 dark:text-green-300" size={24} />
             </div>
             <div className="ml-4">
-              <h2 className="text-sm font-medium text-brown-400 dark:text-white/40">Today's Deliveries</h2>
+              <h2 className="text-sm font-medium text-brown-400 dark:text-white/40">Today&apos;s Deliveries</h2>
               <p className="text-3xl font-semibold text-charcoal dark:text-white">{dashboardData?.todayDeliveries || 0}</p>
             </div>
           </div>
@@ -249,7 +249,7 @@ const Dashboard = () => {
             <FaTruck className="mx-auto text-brown-400 dark:text-brown-400 mb-4" size={48} />
             <h3 className="text-lg font-medium text-charcoal dark:text-white/55 mb-2">No Active Deliveries</h3>
             <p className="text-brown-400 dark:text-white/40">
-              You currently don't have any active deliveries assigned to you.
+              You currently don&apos;t have any active deliveries assigned to you.
             </p>
           </div>
         ) : (
