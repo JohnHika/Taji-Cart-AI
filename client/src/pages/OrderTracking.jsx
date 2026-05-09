@@ -91,6 +91,7 @@ const OrderTracking = () => {
     const connectSocket = () => {
       console.log(`Connecting to socket server at ${backendUrl}`);
       
+      const token = sessionStorage.getItem('accesstoken') || '';
       const newSocket = io(backendUrl, {
         withCredentials: true,
         reconnection: true,
@@ -99,7 +100,8 @@ const OrderTracking = () => {
         reconnectionDelayMax: 5000,
         timeout: 30000, // Increased from 20000
         autoConnect: true,
-        query: { orderId } // Add orderId to query params
+        query: { orderId }, // Add orderId to query params
+        auth: { token }    // Pass auth token so socket middleware accepts the connection
       });
       
       socketRef.current = newSocket;
@@ -114,6 +116,16 @@ const OrderTracking = () => {
       
       newSocket.on('connect_error', (error) => {
         console.error('Socket connection error:', error);
+        // Auth errors: server rejected us — stop retrying immediately to avoid polling loops
+        if (
+          error.message === 'Authentication token required' ||
+          error.message === 'Authentication failed' ||
+          error.message === 'User not found' ||
+          error.message === 'Invalid token'
+        ) {
+          newSocket.disconnect();
+          return; // Do not toast or retry; user simply won't get live updates
+        }
         toast.error('Connection error. Attempting to reconnect...');
         // If not already retrying
         if (reconnectAttempts === 0) {
