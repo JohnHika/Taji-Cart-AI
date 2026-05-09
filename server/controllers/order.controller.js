@@ -10,9 +10,10 @@ import LoyaltyCardModel from "../models/loyaltycard.model.js"; // Add this impor
 import NotificationModel from "../models/notification.model.js"; // Add this import
 import OrderModel from "../models/order.model.js";
 import ProductModel from "../models/product.model.js"; // Add this import
+import UserRewardModel from "../models/userreward.model.js";
 import UserModel from "../models/user.model.js";
 import { getIO } from '../socket/socket.js'; // Add this import
-import { processOrderContribution } from './communitycampaign.controller.js'; // Add this import
+import { markRewardAsUsed, processOrderContribution } from './communitycampaign.controller.js'; // Add this import
 import { nawiriBrand } from "../utils/brand.js";
 import { renderOrderNoticeEmail } from "../utils/emailTemplates.js";
 
@@ -20,6 +21,214 @@ import { renderOrderNoticeEmail } from "../utils/emailTemplates.js";
 const inspectObject = (obj) => util.inspect(obj, {depth: 3, colors: true});
 
 const formatCurrency = (amount = 0) => `KES ${Number(amount || 0).toLocaleString()}`;
+const LOYALTY_TIER_DISCOUNTS = {
+  Basic: 0,
+  Bronze: 2,
+  Silver: 3.5,
+  Gold: 5,
+  Platinum: 7.5,
+};
+
+const roundMoney = (amount = 0) => Number(Number(amount || 0).toFixed(2));
+
+const createOrderValidationError = (message, statusCode = 400) => {
+  const error = new Error(message);
+  error.statusCode = statusCode;
+  return error;
+};
+
+const getRoyalDiscountRate = (tier = 'Basic') => Number(LOYALTY_TIER_DISCOUNTS[tier] || 0);
+
+const getOrderProductId = (item) => item?.productId?._id || item?.productId || item?._id;
+
+const getValidatedQuantity = (quantity) => {
+  const parsedQuantity = Number(quantity);
+
+  if (!Number.isFinite(parsedQuantity) || parsedQuantity <= 0) {
+    return 0;
+  }
+
+  return Math.floor(parsedQuantity);
+};
+
+export const pricewithDiscount = (price, dis = 0, royalDiscount = 0) => {
+  const basePrice = Number(price || 0);
+  const productDiscount = Math.max(0, Number(dis || 0));
+  const loyaltyDiscount = Math.max(0, Number(royalDiscount || 0));
+
+  const discountAmount = Math.round((basePrice * productDiscount) / 100);
+  const priceAfterProductDiscount = basePrice - discountAmount;
+  const royalDiscountAmount = Math.round((priceAfterProductDiscount * loyaltyDiscount) / 100);
+
+  return Math.max(0, priceAfterProductDiscount - royalDiscountAmount);
+};
+
+const getValidatedCommunityReward = async ({ userId, communityRewardId, communityDiscountAmount }) => {
+  if (!userId || !communityRewardId || !mongoose.Types.ObjectId.isValid(String(communityRewardId))) {
+    return {
+      reward: null,
+      discountPercent: 0,
+    };
+  }
+
+  const reward = await UserRewardModel.findOne({
+    _id: communityRewardId,
+    userId,
+    type: 'discount',
+    isActive: true,
+    isUsed: false,
+    expiryDate: { $gt: new Date() },
+  });
+
+  if (!reward) {
+    return {
+      reward: null,
+      discountPercent: 0,
+    };
+  }
+
+  const rewardDiscount = Math.max(0, Number(reward.value || 0));
+  const requestedDiscount = Math.max(0, Number(communityDiscountAmount || 0));
+
+  return {
+    reward,
+    discountPercent: requestedDiscount > 0 ? Math.min(rewardDiscount, requestedDiscount) : rewardDiscount,
+  };
+};
+
+const buildValidatedOrderPricing = async ({
+  items,
+  userId = null,
+  usePoints = false,
+  pointsUsed = 0,
+  communityRewardId = null,
+  communityDiscountAmount = 0,
+}) => {
+  const orderItems = Array.isArray(items) ? items : [];
+
+  if (orderItems.length === 0) {
+    throw createOrderValidationError('Your cart is empty. Add items before checking out.');
+  }
+
+  let loyaltyCard = null;
+  let royalDiscount = 0;
+
+  if (userId && mongoose.Types.ObjectId.isValid(String(userId))) {
+    loyaltyCard = await LoyaltyCardModel.findOne({ userId });
+    royalDiscount = getRoyalDiscountRate(loyaltyCard?.tier);
+  }
+
+  const uniqueProductIds = [...new Set(
+    orderItems
+      .map((item) => getOrderProductId(item))
+      .filter((productId) => mongoose.Types.ObjectId.isValid(String(productId)))
+      .map(String)
+  )];
+
+  const products = await ProductModel.find({
+    _id: { $in: uniqueProductIds },
+  }).select('_id name image price discount stock').lean();
+
+  const productsById = new Map(products.map((product) => [String(product._id), product]));
+  let subTotalAmt = 0;
+
+  const normalizedItems = orderItems.map((item) => {
+    const productId = getOrderProductId(item);
+
+    if (!mongoose.Types.ObjectId.isValid(String(productId))) {
+      throw createOrderValidationError('Your cart contains an invalid product reference. Please refresh and try again.');
+    }
+
+    const product = productsById.get(String(productId));
+
+    if (!product) {
+      throw createOrderValidationError(`Product ${item?.productId?.name || item?.name || 'in your cart'} not found`, 404);
+    }
+
+    const quantity = getValidatedQuantity(item?.quantity);
+
+    if (!quantity) {
+      throw createOrderValidationError(`Invalid quantity for ${product.name}`);
+    }
+
+    if (Number(product.stock || 0) < quantity) {
+      throw createOrderValidationError(`Insufficient stock for ${product.name}. Available: ${product.stock}, Requested: ${quantity}`);
+    }
+
+    const unitPrice = pricewithDiscount(product.price, product.discount, royalDiscount);
+    subTotalAmt += unitPrice * quantity;
+
+    return {
+      ...item,
+      quantity,
+      productId: {
+        ...(typeof item?.productId === 'object' && item.productId ? item.productId : {}),
+        _id: product._id,
+        name: product.name,
+        image: product.image,
+        price: product.price,
+        discount: product.discount,
+      },
+    };
+  });
+
+  subTotalAmt = roundMoney(subTotalAmt);
+
+  const { reward: communityReward, discountPercent: communityDiscountPercent } = await getValidatedCommunityReward({
+    userId,
+    communityRewardId,
+    communityDiscountAmount,
+  });
+
+  const priceAfterCommunityDiscount = communityDiscountPercent > 0
+    ? roundMoney(subTotalAmt * (1 - communityDiscountPercent / 100))
+    : subTotalAmt;
+
+  let appliedPoints = 0;
+
+  if ((usePoints === true || usePoints === 'true') && loyaltyCard) {
+    const availablePoints = Math.max(0, Number(loyaltyCard.points || 0));
+    const requestedPoints = Math.max(0, Number(pointsUsed || 0));
+    appliedPoints = Math.min(availablePoints, requestedPoints, priceAfterCommunityDiscount);
+  }
+
+  return {
+    normalizedItems,
+    subTotalAmt,
+    totalAmt: roundMoney(Math.max(0, priceAfterCommunityDiscount - appliedPoints)),
+    loyaltyCard,
+    appliedPoints,
+    communityReward,
+    communityDiscountPercent,
+  };
+};
+
+const redeemLoyaltyPoints = async ({ loyaltyCard, pointsToRedeem, orderId }) => {
+  if (!loyaltyCard || pointsToRedeem <= 0) {
+    return;
+  }
+
+  loyaltyCard.points = Math.max(0, Number(loyaltyCard.points || 0) - Number(pointsToRedeem || 0));
+  loyaltyCard.pointsHistory.push({
+    points: -Number(pointsToRedeem || 0),
+    reason: `Order #${orderId} redemption`,
+    date: new Date(),
+  });
+
+  await loyaltyCard.save();
+
+  try {
+    await NotificationModel.create({
+      type: 'loyalty_points',
+      title: 'Loyalty Points Redeemed',
+      message: `You redeemed ${pointsToRedeem} Royal Points on order ${orderId}.`,
+      isRead: false,
+      userId: loyaltyCard.userId,
+    });
+  } catch (notificationError) {
+    console.error('Error creating loyalty redemption notification:', notificationError);
+  }
+};
 
 const sendOrderLifecycleEmail = async ({
     user,
@@ -56,7 +265,17 @@ const sendOrderLifecycleEmail = async ({
 export async function CashOnDeliveryOrderController(request, response) {
     try {
         const userId = request.userId // auth middleware 
-        const { list_items, totalAmt, addressId, subTotalAmt, fulfillment_type, pickup_location, pickup_instructions } = request.body 
+    const {
+      list_items,
+      addressId,
+      fulfillment_type = 'delivery',
+      pickup_location,
+      pickup_instructions,
+      usePoints = false,
+      pointsUsed = 0,
+      communityRewardId = null,
+      communityDiscountAmount = 0,
+    } = request.body
         const customer = await UserModel.findById(userId).select('name email')
 
         // Validate inputs based on fulfillment type
@@ -76,25 +295,21 @@ export async function CashOnDeliveryOrderController(request, response) {
             });
         }
 
-        // Check stock availability first
-        for (const item of list_items) {
-            const product = await ProductModel.findById(item.productId._id);
-            if (!product) {
-                return response.status(404).json({
-                    message: `Product ${item.productId.name} not found`,
-                    error: true,
-                    success: false
-                });
-            }
-            
-            if (product.stock < item.quantity) {
-                return response.status(400).json({
-                    message: `Insufficient stock for ${product.name}. Available: ${product.stock}, Requested: ${item.quantity}`,
-                    error: true,
-                    success: false
-                });
-            }
-        }
+        const {
+            normalizedItems,
+            subTotalAmt,
+            totalAmt,
+            loyaltyCard,
+            appliedPoints,
+            communityReward,
+        } = await buildValidatedOrderPricing({
+            items: list_items,
+            userId,
+            usePoints,
+            pointsUsed,
+            communityRewardId,
+            communityDiscountAmount,
+        });
 
         // Generate verification code for pickup orders
         const generateVerificationCode = () => {
@@ -105,7 +320,7 @@ export async function CashOnDeliveryOrderController(request, response) {
             ? generateVerificationCode() 
             : "";
 
-        const payload = list_items.map(el => {
+        const payload = normalizedItems.map(el => {
             return({
                 userId: userId,
                 orderId: `ORD-${new mongoose.Types.ObjectId()}`,
@@ -129,7 +344,7 @@ export async function CashOnDeliveryOrderController(request, response) {
         const generatedOrder = await OrderModel.insertMany(payload)
 
         // Update product stock after order creation
-        const stockUpdatePromises = list_items.map(async (item) => {
+        const stockUpdatePromises = normalizedItems.map(async (item) => {
             const product = await ProductModel.findById(item.productId._id);
             
             // Reduce stock
@@ -154,6 +369,18 @@ export async function CashOnDeliveryOrderController(request, response) {
         // Remove from the cart
         const removeCartItems = await CartProductModel.deleteMany({ userId: userId })
         const updateInUser = await UserModel.updateOne({ _id: userId }, { shopping_cart: [] })
+
+        if (appliedPoints > 0) {
+            await redeemLoyaltyPoints({
+                loyaltyCard,
+                pointsToRedeem: appliedPoints,
+                orderId: payload[0].orderId,
+            });
+        }
+
+        if (communityReward?._id) {
+            await markRewardAsUsed(userId, communityReward._id, payload[0].orderId);
+        }
 
         // Update loyalty points
         await updateLoyaltyPoints(userId, totalAmt, payload[0].orderId);
@@ -217,18 +444,12 @@ export async function CashOnDeliveryOrderController(request, response) {
 
     } catch (error) {
         console.error("Order creation error:", error);
-        return response.status(500).json({
+    return response.status(error.statusCode || 500).json({
             message: error.message || error,
             error: true,
             success: false
         })
     }
-}
-
-export const pricewithDiscount = (price,dis = 1)=>{
-    const discountAmout = Math.ceil((Number(price) * Number(dis)) / 100)
-    const actualPrice = Number(price) - Number(discountAmout)
-    return actualPrice
 }
 
 // Guest Order Tracking Controller - allows guests to track their orders
@@ -291,12 +512,12 @@ export async function trackGuestOrderController(request, response) {
 // Guest Checkout Controller - allows users to purchase without logging in
 export async function guestCheckoutController(request, response) {
     try {
-        const { items, totalAmt, subTotalAmt, guestEmail, guestPhone, guestShipping, fulfillment_type = 'delivery', pickup_location = '' } = request.body
+    const { items, guestEmail, guestPhone, guestShipping, fulfillment_type = 'delivery', pickup_location = '' } = request.body
 
         // Validate required fields
-        if (!guestEmail || !items || !totalAmt) {
+    if (!guestEmail || !items) {
             return response.status(400).json({
-                message: "Email, items, and total amount are required",
+        message: "Email and items are required",
                 error: true,
                 success: false
             })
@@ -312,25 +533,11 @@ export async function guestCheckoutController(request, response) {
             })
         }
 
-        // Check stock availability first
-        for (const item of items) {
-            const product = await ProductModel.findById(item.productId || item.productId?._id)
-            if (!product) {
-                return response.status(404).json({
-                    message: `Product ${item.productId?.name || 'unknown'} not found`,
-                    error: true,
-                    success: false
-                })
-            }
-
-            if (product.stock < item.quantity) {
-                return response.status(400).json({
-                    message: `Insufficient stock for ${product.name}. Available: ${product.stock}, Requested: ${item.quantity}`,
-                    error: true,
-                    success: false
-                })
-            }
-        }
+        const {
+            normalizedItems,
+            subTotalAmt,
+            totalAmt,
+        } = await buildValidatedOrderPricing({ items })
 
         // Generate verification code for pickup orders
         const generateVerificationCode = () => {
@@ -352,10 +559,10 @@ export async function guestCheckoutController(request, response) {
             fulfillment_type,
             pickup_location,
             product_details: {
-                name: items.map(item => item.productId?.name || item.name || 'Product').join(', '),
-                image: items[0]?.productId?.image || []
+                name: normalizedItems.map(item => item.productId?.name || item.name || 'Product').join(', '),
+                image: normalizedItems[0]?.productId?.image || []
             },
-            subTotalAmt: subTotalAmt || totalAmt,
+            subTotalAmt,
             totalAmt,
             status: 'pending',
             statusHistory: [{
@@ -369,8 +576,8 @@ export async function guestCheckoutController(request, response) {
         })
 
         // Deduct stock
-        for (const item of items) {
-            const productId = item.productId || item.productId?._id
+        for (const item of normalizedItems) {
+            const productId = getOrderProductId(item)
             await ProductModel.findByIdAndUpdate(productId, {
                 $inc: { stock: -item.quantity }
             })
@@ -443,7 +650,7 @@ export async function guestCheckoutController(request, response) {
 
     } catch (error) {
         console.error("Guest checkout error:", error)
-        return response.status(500).json({
+    return response.status(error.statusCode || 500).json({
             message: error.message || error,
             error: true,
             success: false

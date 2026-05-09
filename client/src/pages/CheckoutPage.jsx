@@ -19,6 +19,7 @@ import { useGlobalContext } from '../provider/GlobalProvider';
 import { clearCartItems } from '../store/cartProduct';
 import Axios from '../utils/Axios';
 import AxiosToastError from '../utils/AxiosToastError';
+import { getStoredAccessToken } from '../utils/authStorage';
 import { DisplayPriceInShillings } from '../utils/DisplayPriceInShillings';
 import { Link } from 'react-router-dom';
 
@@ -83,8 +84,7 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
 
       try {
         setLoyaltyLoading(true);
-        // Get token from localStorage
-        const token = localStorage.getItem('accesstoken');
+        const token = getStoredAccessToken();
         
         if (!token) {
           console.log("No authentication token found, skipping loyalty card fetch");
@@ -93,10 +93,7 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
 
         const response = await Axios({
           url: `/api/users/${user._id}/loyalty-card`,
-          method: 'GET',
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
+          method: 'GET'
         });
         
         if (response.data.success && response.data.data) {
@@ -359,12 +356,12 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
     await runCheckoutAction('pesapal', async () => {
       try {
         const orderId = `ORD-${Date.now()}-${Math.floor(Math.random()*1000)}`;
-        const token = localStorage.getItem('accesstoken') || localStorage.getItem('token');
+        const token = getStoredAccessToken();
 
         const res = await Axios({
           url: buildApiUrl('/api/pesapal/initiate'),
           method: 'POST',
-          headers: { Authorization: `Bearer ${token}` },
+          ...(token ? { headers: { Authorization: `Bearer ${token}` } } : {}),
           data: {
             orderId,
             amount: finalPrice,

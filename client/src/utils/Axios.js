@@ -1,6 +1,7 @@
 import axios from 'axios';
 import { apiBaseUrl } from '../common/apiBaseUrl';
 import SummaryApi from '../common/SummaryApi';
+import { getStoredAccessToken } from './authStorage';
 
 const inFlightMutationRequests = new Map();
 
@@ -75,11 +76,7 @@ const instance = axios.create({
 });
 
 instance.interceptors.request.use((config) => {
-  const token =
-    sessionStorage.getItem('accesstoken') ||
-    localStorage.getItem('accesstoken') ||
-    sessionStorage.getItem('token') ||
-    localStorage.getItem('token');
+  const token = getStoredAccessToken();
 
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
@@ -207,7 +204,7 @@ instance.interceptors.response.use(
 
 instance.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('accesstoken');
+    const token = getStoredAccessToken();
 
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
@@ -219,7 +216,7 @@ instance.interceptors.request.use(
 );
 
 const Axios = (options = {}) => {
-  const token = sessionStorage.getItem('accesstoken');
+  const token = getStoredAccessToken();
 
   const headers = {
     ...(token ? { Authorization: `Bearer ${token}` } : {})
