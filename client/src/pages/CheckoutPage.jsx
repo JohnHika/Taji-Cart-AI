@@ -66,7 +66,11 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
   const [communityDiscount, setCommunityDiscount] = useState(0);
 
   // Check if payments should be enabled
-  const isPaymentEnabled = selectAddress !== null && addressList[selectAddress] && addressList[selectAddress].status;
+  // For delivery: need a selected address
+  // For pickup: need a pickup location
+  const isPaymentEnabled = 
+    (fulfillmentMethod === 'delivery' && selectAddress !== null && addressList[selectAddress] && addressList[selectAddress].status) ||
+    (fulfillmentMethod === 'pickup' && pickupLocation);
   const checkoutLockRef = useRef(false);
   const [checkoutAction, setCheckoutAction] = useState('');
 
