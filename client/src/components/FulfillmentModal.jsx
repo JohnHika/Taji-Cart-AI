@@ -18,7 +18,9 @@ const FulfillmentModal = ({ isOpen, onClose, pickupLocations = [] }) => {
       pickupLocation: selectedMethod === 'pickup' ? selectedLocation : '',
       pickupInstructions: selectedMethod === 'pickup' ? pickupInstructions : '',
     };
-
+    
+    console.log('FulfillmentModal handleSelect:', fulfillmentData);
+    
     navigate('/dashboard/checkout', { state: fulfillmentData });
     onClose();
   };
