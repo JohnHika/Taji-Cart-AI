@@ -16,6 +16,7 @@ import { fetchCartItems } from './store/cartProduct';
 import { setAllCategory, setAllSubCategory, setLoadingCategory, setLoyaltyDetails } from './store/productSlice';
 import { setUserDetails } from './store/userSlice';
 import Axios from './utils/Axios';
+import { getStoredAccessToken } from './utils/authStorage';
 import fetchUserDetails from './utils/fetchUserDetails';
 
 // Error fallback component
@@ -155,8 +156,8 @@ function App() {
         const productDataResult = await fetchProductData();
         console.log("Product data fetch result:", productDataResult);
         
-        // Check authentication - Using sessionStorage instead of localStorage
-        const token = sessionStorage.getItem('accesstoken');
+        // Check authentication - checks both sessionStorage and localStorage
+        const token = getStoredAccessToken();
         if (token) {
           const userDetails = await fetchUserDetails();
           
@@ -176,9 +177,11 @@ function App() {
       } catch (error) {
         console.error("App initialization error:", error);
         toast.error("Error initializing app");
-        // Clear tokens on auth error - Using sessionStorage instead of localStorage
+        // Clear tokens from both storages on auth error
         sessionStorage.removeItem('accesstoken');
         sessionStorage.removeItem('refreshToken');
+        localStorage.removeItem('accesstoken');
+        localStorage.removeItem('refreshToken');
       } finally {
         if (isMounted) {
           setIsLoading(false);

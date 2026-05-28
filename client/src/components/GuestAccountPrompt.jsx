@@ -69,9 +69,11 @@ function GuestAccountPrompt({ guestEmail, orderId, totalAmount }) {
       if (response.data.success) {
         toast.success('Account created successfully!');
 
-        // Store tokens
+        // Store tokens in both storages so they survive mobile tab kills
         sessionStorage.setItem('accesstoken', response.data.data.accesstoken);
         sessionStorage.setItem('refreshToken', response.data.data.refreshToken);
+        localStorage.setItem('accesstoken', response.data.data.accesstoken);
+        localStorage.setItem('refreshToken', response.data.data.refreshToken);
 
         // Close modal
         setShowModal(false);

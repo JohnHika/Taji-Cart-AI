@@ -120,7 +120,9 @@ if (typeof window !== 'undefined') {
 
 const refreshToken = async () => {
   try {
-    const storedRefreshToken = sessionStorage.getItem('refreshToken');
+    const storedRefreshToken =
+      sessionStorage.getItem('refreshToken') ||
+      localStorage.getItem('refreshToken');
 
     if (!storedRefreshToken) {
       throw new Error('No refresh token available');
@@ -138,8 +140,11 @@ const refreshToken = async () => {
         refreshToken: newRefreshToken
       } = response.data.data;
 
+      // Persist to both storages so tokens survive mobile tab kills
       sessionStorage.setItem('accesstoken', accessToken);
       sessionStorage.setItem('refreshToken', newRefreshToken);
+      localStorage.setItem('accesstoken', accessToken);
+      localStorage.setItem('refreshToken', newRefreshToken);
       setupRefreshTimer();
 
       console.log('Token refreshed successfully');
@@ -151,6 +156,8 @@ const refreshToken = async () => {
     console.error('Token refresh failed:', error);
     sessionStorage.removeItem('accesstoken');
     sessionStorage.removeItem('refreshToken');
+    localStorage.removeItem('accesstoken');
+    localStorage.removeItem('refreshToken');
 
     if (typeof window !== 'undefined') {
       window.location.href = '/login';
@@ -160,7 +167,7 @@ const refreshToken = async () => {
   }
 };
 
-if (typeof window !== 'undefined' && sessionStorage.getItem('accesstoken')) {
+if (typeof window !== 'undefined' && (sessionStorage.getItem('accesstoken') || localStorage.getItem('accesstoken'))) {
   setupRefreshTimer();
 }
 

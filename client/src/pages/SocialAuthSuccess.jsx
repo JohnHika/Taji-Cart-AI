@@ -66,10 +66,12 @@ const SocialAuthSuccess = () => {
           window.history.replaceState(null, document.title, location.pathname);
         }
 
-        // Save tokens to session storage
+        // Save tokens to both storages so they survive mobile tab kills
         sessionStorage.setItem('accesstoken', token);
+        localStorage.setItem('accesstoken', token);
         if (refreshToken) {
           sessionStorage.setItem('refreshToken', refreshToken);
+          localStorage.setItem('refreshToken', refreshToken);
         }
 
         // Build user object from either JSON userData or individual params

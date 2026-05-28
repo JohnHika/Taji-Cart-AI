@@ -179,58 +179,58 @@ const Dashboard = () => {
   }
   
   return (
-    <div className="mobile-page-shell container mx-auto py-0">
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold mb-2 dark:text-white">Delivery Dashboard</h1>
-        <p className="text-brown-500 dark:text-white/40">Welcome back, {user.name}</p>
+    <div className="mobile-page-shell container mx-auto py-0 pb-20 sm:pb-0">
+      <div className="mb-4 sm:mb-8">
+        <h1 className="text-xl sm:text-2xl font-bold mb-1 sm:mb-2 dark:text-white">Delivery Dashboard</h1>
+        <p className="text-sm text-brown-500 dark:text-white/40">Welcome back, {user.name}</p>
       </div>
       
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        <div className="bg-white dark:bg-dm-card rounded-lg shadow p-6">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6 mb-4 sm:mb-8">
+        <div className="bg-white dark:bg-dm-card rounded-lg shadow p-3 sm:p-6">
           <div className="flex items-center">
-            <div className="bg-plum-100 dark:bg-plum-900/40 p-3 rounded-full">
-              <FaMotorcycle className="text-plum-600 dark:text-plum-300" size={24} />
+            <div className="bg-plum-100 dark:bg-plum-900/40 p-2 sm:p-3 rounded-full">
+              <FaMotorcycle className="text-plum-600 dark:text-plum-300" size={20} />
             </div>
-            <div className="ml-4">
-              <h2 className="text-sm font-medium text-brown-400 dark:text-white/40">Pending Deliveries</h2>
-              <p className="text-3xl font-semibold text-charcoal dark:text-white">{dashboardData?.pendingDeliveries || 0}</p>
+            <div className="ml-2 sm:ml-4">
+              <h2 className="text-xs sm:text-sm font-medium text-brown-400 dark:text-white/40 leading-tight">Pending</h2>
+              <p className="text-2xl sm:text-3xl font-semibold text-charcoal dark:text-white">{dashboardData?.pendingDeliveries || 0}</p>
             </div>
           </div>
         </div>
         
-        <div className="bg-white dark:bg-dm-card rounded-lg shadow p-6">
+        <div className="bg-white dark:bg-dm-card rounded-lg shadow p-3 sm:p-6">
           <div className="flex items-center">
-            <div className="bg-green-100 dark:bg-green-900 p-3 rounded-full">
-              <FaCalendarCheck className="text-green-500 dark:text-green-300" size={24} />
+            <div className="bg-green-100 dark:bg-green-900 p-2 sm:p-3 rounded-full">
+              <FaCalendarCheck className="text-green-500 dark:text-green-300" size={20} />
             </div>
-            <div className="ml-4">
-              <h2 className="text-sm font-medium text-brown-400 dark:text-white/40">Today&apos;s Deliveries</h2>
-              <p className="text-3xl font-semibold text-charcoal dark:text-white">{dashboardData?.todayDeliveries || 0}</p>
+            <div className="ml-2 sm:ml-4">
+              <h2 className="text-xs sm:text-sm font-medium text-brown-400 dark:text-white/40 leading-tight">Today</h2>
+              <p className="text-2xl sm:text-3xl font-semibold text-charcoal dark:text-white">{dashboardData?.todayDeliveries || 0}</p>
             </div>
           </div>
         </div>
         
-        <div className="bg-white dark:bg-dm-card rounded-lg shadow p-6">
+        <div className="bg-white dark:bg-dm-card rounded-lg shadow p-3 sm:p-6">
           <div className="flex items-center">
-            <div className="bg-purple-100 dark:bg-purple-900 p-3 rounded-full">
-              <FaBox className="text-purple-500 dark:text-purple-300" size={24} />
+            <div className="bg-purple-100 dark:bg-purple-900 p-2 sm:p-3 rounded-full">
+              <FaBox className="text-purple-500 dark:text-purple-300" size={20} />
             </div>
-            <div className="ml-4">
-              <h2 className="text-sm font-medium text-brown-400 dark:text-white/40">Total Completed</h2>
-              <p className="text-3xl font-semibold text-charcoal dark:text-white">{dashboardData?.totalDeliveries || 0}</p>
+            <div className="ml-2 sm:ml-4">
+              <h2 className="text-xs sm:text-sm font-medium text-brown-400 dark:text-white/40 leading-tight">Completed</h2>
+              <p className="text-2xl sm:text-3xl font-semibold text-charcoal dark:text-white">{dashboardData?.totalDeliveries || 0}</p>
             </div>
           </div>
         </div>
         
-        <div className="bg-white dark:bg-dm-card rounded-lg shadow p-6">
+        <div className="bg-white dark:bg-dm-card rounded-lg shadow p-3 sm:p-6">
           <div className="flex items-center">
-            <div className="bg-yellow-100 dark:bg-yellow-900 p-3 rounded-full">
-              <FaStar className="text-yellow-500 dark:text-yellow-300" size={24} />
+            <div className="bg-yellow-100 dark:bg-yellow-900 p-2 sm:p-3 rounded-full">
+              <FaStar className="text-yellow-500 dark:text-yellow-300" size={20} />
             </div>
-            <div className="ml-4">
-              <h2 className="text-sm font-medium text-brown-400 dark:text-white/40">Rating</h2>
-              <p className="text-3xl font-semibold text-charcoal dark:text-white">
+            <div className="ml-2 sm:ml-4">
+              <h2 className="text-xs sm:text-sm font-medium text-brown-400 dark:text-white/40 leading-tight">Rating</h2>
+              <p className="text-2xl sm:text-3xl font-semibold text-charcoal dark:text-white">
                 {dashboardData?.averageRating?.toFixed(1) || 'N/A'}
               </p>
             </div>
@@ -239,8 +239,8 @@ const Dashboard = () => {
       </div>
       
       {/* Active Orders */}
-      <div className="mb-8">
-        <div className="flex items-center justify-between mb-6">
+      <div className="mb-4 sm:mb-8">
+        <div className="flex items-center justify-between mb-3 sm:mb-6">
           <h2 className="text-xl font-semibold dark:text-white">Active Orders</h2>
         </div>
         
@@ -253,10 +253,10 @@ const Dashboard = () => {
             </p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-6">
             {activeOrders.map(order => (
               <div key={order._id} className="bg-white dark:bg-dm-card rounded-lg shadow overflow-hidden">
-                <div className={`px-6 py-4 border-b border-brown-100 dark:border-dm-border ${
+                <div className={`px-4 py-3 sm:px-6 sm:py-4 border-b border-brown-100 dark:border-dm-border ${
                   order.status === 'driver_assigned' ? 'bg-plum-50 dark:bg-plum-900/20' :
                   order.status === 'out_for_delivery' ? 'bg-yellow-50 dark:bg-yellow-900/20' :
                   'bg-green-50 dark:bg-green-900/20'
@@ -280,9 +280,9 @@ const Dashboard = () => {
                   </div>
                 </div>
                 
-                <div className="p-6">
-                  <div className="mb-4">
-                    <h4 className="text-sm font-medium text-brown-400 dark:text-white/40 mb-2">Customer Information</h4>
+                <div className="p-4 sm:p-6">
+                  <div className="mb-3 sm:mb-4">
+                    <h4 className="text-xs sm:text-sm font-medium text-brown-400 dark:text-white/40 mb-1 sm:mb-2">Customer</h4>
                     <div className="flex items-start">
                       <FaUser className="text-brown-400 mt-1 mr-2" />
                       <div>
@@ -292,8 +292,8 @@ const Dashboard = () => {
                     </div>
                   </div>
                   
-                  <div className="mb-4">
-                    <h4 className="text-sm font-medium text-brown-400 dark:text-white/40 mb-2">Delivery Address</h4>
+                  <div className="mb-3 sm:mb-4">
+                    <h4 className="text-xs sm:text-sm font-medium text-brown-400 dark:text-white/40 mb-1 sm:mb-2">Address</h4>
                     <div className="flex items-start">
                       <FaMapMarkerAlt className="text-brown-400 mt-1 mr-2" />
                       <div>
@@ -302,8 +302,8 @@ const Dashboard = () => {
                     </div>
                   </div>
                   
-                  <div className="mb-6">
-                    <h4 className="text-sm font-medium text-brown-400 dark:text-white/40 mb-2">Order Summary</h4>
+                  <div className="mb-3 sm:mb-6">
+                    <h4 className="text-xs sm:text-sm font-medium text-brown-400 dark:text-white/40 mb-1 sm:mb-2">Order Total</h4>
                     <div className="flex justify-between text-charcoal dark:text-white/55">
                       <span>Order Total:</span>
                       <span className="font-medium">KSh {order.total.toFixed(2)}</span>

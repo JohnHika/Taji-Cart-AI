@@ -51,6 +51,9 @@ const Login = () => {
             if (response.data.success) {
                 sessionStorage.setItem('accesstoken', response.data.data.accesstoken);
                 sessionStorage.setItem('refreshToken', response.data.data.refreshToken);
+                // Also persist to localStorage so tokens survive mobile tab kills
+                localStorage.setItem('accesstoken', response.data.data.accesstoken);
+                localStorage.setItem('refreshToken', response.data.data.refreshToken);
                 if (window.setupRefreshTimer) window.setupRefreshTimer();
                 const userDetails = await fetchUserDetails();
                 const nextUser = {
