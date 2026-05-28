@@ -11,6 +11,7 @@ import { logout, setUserDetails, updatedAvatar } from '../store/userSlice';
 import Axios from '../utils/Axios';
 import AxiosToastError from '../utils/AxiosToastError';
 import fetchUserDetails from '../utils/fetchUserDetails';
+import { getAccountTypeMeta, getEffectiveRole } from '../utils/userRole';
 
 const Profile = () => {
     const user = useSelector(state => state.user)
@@ -282,62 +283,10 @@ const Profile = () => {
         }
     }
 
-    // Add this helper function to determine account type with enhanced staff detection
-    const getAccountType = (user) => {
-        console.log("Determining account type for user:", user);
-        
-        // Check all possible staff indicators
-        if (
-            user.isStaff === true || 
-            user.role === 'staff' || 
-            user.userType === 'staff' ||
-            user.accountType === 'staff' ||
-            (typeof user.permissions === 'object' && user.permissions?.staff === true)
-        ) {
-            return { 
-                type: 'Staff', 
-                color: 'text-purple-600 dark:text-purple-400', 
-                icon: <FaUserTie className="mr-1" /> 
-            };
-        }
-        
-        // Check for admin role
-        if (
-            user.isAdmin === true || 
-            user.role === 'admin' || 
-            user.userType === 'admin' ||
-            user.accountType === 'admin'
-        ) {
-            return { 
-                type: 'Admin', 
-                color: 'text-red-600 dark:text-red-400', 
-                icon: <FaUserShield className="mr-1" /> 
-            };
-        }
-        
-        // Check for delivery personnel
-        if (
-            user.isDelivery === true || 
-            user.role === 'delivery' || 
-            user.userType === 'delivery' ||
-            user.accountType === 'delivery'
-        ) {
-            return { 
-                type: 'Delivery Personnel', 
-                color: 'text-plum-600 dark:text-plum-300', 
-                icon: <FaTruck className="mr-1" /> 
-            };
-        }
-        
-        // Default to customer
-        return { 
-            type: 'Customer', 
-            color: 'text-green-600 dark:text-green-400', 
-            icon: <FaUser className="mr-1" /> 
-        };
-    };
+    const accountTypeMeta = getAccountTypeMeta(user);
+    const effectiveRole = getEffectiveRole(user);
 
-    if (user.role === 'staff') {
+    if (effectiveRole === 'staff') {
         // Render profile settings for staff
         return (
             <div className="max-w-3xl mx-auto bg-white dark:bg-dm-card p-6 rounded-lg shadow-md transition-colors duration-200">
@@ -513,7 +462,7 @@ const Profile = () => {
                                 </label>
                                 <div className="flex items-center">
                                     {(() => {
-                                        const accountInfo = getAccountType(user);
+                                        const accountInfo = accountTypeMeta;
                                         return (
                                             <span className={`flex items-center font-medium ${accountInfo.color}`}>
                                                 {accountInfo.icon}
@@ -529,6 +478,7 @@ const Profile = () => {
                                         <div>Role properties:</div>
                                         <div>- isStaff: {String(user.isStaff)}</div>
                                         <div>- role: {user.role || 'undefined'}</div>
+                                        <div>- effectiveRole: {effectiveRole}</div>
                                         <div>- userType: {user.userType || 'undefined'}</div>
                                         <div>- accountType: {user.accountType || 'undefined'}</div>
                                     </div>

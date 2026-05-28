@@ -23,6 +23,7 @@ import RoyalCard from '../components/RoyalCard';
 import UserProfileAvatarEdit from '../components/UserProfileAvatarEdit';
 import { setUserDetails } from '../store/userSlice'; // Changed from setUser to setUserDetails
 import Axios from '../utils/Axios';
+import { getAccountTypeMeta } from '../utils/userRole';
 
 const UserProfile = () => {
   console.log("UserProfile component rendering");
@@ -262,6 +263,7 @@ const UserProfile = () => {
 
   const accountCreatedAt = user.createdAt || user.created_at;
   const lastLoginAt = user.lastLogin || user.last_login_date;
+  const accountTypeMeta = getAccountTypeMeta(user);
 
   // Add function to request email verification
   const handleRequestVerification = async () => {
@@ -559,18 +561,8 @@ const UserProfile = () => {
                         <div>
                           <p className="text-sm text-brown-500 dark:text-white/50">Account Type</p>
                           <div className="flex items-center">
-                            <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                              user.isAdmin || user.role === 'admin' 
-                                ? 'bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200' 
-                                : user.isDelivery || user.role === 'delivery'
-                                  ? 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200'
-                                  : 'bg-plum-100 dark:bg-plum-900 text-plum-800 dark:text-plum-200'
-                            }`}>
-                              {user.isAdmin || user.role === 'admin' 
-                                ? 'Administrator' 
-                                : user.isDelivery || user.role === 'delivery'
-                                  ? 'Delivery Personnel'
-                                  : 'Customer'}
+                            <span className={`px-2 py-1 text-xs font-medium rounded-full ${accountTypeMeta.chipClass}`}>
+                              {accountTypeMeta.type}
                             </span>
                           </div>
                         </div>
