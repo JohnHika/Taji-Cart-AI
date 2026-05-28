@@ -70,7 +70,7 @@ const Header = () => {
             </div>
           </div>
         ) : (
-          <div className="container mx-auto flex min-w-0 items-center gap-2 px-2 py-2 md:gap-3 md:px-4">
+          <div className="container mx-auto flex min-w-0 items-center gap-2 sm:gap-3 px-2 sm:px-3 md:gap-4 md:px-4 h-14">
             <Link to="/" className="flex shrink-0 items-center gap-1.5 sm:gap-2 py-1" aria-label={nawiriBrand.shortName}>
               <img
                 src={nawiriBrand.logo}
@@ -88,7 +88,7 @@ const Header = () => {
               onClick={() => navigate('/search')}
               aria-label="Search"
             >
-              <IoSearch size={22} />
+              <IoSearch size={24} className="min-w-[24px] min-h-[24px]" />
             </button>
 
             {/* Full search bar — sm and up */}
@@ -106,7 +106,7 @@ const Header = () => {
                 onClick={() => navigate('/mobile/cart')}
                 aria-label="Cart"
               >
-                <BsCart4 size={24} />
+                <BsCart4 size={24} className="min-w-[24px] min-h-[24px]" />
                 {totalQty > 0 && (
                   <span className="absolute -top-2 -right-2 flex h-5 min-w-[20px] items-center justify-center rounded-full bg-red-500 px-1 text-xs text-white">
                     {totalQty > 99 ? '99+' : totalQty}
@@ -119,7 +119,7 @@ const Header = () => {
                 onClick={handleMobileUser}
                 aria-label="Profile"
               >
-                <FaRegCircleUser size={24} />
+                <FaRegCircleUser size={24} className="min-w-[24px] min-h-[24px]" />
               </button>
 
               <div className="hidden lg:flex items-center gap-4">
@@ -169,7 +169,7 @@ const Header = () => {
                 className="rounded-lg p-1.5 text-charcoal transition-colors hover:bg-plum-50 dark:text-white/80 dark:hover:bg-plum-900/30 lg:hidden"
                 aria-label="Menu"
               >
-                {mobileMenuOpen ? <FiX size={20} /> : <FiMenu size={20} />}
+                {mobileMenuOpen ? <FiX size={24} className="min-w-[24px] min-h-[24px]" /> : <FiMenu size={24} className="min-w-[24px] min-h-[24px]" />}
               </button>
             </div>
           </div>
