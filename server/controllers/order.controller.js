@@ -21,7 +21,6 @@ import {
 import { markRewardAsUsed, processOrderContribution } from './communitycampaign.controller.js'; // Add this import
 import { nawiriBrand } from "../utils/brand.js";
 import { renderOrderNoticeEmail } from "../utils/emailTemplates.js";
-import { nanoid } from 'nanoid'; // For generating session IDs
 
 // Add this helper function to better log objects
 const inspectObject = (obj) => util.inspect(obj, {depth: 3, colors: true});
