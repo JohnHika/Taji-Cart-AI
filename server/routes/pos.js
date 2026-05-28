@@ -5,8 +5,6 @@ import Product from '../models/product.model.js';
 import auth from '../middleware/auth.js';
 import Staff from '../middleware/Staff.js';
 import axios from 'axios';
-import { getAuthToken, MPESA_STK_URL } from '../config/mpesa.js';
-import MpesaPayment from '../models/mpesaPayment.model.js';
 
 const router = express.Router();
 
@@ -55,63 +53,6 @@ router.get('/products/lookup', auth, Staff, async (req, res) => {
   } catch (error) {
     console.error('Product lookup error:', error);
     return res.status(500).json({ success: false, message: error.message });
-  }
-});
-// Initiate M-Pesa STK Push for NAWIRI
-router.post('/mpesa/stk-push', auth, Staff, async (req, res) => {
-  try {
-    const { phoneNumber, amount } = req.body;
-    if (!phoneNumber || !amount) {
-      return res.status(400).json({ success: false, message: 'Phone number and amount are required' });
-    }
-
-    const formattedPhone = phoneNumber.replace(/^(\+?254|0)/, '254');
-    const timestamp = (() => {
-      const d = new Date();
-      const pad = (n) => n.toString().padStart(2, '0');
-      return `${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}`;
-    })();
-
-    const password = Buffer.from(`${process.env.MPESA_SHORTCODE}${process.env.MPESA_PASSKEY}${timestamp}`).toString('base64');
-    const token = await getAuthToken();
-
-    const hostHeader = req.headers['x-forwarded-host'] || req.headers.host;
-    const protocolHeader = (req.headers['x-forwarded-proto'] || 'https');
-    const fallbackBase = hostHeader ? `${protocolHeader}://${hostHeader}` : '';
-    const baseURL = process.env.BACKEND_URL || process.env.RENDER_EXTERNAL_URL || fallbackBase;
-
-    const requestData = {
-      BusinessShortCode: process.env.MPESA_SHORTCODE,
-      Password: password,
-      Timestamp: timestamp,
-      TransactionType: 'CustomerPayBillOnline',
-      Amount: Math.ceil(amount),
-      PartyA: formattedPhone,
-      PartyB: process.env.MPESA_SHORTCODE,
-      PhoneNumber: formattedPhone,
-      CallBackURL: `${baseURL}/api/mpesa/callback`,
-      AccountReference: `NAWIRI-${Date.now()}`,
-      TransactionDesc: 'NAWIRI payment'
-    };
-
-    const mpesaResponse = await axios.post(MPESA_STK_URL, requestData, {
-      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }
-    });
-
-    // Persist minimal payment record for NAWIRI polling
-    const { MerchantRequestID, CheckoutRequestID, ResponseCode, ResponseDescription } = mpesaResponse.data;
-    await MpesaPayment.create({
-      merchantRequestId: MerchantRequestID,
-      checkoutRequestId: CheckoutRequestID,
-      phoneNumber: formattedPhone,
-      amount: Math.ceil(amount),
-      status: 'pending'
-    });
-
-    return res.status(200).json({ success: true, message: 'STK push sent', data: mpesaResponse.data });
-  } catch (error) {
-    console.error('NAWIRI STK Push Error:', error?.response?.data || error.message || error);
-    return res.status(500).json({ success: false, message: error?.response?.data?.errorMessage || error.message || 'Failed to send STK push' });
   }
 });
 

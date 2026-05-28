@@ -13,12 +13,10 @@ import {
     getVerificationHistoryController,
     guestCheckoutController,
     trackGuestOrderController,
-    paymentController,
     updateOrderLocation,
     updateOrderStatus,
     verifyPickupCode,
-    verifyPickupController,
-    webhookStripe
+    verifyPickupController
 } from '../controllers/order.controller.js'
 import { admin } from '../middleware/Admin.js'
 import auth from '../middleware/auth.js'
@@ -28,10 +26,8 @@ const orderRouter = Router()
 
 // User order routes
 orderRouter.post("/cash-on-delivery", auth, CashOnDeliveryOrderController)
-orderRouter.post('/checkout', auth, paymentController)
 orderRouter.post('/guest-checkout', guestCheckoutController) // Guest checkout (no auth required)
 orderRouter.get('/track-guest', trackGuestOrderController) // Guest order tracking (no auth required)
-orderRouter.post('/webhook', webhookStripe)
 orderRouter.get("/order-list", auth, getOrderDetailsController)
 orderRouter.get("/details", auth, getOrderBySessionController)
 

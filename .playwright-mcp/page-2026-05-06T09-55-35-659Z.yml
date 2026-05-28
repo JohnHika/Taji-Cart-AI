@@ -1,0 +1,542 @@
+- generic [ref=e2]:
+  - generic [ref=e3]:
+    - banner [ref=e4]:
+      - generic [ref=e5]:
+        - link "Render" [ref=e7] [cursor=pointer]:
+          - /url: /
+          - img "Render" [ref=e8]
+        - button "J John Hika's Workspace" [ref=e12] [cursor=pointer]:
+          - generic [ref=e13]:
+            - generic [ref=e14]: J
+            - generic "John Hika's Workspace" [ref=e15]
+            - img [ref=e16]
+      - generic [ref=e20]:
+        - navigation [ref=e21]:
+          - list [ref=e22]:
+            - listitem [ref=e23]:
+              - button "taji-cart-api" [ref=e26] [cursor=pointer]:
+                - generic [ref=e27]:
+                  - img [ref=e28]
+                  - generic [ref=e30]:
+                    - generic [ref=e31]: taji-cart-api
+                    - img [ref=e32]
+        - button "Search Ctrl + K" [ref=e35] [cursor=pointer]:
+          - img [ref=e37]
+          - text: Search
+          - generic [ref=e39]:
+            - img [ref=e40]
+            - generic [ref=e42]: Ctrl
+            - generic [ref=e43]: +
+            - generic [ref=e44]: K
+            - generic [ref=e45]: K
+      - generic [ref=e46]:
+        - button "New" [ref=e48] [cursor=pointer]:
+          - generic [ref=e49]:
+            - img [ref=e50]
+            - generic [ref=e52]: New
+        - button "Upgrade" [ref=e54] [cursor=pointer]:
+          - generic [ref=e55]:
+            - img [ref=e56]
+            - generic [ref=e58]: Upgrade
+        - button "Help" [ref=e60] [cursor=pointer]:
+          - img "Help" [ref=e61]
+        - button "j" [ref=e66] [cursor=pointer]:
+          - generic [ref=e68]: j
+    - generic [ref=e69]:
+      - navigation [ref=e70]:
+        - separator [ref=e71]
+        - generic [ref=e72]:
+          - generic [ref=e73]:
+            - link "Dashboard" [ref=e74] [cursor=pointer]:
+              - /url: /
+              - img [ref=e75]
+              - generic [ref=e77]: Dashboard
+            - generic [ref=e78]:
+              - img [ref=e79]
+              - generic [ref=e81]: taji-cart-api
+          - generic [ref=e82]:
+            - list [ref=e83]:
+              - listitem [ref=e84]:
+                - link "Events" [ref=e85] [cursor=pointer]:
+                  - /url: /web/srv-d7aev494tr6s73ea712g/events
+                  - img [ref=e86]
+                  - generic [ref=e93]: Events
+              - listitem [ref=e94]:
+                - link "Settings" [ref=e95] [cursor=pointer]:
+                  - /url: /web/srv-d7aev494tr6s73ea712g/settings
+                  - img [ref=e96]
+                  - generic [ref=e99]: Settings
+            - generic [ref=e100]:
+              - generic [ref=e101]: Monitor
+              - list "Monitor" [ref=e102]:
+                - listitem [ref=e103]:
+                  - link "Logs" [ref=e104] [cursor=pointer]:
+                    - /url: /web/srv-d7aev494tr6s73ea712g/logs
+                    - img [ref=e105]
+                    - generic [ref=e110]: Logs
+                - listitem [ref=e111]:
+                  - link "Metrics" [ref=e112] [cursor=pointer]:
+                    - /url: /web/srv-d7aev494tr6s73ea712g/metrics
+                    - img [ref=e113]
+                    - generic [ref=e115]: Metrics
+            - generic [ref=e116]:
+              - generic [ref=e117]: Manage
+              - list "Manage" [ref=e118]:
+                - listitem [ref=e119]:
+                  - link "Environment" [ref=e120] [cursor=pointer]:
+                    - /url: /web/srv-d7aev494tr6s73ea712g/env
+                    - img [ref=e121]
+                    - generic [ref=e125]: Environment
+                - listitem [ref=e126]:
+                  - link "Shell" [ref=e127] [cursor=pointer]:
+                    - /url: /web/srv-d7aev494tr6s73ea712g/shell
+                    - img [ref=e128]
+                    - generic [ref=e132]:
+                      - generic [ref=e133]: Shell
+                      - status [ref=e136]:
+                        - img [ref=e137]
+                - listitem [ref=e139]:
+                  - link "Scaling" [ref=e140] [cursor=pointer]:
+                    - /url: /web/srv-d7aev494tr6s73ea712g/scaling
+                    - img [ref=e141]
+                    - generic [ref=e146]:
+                      - generic [ref=e147]: Scaling
+                      - status [ref=e150]:
+                        - img [ref=e151]
+                - listitem [ref=e153]:
+                  - link "Previews" [ref=e154] [cursor=pointer]:
+                    - /url: /web/srv-d7aev494tr6s73ea712g/previews
+                    - img [ref=e155]
+                    - generic [ref=e159]: Previews
+                - listitem [ref=e160]:
+                  - link "Disk" [ref=e161] [cursor=pointer]:
+                    - /url: /web/srv-d7aev494tr6s73ea712g/disks
+                    - img [ref=e162]
+                    - generic [ref=e167]:
+                      - generic [ref=e168]: Disk
+                      - status [ref=e171]:
+                        - img [ref=e172]
+                - listitem [ref=e174]:
+                  - link "One-Off Jobs" [ref=e175] [cursor=pointer]:
+                    - /url: /web/srv-d7aev494tr6s73ea712g/jobs
+                    - img [ref=e176]
+                    - generic [ref=e182]:
+                      - generic [ref=e183]: One-Off Jobs
+                      - status [ref=e186]:
+                        - img [ref=e187]
+        - generic [ref=e189]:
+          - alert [ref=e190]:
+            - img [ref=e192]
+            - generic [ref=e196]:
+              - generic [ref=e197]:
+                - generic [ref=e198]: New plans, zero seat fees
+                - generic [ref=e199]: We're updating workspace pricing to help teams grow faster. No seat fees, more self-serve features, granular bandwidth billing, and more.
+              - link "Opt-in early" [ref=e201] [cursor=pointer]:
+                - /url: /billing/update-plan
+            - button "Close notification" [ref=e202] [cursor=pointer]:
+              - img [ref=e203]
+          - generic [ref=e205]:
+            - button "Collapse items" [expanded] [ref=e206] [cursor=pointer]:
+              - img [ref=e207]
+            - list "Footer navigation" [ref=e209]:
+              - listitem [ref=e210]:
+                - link "Changelog" [ref=e211] [cursor=pointer]:
+                  - /url: https://render.com/changelog
+                  - img [ref=e212]
+                  - generic [ref=e217]: Changelog
+              - listitem [ref=e218]:
+                - link "Invite a friend" [ref=e219] [cursor=pointer]:
+                  - /url: /invites
+                  - img [ref=e220]
+                  - generic [ref=e222]: Invite a friend
+              - listitem [ref=e223]:
+                - button "Contact support" [ref=e224] [cursor=pointer]:
+                  - img [ref=e225]
+                  - generic [ref=e229]: Contact support
+            - link "Render Status" [ref=e231] [cursor=pointer]:
+              - /url: https://status.render.com
+              - img [ref=e232]
+              - generic [ref=e234]: Render Status
+      - generic [ref=e236]:
+        - banner [ref=e238]:
+          - generic [ref=e239]:
+            - generic [ref=e240]:
+              - img [ref=e241]
+              - generic [ref=e243]: Web Service
+            - generic [ref=e244]:
+              - heading "taji-cart-api Node Free Upgrade your instance" [level=1] [ref=e246]:
+                - generic [ref=e247]: taji-cart-api
+                - generic [ref=e248]:
+                  - generic [ref=e249]: Node
+                  - link "Free" [ref=e250] [cursor=pointer]:
+                    - /url: /web/srv-d7aev494tr6s73ea712g/plan
+                    - generic [ref=e251]: Free
+                  - link "Upgrade your instance" [ref=e252] [cursor=pointer]:
+                    - /url: /web/srv-d7aev494tr6s73ea712g/plan
+                    - text: Upgrade your instance
+                    - img [ref=e254]
+              - generic [ref=e257]:
+                - button "Connect" [ref=e258] [cursor=pointer]:
+                  - generic [ref=e259]: Connect
+                  - img [ref=e260]
+                - button "Manual Deploy" [ref=e262] [cursor=pointer]:
+                  - generic [ref=e263]: Manual Deploy
+                  - img [ref=e264]
+          - generic [ref=e268]:
+            - generic [ref=e270]:
+              - generic [ref=e271]: "Service ID:"
+              - generic "Service ID:" [ref=e272]:
+                - generic [ref=e273]: srv-d7aev494tr6s73ea712g
+                - button "Copy" [ref=e276] [cursor=pointer]:
+                  - img [ref=e277]
+            - generic [ref=e280]:
+              - img "GitHub" [ref=e282]
+              - link "JohnHika / Taji-Cart-AI main" [ref=e284] [cursor=pointer]:
+                - /url: https://github.com/JohnHika/Taji-Cart-AI/tree/main
+                - generic [ref=e285]:
+                  - generic [ref=e286]: JohnHika / Taji-Cart-AI
+                  - img [ref=e287]
+                  - generic [ref=e289]: main
+            - generic "Copy" [ref=e291]:
+              - link "https://taji-cart-api.onrender.com" [ref=e293] [cursor=pointer]:
+                - /url: https://taji-cart-api.onrender.com
+              - button "Copy" [ref=e296] [cursor=pointer]:
+                - img [ref=e297]
+        - main [ref=e300]:
+          - generic [ref=e301]:
+            - alert [ref=e302]:
+              - generic [ref=e304]:
+                - img [ref=e306]
+                - generic [ref=e310]:
+                  - generic [ref=e312]: Your free instance will spin down with inactivity, which can delay requests by 50 seconds or more.
+                  - link "Upgrade now" [ref=e314] [cursor=pointer]:
+                    - /url: /web/srv-d7aev494tr6s73ea712g/plan
+            - button "Filter events 31" [ref=e316] [cursor=pointer]:
+              - img [ref=e318]
+              - generic [ref=e320]:
+                - text: Filter events
+                - generic [ref=e321]: "31"
+              - img [ref=e322]
+            - generic [ref=e324]:
+              - list [ref=e325]:
+                - listitem [ref=e326]:
+                  - generic [ref=e327]:
+                    - img [ref=e330]
+                    - generic [ref=e332]:
+                      - generic [ref=e333]:
+                        - generic [ref=e334]:
+                          - link "Deploy" [ref=e335] [cursor=pointer]:
+                            - /url: /web/srv-d7aev494tr6s73ea712g/deploys/dep-d7tg763rjlhs73as0vlg
+                          - text: live
+                        - text: for
+                        - link "acb348d" [ref=e337] [cursor=pointer]:
+                          - /url: https://github.com/JohnHika/Taji-Cart-AI/commit/acb348d4b2b3f3bdbf603f855d5859021e294718
+                        - text: ":"
+                        - generic [ref=e338]: "Merge pull request #17 from JohnHika/axoncode-changes Fix email delivery and registration issues"
+                      - generic [ref=e339]: May 6, 2026 at 12:03 PM
+                - listitem [ref=e340]:
+                  - generic [ref=e341]:
+                    - img [ref=e344]
+                    - generic [ref=e347]:
+                      - generic [ref=e348]:
+                        - generic [ref=e349]:
+                          - generic [ref=e350]:
+                            - link "Deploy" [ref=e351] [cursor=pointer]:
+                              - /url: /web/srv-d7aev494tr6s73ea712g/deploys/dep-d7tg763rjlhs73as0vlg
+                            - text: started
+                          - text: for
+                          - link "acb348d" [ref=e353] [cursor=pointer]:
+                            - /url: https://github.com/JohnHika/Taji-Cart-AI/commit/acb348d4b2b3f3bdbf603f855d5859021e294718
+                          - text: ":"
+                          - generic [ref=e354]: "Merge pull request #17 from JohnHika/axoncode-changes Fix email delivery and registration issues"
+                        - generic [ref=e355]: Environment updated
+                      - generic [ref=e356]: May 6, 2026 at 12:02 PM
+                - listitem [ref=e357]:
+                  - generic [ref=e358]:
+                    - img [ref=e361]
+                    - generic [ref=e363]:
+                      - generic [ref=e364]:
+                        - generic [ref=e365]:
+                          - link "Deploy" [ref=e366] [cursor=pointer]:
+                            - /url: /web/srv-d7aev494tr6s73ea712g/deploys/dep-d7tf4vbrjlhs73f5jedg
+                          - text: live
+                        - text: for
+                        - link "acb348d" [ref=e368] [cursor=pointer]:
+                          - /url: https://github.com/JohnHika/Taji-Cart-AI/commit/acb348d4b2b3f3bdbf603f855d5859021e294718
+                        - text: ":"
+                        - generic [ref=e369]: "Merge pull request #17 from JohnHika/axoncode-changes Fix email delivery and registration issues"
+                      - generic [ref=e370]: May 6, 2026 at 10:51 AM
+                  - link "Rollback" [ref=e372] [cursor=pointer]:
+                    - /url: /web/srv-d7aev494tr6s73ea712g/deploys/dep-d7tf4vbrjlhs73f5jedg/rollback
+                    - img [ref=e374]
+                    - text: Rollback
+                - listitem [ref=e376]:
+                  - generic [ref=e377]:
+                    - img [ref=e380]
+                    - generic [ref=e383]:
+                      - generic [ref=e384]:
+                        - generic [ref=e385]:
+                          - generic [ref=e386]:
+                            - link "Deploy" [ref=e387] [cursor=pointer]:
+                              - /url: /web/srv-d7aev494tr6s73ea712g/deploys/dep-d7tf4vbrjlhs73f5jedg
+                            - text: started
+                          - text: for
+                          - link "acb348d" [ref=e389] [cursor=pointer]:
+                            - /url: https://github.com/JohnHika/Taji-Cart-AI/commit/acb348d4b2b3f3bdbf603f855d5859021e294718
+                          - text: ":"
+                          - generic [ref=e390]: "Merge pull request #17 from JohnHika/axoncode-changes Fix email delivery and registration issues"
+                        - generic [ref=e391]: New commit via Auto-Deploy
+                      - generic [ref=e392]: May 6, 2026 at 10:49 AM
+                - listitem [ref=e393]:
+                  - generic [ref=e394]:
+                    - img [ref=e397]
+                    - generic [ref=e399]:
+                      - generic [ref=e400]:
+                        - generic [ref=e401]:
+                          - link "Deploy" [ref=e402] [cursor=pointer]:
+                            - /url: /web/srv-d7aev494tr6s73ea712g/deploys/dep-d7tenh8sfn5c73drodd0
+                          - text: live
+                        - text: for
+                        - link "6ab6221" [ref=e404] [cursor=pointer]:
+                          - /url: https://github.com/JohnHika/Taji-Cart-AI/commit/6ab62218cd0c3ebabbae43ceed90b5011c61a1f5
+                        - text: ":"
+                        - generic [ref=e405]: "Merge pull request #16 from JohnHika/axoncode-changes Complete Driver Management System"
+                      - generic [ref=e406]: May 6, 2026 at 10:22 AM
+                  - link "Rollback" [ref=e408] [cursor=pointer]:
+                    - /url: /web/srv-d7aev494tr6s73ea712g/deploys/dep-d7tenh8sfn5c73drodd0/rollback
+                    - img [ref=e410]
+                    - text: Rollback
+                - listitem [ref=e412]:
+                  - generic [ref=e413]:
+                    - img [ref=e416]
+                    - generic [ref=e419]:
+                      - generic [ref=e420]:
+                        - generic [ref=e421]:
+                          - generic [ref=e422]:
+                            - link "Deploy" [ref=e423] [cursor=pointer]:
+                              - /url: /web/srv-d7aev494tr6s73ea712g/deploys/dep-d7tenh8sfn5c73drodd0
+                            - text: started
+                          - text: for
+                          - link "6ab6221" [ref=e425] [cursor=pointer]:
+                            - /url: https://github.com/JohnHika/Taji-Cart-AI/commit/6ab62218cd0c3ebabbae43ceed90b5011c61a1f5
+                          - text: ":"
+                          - generic [ref=e426]: "Merge pull request #16 from JohnHika/axoncode-changes Complete Driver Management System"
+                        - generic [ref=e427]: New commit via Auto-Deploy
+                      - generic [ref=e428]: May 6, 2026 at 10:20 AM
+                - listitem [ref=e429]:
+                  - generic [ref=e430]:
+                    - img [ref=e433]
+                    - generic [ref=e435]:
+                      - generic [ref=e436]:
+                        - generic [ref=e437]:
+                          - link "Deploy" [ref=e438] [cursor=pointer]:
+                            - /url: /web/srv-d7aev494tr6s73ea712g/deploys/dep-d7tdqe0g4nts73a491i0
+                          - text: live
+                        - text: for
+                        - link "57dac91" [ref=e440] [cursor=pointer]:
+                          - /url: https://github.com/JohnHika/Taji-Cart-AI/commit/57dac914fd6e79d85250a39c98f8bd7220e355a3
+                        - text: ":"
+                        - generic [ref=e441]: "Merge pull request #15 from JohnHika/axoncode-changes Fix dashboard authentication 401 error"
+                      - generic [ref=e442]: May 6, 2026 at 9:20 AM
+                  - link "Rollback" [ref=e444] [cursor=pointer]:
+                    - /url: /web/srv-d7aev494tr6s73ea712g/deploys/dep-d7tdqe0g4nts73a491i0/rollback
+                    - img [ref=e446]
+                    - text: Rollback
+                - listitem [ref=e448]:
+                  - generic [ref=e449]:
+                    - img [ref=e452]
+                    - generic [ref=e455]:
+                      - generic [ref=e456]:
+                        - generic [ref=e457]:
+                          - generic [ref=e458]:
+                            - link "Deploy" [ref=e459] [cursor=pointer]:
+                              - /url: /web/srv-d7aev494tr6s73ea712g/deploys/dep-d7tdqe0g4nts73a491i0
+                            - text: started
+                          - text: for
+                          - link "57dac91" [ref=e461] [cursor=pointer]:
+                            - /url: https://github.com/JohnHika/Taji-Cart-AI/commit/57dac914fd6e79d85250a39c98f8bd7220e355a3
+                          - text: ":"
+                          - generic [ref=e462]: "Merge pull request #15 from JohnHika/axoncode-changes Fix dashboard authentication 401 error"
+                        - generic [ref=e463]: New commit via Auto-Deploy
+                      - generic [ref=e464]: May 6, 2026 at 9:18 AM
+                - listitem [ref=e465]:
+                  - generic [ref=e466]:
+                    - img [ref=e469]
+                    - generic [ref=e471]:
+                      - generic [ref=e472]:
+                        - generic [ref=e473]:
+                          - link "Deploy" [ref=e474] [cursor=pointer]:
+                            - /url: /web/srv-d7aev494tr6s73ea712g/deploys/dep-d7saftjrjlhs73e7mu5g
+                          - text: live
+                        - text: for
+                        - link "10746b9" [ref=e476] [cursor=pointer]:
+                          - /url: https://github.com/JohnHika/Taji-Cart-AI/commit/10746b9d621c2a1f9908559233e6b48bb30ff0f3
+                        - text: ":"
+                        - generic [ref=e477]: "Merge pull request #13 from JohnHika/axoncode-changes fix(auth): handle email service outages gracefully"
+                      - generic [ref=e478]: May 4, 2026 at 5:09 PM
+                  - link "Rollback" [ref=e480] [cursor=pointer]:
+                    - /url: /web/srv-d7aev494tr6s73ea712g/deploys/dep-d7saftjrjlhs73e7mu5g/rollback
+                    - img [ref=e482]
+                    - text: Rollback
+                - listitem [ref=e484]:
+                  - generic [ref=e485]:
+                    - img [ref=e488]
+                    - generic [ref=e491]:
+                      - generic [ref=e492]:
+                        - generic [ref=e493]:
+                          - generic [ref=e494]:
+                            - link "Deploy" [ref=e495] [cursor=pointer]:
+                              - /url: /web/srv-d7aev494tr6s73ea712g/deploys/dep-d7saftjrjlhs73e7mu5g
+                            - text: started
+                          - text: for
+                          - link "10746b9" [ref=e497] [cursor=pointer]:
+                            - /url: https://github.com/JohnHika/Taji-Cart-AI/commit/10746b9d621c2a1f9908559233e6b48bb30ff0f3
+                          - text: ":"
+                          - generic [ref=e498]: "Merge pull request #13 from JohnHika/axoncode-changes fix(auth): handle email service outages gracefully"
+                        - generic [ref=e499]: New commit via Auto-Deploy
+                      - generic [ref=e500]: May 4, 2026 at 5:06 PM
+                - listitem [ref=e501]:
+                  - generic [ref=e502]:
+                    - img [ref=e505]
+                    - generic [ref=e507]:
+                      - generic [ref=e508]:
+                        - generic [ref=e509]:
+                          - link "Deploy" [ref=e510] [cursor=pointer]:
+                            - /url: /web/srv-d7aev494tr6s73ea712g/deploys/dep-d7sa42rbc2fs73b65ql0
+                          - text: live
+                        - text: for
+                        - link "ea24913" [ref=e512] [cursor=pointer]:
+                          - /url: https://github.com/JohnHika/Taji-Cart-AI/commit/ea2491300b99fe357123f9cddf160f3f229963ad
+                        - text: ":"
+                        - generic [ref=e513]: "Merge pull request #12 from JohnHika/axoncode-changes fix(auth): guard passwordless login and remove home quick-links"
+                      - generic [ref=e514]: May 4, 2026 at 4:43 PM
+                  - link "Rollback" [ref=e516] [cursor=pointer]:
+                    - /url: /web/srv-d7aev494tr6s73ea712g/deploys/dep-d7sa42rbc2fs73b65ql0/rollback
+                    - img [ref=e518]
+                    - text: Rollback
+                - listitem [ref=e520]:
+                  - generic [ref=e521]:
+                    - img [ref=e524]
+                    - generic [ref=e527]:
+                      - generic [ref=e528]:
+                        - generic [ref=e529]:
+                          - generic [ref=e530]:
+                            - link "Deploy" [ref=e531] [cursor=pointer]:
+                              - /url: /web/srv-d7aev494tr6s73ea712g/deploys/dep-d7sa42rbc2fs73b65ql0
+                            - text: started
+                          - text: for
+                          - link "ea24913" [ref=e533] [cursor=pointer]:
+                            - /url: https://github.com/JohnHika/Taji-Cart-AI/commit/ea2491300b99fe357123f9cddf160f3f229963ad
+                          - text: ":"
+                          - generic [ref=e534]: "Merge pull request #12 from JohnHika/axoncode-changes fix(auth): guard passwordless login and remove home quick-links"
+                        - generic [ref=e535]: New commit via Auto-Deploy
+                      - generic [ref=e536]: May 4, 2026 at 4:41 PM
+                - listitem [ref=e537]:
+                  - generic [ref=e538]:
+                    - img [ref=e541]
+                    - generic [ref=e543]:
+                      - generic [ref=e544]:
+                        - generic [ref=e545]:
+                          - link "Deploy" [ref=e546] [cursor=pointer]:
+                            - /url: /web/srv-d7aev494tr6s73ea712g/deploys/dep-d7s8vh7avr4c73aihd40
+                          - text: live
+                        - text: for
+                        - link "85b6b63" [ref=e548] [cursor=pointer]:
+                          - /url: https://github.com/JohnHika/Taji-Cart-AI/commit/85b6b6308cd402d7dba736aaf2c58d86363a146e
+                        - text: ":"
+                        - generic [ref=e549]: "Merge pull request #11 from JohnHika/axoncode-changes Axoncode changes"
+                      - generic [ref=e550]: May 4, 2026 at 3:24 PM
+                  - link "Rollback" [ref=e552] [cursor=pointer]:
+                    - /url: /web/srv-d7aev494tr6s73ea712g/deploys/dep-d7s8vh7avr4c73aihd40/rollback
+                    - img [ref=e554]
+                    - text: Rollback
+                - listitem [ref=e556]:
+                  - generic [ref=e557]:
+                    - img [ref=e560]
+                    - generic [ref=e563]:
+                      - generic [ref=e564]:
+                        - generic [ref=e565]:
+                          - generic [ref=e566]:
+                            - link "Deploy" [ref=e567] [cursor=pointer]:
+                              - /url: /web/srv-d7aev494tr6s73ea712g/deploys/dep-d7s8vh7avr4c73aihd40
+                            - text: started
+                          - text: for
+                          - link "85b6b63" [ref=e569] [cursor=pointer]:
+                            - /url: https://github.com/JohnHika/Taji-Cart-AI/commit/85b6b6308cd402d7dba736aaf2c58d86363a146e
+                          - text: ":"
+                          - generic [ref=e570]: "Merge pull request #11 from JohnHika/axoncode-changes Axoncode changes"
+                        - generic [ref=e571]: New commit via Auto-Deploy
+                      - generic [ref=e572]: May 4, 2026 at 3:23 PM
+                - listitem [ref=e573]:
+                  - generic [ref=e574]:
+                    - img [ref=e577]
+                    - generic [ref=e580]:
+                      - generic [ref=e581]: Resumed by Free Tier Usage Exceeded
+                      - generic [ref=e582]: May 1, 2026 at 3:59 AM
+                - listitem [ref=e583]:
+                  - generic [ref=e584]:
+                    - img [ref=e587]
+                    - generic [ref=e590]:
+                      - generic [ref=e591]: Service resumed
+                      - generic [ref=e592]: May 1, 2026 at 3:59 AM
+                - listitem [ref=e593]:
+                  - generic [ref=e594]:
+                    - img [ref=e597]
+                    - generic [ref=e601]:
+                      - generic [ref=e603]: Suspended by Free Tier Usage Exceeded
+                      - generic [ref=e604]: April 20, 2026 at 9:15 AM
+                - listitem [ref=e605]:
+                  - generic [ref=e606]:
+                    - img [ref=e609]
+                    - generic [ref=e613]:
+                      - generic [ref=e614]: Service suspended
+                      - generic [ref=e615]: April 20, 2026 at 9:15 AM
+                - listitem [ref=e616]:
+                  - generic [ref=e617]:
+                    - img [ref=e620]
+                    - generic [ref=e622]:
+                      - generic [ref=e623]:
+                        - generic [ref=e624]:
+                          - link "Deploy" [ref=e625] [cursor=pointer]:
+                            - /url: /web/srv-d7aev494tr6s73ea712g/deploys/dep-d7cfl4osfn5c73cn9j2g
+                          - text: live
+                        - text: for
+                        - link "ba6d2fa" [ref=e627] [cursor=pointer]:
+                          - /url: https://github.com/JohnHika/Taji-Cart-AI/commit/ba6d2fa107bbd6647cbe08d35a5eeab32ff7827e
+                        - text: ":"
+                        - generic [ref=e628]: "Merge pull request #8 from JohnHika/john fix: keepalive 404, health endpoint rate-limit bypass, auth logs, ObjectId validation"
+                      - generic [ref=e629]: April 10, 2026 at 4:28 PM
+                - listitem [ref=e630]:
+                  - generic [ref=e631]:
+                    - img [ref=e634]
+                    - generic [ref=e637]:
+                      - generic [ref=e638]:
+                        - generic [ref=e639]:
+                          - generic [ref=e640]:
+                            - link "Deploy" [ref=e641] [cursor=pointer]:
+                              - /url: /web/srv-d7aev494tr6s73ea712g/deploys/dep-d7cfl4osfn5c73cn9j2g
+                            - text: started
+                          - text: for
+                          - link "ba6d2fa" [ref=e643] [cursor=pointer]:
+                            - /url: https://github.com/JohnHika/Taji-Cart-AI/commit/ba6d2fa107bbd6647cbe08d35a5eeab32ff7827e
+                          - text: ":"
+                          - generic [ref=e644]: "Merge pull request #8 from JohnHika/john fix: keepalive 404, health endpoint rate-limit bypass, auth logs, ObjectId validation"
+                        - generic [ref=e645]: New commit via Auto-Deploy
+                      - generic [ref=e646]: April 10, 2026 at 4:26 PM
+              - img "Loading..." [ref=e648]
+  - generic:
+    - generic:
+      - generic: "0 services selected:"
+      - generic:
+        - generic:
+          - button:
+            - generic:
+              - img
+            - generic: Move
+            - img
+    - generic:
+      - separator
+      - generic:
+        - generic:
+          - button:
+            - img

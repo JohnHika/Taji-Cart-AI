@@ -59,6 +59,7 @@ const UsersAdmin = () => {
           email: user.email || 'No Email',
           isAdmin: Boolean(user.isAdmin),
           isDelivery: Boolean(user.isDelivery),
+          isStaff: Boolean(user.isStaff || user.role === 'staff'),
           role: user.role || 'user',
           status: user.status || 'Active'
         }));
@@ -104,6 +105,7 @@ const UsersAdmin = () => {
           email: user.email || 'No Email',
           isAdmin: Boolean(user.isAdmin),
           isDelivery: Boolean(user.isDelivery),
+          isStaff: Boolean(user.isStaff || user.role === 'staff'),
           role: user.role || 'user',
           status: user.status || 'Active'
         }));

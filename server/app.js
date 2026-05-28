@@ -20,16 +20,9 @@ import driverVerificationRoutes from './route/driverVerification.route.js';
 import driverFinancialRoutes from './route/driverFinancial.route.js';
 import driverPerformanceRoutes from './route/driverPerformance.route.js';
 import loyaltyRouter from './route/loyalty.routes.js';
-import mpesaRouter from './route/mpesa.route.js';
-import mpesaDirectRouter from './route/mpesaDirect.route.js';
-import mpesaPayoutRouter from './route/mpesaPayout.route.js';
 import routeOptimizationRouter from './route/routeOptimization.route.js';
 import orderRouter from './route/order.route.js';
-import pesapalRouter from './route/pesapal.route.js';
-import equityRouter from './route/equity.route.js';
-import payheroRouter from './route/payhero.route.js';
 import productRouter from './route/product.route.js';
-import stripeRouter from './route/stripe.route.js';
 import subCategoryRouter from './route/subCategory.route.js';
 import trackingRouter from './route/tracking.route.js';
 import uploadRouter from './route/upload.router.js';
@@ -38,7 +31,6 @@ import authRoutes from './routes/auth.routes.js';
 import posRouter from './routes/pos.js';
 
 // ── Controllers used directly on admin routes ───────────────────────────────
-import { initiatePayment as pesapalInitiate } from './controllers/pesapal.controller.js';
 import {
     getBenefitRanges,
     getLoyaltyCards,
@@ -136,15 +128,7 @@ app.use('/api/products', productRouter);
 app.use('/api/cart', cartRouter);
 app.use('/api/address', addressRouter);
 app.use('/api/order', orderRouter);
-app.use('/api/stripe', stripeRouter);
-app.use('/api/pesapal', pesapalRouter);
-app.post('/api/init-pesapal', auth, pesapalInitiate);
-app.use('/api/mpesa', mpesaRouter);
-app.use('/api/mpesa-direct', mpesaDirectRouter);
-app.use('/api/mpesa-payouts', mpesaPayoutRouter);
 app.use('/api/route-optimization', routeOptimizationRouter);
-app.use('/api/equity', equityRouter);
-app.use('/api/payhero', payheroRouter);
 app.use('/api/chat', chatRoutes);
 app.use('/api/loyalty', loyaltyRouter);
 app.use('/api', campaignRouter);

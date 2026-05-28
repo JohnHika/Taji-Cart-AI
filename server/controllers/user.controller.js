@@ -315,6 +315,7 @@ export async function getAllUsersController(request, response) {
                 email: userData.email || 'No Email',
                 isAdmin: Boolean(userData.isAdmin),
                 isDelivery: Boolean(userData.isDelivery),
+                isStaff: Boolean(userData.isStaff || userData.role === 'staff'),
                 role: userData.role || 'user',
                 status: userData.status || 'Active'
             };
@@ -1860,7 +1861,7 @@ export async function scanLoyaltyCard(req, res) {
  */
 export async function updateUserRoleController(req, res) {
     try {
-        const { userId, isAdmin } = req.body;
+        const { userId, isAdmin, role, isDelivery, isStaff } = req.body;
         
         if (!userId) {
             return res.status(400).json({
@@ -1870,13 +1871,33 @@ export async function updateUserRoleController(req, res) {
             });
         }
         
+        const requestedRole = String(role || '').trim().toLowerCase();
+        const normalizedRole = requestedRole === 'customer'
+            ? 'user'
+            : requestedRole === 'seller'
+                ? 'staff'
+                : requestedRole;
+
+        const allowedRoles = new Set(['user', 'admin', 'delivery', 'staff']);
+        const targetRole = allowedRoles.has(normalizedRole)
+            ? normalizedRole
+            : (Boolean(isAdmin) ? 'admin' : 'user');
+
         // Log the request for debugging
-        console.log(`Received role update request for user ${userId}:`, { isAdmin });
-        
-        // Use findByIdAndUpdate to ensure atomic update
+        console.log(`Received role update request for user ${userId}:`, {
+            role,
+            targetRole,
+            isAdmin,
+            isDelivery,
+            isStaff,
+        });
+
+        // Keep role flags mutually consistent with the selected role.
         const updateData = {
-            isAdmin: Boolean(isAdmin),
-            role: isAdmin ? 'admin' : 'user'
+            role: targetRole,
+            isAdmin: targetRole === 'admin',
+            isDelivery: targetRole === 'delivery',
+            isStaff: targetRole === 'staff',
         };
         
         console.log(`Applying updates:`, updateData);
@@ -1901,6 +1922,14 @@ export async function updateUserRoleController(req, res) {
             role: updatedUser.role
         });
         
+        const roleLabels = {
+            admin: 'Administrator',
+            staff: 'Seller',
+            delivery: 'Driver',
+            user: 'Customer',
+        };
+        const roleLabel = roleLabels[updatedUser.role] || 'Customer';
+
         // Send email notification asynchronously so SMTP latency does not block API response
         sendEmail({
             sendTo: updatedUser.email,
@@ -1908,7 +1937,7 @@ export async function updateUserRoleController(req, res) {
             html: renderAccountNoticeEmail({
                 name: updatedUser.name,
                 title: 'Your account role changed',
-                intro: `Your Nawiri Hair Kenya account role is now ${updatedUser.isAdmin ? 'Administrator' : 'Customer'}.`,
+                intro: `Your Nawiri Hair Kenya account role is now ${roleLabel}.`,
                 highlights: [
                     'This change controls the tools and dashboards available on your account.',
                     `If you were not expecting this update, contact ${nawiriBrand.supportEmail}.`,
@@ -1919,7 +1948,7 @@ export async function updateUserRoleController(req, res) {
         });
         
         return res.status(200).json({
-            message: `User role updated to ${updatedUser.isAdmin ? 'admin' : 'regular user'} successfully`,
+            message: `User role updated to ${updatedUser.role} successfully`,
             success: true,
             error: false,
             data: {
@@ -1927,6 +1956,8 @@ export async function updateUserRoleController(req, res) {
                 name: updatedUser.name,
                 email: updatedUser.email,
                 isAdmin: updatedUser.isAdmin,
+                isDelivery: updatedUser.isDelivery,
+                isStaff: updatedUser.isStaff,
                 role: updatedUser.role
             }
         });
