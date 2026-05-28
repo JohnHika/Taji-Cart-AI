@@ -55,6 +55,15 @@ const orderSchema = new mongoose.Schema({
         type: String,
         default: ""
     },
+    delivery_mode: {
+        type: String,
+        enum: ['standard', 'foot', 'walking', 'walker', ''],
+        default: 'standard'
+    },
+    customer_location: {
+        lat: Number,
+        lng: Number
+    },
     status: {
         type: String,
         enum: ['pending', 'processing', 'dispatched', 'driver_assigned', 'out_for_delivery', 'nearby', 'delivered', 'ready_for_pickup', 'picked_up', 'cancelled'],

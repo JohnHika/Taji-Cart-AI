@@ -1,4 +1,5 @@
 import isadmin from './isAdmin';
+import { getEffectiveRole } from './userRole';
 
 /**
  * Default route after email/password or social login, by role.
@@ -8,10 +9,11 @@ import isadmin from './isAdmin';
 export function getPostLoginPath(user) {
   if (!user?._id) return '/';
   if (isadmin(user)) return '/dashboard';
-  if (user.role === 'delivery' || user.isDelivery === true) {
+  const effectiveRole = getEffectiveRole(user);
+  if (effectiveRole === 'delivery') {
     return '/dashboard/delivery/dashboard';
   }
-  if (user.role === 'staff' || user.isStaff === true) {
+  if (effectiveRole === 'staff') {
     return '/dashboard/staff/dashboard';
   }
   return '/';

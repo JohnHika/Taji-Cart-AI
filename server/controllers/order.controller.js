@@ -12,6 +12,12 @@ import ProductModel from "../models/product.model.js"; // Add this import
 import UserRewardModel from "../models/userreward.model.js";
 import UserModel from "../models/user.model.js";
 import { getIO } from '../socket/socket.js'; // Add this import
+import {
+  extractCoordinatesFromPayload,
+  getCbdFootDeliveryStatus,
+  getDeliveryModeFromPayload,
+  isFootDeliveryMode,
+} from '../utils/cbdDelivery.js';
 import { markRewardAsUsed, processOrderContribution } from './communitycampaign.controller.js'; // Add this import
 import { nawiriBrand } from "../utils/brand.js";
 import { renderOrderNoticeEmail } from "../utils/emailTemplates.js";
@@ -275,6 +281,8 @@ export async function CashOnDeliveryOrderController(request, response) {
       communityRewardId = null,
       communityDiscountAmount = 0,
     } = request.body
+        const deliveryMode = getDeliveryModeFromPayload(request.body)
+        const customerLocation = extractCoordinatesFromPayload(request.body)
         const customer = await UserModel.findById(userId).select('name email')
 
         // Validate inputs based on fulfillment type
@@ -292,6 +300,28 @@ export async function CashOnDeliveryOrderController(request, response) {
                 error: true,
                 success: false
             });
+        }
+
+        if (fulfillment_type === 'delivery' && isFootDeliveryMode(deliveryMode)) {
+          const cbdStatus = getCbdFootDeliveryStatus(customerLocation)
+
+          if (!cbdStatus.allowed) {
+            const outsideZoneMessage = cbdStatus.reason === 'outside_cbd'
+              ? `Foot delivery is available only within Nairobi CBD (${cbdStatus.radiusKm}km radius). Your selected location is ${Number(cbdStatus.distanceKm || 0).toFixed(2)}km away.`
+              : 'Please enable location and pin your delivery point to use foot delivery in Nairobi CBD.'
+
+            return response.status(400).json({
+              message: outsideZoneMessage,
+              error: true,
+              success: false,
+              code: 'FOOT_DELIVERY_OUTSIDE_CBD',
+              details: {
+                radiusKm: cbdStatus.radiusKm,
+                distanceKm: cbdStatus.distanceKm,
+                center: cbdStatus.center,
+              },
+            })
+          }
         }
 
         const {
@@ -334,6 +364,8 @@ export async function CashOnDeliveryOrderController(request, response) {
                 fulfillment_type: fulfillment_type || 'delivery',
                 pickup_location: pickup_location || '',
                 pickup_instructions: pickup_instructions || '',
+                delivery_mode: deliveryMode || 'standard',
+                customer_location: customerLocation || undefined,
                 pickupVerificationCode: pickupVerificationCode,
                 subTotalAmt: subTotalAmt,
                 totalAmt: totalAmt,
@@ -511,7 +543,9 @@ export async function trackGuestOrderController(request, response) {
 // Guest Checkout Controller - allows users to purchase without logging in
 export async function guestCheckoutController(request, response) {
     try {
-    const { items, guestEmail, guestPhone, guestShipping, fulfillment_type = 'delivery', pickup_location = '' } = request.body
+  const { items, guestEmail, guestPhone, guestShipping, fulfillment_type = 'delivery', pickup_location = '' } = request.body
+    const deliveryMode = getDeliveryModeFromPayload(request.body)
+    const customerLocation = extractCoordinatesFromPayload(request.body)
 
         // Validate required fields
     if (!guestEmail || !items) {
@@ -538,6 +572,28 @@ export async function guestCheckoutController(request, response) {
             totalAmt,
         } = await buildValidatedOrderPricing({ items })
 
+        if (fulfillment_type === 'delivery' && isFootDeliveryMode(deliveryMode)) {
+          const cbdStatus = getCbdFootDeliveryStatus(customerLocation)
+
+          if (!cbdStatus.allowed) {
+            const outsideZoneMessage = cbdStatus.reason === 'outside_cbd'
+              ? `Foot delivery is available only within Nairobi CBD (${cbdStatus.radiusKm}km radius). Your selected location is ${Number(cbdStatus.distanceKm || 0).toFixed(2)}km away.`
+              : 'Please enable location and pin your delivery point to use foot delivery in Nairobi CBD.'
+
+            return response.status(400).json({
+              message: outsideZoneMessage,
+              error: true,
+              success: false,
+              code: 'FOOT_DELIVERY_OUTSIDE_CBD',
+              details: {
+                radiusKm: cbdStatus.radiusKm,
+                distanceKm: cbdStatus.distanceKm,
+                center: cbdStatus.center,
+              },
+            })
+          }
+        }
+
         // Generate verification code for pickup orders
         const generateVerificationCode = () => {
             return Math.random().toString(36).substring(2, 8).toUpperCase()
@@ -556,7 +612,9 @@ export async function guestCheckoutController(request, response) {
             guestPhone: guestPhone || '',
             guestShipping: guestShipping || {},
             fulfillment_type,
+            delivery_mode: deliveryMode || 'standard',
             pickup_location,
+            customer_location: customerLocation || undefined,
             product_details: {
                 name: normalizedItems.map(item => item.productId?.name || item.name || 'Product').join(', '),
                 image: normalizedItems[0]?.productId?.image || []

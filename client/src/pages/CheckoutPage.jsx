@@ -20,6 +20,7 @@ import { clearCartItems } from '../store/cartProduct';
 import Axios from '../utils/Axios';
 import AxiosToastError from '../utils/AxiosToastError';
 import { getStoredAccessToken } from '../utils/authStorage';
+import { formatDistanceKm, getFootDeliveryEligibility, NAIROBI_CBD_RADIUS_KM } from '../utils/cbdDelivery';
 import { DisplayPriceInShillings } from '../utils/DisplayPriceInShillings';
 import { Link } from 'react-router-dom';
 
@@ -41,6 +42,9 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
   const [pickupInstructions, setPickupInstructions] = useState(
     location.state?.pickupInstructions || location.state?.pickup_instructions || ''
   );
+  const [deliveryMode, setDeliveryMode] = useState(location.state?.delivery_mode || 'standard');
+  const [customerLocation, setCustomerLocation] = useState(location.state?.customerLocation || null);
+  const [locationLoading, setLocationLoading] = useState(false);
   
   const addressList = useSelector(state => state.addresses.addressList);
   const [selectAddress, setSelectAddress] = useState(null); // Changed from 0 to null to ensure validation
@@ -145,6 +149,10 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
     ? Math.max(0, priceAfterCommunityDiscount - pointsValue) 
     : priceAfterCommunityDiscount;
   const isCheckoutBusy = checkoutAction !== '';
+  const footDeliveryEligibility = useMemo(
+    () => getFootDeliveryEligibility(customerLocation),
+    [customerLocation]
+  );
   const hasCheckoutAmount = useMemo(() => {
     const numericTotal = Number(totalPrice || 0);
 
@@ -187,11 +195,64 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
         toast.error('Please select a delivery address before proceeding');
         return false;
       }
+
+      if (deliveryMode === 'foot') {
+        if (!customerLocation) {
+          toast.error('Foot delivery requires your live location within Nairobi CBD.');
+          return false;
+        }
+
+        if (!footDeliveryEligibility.eligible) {
+          toast.error(
+            `Foot delivery is only available within Nairobi CBD (${NAIROBI_CBD_RADIUS_KM}km radius).`
+          );
+          return false;
+        }
+      }
     } else if (fulfillmentMethod === 'pickup' && !pickupLocation) {
       toast.error('Please select a pickup location');
       return false;
     }
     return true;
+  };
+
+  const captureCustomerLocation = () => {
+    if (!navigator.geolocation) {
+      toast.error('Geolocation is not supported on this device/browser.');
+      return;
+    }
+
+    setLocationLoading(true);
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const nextLocation = {
+          lat: Number(position.coords.latitude),
+          lng: Number(position.coords.longitude),
+        };
+
+        setCustomerLocation(nextLocation);
+        const eligibility = getFootDeliveryEligibility(nextLocation);
+
+        if (eligibility.eligible) {
+          toast.success('Great! You are within Nairobi CBD for foot delivery.');
+        } else {
+          toast.error(
+            `You are ${formatDistanceKm(eligibility.distanceKm)} from CBD center. Foot delivery is limited to ${eligibility.radiusKm}km.`
+          );
+        }
+
+        setLocationLoading(false);
+      },
+      () => {
+        setLocationLoading(false);
+        toast.error('Unable to access location. Please allow location permissions and try again.');
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 0,
+      }
+    );
   };
 
   const handleCashOnDelivery = async() => {
@@ -212,6 +273,8 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
             communityRewardId: selectedReward ? selectedReward._id : null,
             communityDiscountAmount: selectedReward && selectedReward.type === 'discount' ? communityDiscount : 0,
             fulfillment_type: fulfillmentMethod,
+            delivery_mode: fulfillmentMethod === 'delivery' ? deliveryMode : 'standard',
+            customerLocation,
             pickup_location: pickupLocation,
             pickup_instructions: pickupInstructions
           },
@@ -286,6 +349,10 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
                 communityRewardId: selectedReward ? selectedReward._id : null,
                 communityDiscountAmount: selectedReward && selectedReward.type === 'discount' ? communityDiscount : 0,
                 fulfillment_type: fulfillmentMethod,
+                delivery_mode: fulfillmentMethod === 'delivery' ? deliveryMode : 'standard',
+                customerLocation,
+                delivery_mode: fulfillmentMethod === 'delivery' ? deliveryMode : 'standard',
+                customerLocation,
                 pickup_location: pickupLocation,
                 pickup_instructions: pickupInstructions
               },
@@ -536,6 +603,44 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
                 >
                   Add address
                 </div>
+              </div>
+
+              <div className="mt-4 p-3 bg-white dark:bg-dm-card rounded shadow border border-brown-100 dark:border-dm-border">
+                <p className="text-sm font-semibold dark:text-white mb-2">Delivery Type</p>
+                <div className="grid grid-cols-2 gap-2 text-xs">
+                  <button
+                    type="button"
+                    onClick={() => setDeliveryMode('standard')}
+                    className={`px-2 py-2 rounded ${deliveryMode === 'standard' ? 'bg-plum-700 text-white' : 'bg-plum-100 dark:bg-plum-900/30 dark:text-white/80'}`}
+                  >
+                    Standard
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setDeliveryMode('foot')}
+                    className={`px-2 py-2 rounded ${deliveryMode === 'foot' ? 'bg-plum-700 text-white' : 'bg-plum-100 dark:bg-plum-900/30 dark:text-white/80'}`}
+                  >
+                    Foot (CBD)
+                  </button>
+                </div>
+
+                {deliveryMode === 'foot' && (
+                  <div className="mt-2 space-y-1">
+                    <button
+                      type="button"
+                      onClick={captureCustomerLocation}
+                      disabled={locationLoading}
+                      className="w-full text-xs px-2 py-2 rounded bg-gold-500 text-charcoal font-semibold disabled:opacity-60"
+                    >
+                      {locationLoading ? 'Checking location...' : 'Use My Current Location'}
+                    </button>
+                    <p className="text-[11px] text-brown-500 dark:text-white/55">
+                      {customerLocation
+                        ? `Distance: ${formatDistanceKm(footDeliveryEligibility.distanceKm)} (${footDeliveryEligibility.eligible ? 'eligible' : 'outside zone'})`
+                        : 'Location required for foot delivery in CBD.'}
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -798,6 +903,65 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
             >
               + Add new address
             </div>
+          </div>
+
+          <div className='bg-white dark:bg-dm-card p-4 rounded-card border border-brown-100 dark:border-dm-border mb-4 transition-colors duration-200'>
+            <p className='text-sm font-semibold text-charcoal dark:text-white mb-3'>Delivery Type</p>
+
+            <div className='grid sm:grid-cols-2 gap-3'>
+              <label className={`cursor-pointer rounded-card border-2 p-3 transition-all ${
+                deliveryMode === 'standard'
+                  ? 'border-plum-600 bg-plum-50 dark:border-plum-400 dark:bg-plum-900/20'
+                  : 'border-brown-100 dark:border-dm-border'
+              }`}>
+                <input
+                  type='radio'
+                  name='delivery_mode'
+                  value='standard'
+                  checked={deliveryMode === 'standard'}
+                  onChange={() => setDeliveryMode('standard')}
+                  className='hidden'
+                />
+                <p className='font-semibold text-charcoal dark:text-white'>Standard Delivery</p>
+                <p className='text-xs text-brown-500 dark:text-white/50 mt-1'>Regular rider delivery across Nairobi.</p>
+              </label>
+
+              <label className={`cursor-pointer rounded-card border-2 p-3 transition-all ${
+                deliveryMode === 'foot'
+                  ? 'border-plum-600 bg-plum-50 dark:border-plum-400 dark:bg-plum-900/20'
+                  : 'border-brown-100 dark:border-dm-border'
+              }`}>
+                <input
+                  type='radio'
+                  name='delivery_mode'
+                  value='foot'
+                  checked={deliveryMode === 'foot'}
+                  onChange={() => setDeliveryMode('foot')}
+                  className='hidden'
+                />
+                <p className='font-semibold text-charcoal dark:text-white'>Delivery by Foot</p>
+                <p className='text-xs text-brown-500 dark:text-white/50 mt-1'>Only within Nairobi CBD ({NAIROBI_CBD_RADIUS_KM}km radius).</p>
+              </label>
+            </div>
+
+            {deliveryMode === 'foot' && (
+              <div className='mt-3 space-y-2'>
+                <button
+                  type='button'
+                  onClick={captureCustomerLocation}
+                  className='px-3 py-2 rounded-pill text-sm font-semibold bg-plum-700 text-white hover:bg-plum-600 transition-colors disabled:opacity-60 disabled:cursor-not-allowed'
+                  disabled={locationLoading}
+                >
+                  {locationLoading ? 'Checking location...' : 'Use My Current Location'}
+                </button>
+
+                <p className='text-xs text-brown-500 dark:text-white/50'>
+                  {customerLocation
+                    ? `Distance to CBD center: ${formatDistanceKm(footDeliveryEligibility.distanceKm)} (${footDeliveryEligibility.eligible ? 'eligible' : 'outside allowed zone'})`
+                    : 'Location required to confirm CBD eligibility for foot delivery.'}
+                </p>
+              </div>
+            )}
           </div>
         </>
       );
@@ -1105,6 +1269,8 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
                 communityRewardId={selectedReward?._id}
                 communityDiscountAmount={selectedReward?.type === 'discount' ? communityDiscount : 0}
                 fulfillment_type={fulfillmentMethod}
+                delivery_mode={fulfillmentMethod === 'delivery' ? deliveryMode : 'standard'}
+                customerLocation={customerLocation}
                 pickup_location={pickupLocation}
                 pickup_instructions={pickupInstructions}
               />

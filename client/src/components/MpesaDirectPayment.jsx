@@ -13,6 +13,8 @@ const MpesaDirectPayment = ({
   communityRewardId,
   communityDiscountAmount,
   fulfillment_type = 'delivery',
+  delivery_mode = 'standard',
+  customerLocation = null,
   pickup_location = '',
   pickup_instructions = '',
   guestEmail,
@@ -97,6 +99,8 @@ const MpesaDirectPayment = ({
         communityRewardId,
         communityDiscountAmount,
         fulfillment_type,
+        delivery_mode,
+        customerLocation,
         pickup_location,
         pickup_instructions
       };

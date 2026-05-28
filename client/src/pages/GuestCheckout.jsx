@@ -14,6 +14,7 @@ import MpesaPayment from '../components/MpesaPayment';
 import EquityPayment from '../components/EquityPayment';
 import PayHeroPayment from '../components/PayHeroPayment';
 import MpesaDirectPayment from '../components/MpesaDirectPayment';
+import { formatDistanceKm, getFootDeliveryEligibility, NAIROBI_CBD_RADIUS_KM } from '../utils/cbdDelivery';
 
 function GuestCheckout() {
   const navigate = useNavigate();
@@ -23,6 +24,7 @@ function GuestCheckout() {
   const [step, setStep] = useState(1);
   const [orderSuccess, setOrderSuccess] = useState(null);
   const [paymentMethod, setPaymentMethod] = useState('payhero'); // 'mpesa', 'equity', 'payhero', or 'cod'
+  const [locationLoading, setLocationLoading] = useState(false);
 
   const [formData, setFormData] = useState({
     // Contact Info
@@ -38,8 +40,12 @@ function GuestCheckout() {
 
     // Order Options
     fulfillment_type: 'delivery',
+    delivery_mode: 'standard',
     pickup_location: '',
+    customerLocation: null,
   });
+
+  const footDeliveryEligibility = getFootDeliveryEligibility(formData.customerLocation);
 
   const calculateTotal = () => {
     return cart.reduce((total, item) => {
@@ -85,7 +91,58 @@ function GuestCheckout() {
       return false;
     }
 
+    if (formData.fulfillment_type === 'delivery' && formData.delivery_mode === 'foot') {
+      if (!formData.customerLocation) {
+        toast.error('Foot delivery requires your live location within Nairobi CBD.');
+        return false;
+      }
+
+      if (!footDeliveryEligibility.eligible) {
+        toast.error(`Foot delivery is only available within Nairobi CBD (${NAIROBI_CBD_RADIUS_KM}km radius).`);
+        return false;
+      }
+    }
+
     return true;
+  };
+
+  const captureCustomerLocation = () => {
+    if (!navigator.geolocation) {
+      toast.error('Geolocation is not supported on this browser/device.');
+      return;
+    }
+
+    setLocationLoading(true);
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const customerLocation = {
+          lat: Number(position.coords.latitude),
+          lng: Number(position.coords.longitude),
+        };
+
+        const eligibility = getFootDeliveryEligibility(customerLocation);
+        setFormData((prev) => ({ ...prev, customerLocation }));
+
+        if (eligibility.eligible) {
+          toast.success('Great! You are within Nairobi CBD for foot delivery.');
+        } else {
+          toast.error(
+            `You are ${formatDistanceKm(eligibility.distanceKm)} from CBD center. Foot delivery is limited to ${eligibility.radiusKm}km.`
+          );
+        }
+
+        setLocationLoading(false);
+      },
+      () => {
+        setLocationLoading(false);
+        toast.error('Unable to access location. Please allow location permissions and try again.');
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 0,
+      }
+    );
   };
 
   const handlePaymentSuccess = (paymentData) => {
@@ -344,6 +401,67 @@ function GuestCheckout() {
                           </div>
                         </label>
                       </div>
+
+                      {formData.fulfillment_type === 'delivery' && (
+                        <div className="mt-4">
+                          <label className="block text-sm font-medium text-brown-600 dark:text-brown-300 mb-2">
+                            Delivery Type
+                          </label>
+                          <div className="grid md:grid-cols-2 gap-3">
+                            <label className={`cursor-pointer border-2 rounded-lg p-3 transition-all ${
+                              formData.delivery_mode === 'standard'
+                                ? 'border-gold-500 bg-gold-50 dark:bg-gold-900/20'
+                                : 'border-brown-200 dark:border-brown-700'
+                            }`}>
+                              <input
+                                type="radio"
+                                name="delivery_mode"
+                                value="standard"
+                                checked={formData.delivery_mode === 'standard'}
+                                onChange={handleInputChange}
+                                className="hidden"
+                              />
+                              <p className="font-semibold text-charcoal dark:text-white">Standard Delivery</p>
+                              <p className="text-xs text-brown-500 mt-1">Regular rider delivery.</p>
+                            </label>
+
+                            <label className={`cursor-pointer border-2 rounded-lg p-3 transition-all ${
+                              formData.delivery_mode === 'foot'
+                                ? 'border-gold-500 bg-gold-50 dark:bg-gold-900/20'
+                                : 'border-brown-200 dark:border-brown-700'
+                            }`}>
+                              <input
+                                type="radio"
+                                name="delivery_mode"
+                                value="foot"
+                                checked={formData.delivery_mode === 'foot'}
+                                onChange={handleInputChange}
+                                className="hidden"
+                              />
+                              <p className="font-semibold text-charcoal dark:text-white">Delivery by Foot</p>
+                              <p className="text-xs text-brown-500 mt-1">Only in Nairobi CBD ({NAIROBI_CBD_RADIUS_KM}km radius).</p>
+                            </label>
+                          </div>
+
+                          {formData.delivery_mode === 'foot' && (
+                            <div className="mt-3 space-y-2">
+                              <button
+                                type="button"
+                                onClick={captureCustomerLocation}
+                                disabled={locationLoading}
+                                className="px-4 py-2 rounded-pill bg-gold-500 hover:bg-gold-400 text-charcoal font-semibold text-sm transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                              >
+                                {locationLoading ? 'Checking location...' : 'Use My Current Location'}
+                              </button>
+                              <p className="text-xs text-brown-500 dark:text-brown-400">
+                                {formData.customerLocation
+                                  ? `Distance to CBD center: ${formatDistanceKm(footDeliveryEligibility.distanceKm)} (${footDeliveryEligibility.eligible ? 'eligible' : 'outside allowed zone'})`
+                                  : 'Location is required for foot delivery eligibility.'}
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
 
                     {formData.fulfillment_type === 'pickup' && (
@@ -516,9 +634,12 @@ function GuestCheckout() {
                             city: formData.city,
                             zipCode: formData.zipCode,
                             phone: formData.guestPhone,
-                            name: `${formData.firstName} ${formData.lastName}`
+                            name: `${formData.firstName} ${formData.lastName}`,
+                            coordinates: formData.customerLocation,
                           }}
                           fulfillment_type={formData.fulfillment_type}
+                          delivery_mode={formData.delivery_mode}
+                          customerLocation={formData.customerLocation}
                           pickup_location={formData.pickup_location}
                           onSuccess={handlePaymentSuccess}
                           onError={handlePaymentError}
@@ -536,9 +657,12 @@ function GuestCheckout() {
                             address: formData.address,
                             city: formData.city,
                             zipCode: formData.zipCode,
-                            phone: formData.guestPhone
+                            phone: formData.guestPhone,
+                            coordinates: formData.customerLocation,
                           }}
                           fulfillment_type={formData.fulfillment_type}
+                          delivery_mode={formData.delivery_mode}
+                          customerLocation={formData.customerLocation}
                           pickup_location={formData.pickup_location}
                           onSuccess={handlePaymentSuccess}
                           onError={handlePaymentError}
@@ -556,9 +680,12 @@ function GuestCheckout() {
                             address: formData.address,
                             city: formData.city,
                             zipCode: formData.zipCode,
-                            phone: formData.guestPhone
+                            phone: formData.guestPhone,
+                            coordinates: formData.customerLocation,
                           }}
                           fulfillment_type={formData.fulfillment_type}
+                          delivery_mode={formData.delivery_mode}
+                          customerLocation={formData.customerLocation}
                           pickup_location={formData.pickup_location}
                           onSuccess={handlePaymentSuccess}
                           onError={handlePaymentError}
@@ -578,9 +705,12 @@ function GuestCheckout() {
                             city: formData.city,
                             zipCode: formData.zipCode,
                             phone: formData.guestPhone,
-                            name: `${formData.firstName} ${formData.lastName}`
+                            name: `${formData.firstName} ${formData.lastName}`,
+                            coordinates: formData.customerLocation,
                           }}
                           fulfillment_type={formData.fulfillment_type}
+                          delivery_mode={formData.delivery_mode}
+                          customerLocation={formData.customerLocation}
                           pickup_location={formData.pickup_location}
                           onSuccess={handlePaymentSuccess}
                           onError={handlePaymentError}

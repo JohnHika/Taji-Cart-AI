@@ -1,5 +1,16 @@
 import { createSlice } from "@reduxjs/toolkit";
 
+const parseBooleanFlag = (value) => {
+    if (typeof value === 'boolean') return value;
+    if (typeof value === 'number') return value === 1;
+    if (typeof value === 'string') {
+        const normalized = value.trim().toLowerCase();
+        if (['true', '1', 'yes', 'on'].includes(normalized)) return true;
+        if (['false', '0', 'no', 'off', 'null', 'undefined', ''].includes(normalized)) return false;
+    }
+    return Boolean(value);
+}
+
 const initialValue = {
     _id : "",
     name : "",
@@ -40,19 +51,31 @@ const userSlice  = createSlice({
             
             // Convert role to lowercase for case-insensitive comparison
             const userRole = (userData.role || '').toLowerCase();
+            const parsedIsAdmin = parseBooleanFlag(userData?.isAdmin);
+            const parsedIsStaff = parseBooleanFlag(userData?.isStaff);
+            const parsedIsDelivery = parseBooleanFlag(userData?.isDelivery);
             
             if (userRole === 'staff') {
                 console.log("STAFF ROLE DETECTED - Setting isStaff flag");
                 userData.isStaff = true;
+                userData.isAdmin = false;
+                userData.isDelivery = false;
                 userData.accountType = 'staff';
             } else if (userRole === 'admin') {
                 userData.isAdmin = true;
+                userData.isStaff = true;
+                userData.isDelivery = false;
                 userData.accountType = 'admin';
             } else if (userRole === 'delivery') {
                 userData.isDelivery = true;
+                userData.isAdmin = false;
+                userData.isStaff = false;
                 userData.accountType = 'delivery';
             } else {
                 // Default to customer/regular user
+                userData.isAdmin = parsedIsAdmin;
+                userData.isStaff = parsedIsStaff;
+                userData.isDelivery = parsedIsDelivery;
                 userData.accountType = 'customer';
             }
             
@@ -75,9 +98,9 @@ const userSlice  = createSlice({
             state.shopping_cart = userData?.shopping_cart
             state.orderHistory = userData?.orderHistory
             state.role = userData?.role
-            state.isAdmin = Boolean(userData?.isAdmin)
-            state.isStaff = Boolean(userData?.isStaff)
-            state.isDelivery = Boolean(userData?.isDelivery)
+            state.isAdmin = parseBooleanFlag(userData?.isAdmin)
+            state.isStaff = parseBooleanFlag(userData?.isStaff)
+            state.isDelivery = parseBooleanFlag(userData?.isDelivery)
             state.accountType = userData?.accountType || ''
             state.isAuthenticated = true;
         },
