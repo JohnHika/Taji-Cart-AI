@@ -220,11 +220,11 @@ const Home = () => {
         </div>
 
         {loadingCatalog ? (
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
-            {Array.from({ length: 3 }).map((_, index) => (
+          <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-3">
+            {Array.from({ length: 4 }).map((_, index) => (
               <div
                 key={`category-banner-skeleton-${index}`}
-                className="min-h-[220px] animate-pulse rounded-3xl bg-gradient-to-br from-plum-100 to-gold-100 dark:from-plum-900/30 dark:to-gold-900/10"
+                className="min-h-[150px] animate-pulse rounded-2xl bg-gradient-to-br from-plum-100 to-gold-100 dark:from-plum-900/30 dark:to-gold-900/10 sm:min-h-[220px] sm:rounded-3xl"
               />
             ))}
           </div>

@@ -1154,6 +1154,18 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
               <p>Delivery Charge</p>
               <p className='flex items-center gap-2'>Free</p>
             </div>
+
+            {usePoints && (
+              <div className='flex gap-4 justify-between ml-1 text-green-600 dark:text-green-400'>
+                <p>Points Discount</p>
+                <p>- KES {pointsValue.toLocaleString()}</p>
+              </div>
+            )}
+
+            <div className='flex gap-4 justify-between ml-1 mt-2 pt-2 border-t border-brown-100 dark:border-dm-border'>
+              <p className='font-bold text-charcoal dark:text-white'>Total</p>
+              <p className='font-bold text-gold-600 dark:text-gold-300 font-price'>{DisplayPriceInShillings(finalPrice)}</p>
+            </div>
           </div>
 
           {/* Loyalty Points Section */}
@@ -1183,26 +1195,6 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
               )}
             </div>
           )}
-
-          {/* Updated Price Display */}
-          <div className="mt-4 p-4 bg-white dark:bg-dm-card rounded-card border border-brown-100 dark:border-dm-border transition-colors duration-200">
-            <div className="flex justify-between items-center text-sm text-charcoal dark:text-white/80">
-              <span>Subtotal</span>
-              <span className="font-price font-semibold">KES {priceAfterCommunityDiscount.toLocaleString()}</span>
-            </div>
-
-            {usePoints && (
-              <div className="flex justify-between items-center text-sm text-green-600 dark:text-green-400 mt-1">
-                <span>Points Discount</span>
-                <span className="font-price font-semibold">- KES {pointsValue.toLocaleString()}</span>
-              </div>
-            )}
-
-            <div className="flex justify-between items-center mt-3 pt-3 border-t border-brown-100 dark:border-dm-border">
-              <span className="font-bold text-charcoal dark:text-white">Total</span>
-              <span className="font-price font-bold text-lg text-gold-600 dark:text-gold-300">KES {finalPrice?.toLocaleString()}</span>
-            </div>
-          </div>
 
           <div className='w-full flex flex-col gap-3 mt-5'>
             <p className="text-xs font-semibold uppercase tracking-widest text-brown-300 dark:text-white/30 mb-1">Choose Payment Method</p>
@@ -1258,19 +1250,8 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
               {!isPaymentEnabled && <span className="text-xs font-normal opacity-60">{fulfillmentMethod === 'delivery' ? 'Select address first' : 'Select pickup location'}</span>}
             </button>
 
-            <button
-              className={`w-full py-3.5 rounded-pill font-bold text-sm mt-1 transition-all duration-200 press shadow-sm ${
-                isPaymentEnabled && !isCheckoutBusy
-                  ? 'bg-gold-500 hover:bg-gold-400 text-charcoal hover:shadow-gold'
-                  : 'bg-brown-100 dark:bg-dm-card-2 text-brown-300 dark:text-white/20 cursor-not-allowed'
-              }`}
-              onClick={handleOnlinePayment}
-              disabled={!isPaymentEnabled || isCheckoutBusy}
-            >
-              {checkoutAction === 'card' ? 'Processing card payment...' : `Confirm & Pay - KES ${finalPrice?.toLocaleString()}`}
-            </button>
-
-            {/* Guest Checkout CTA */}
+            {/* Guest Checkout CTA — only show for unauthenticated users */}
+            {!user?._id && (
             <div className="mt-6 pt-6 border-t border-brown-200 dark:border-brown-700">
               <p className="text-center text-sm text-brown-500 dark:text-brown-400 mb-3">
                 Don't want to create an account?
@@ -1282,6 +1263,7 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
                 Checkout as Guest →
               </Link>
             </div>
+            )}
           </div>
         </div>
         </div>

@@ -9,6 +9,7 @@ import SummaryApi from './common/SummaryApi';
 import BottomNavigation from './components/BottomNavigation';
 import CartMobileLink from './components/CartMobile';
 import DashboardMobileHeader from './components/DashboardMobileHeader';
+import Footer from './components/Footer';
 import Header from './components/Header';
 import GlobalProvider from './provider/GlobalProvider';
 import { fetchCartItems } from './store/cartProduct';
@@ -270,6 +271,7 @@ function App() {
 
   const isAuthPage = ['/login', '/register', '/forgot-password', '/verification-otp', '/reset-password', '/verify-email'].includes(location.pathname);
   const isDashboardShell = location.pathname.startsWith('/dashboard');
+  const isPOSPage = location.pathname.includes('/dashboard/sales-counter') || location.pathname.includes('/dashboard/staff-pos');
 
   const showStoreChrome = !isAuthPage && !isDashboardShell;
 
@@ -277,8 +279,8 @@ function App() {
     <ErrorBoundary FallbackComponent={ErrorFallback}>
       <GlobalProvider>
         <ScrollRestoration />
-        {isDashboardShell && <DashboardMobileHeader />}
-        <Header />
+        {isDashboardShell && !isPOSPage && <DashboardMobileHeader />}
+        {showStoreChrome && <Header />}
         <main className='min-h-[78vh] max-w-full overflow-x-hidden'>
           {/* Add suspense to catch lazy-loaded component errors */}
           <Suspense fallback={<div className="p-5 text-center">Loading...</div>}>

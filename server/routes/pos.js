@@ -5,6 +5,8 @@ import Product from '../models/product.model.js';
 import auth from '../middleware/auth.js';
 import Staff from '../middleware/Staff.js';
 import axios from 'axios';
+import { getAuthToken, MPESA_STK_URL } from '../config/mpesa.js';
+import MpesaPayment from '../models/mpesaPayment.model.js';
 
 const router = express.Router();
 
@@ -53,6 +55,77 @@ router.get('/products/lookup', auth, Staff, async (req, res) => {
   } catch (error) {
     console.error('Product lookup error:', error);
     return res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// ─── M-Pesa STK Push (POS split-payment) ────────────────────────────────────
+router.post('/mpesa/stk-push', auth, Staff, async (req, res) => {
+  try {
+    const { phoneNumber, amount } = req.body;
+    if (!phoneNumber || !amount) {
+      return res.status(400).json({ success: false, message: 'Phone number and amount are required' });
+    }
+
+    const formattedPhone = phoneNumber.replace(/^(\+?254|0)/, '254');
+
+    const now = new Date();
+    const pad = (n) => n.toString().padStart(2, '0');
+    const timestamp =
+      `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}` +
+      `${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
+
+    const password = Buffer.from(
+      `${process.env.MPESA_SHORTCODE}${process.env.MPESA_PASSKEY}${timestamp}`
+    ).toString('base64');
+
+    const token = await getAuthToken();
+
+    // Determine callback base URL robustly
+    const hostHeader    = req.headers['x-forwarded-host'] || req.headers.host;
+    const protoHeader   = req.headers['x-forwarded-proto'] || 'https';
+    const fallbackBase  = hostHeader ? `${protoHeader}://${hostHeader}` : '';
+    const baseURL       = process.env.BACKEND_URL || process.env.RENDER_EXTERNAL_URL || fallbackBase;
+
+    const mpesaResponse = await axios.post(
+      MPESA_STK_URL,
+      {
+        BusinessShortCode: process.env.MPESA_SHORTCODE,
+        Password: password,
+        Timestamp: timestamp,
+        TransactionType: 'CustomerPayBillOnline',
+        Amount: Math.ceil(amount),
+        PartyA: formattedPhone,
+        PartyB: process.env.MPESA_SHORTCODE,
+        PhoneNumber: formattedPhone,
+        CallBackURL: `${baseURL}/api/mpesa/callback`,
+        AccountReference: `NAWIRI-${Date.now()}`,
+        TransactionDesc: 'NAWIRI POS payment',
+      },
+      {
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        timeout: 15000,
+      }
+    );
+
+    const { MerchantRequestID, CheckoutRequestID } = mpesaResponse.data;
+
+    await MpesaPayment.create({
+      merchantRequestId: MerchantRequestID,
+      checkoutRequestId: CheckoutRequestID,
+      phoneNumber: formattedPhone,
+      amount: Math.ceil(amount),
+      status: 'pending',
+    });
+
+    return res.status(200).json({ success: true, message: 'STK push sent', data: mpesaResponse.data });
+  } catch (error) {
+    const errMsg =
+      error?.response?.data?.errorMessage ||
+      error?.response?.data?.ResponseDescription ||
+      error?.message ||
+      'Failed to send STK push';
+    console.error('M-Pesa STK Push Error:', error?.response?.data || error.message);
+    return res.status(500).json({ success: false, message: errMsg });
   }
 });
 
@@ -247,7 +320,9 @@ router.post('/sale', auth, Staff, async (req, res) => {
         });
       }
 
-      if (product.stock < item.quantity) {
+      // POS allows negative inventory: only hard-block when stock is a known positive number
+      // AND quantity requested exceeds it. Zero or null stock = allow (reconcile later).
+      if (product.stock != null && product.stock > 0 && product.stock < item.quantity) {
         return res.status(409).json({
           success: false,
           message: `${product.name} only has ${product.stock} item(s) left in stock`
@@ -278,27 +353,22 @@ router.post('/sale', auth, Staff, async (req, res) => {
     // Create sale record
     const reservedStock = [];
     for (const item of normalizedItems) {
+      // Update stock without minimum constraint so it can go negative (POS negative inventory).
       const updatedProduct = await Product.findOneAndUpdate(
-        {
-          _id: item.product,
-          stock: { $gte: item.quantity }
-        },
-        {
-          $inc: { stock: -item.quantity }
-        },
-        {
-          new: true
-        }
+        { _id: item.product },
+        { $inc: { stock: -item.quantity } },
+        { new: true }
       );
 
       if (!updatedProduct) {
+        // Product doesn't exist at all — rollback any prior decrements
         for (const reserved of reservedStock) {
           await Product.findByIdAndUpdate(reserved.product, { $inc: { stock: reserved.quantity } });
         }
 
-        return res.status(409).json({
+        return res.status(404).json({
           success: false,
-          message: `Stock changed before checkout. Please rescan ${item.name} and try again.`
+          message: `Product "${item.name || item.product}" not found. Please rescan and try again.`
         });
       }
 

@@ -140,44 +140,32 @@ const PromoBanner = ({ products = [] }) => {
             Shop Now
             <FiChevronRight size={13} />
           </button>
+
+
         </div>
       </div>
 
-      {/* ── Navigation arrows ──────────────────────────────────────────── */}
+      {/* ── Navigation arrows — desktop only (sm+), hidden on mobile ──── */}
       {featured.length > 1 && (
         <>
           <button
             onClick={prev}
             aria-label="Previous"
-            className="absolute left-2 top-1/2 z-20 -translate-y-1/2 flex h-7 w-7 sm:h-9 sm:w-9 items-center justify-center rounded-full border border-white/15 bg-black/20 text-white backdrop-blur-sm transition hover:bg-black/40"
+            className="hidden sm:flex absolute left-2 top-1/2 z-20 -translate-y-1/2 h-9 w-9 items-center justify-center rounded-full border border-white/15 bg-black/20 text-white backdrop-blur-sm transition hover:bg-black/40"
           >
             <FiChevronLeft size={16} />
           </button>
           <button
             onClick={next}
             aria-label="Next"
-            className="absolute right-2 top-1/2 z-20 -translate-y-1/2 flex h-7 w-7 sm:h-9 sm:w-9 items-center justify-center rounded-full border border-white/15 bg-black/20 text-white backdrop-blur-sm transition hover:bg-black/40"
+            className="hidden sm:flex absolute right-2 top-1/2 z-20 -translate-y-1/2 h-9 w-9 items-center justify-center rounded-full border border-white/15 bg-black/20 text-white backdrop-blur-sm transition hover:bg-black/40"
           >
             <FiChevronRight size={16} />
           </button>
         </>
       )}
 
-      {/* ── Dot indicators ─────────────────────────────────────────────── */}
-      {featured.length > 1 && (
-        <div className="absolute bottom-3 sm:bottom-4 left-1/2 z-20 flex -translate-x-1/2 gap-1.5">
-          {featured.map((_, i) => (
-            <button
-              key={i}
-              onClick={() => setCurrent(i)}
-              aria-label={`Slide ${i + 1}`}
-              className={`h-1.5 rounded-full transition-all duration-300 ${
-                i === current ? 'w-5 sm:w-6 bg-gold-400' : 'w-1.5 bg-white/30 hover:bg-white/55'
-              }`}
-            />
-          ))}
-        </div>
-      )}
+
 
       {/* ── Auto-play progress bar ──────────────────────────────────────── */}
       {featured.length > 1 && !paused && (

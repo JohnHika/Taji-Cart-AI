@@ -1,10 +1,14 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { BsCart4 } from 'react-icons/bs';
-import { FaChevronDown, FaChevronUp, FaRegCircleUser } from 'react-icons/fa6';
-import { FiMenu, FiX } from 'react-icons/fi';
-import { IoSearch } from 'react-icons/io5';
-import { useSelector } from 'react-redux';
+import { FaChevronDown, FaChevronUp } from 'react-icons/fa6';
+import { FiMenu, FiX, FiSearch, FiLogOut } from 'react-icons/fi';
+import { useDispatch, useSelector } from 'react-redux';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { toast } from 'react-hot-toast';
+import SummaryApi from '../common/SummaryApi';
+import Axios from '../utils/Axios';
+import AxiosToastError from '../utils/AxiosToastError';
+import { logout } from '../store/userSlice';
 import { nawiriBrand } from '../config/brand';
 import useMobile from '../hooks/useMobile';
 import { useGlobalContext } from '../provider/GlobalProvider';
@@ -23,6 +27,7 @@ const Header = () => {
   const [isMobile] = useMobile();
   const location = useLocation();
   const navigate = useNavigate();
+  const dispatch = useDispatch();
   const user = useSelector((state) => state?.user);
   const cart = useSelector((state) => state.cartItem?.cart || []);
   const { totalPrice, totalQty } = useGlobalContext();
@@ -43,6 +48,21 @@ const Header = () => {
   };
 
   const isActive = (path) => location.pathname === path || location.pathname.startsWith(`${path}/`);
+
+  const handleLogout = async () => {
+    try {
+      const response = await Axios({ ...SummaryApi.logout });
+      if (response.data.success) {
+        setMobileMenuOpen(false);
+        dispatch(logout());
+        localStorage.clear();
+        toast.success(response.data.message);
+        navigate('/');
+      }
+    } catch (error) {
+      AxiosToastError(error);
+    }
+  };
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -77,36 +97,36 @@ const Header = () => {
                 alt=""
                 className="h-8 w-auto max-h-9 max-w-[38px] object-contain sm:max-w-[42px] md:h-10 md:max-w-[46px]"
               />
-              <span className="hidden sm:block font-display font-bold text-plum-800 dark:text-white leading-none tracking-tight whitespace-nowrap text-[0.95rem] md:text-lg">
+              <span className="font-display font-bold text-plum-800 dark:text-white leading-none tracking-tight whitespace-nowrap text-sm sm:text-[0.95rem] md:text-lg">
                 Nawiri Hair
               </span>
             </Link>
 
-            {/* Search icon — only on xs screens */}
-            <button
-              className="flex sm:hidden shrink-0 text-neutral-600 dark:text-white/80"
-              onClick={() => navigate('/search')}
-              aria-label="Search"
-            >
-              <IoSearch size={24} className="min-w-[24px] min-h-[24px]" />
-            </button>
-
-            {/* Full search bar — sm and up */}
-            <div className="hidden sm:flex min-w-0 flex-1 justify-center px-1">
-              <div className="w-full max-w-xs md:max-w-sm lg:max-w-md xl:max-w-lg">
+            {/* Flex spacer on mobile; search bar on sm+ */}
+            <div className="flex min-w-0 flex-1 items-center justify-center sm:px-1">
+              <div className="hidden sm:block w-full max-w-xs md:max-w-sm lg:max-w-md xl:max-w-lg">
                 <Search />
               </div>
             </div>
 
-            <div className="flex shrink-0 items-center gap-2 md:gap-3">
+            <div className="flex shrink-0 items-center gap-1.5 sm:gap-2 md:gap-3">
+              {/* Search icon — mobile only, grouped with other icons */}
+              <button
+                className="sm:hidden text-neutral-600 dark:text-white/80 p-1"
+                onClick={() => navigate('/search')}
+                aria-label="Search"
+              >
+                <FiSearch size={22} />
+              </button>
+
               <ThemeToggle />
 
               <button
-                className="relative text-neutral-600 dark:text-white/80 lg:hidden"
+                className="relative text-neutral-600 dark:text-white/80 lg:hidden p-1"
                 onClick={() => navigate('/mobile/cart')}
                 aria-label="Cart"
               >
-                <BsCart4 size={24} className="min-w-[24px] min-h-[24px]" />
+                <BsCart4 size={22} />
                 {totalQty > 0 && (
                   <span className="absolute -top-2 -right-2 flex h-5 min-w-[20px] items-center justify-center rounded-full bg-red-500 px-1 text-xs text-white">
                     {totalQty > 99 ? '99+' : totalQty}
@@ -114,13 +134,6 @@ const Header = () => {
                 )}
               </button>
 
-              <button
-                className="text-neutral-600 dark:text-white/80 lg:hidden"
-                onClick={handleMobileUser}
-                aria-label="Profile"
-              >
-                <FaRegCircleUser size={24} className="min-w-[24px] min-h-[24px]" />
-              </button>
 
               <div className="hidden lg:flex items-center gap-4">
                 <div className="relative" ref={userMenuRef}>
@@ -169,7 +182,7 @@ const Header = () => {
                 className="rounded-lg p-1.5 text-charcoal transition-colors hover:bg-plum-50 dark:text-white/80 dark:hover:bg-plum-900/30 lg:hidden"
                 aria-label="Menu"
               >
-                {mobileMenuOpen ? <FiX size={24} className="min-w-[24px] min-h-[24px]" /> : <FiMenu size={24} className="min-w-[24px] min-h-[24px]" />}
+                {mobileMenuOpen ? <FiX size={22} /> : <FiMenu size={22} />}
               </button>
             </div>
           </div>
@@ -262,6 +275,16 @@ const Header = () => {
                 >
                   Sign in
                 </Link>
+              )}
+
+              {user?._id && (
+                <button
+                  onClick={handleLogout}
+                  className="mt-2 flex w-full items-center gap-3 rounded-lg px-4 py-3 text-sm font-medium text-red-500 transition-colors hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20"
+                >
+                  <FiLogOut size={18} />
+                  Log out
+                </button>
               )}
             </nav>
 

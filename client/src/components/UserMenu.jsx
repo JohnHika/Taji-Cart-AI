@@ -200,7 +200,7 @@ const UserMenu = ({ close, variant = 'dropdown' }) => {
         <button
           type="button"
           onClick={handleLogout}
-          className={`${linkBase} mb-2 w-full text-left text-brown-600 dark:text-white/70`}
+          className={`${linkBase} mb-2 w-full text-left text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20`}
         >
           <FaSignOutAlt size={15} className={iconClass} />
           Log out

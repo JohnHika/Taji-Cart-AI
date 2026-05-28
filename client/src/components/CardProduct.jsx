@@ -18,9 +18,9 @@ const CardProduct = ({ data }) => {
   return (
     <Link
       to={`/product/${encodeURIComponent(valideURLConvert(data.name))}-${data._id}`}
-      className="group grid h-full min-h-0 w-[148px] max-w-full grid-rows-[auto_auto_auto_1fr_auto] gap-2 overflow-hidden rounded-xl border border-brown-200 bg-white p-2 transition-all duration-300 hover:-translate-y-1 hover:border-plum-300 hover:shadow-xl dark:border-dm-border dark:bg-dm-card dark:hover:border-plum-600 xs:w-[160px] sm:w-[172px] sm:p-3 md:w-[192px] lg:w-[212px] lg:p-4 xl:w-[232px]"
+      className="group grid h-full min-h-0 w-[140px] max-w-full grid-rows-[auto_auto_auto_1fr_auto] gap-1.5 overflow-hidden rounded-xl border border-brown-200 bg-white p-2 transition-all duration-300 hover:-translate-y-1 hover:border-plum-300 hover:shadow-xl dark:border-dm-border dark:bg-dm-card dark:hover:border-plum-600 xs:w-[156px] sm:w-[172px] sm:gap-2 sm:p-3 md:w-[192px] lg:w-[212px] lg:p-4 xl:w-[232px]"
     >
-      <div className="relative aspect-square w-full overflow-hidden rounded-xl bg-blush-50 dark:bg-dm-card-2 shadow-sm">
+      <div className="relative aspect-[4/3] w-full overflow-hidden rounded-xl bg-blush-50 dark:bg-dm-card-2 shadow-sm sm:aspect-square">
         <img
           src={data.image?.[0]}
           alt={data.name}
@@ -32,7 +32,7 @@ const CardProduct = ({ data }) => {
         />
       </div>
 
-      <div className="mt-1 flex flex-wrap items-center gap-1">
+      <div className="mt-0.5 flex flex-wrap items-center gap-1 sm:mt-1">
         {categoryName && (
           <div className="w-fit rounded-full bg-plum-100 px-2 py-1 text-xs font-semibold text-plum-800 dark:bg-plum-900/50 dark:text-plum-200 sm:px-3">
             {categoryName}
@@ -49,7 +49,7 @@ const CardProduct = ({ data }) => {
         </p>
       </div>
 
-      <div className="min-w-0 overflow-hidden">
+      <div className="hidden min-w-0 overflow-hidden sm:block">
         {unitName && (
           <p className="text-xs leading-tight text-brown-400 dark:text-white/40">
             {unitName}

@@ -29,6 +29,7 @@ import uploadRouter from './route/upload.router.js';
 import userRouter from './route/user.route.js';
 import authRoutes from './routes/auth.routes.js';
 import posRouter from './routes/pos.js';
+import mpesaRouter from './route/mpesa.route.js';
 
 // ── Controllers used directly on admin routes ───────────────────────────────
 import {
@@ -139,6 +140,7 @@ app.use('/api/loyalty', loyaltyRouter);
 app.use('/api', campaignRouter);
 app.use('/api/tracking', trackingRouter);
 app.use('/api/pos', posRouter);
+app.use('/api/mpesa', mpesaRouter);
 app.use('/api/delivery', deliveryRoutes);
 app.use('/api/driver-verification', driverVerificationRoutes);
 app.use('/api/driver-financials', driverFinancialRoutes);

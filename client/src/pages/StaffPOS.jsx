@@ -22,7 +22,8 @@ import {
   FaSave,
   FaListUl,
   FaQuestionCircle,
-  FaQrcode
+  FaQrcode,
+  FaCamera
 } from 'react-icons/fa';
 import { useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
@@ -34,7 +35,6 @@ import AxiosToastError from '../utils/AxiosToastError';
 import { DisplayPriceInShillings } from '../utils/DisplayPriceInShillings';
 import isStaff from '../utils/isStaff';
 
-const SALES_COUNTER_TITLE = 'Branch Sales Counter';
 const SALES_RECORDS_LABEL = 'Sales Records';
 const BARCODE_SCAN_FORMATS = ['ean_13', 'ean_8', 'upc_a', 'upc_e', 'code_128', 'code_39', 'code_93', 'codabar', 'itf'];
 const QR_SCAN_FORMATS = ['qr_code'];
@@ -65,6 +65,7 @@ const StaffPOS = () => {
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [barcode, setBarcode] = useState('');
+  const [showSearchExpanded, setShowSearchExpanded] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
   const [orderNote, setOrderNote] = useState('');
   const [applyTax, setApplyTax] = useState(false);
@@ -101,6 +102,13 @@ const StaffPOS = () => {
     { method: 'cash', amount: '', phone: '', mpesaStatus: 'idle', mpesaCheckoutId: '', mpesaRequesting: false }
   ]);
   
+  // Task 32: Payment proof & sale confirmation
+  const [paymentNote, setPaymentNote] = useState('');
+  const [paymentPhotoDataUrl, setPaymentPhotoDataUrl] = useState(null);
+  const photoInputRef = useRef(null);
+  const [zeroPriceProduct, setZeroPriceProduct] = useState(null);
+  const [showCompleteConfirm, setShowCompleteConfirm] = useState(false);
+
   // Receipt state
   const [currentSale, setCurrentSale] = useState(null);
   const [showReceiptModal, setShowReceiptModal] = useState(false);
@@ -289,10 +297,20 @@ const StaffPOS = () => {
 
   // Add product to cart
   const addToCart = (product) => {
+    // Zero-price guard: block products priced at Ksh 0 unless already flagged as promotional
+    if ((product.price === 0 || (product.price !== undefined && product.price < 0)) && !product._isPromotional) {
+      setZeroPriceProduct(product);
+      return;
+    }
+
     const existingItem = cart.find(item => item._id === product._id);
 
-    if ((existingItem?.quantity || 0) >= Number(product.stock || 0)) {
-      toast.error(`${product.name} has no more stock available for this sale`);
+    // Only block if stock is a real positive number and we've exceeded it.
+    // Zero or null stock = allowed (POS can sell into negative for later reconciliation).
+    const currentQty = existingItem?.quantity || 0;
+    const stockLevel = product.stock != null ? Number(product.stock) : null;
+    if (stockLevel !== null && stockLevel > 0 && currentQty >= stockLevel) {
+      toast.error(`Only ${stockLevel} unit(s) of "${product.name}" left in stock`);
       return;
     }
     
@@ -317,8 +335,9 @@ const StaffPOS = () => {
     }
 
     const matchingItem = cart.find(item => item._id === productId);
-    if (matchingItem && newQuantity > Number(matchingItem.stock || 0)) {
-      toast.error(`Only ${matchingItem.stock} unit(s) of ${matchingItem.name} are available`);
+    const stockLevel = matchingItem?.stock != null ? Number(matchingItem.stock) : null;
+    if (matchingItem && stockLevel !== null && stockLevel > 0 && newQuantity > stockLevel) {
+      toast.error(`Only ${stockLevel} unit(s) of ${matchingItem.name} are available`);
       return;
     }
     
@@ -899,6 +918,13 @@ const StaffPOS = () => {
       toast.error('Payment methods do not cover total');
       return;
     }
+
+    // Zero-price guard: block completing sale if any cart item has price 0 and is not flagged as promotional
+    const zeroPriceItems = cart.filter(item => (item.price === 0 || item.price < 0) && !item._isPromotional);
+    if (zeroPriceItems.length > 0) {
+      toast.error(`Cannot complete: ${zeroPriceItems.map(i => i.name).join(', ')} must be priced or marked as Free/Promotional.`);
+      return;
+    }
     
     try {
       setLoading(true);
@@ -928,7 +954,8 @@ const StaffPOS = () => {
         cashier: user._id,
         cashierName: user.name,
         saleDate: new Date(),
-        note: orderNote
+        note: orderNote,
+        paymentNote: paymentNote || undefined
       };
       
       const response = await Axios({
@@ -993,6 +1020,9 @@ const StaffPOS = () => {
     setOrderNote('');
     setWalkInName('');
     setWalkInPhone('');
+    setPaymentNote('');
+    setPaymentPhotoDataUrl(null);
+    setShowCompleteConfirm(false);
   };
 
   const printReceipt = () => {
@@ -1408,117 +1438,138 @@ const StaffPOS = () => {
       )}
       {/* Header / Toolbar */}
       <div className="bg-white/90 backdrop-blur dark:bg-dm-card sticky top-0 z-30 border-b border-brown-100 dark:border-dm-border">
-        <div className="px-3 sm:px-4 py-3 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+        {/* Row 1 — title + utility buttons */}
+        <div className="px-3 sm:px-4 pt-3 pb-2 flex items-center justify-between gap-2">
           <div className="min-w-0">
-            <h1 className="text-xl sm:text-2xl font-bold text-charcoal dark:text-white">NAWIRI Hair Sales Counter</h1>
-            <p className="text-xs text-brown-500 dark:text-white/40">{SALES_COUNTER_TITLE} | Seller: {user.name} | Branch: {user.staff_branch || 'Main Store'}</p>
+            <h1 className="text-base sm:text-xl font-bold text-charcoal dark:text-white leading-tight">NAWIRI Hair Sales Counter</h1>
+            <p className="text-[11px] text-brown-400 dark:text-white/40 truncate">{user.name} · {user.staff_branch || 'Main Store'}</p>
           </div>
-          <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-            <button onClick={() => setShowParkedDrawer(true)} className="flex items-center justify-center gap-2 px-3 py-2 rounded-lg border border-brown-200 dark:border-dm-border hover:bg-ivory dark:hover:bg-dm-card-2 text-sm">
-              <FaListUl /> <span className="hidden sm:inline">Held</span>
+          <div className="flex items-center gap-1.5 shrink-0">
+            <button onClick={() => setShowParkedDrawer(true)} title="Held sales" className="flex items-center justify-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-brown-200 dark:border-dm-border hover:bg-ivory dark:hover:bg-dm-card-2 text-sm">
+              <FaListUl className="text-brown-500 dark:text-white/60" /> <span className="hidden sm:inline text-xs">Held</span>
             </button>
-            <button onClick={() => setShowHelp(true)} className="flex items-center justify-center gap-2 px-3 py-2 rounded-lg border border-brown-200 dark:border-dm-border hover:bg-ivory dark:hover:bg-dm-card-2 text-sm">
-              <FaQuestionCircle /> <span className="hidden sm:inline">Help</span>
-            </button>
-            <div className="min-w-0 flex-1 sm:flex-none text-left sm:text-right">
-              <div className="text-xl sm:text-2xl font-extrabold text-charcoal dark:text-white">{DisplayPriceInShillings(calculateTotals().total)}</div>
-              <div className="text-xs text-brown-500 dark:text-white/40">{calculateTotals().itemCount} items</div>
-            </div>
-            <button onClick={() => setShowPaymentModal(true)} disabled={cart.length===0} className="w-full sm:w-auto px-4 py-2 rounded-lg bg-primary-600 hover:bg-primary-700 text-white font-semibold disabled:opacity-50">
-              Charge (F4)
+            <button onClick={() => setShowHelp(true)} title="Help" className="flex items-center justify-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-brown-200 dark:border-dm-border hover:bg-ivory dark:hover:bg-dm-card-2 text-sm">
+              <FaQuestionCircle className="text-brown-500 dark:text-white/60" /> <span className="hidden sm:inline text-xs">Help</span>
             </button>
           </div>
+        </div>
+        {/* Row 2 — total + charge button (always visible, prominent) */}
+        <div className="px-3 sm:px-4 pb-3 flex items-center gap-3">
+          <div className="flex-1 min-w-0">
+            <div className="text-2xl sm:text-3xl font-extrabold text-charcoal dark:text-white tabular-nums">{DisplayPriceInShillings(calculateTotals().total)}</div>
+            <div className="text-xs text-brown-400 dark:text-white/40 mt-0.5">{calculateTotals().itemCount} {calculateTotals().itemCount === 1 ? 'item' : 'items'}</div>
+          </div>
+          <button onClick={() => setShowPaymentModal(true)} disabled={cart.length===0} className="hidden md:inline-flex items-center px-5 py-2.5 rounded-xl bg-primary-600 hover:bg-primary-700 active:scale-95 text-white font-semibold text-sm transition-all disabled:opacity-40 disabled:cursor-not-allowed shadow-md">
+            Charge (F4)
+          </button>
         </div>
       </div>
 
       <div className="flex min-h-[calc(100dvh-72px)] flex-col xl:flex-row">
         {/* Left Panel - Products */}
         <div className="flex-1 min-w-0 p-3 sm:p-4 xl:overflow-hidden">
-          {/* Search and Scan Row */}
-          <div className="bg-white dark:bg-dm-card rounded-xl shadow-sm p-3 sm:p-4 mb-4">
-            <div className="grid grid-cols-1 xl:grid-cols-2 gap-3 items-start">
-              {/* Product Search */}
-              <div className="relative">
-                <FaSearch className="absolute left-3 top-3 text-brown-300" />
+          {/* Search / Scan Toolbar — icon buttons, expandable */}
+          <div className="flex items-center gap-2 mb-3">
+            {/* Search icon button — toggles expandable input */}
+            <button
+              onClick={() => setShowSearchExpanded(prev => !prev)}
+              title="Search products"
+              className={`p-2.5 rounded-xl shadow-sm border transition-colors flex-shrink-0 ${
+                (showSearchExpanded || searchTerm)
+                  ? 'bg-plum-600 text-white border-plum-600'
+                  : 'bg-white dark:bg-dm-card text-brown-400 dark:text-white/60 border-blush-200 dark:border-dm-border hover:text-plum-600 hover:border-plum-300 dark:hover:text-plum-300'
+              }`}
+            >
+              <FaSearch size={16} />
+            </button>
+
+            {/* Expandable search / barcode input */}
+            {showSearchExpanded && (
+              <div className="flex-1 relative">
                 <input
                   type="text"
-                  placeholder="Search products, SKU, barcode, or QR..."
+                  autoFocus
+                  placeholder="Search or scan barcode / SKU…"
                   value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
+                  onChange={(e) => { setSearchTerm(e.target.value); setBarcode(e.target.value); }}
+                  onKeyDown={(e) => { if (e.key === 'Enter') addByBarcode(searchTerm.trim()); }}
                   ref={searchRef}
-                  className="w-full pl-10 pr-4 py-2 border border-blush-200 dark:border-dm-border rounded-pill bg-blush-100 dark:bg-dm-card-2 focus:ring-2 focus:ring-plum-500 text-charcoal dark:text-white placeholder:text-brown-300 outline-none"
+                  className="w-full pl-4 pr-9 py-2.5 border border-blush-200 dark:border-dm-border rounded-pill bg-white dark:bg-dm-card-2 focus:ring-2 focus:ring-plum-500 text-charcoal dark:text-white placeholder:text-brown-300 outline-none text-sm shadow-sm"
                 />
-              </div>
-              {/* Barcode Scanner */}
-              <div className="grid grid-cols-1 sm:grid-cols-[minmax(0,1fr)_auto] gap-2">
-                <div className="flex">
-                  <div className="relative flex-1">
-                    <FaBarcode className="absolute left-3 top-3 text-brown-400" />
-                    <input
-                      type="text"
-                      placeholder="Scan barcode / QR or enter SKU..."
-                      value={barcode}
-                      onChange={(e) => setBarcode(e.target.value)}
-                      onKeyPress={(e) => e.key === 'Enter' && addByBarcode()}
-                      className="w-full pl-10 pr-4 py-2 border border-brown-200 dark:border-dm-border rounded-l-lg focus:ring-2 focus:ring-primary-500 dark:bg-dm-card-2 dark:text-white"
-                    />
-                  </div>
+                {searchTerm && (
                   <button
-                    onClick={() => addByBarcode()}
-                    className="px-4 py-2 bg-primary-500 text-white rounded-r-lg hover:bg-primary-600"
+                    onClick={() => { setSearchTerm(''); setBarcode(''); }}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-brown-300 hover:text-brown-500"
                   >
-                    Add
+                    <FaTimes size={13} />
                   </button>
-                </div>
-                <button
-                  type="button"
-                  onClick={openProductScanner}
-                  className="w-full sm:w-auto px-4 py-2 border border-primary-500 text-primary-600 dark:text-primary-300 dark:border-primary-400 rounded-lg hover:bg-primary-50 dark:hover:bg-dm-card-2 flex items-center justify-center gap-2"
-                >
-                  <FaQrcode />
-                  Use Camera
-                </button>
+                )}
               </div>
-            </div>
+            )}
 
-            <div className="mt-3 flex flex-wrap items-start justify-between gap-2 text-xs text-brown-400 dark:text-white/40">
-              <p>Search products, type the SKU, or scan a product barcode or QR code directly with the device camera.</p>
-              <p>{cameraDetectionAvailable ? 'Live barcode and QR detection are available in supported mobile browsers.' : 'If live detection is unavailable, manual barcode or QR entry still works.'}</p>
-            </div>
+            {/* QR / Camera icon button */}
+            <button
+              type="button"
+              onClick={openProductScanner}
+              title="Scan with camera"
+              className="p-2.5 rounded-xl bg-white dark:bg-dm-card shadow-sm border border-blush-200 dark:border-dm-border text-brown-400 dark:text-white/60 hover:text-primary-600 dark:hover:text-primary-300 hover:border-primary-300 transition-colors flex-shrink-0 ml-auto"
+            >
+              <FaQrcode size={16} />
+            </button>
+          </div>
 
-            {/* Category Filter moved below */}
-            <div className="mt-4 flex items-center gap-2 overflow-x-auto no-scrollbar">
-              <button onClick={() => setSelectedCategory('all')} className={`px-3 py-2 rounded-full text-sm whitespace-nowrap border ${selectedCategory==='all' ? 'bg-primary-600 text-white border-primary-600' : 'bg-brown-50 dark:bg-dm-card-2 text-charcoal dark:text-white/55 border-brown-100 dark:border-dm-border'}`}>All</button>
-              {categories.map(c => (
-                <button key={c._id} onClick={() => setSelectedCategory(c._id)} className={`px-3 py-1.5 rounded-pill text-sm whitespace-nowrap border transition-colors ${selectedCategory===c._id ? 'bg-plum-700 text-white border-plum-700' : 'bg-blush-50 dark:bg-dm-card-2 text-charcoal dark:text-white/70 border-blush-200 dark:border-dm-border hover:bg-plum-50'}`}>{c.name}</button>
-              ))}
-            </div>
+          {/* Category pills — own row for breathing room */}
+          <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-2 mb-3 px-0.5">
+            <button
+              onClick={() => setSelectedCategory('all')}
+              className={`px-3.5 py-1.5 rounded-full text-sm whitespace-nowrap border transition-colors shrink-0 ${selectedCategory==='all' ? 'bg-primary-600 text-white border-primary-600' : 'bg-white dark:bg-dm-card-2 text-charcoal dark:text-white/60 border-brown-200 dark:border-dm-border'}`}
+            >
+              All
+            </button>
+            {categories.map(c => (
+              <button
+                key={c._id}
+                onClick={() => setSelectedCategory(c._id)}
+                className={`px-3.5 py-1.5 rounded-full text-sm whitespace-nowrap border transition-colors shrink-0 ${selectedCategory===c._id ? 'bg-plum-700 text-white border-plum-700' : 'bg-white dark:bg-dm-card-2 text-charcoal dark:text-white/70 border-blush-200 dark:border-dm-border hover:bg-plum-50 dark:hover:bg-dm-card'}`}
+              >
+                {c.name}
+              </button>
+            ))}
           </div>
 
           {/* Products Grid */}
-          <div className="bg-white dark:bg-dm-card rounded-xl shadow-sm p-3 sm:p-4 min-h-[320px] max-h-[55dvh] xl:h-[calc(100dvh-250px)] xl:max-h-none overflow-y-auto">
-            <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3 sm:gap-4">
+          <div className="bg-white dark:bg-dm-card rounded-xl shadow-sm p-2 sm:p-3 min-h-[280px] max-h-[52dvh] xl:h-[calc(100dvh-250px)] xl:max-h-none overflow-y-auto">
+            <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-2">
               {filteredProducts.map(product => (
-                <div key={product._id} className="group border border-brown-100 dark:border-dm-border rounded-card p-3 hover-lift bg-white dark:bg-dm-card transition-all">
-                  <div className="relative aspect-square mb-2 bg-blush-50 dark:bg-dm-card-2 rounded-lg overflow-hidden">
+                <div
+                  key={product._id}
+                  onClick={() => addToCart(product)}
+                  className="group relative border border-brown-100 dark:border-dm-border rounded-xl p-2 bg-white dark:bg-dm-card cursor-pointer hover:border-plum-300 dark:hover:border-plum-700 hover:shadow-md transition-all active:scale-[0.97] select-none"
+                >
+                  {/* Image — fixed compact height for POS density */}
+                  <div className="relative h-20 mb-1.5 bg-blush-50 dark:bg-dm-card-2 rounded-lg overflow-hidden">
                     {product.image && product.image[0] ? (
-                      <img src={product.image[0]} alt={product.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                      <img src={product.image[0]} alt={product.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200" />
                     ) : (
-                      <div className="w-full h-full flex items-center justify-center text-brown-200"><FaShoppingCart size={24} /></div>
+                      <div className="w-full h-full flex items-center justify-center text-brown-200"><FaShoppingCart size={20} /></div>
                     )}
-                    <button onClick={() => addToCart(product)} className="absolute bottom-2 right-2 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity px-3 py-1.5 rounded-lg bg-primary-600 text-white text-xs font-medium">Add</button>
-                    <div className="absolute left-2 top-2 bg-white/90 dark:bg-dm-card/80 text-xs px-2 py-1 rounded-md border border-brown-100 dark:border-dm-border">Stock: {product.stock}</div>
+                    {/* Stock badge — red when low */}
+                    <div className={`absolute top-1 left-1 text-[10px] px-1.5 py-0.5 rounded-md font-semibold leading-none ${
+                      product.stock <= 2
+                        ? 'bg-red-500 text-white'
+                        : 'bg-white/90 dark:bg-dm-card/80 text-charcoal dark:text-white border border-brown-100 dark:border-dm-border'
+                    }`}>
+                      {product.stock}
+                    </div>
+                    {/* Quick-add overlay */}
+                    <div className="absolute bottom-1 right-1 w-7 h-7 bg-primary-600 group-hover:bg-primary-700 text-white rounded-lg flex items-center justify-center font-bold text-lg shadow-sm transition-colors">
+                      +
+                    </div>
                   </div>
-                  <h3 className="font-medium text-sm text-charcoal dark:text-white line-clamp-2 min-h-[36px]">{product.name}</h3>
-                  {getProductScanLabel(product) && (
-                    <p className="mt-1 text-xs text-brown-400 dark:text-white/40">
-                      {getProductScanLabel(product).label}: {getProductScanLabel(product).value}
-                    </p>
-                  )}
-                  <div className="flex items-center justify-between mt-1">
-                    <p className="font-price text-gold-600 dark:text-gold-400 font-semibold text-sm">{DisplayPriceInShillings(product.price)}</p>
-                    <button onClick={() => addToCart(product)} className="w-7 h-7 rounded-full border border-plum-200 dark:border-plum-700 hover:bg-plum-50 dark:hover:bg-plum-900/30 text-plum-700 dark:text-plum-300 text-sm flex items-center justify-center font-bold">+</button>
-                  </div>
+                  {/* Product name — compact */}
+                  <h3 className="font-medium text-xs text-charcoal dark:text-white line-clamp-2 leading-tight min-h-[28px]">{product.name}</h3>
+                  {/* Price */}
+                  <p className="font-price text-gold-600 dark:text-gold-400 font-bold text-sm mt-0.5">{DisplayPriceInShillings(product.price)}</p>
                 </div>
               ))}
             </div>
@@ -1526,17 +1577,17 @@ const StaffPOS = () => {
         </div>
 
         {/* Right Panel - Cart & Customer */}
-        <div className="w-full xl:w-[360px] xl:min-w-[360px] bg-white dark:bg-dm-card border-t xl:border-t-0 xl:border-l border-brown-100 dark:border-dm-border flex flex-col xl:max-h-[calc(100dvh-72px)]">
+        <div className="w-full xl:w-[360px] xl:min-w-[360px] bg-white dark:bg-dm-card border-t xl:border-t-0 xl:border-l border-brown-100 dark:border-dm-border flex flex-col xl:max-h-[calc(100dvh-72px)] pb-20 md:pb-0">
           {/* Customer Section */}
-          <div className="p-4 border-b border-brown-100 dark:border-dm-border">
+          <div className="p-3 border-b border-brown-100 dark:border-dm-border">
             <div className="flex items-center justify-between mb-2">
-              <h3 className="font-semibold text-charcoal dark:text-white">Customer</h3>
+              <h3 className="text-sm font-semibold text-charcoal dark:text-white">Customer</h3>
               <button
                 onClick={() => setShowCustomerModal(true)}
-                className="flex items-center gap-2 px-3 py-1 text-sm bg-plum-700 hover:bg-plum-800 text-white rounded-pill transition-colors"
+                className="flex items-center gap-1.5 px-2.5 py-1 text-xs bg-plum-700 hover:bg-plum-800 text-white rounded-pill transition-colors"
                 title="Search for existing customer"
               >
-                <FaUserPlus size={11} />
+                <FaUserPlus size={10} />
                 <span>Search</span>
               </button>
             </div>
@@ -1594,25 +1645,26 @@ Applied: {discount}% loyalty discount applied to cart
                 </div>
               </div>
             ) : (
-              <div>
-                <div className="text-center py-3 text-brown-400 dark:text-white/40">
-                  <FaUser className="mx-auto mb-2" />
-                  <p className="text-sm">No customer selected</p>
+              <div className="flex items-center gap-2">
+                {/* Walk-in avatar chip */}
+                <div className="w-8 h-8 rounded-full bg-blush-100 dark:bg-dm-card-2 border border-blush-200 dark:border-dm-border flex items-center justify-center flex-shrink-0">
+                  <FaUser size={12} className="text-brown-400 dark:text-white/40" />
                 </div>
-                <div className="grid grid-cols-1 gap-2 mt-2">
+                {/* Compact side-by-side inputs */}
+                <div className="flex-1 grid grid-cols-2 gap-1.5 min-w-0">
                   <input
                     type="text"
                     value={walkInName}
                     onChange={(e)=>setWalkInName(e.target.value)}
-                    placeholder="Customer name (optional)"
-                    className="w-full px-3 py-2 text-sm border border-brown-200 dark:border-dm-border rounded-lg dark:bg-dm-card-2 dark:text-white"
+                    placeholder="Name"
+                    className="w-full px-2.5 py-1.5 text-xs border border-brown-200 dark:border-dm-border rounded-lg bg-blush-50 dark:bg-dm-card-2 dark:text-white placeholder:text-brown-300 dark:placeholder:text-white/30"
                   />
                   <input
                     type="tel"
                     value={walkInPhone}
                     onChange={(e)=>setWalkInPhone(e.target.value)}
-                    placeholder="Phone number (optional)"
-                    className="w-full px-3 py-2 text-sm border border-brown-200 dark:border-dm-border rounded-lg dark:bg-dm-card-2 dark:text-white"
+                    placeholder="Phone"
+                    className="w-full px-2.5 py-1.5 text-xs border border-brown-200 dark:border-dm-border rounded-lg bg-blush-50 dark:bg-dm-card-2 dark:text-white placeholder:text-brown-300 dark:placeholder:text-white/30"
                   />
                 </div>
               </div>
@@ -1639,7 +1691,12 @@ Applied: {discount}% loyalty discount applied to cart
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex justify-between items-start mb-2 gap-2">
-                          <h4 className="font-medium text-sm text-charcoal dark:text-white truncate pr-2" title={item.name}>{item.name}</h4>
+                          <div className="flex items-center gap-1.5 flex-1 min-w-0">
+                            <h4 className="font-medium text-sm text-charcoal dark:text-white truncate" title={item.name}>{item.name}</h4>
+                            {item._isPromotional && (
+                              <span className="flex-shrink-0 text-[10px] px-1.5 py-0.5 bg-plum-100 dark:bg-plum-900/30 text-plum-700 dark:text-plum-300 rounded-full font-semibold leading-none">FREE</span>
+                            )}
+                          </div>
                           <button onClick={() => removeFromCart(item._id)} className="text-blush-400 hover:text-red-500 flex-shrink-0 transition-colors"><FaTrash size={13} /></button>
                         </div>
                         {getProductScanLabel(item) && (
@@ -1764,6 +1821,29 @@ Applied: {discount}% loyalty discount applied to cart
           </div>
         </div>
       </div>
+
+      {/* ── Mobile floating checkout bar ── visible only on < md when cart has items */}
+      {cart.length > 0 && (
+        <div className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 dark:bg-dm-card/95 backdrop-blur-sm border-t border-brown-100 dark:border-dm-border shadow-[0_-4px_24px_rgba(0,0,0,0.14)] px-4 pt-3 pb-4">
+          <div className="flex items-center gap-3">
+            <div className="flex-1 min-w-0">
+              <p className="text-[10px] text-brown-400 dark:text-white/40 leading-none mb-0.5">
+                {calculateTotals().itemCount} {calculateTotals().itemCount === 1 ? 'item' : 'items'}
+                {calculateTotals().discountAmount > 0 && <span className="ml-2 text-blush-500">· {DisplayPriceInShillings(calculateTotals().discountAmount)} off</span>}
+              </p>
+              <p className="font-price text-xl font-extrabold text-gold-600 dark:text-gold-400 tabular-nums leading-tight">
+                {DisplayPriceInShillings(calculateTotals().total)}
+              </p>
+            </div>
+            <button
+              onClick={() => setShowPaymentModal(true)}
+              className="flex items-center gap-2 px-6 py-3 rounded-xl bg-primary-600 hover:bg-primary-700 active:scale-95 text-white font-bold text-sm transition-all shadow-md"
+            >
+              Pay Now
+            </button>
+          </div>
+        </div>
+      )}
 
       {showProductScanner && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
@@ -2156,6 +2236,62 @@ Applied: {discount}% loyalty discount applied to cart
               </div>
             )}
 
+            {/* Payment reference note */}
+            <div className="mb-3">
+              <label className="block text-xs font-medium text-brown-500 dark:text-white/50 mb-1">Payment Reference / Note</label>
+              <input
+                type="text"
+                value={paymentNote}
+                onChange={(e) => setPaymentNote(e.target.value)}
+                placeholder="e.g. Cash received, M-Pesa ref: ABC123..."
+                className="w-full px-3 py-2 border border-blush-200 dark:border-dm-border rounded-pill bg-white dark:bg-dm-card text-charcoal dark:text-white text-sm outline-none focus:ring-2 focus:ring-plum-500"
+              />
+            </div>
+
+            {/* Payment proof photo */}
+            <div className="mb-5">
+              <label className="block text-xs font-medium text-brown-500 dark:text-white/50 mb-2">Payment Proof Photo</label>
+              <input
+                ref={photoInputRef}
+                type="file"
+                accept="image/*"
+                capture="environment"
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) {
+                    const reader = new FileReader();
+                    reader.onload = (ev) => setPaymentPhotoDataUrl(ev.target?.result);
+                    reader.readAsDataURL(file);
+                  }
+                  e.target.value = '';
+                }}
+              />
+              {paymentPhotoDataUrl ? (
+                <div className="relative w-full rounded-xl overflow-hidden border border-plum-200 dark:border-plum-700">
+                  <img src={paymentPhotoDataUrl} alt="Payment proof" className="w-full max-h-40 object-cover" />
+                  <button
+                    onClick={() => setPaymentPhotoDataUrl(null)}
+                    className="absolute top-2 right-2 bg-red-500/90 hover:bg-red-600 text-white rounded-full w-6 h-6 flex items-center justify-center shadow"
+                  >
+                    <FaTimes size={9} />
+                  </button>
+                  <div className="absolute bottom-0 left-0 right-0 bg-black/40 text-white text-[10px] text-center py-1">
+                    Payment proof attached ✓
+                  </div>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => photoInputRef.current?.click()}
+                  className="w-full flex items-center justify-center gap-2 py-3 border-2 border-dashed border-blush-300 dark:border-dm-border rounded-xl text-brown-400 dark:text-white/40 hover:border-plum-400 hover:text-plum-600 dark:hover:border-plum-600 dark:hover:text-plum-300 transition-colors"
+                >
+                  <FaCamera size={14} />
+                  <span className="text-sm">Take / Attach Photo</span>
+                </button>
+              )}
+            </div>
+
             <div className="flex gap-2">
               <button
                 onClick={() => setShowPaymentModal(false)}
@@ -2166,13 +2302,97 @@ Applied: {discount}% loyalty discount applied to cart
               {(()=>{ const anyMobilePending = splitPayments.some(r => r.method==='mobile' && r.mpesaStatus !== 'success');
               return (
               <button
-                onClick={processSale}
+                onClick={() => !anyMobilePending && !loading && setShowCompleteConfirm(true)}
                 disabled={loading || anyMobilePending}
                 className="flex-1 px-4 py-2 bg-gold-500 hover:bg-gold-400 text-charcoal font-semibold rounded-pill disabled:opacity-50 press transition-colors"
               >
                 {loading ? <LoadingSpinner size="small" /> : (anyMobilePending ? 'Awaiting M-Pesa...' : 'Complete Sale')}
               </button>
               )})()}
+            </div>
+
+            {/* Completion confirmation overlay */}
+            {showCompleteConfirm && (
+              <div className="absolute inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-6 z-10">
+                <div className="bg-white dark:bg-dm-card rounded-2xl p-6 shadow-2xl w-full max-w-xs">
+                  <h4 className="font-display text-lg italic text-plum-900 dark:text-white mb-1 text-center">Complete this Sale?</h4>
+                  <div className="text-center mb-4">
+                    <p className="font-price text-2xl font-bold text-gold-600 dark:text-gold-400">{DisplayPriceInShillings(totals.total)}</p>
+                    {(customer?.name || walkInName) && (
+                      <p className="text-xs text-brown-500 dark:text-white/50 mt-1">Customer: {customer?.name || walkInName}</p>
+                    )}
+                    {paymentPhotoDataUrl && (
+                      <p className="text-xs text-green-600 dark:text-green-400 mt-1">✓ Payment photo attached</p>
+                    )}
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => setShowCompleteConfirm(false)}
+                      className="flex-1 px-4 py-2.5 border border-brown-200 dark:border-dm-border rounded-pill text-charcoal dark:text-white/70 hover:bg-blush-50 dark:hover:bg-dm-card-2 transition-colors text-sm font-medium"
+                    >
+                      ← Go Back
+                    </button>
+                    <button
+                      onClick={() => { setShowCompleteConfirm(false); processSale(); }}
+                      className="flex-1 px-4 py-2.5 bg-gold-500 hover:bg-gold-400 text-charcoal font-semibold rounded-pill press transition-colors text-sm"
+                    >
+                      ✓ Confirm
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Zero-price guard confirmation */}
+      {zeroPriceProduct && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[60] p-4">
+          <div className="bg-white dark:bg-dm-card rounded-2xl shadow-2xl p-6 w-full max-w-sm">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-10 h-10 bg-amber-100 dark:bg-amber-900/30 rounded-full flex items-center justify-center flex-shrink-0">
+                <FaTag className="text-amber-500" size={16} />
+              </div>
+              <h4 className="font-semibold text-charcoal dark:text-white">Product Has No Price</h4>
+            </div>
+            <p className="text-sm text-brown-500 dark:text-white/60 mb-1">
+              <strong className="text-charcoal dark:text-white">{zeroPriceProduct.name}</strong> is priced at{' '}
+              <strong className="text-red-500">Ksh 0.00</strong>.
+            </p>
+            <p className="text-sm text-brown-400 dark:text-white/40 mb-5">
+              Products cannot be sold at Ksh 0 unless they are a free or promotional item. Would you like to add this as a{' '}
+              <strong className="text-plum-600 dark:text-plum-300">Free / Promotional Item</strong>?
+            </p>
+            <div className="space-y-2">
+              <button
+                onClick={() => {
+                  const promoProduct = { ...zeroPriceProduct, _isPromotional: true };
+                  const existing = cart.find(i => i._id === promoProduct._id);
+                  const stockLevel = promoProduct.stock != null ? Number(promoProduct.stock) : null;
+                  if (stockLevel !== null && stockLevel > 0 && (existing?.quantity || 0) >= stockLevel) {
+                    toast.error(`Only ${stockLevel} unit(s) left in stock`);
+                    setZeroPriceProduct(null);
+                    return;
+                  }
+                  if (existing) {
+                    setCart(prev => prev.map(i => i._id === promoProduct._id ? { ...i, quantity: i.quantity + 1 } : i));
+                  } else {
+                    setCart(prev => [...prev, { ...promoProduct, quantity: 1 }]);
+                  }
+                  toast.success(`${promoProduct.name} added as Free / Promotional item`);
+                  setZeroPriceProduct(null);
+                }}
+                className="w-full px-4 py-2.5 bg-plum-600 hover:bg-plum-700 text-white rounded-pill font-semibold text-sm transition-colors"
+              >
+                Add as Free / Promotional Item
+              </button>
+              <button
+                onClick={() => setZeroPriceProduct(null)}
+                className="w-full px-4 py-2.5 border border-brown-200 dark:border-dm-border rounded-pill text-charcoal dark:text-white/70 hover:bg-blush-50 dark:hover:bg-dm-card-2 text-sm transition-colors"
+              >
+                Cancel — Don't Add
+              </button>
             </div>
           </div>
         </div>

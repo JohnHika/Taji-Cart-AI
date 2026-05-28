@@ -55,13 +55,9 @@ const CommunityCampaignProgress = ({
     }
   }, [campaign, displayMode]);
   
-  // For slim mode with no campaign data, just show a placeholder
+  // For slim mode with no campaign data, render nothing
   if (displayMode === 'slim' && !campaign && !activeCampaign) {
-    return (
-      <div className="px-4 py-2 text-center text-brown-500 dark:text-white/40 text-sm">
-        Check back later for community campaigns
-      </div>
-    );
+    return null;
   }
   
   // For normal mode with no campaign, return null as before

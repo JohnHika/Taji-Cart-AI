@@ -2,9 +2,9 @@ import React from 'react'
 
 const CardLoading = () => {
   return (
-    <div className="flex flex-col bg-white dark:bg-dm-card rounded-card border border-brown-100 dark:border-dm-border shadow-card overflow-hidden w-[155px] sm:w-[175px] lg:w-[210px] xl:w-[230px]">
+    <div className="flex flex-col bg-white dark:bg-dm-card rounded-card border border-brown-100 dark:border-dm-border shadow-card overflow-hidden w-[140px] sm:w-[172px] lg:w-[210px] xl:w-[230px]">
       {/* Image skeleton */}
-      <div className="h-[120px] sm:h-[140px] lg:h-[170px] bg-shimmer" />
+      <div className="h-[105px] sm:h-[172px] lg:h-[210px] bg-shimmer" />
 
       {/* Body skeleton */}
       <div className="p-2.5 sm:p-3 flex flex-col gap-2">

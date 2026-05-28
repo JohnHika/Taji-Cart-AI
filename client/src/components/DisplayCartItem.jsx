@@ -43,6 +43,8 @@ const DisplayCartItem = ({ close, variant = 'drawer' }) => {
     // Handle fulfillment selection and continue to checkout
     const handleFulfillmentSelect = (fulfillmentData) => {
         // Navigate to checkout with fulfillment data
+        // Note: do NOT call close() here — on CartMobile, close = navigate(-1)
+        // which would immediately undo the navigation to checkout.
         navigate("/dashboard/checkout", { 
             state: {
                 fulfillmentMethod: fulfillmentData.fulfillment_type,
@@ -50,11 +52,6 @@ const DisplayCartItem = ({ close, variant = 'drawer' }) => {
                 pickupInstructions: fulfillmentData.pickup_instructions
             }
         });
-        
-        // Close the cart drawer if needed
-        if(close){
-            close()
-        }
     }
 
     const handleClearCart = async () => {
@@ -108,7 +105,7 @@ const DisplayCartItem = ({ close, variant = 'drawer' }) => {
                                     </div>
                                 )}
                                 
-                                <div className='bg-white dark:bg-dm-card rounded-lg p-4 grid gap-5 overflow-auto transition-colors duration-200 flex-1 min-h-0 pb-28 border border-brown-100/80 dark:border-dm-border'>
+                                <div className='bg-white dark:bg-dm-card rounded-lg p-4 grid gap-5 overflow-auto transition-colors duration-200 flex-1 min-h-0 pb-4 border border-brown-100/80 dark:border-dm-border'>
                                     {
                                         cartItem?.length > 0 && (
                                             cartItem.map((item,index)=>{
@@ -163,7 +160,9 @@ const DisplayCartItem = ({ close, variant = 'drawer' }) => {
                                                                 </div>
                                                             )}
                                                             
-                                                            <AddToCartButton product={item.productId} id={item?.id} cartData={item} />
+                                                            <div className="mt-2 max-w-[120px]">
+                                                                <AddToCartButton product={item.productId} id={item?.id} cartData={item} />
+                                                            </div>
                                                         </div>
                                                     </div>
                                                 )
