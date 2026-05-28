@@ -77,7 +77,7 @@ const DashboardMobileHeader = () => {
               {isAdmin ? (
                 <AdminMenu close={closeMenu} forLightPanel />
               ) : (
-                <UserMenu close={closeMenu} />
+                <UserMenu close={closeMenu} variant="sidebar" />
               )}
             </div>
           </div>

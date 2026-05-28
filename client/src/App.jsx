@@ -8,8 +8,7 @@ import './App.css';
 import SummaryApi from './common/SummaryApi';
 import BottomNavigation from './components/BottomNavigation';
 import CartMobileLink from './components/CartMobile';
-// import ChatbotAI from './components/ChatbotAI'; // Hidden: AI feature not yet complete
-import Footer from './components/Footer';
+import DashboardMobileHeader from './components/DashboardMobileHeader';
 import Header from './components/Header';
 import GlobalProvider from './provider/GlobalProvider';
 import { fetchCartItems } from './store/cartProduct';
@@ -278,8 +277,8 @@ function App() {
     <ErrorBoundary FallbackComponent={ErrorFallback}>
       <GlobalProvider>
         <ScrollRestoration />
-        {showStoreChrome && <Header />}
-        <CartSynchronizer />
+        {isDashboardShell && <DashboardMobileHeader />}
+        <Header />
         <main className='min-h-[78vh] max-w-full overflow-x-hidden'>
           {/* Add suspense to catch lazy-loaded component errors */}
           <Suspense fallback={<div className="p-5 text-center">Loading...</div>}>
