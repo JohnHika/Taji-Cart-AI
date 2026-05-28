@@ -5,6 +5,7 @@ import { useDispatch } from 'react-redux';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { fetchCartItems } from '../store/cartProduct';
 import { setUserDetails } from '../store/userSlice';
+import fetchUserDetails from '../utils/fetchUserDetails';
 import { getPostLoginPath } from '../utils/postLoginRedirect';
 
 const createParamsFromSource = (rawValue = '') => {
@@ -86,6 +87,10 @@ const SocialAuthSuccess = () => {
           const _id = params.get('userId');
           const name = params.get('name');
           const email = params.get('email');
+          const role = params.get('role') || 'user';
+          const isAdmin = params.get('isAdmin') === 'true';
+          const isStaff = params.get('isStaff') === 'true' || role === 'staff';
+          const isDelivery = params.get('isDelivery') === 'true' || role === 'delivery';
           const loyaltyPoints = Number(params.get('loyaltyPoints') || 0);
           const loyaltyClass = params.get('loyaltyClass') || 'Basic';
 
@@ -94,12 +99,28 @@ const SocialAuthSuccess = () => {
             name,
             email,
             isAuthenticated: true,
-            role: 'user',
+            role,
+            isAdmin,
+            isStaff,
+            isDelivery,
             loyalty: {
               points: loyaltyPoints,
               class: loyaltyClass
             }
           };
+        }
+
+        // Always fetch a fresh backend user payload so role/flags (e.g. staff) reflect immediately.
+        try {
+          const userDetailsResponse = await fetchUserDetails();
+          if (userDetailsResponse?.success && userDetailsResponse?.data) {
+            userObject = {
+              ...userObject,
+              ...userDetailsResponse.data,
+            };
+          }
+        } catch (detailsError) {
+          console.error('Failed to refresh user details after social auth:', detailsError);
         }
 
         // Store user in Redux
