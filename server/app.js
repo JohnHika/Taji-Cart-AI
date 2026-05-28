@@ -51,6 +51,11 @@ dotenv.config();
 
 const app = express();
 
+// Render (and similar platforms) terminate TLS and forward requests with
+// X-Forwarded-* headers. Trust the first proxy hop so express-rate-limit and
+// secure cookies work correctly in production.
+app.set('trust proxy', Number(process.env.TRUST_PROXY_HOPS || 1));
+
 // Connect to database on startup — catch error so the process doesn't crash on
 // Atlas timeouts (e.g. IP not whitelisted during local development).
 connectDB().catch((err) => {
