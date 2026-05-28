@@ -5,6 +5,7 @@ import passport from 'passport';
 import LoyaltyCard from '../models/loyaltycard.model.js';
 import generatedAccessToken from '../utils/generatedAccessToken.js';
 import genertedRefreshToken from '../utils/generatedRefreshToken.js';
+import trimTrailingSlash from '../utils/trimTrailingSlash.js';
 
 dotenv.config();
 const router = express.Router();
@@ -14,37 +15,8 @@ const getPrimaryForwardedValue = (value = '') =>
     .split(',')[0]
     .trim();
 
-const trimTrailingSlash = (value = '') => value.replace(/\/$/, '');
-
 const LOCAL_FRONTEND_URL = 'http://localhost:5173';
 const CANONICAL_FRONTEND_URL = 'https://nawirihairke.com';
-
-const getRequestOrigin = (req) => {
-  const forwardedProto = getPrimaryForwardedValue(req.headers['x-forwarded-proto'] || '');
-  const forwardedHost = getPrimaryForwardedValue(req.headers['x-forwarded-host'] || req.headers.host || '');
-  const protocol = forwardedProto || req.protocol || 'https';
-
-  if (!forwardedHost) {
-    return '';
-  }
-
-  return `${protocol}://${forwardedHost}`;
-};
-
-const getGoogleCallbackUrlForRequest = (req) => {
-  const requestOrigin = trimTrailingSlash(getRequestOrigin(req));
-  const returnTo = req.query.returnTo || '/';
-  
-  if (!requestOrigin) {
-    return undefined;
-  }
-  
-  // Build callback URL with returnTo parameter
-  const callbackUrl = `${requestOrigin}/api/auth/google/callback`;
-  const url = new URL(callbackUrl);
-  url.searchParams.set('returnTo', returnTo);
-  return url.toString();
-};
 
 const getFrontendBaseUrl = () => {
   const configuredFrontendUrl = trimTrailingSlash(process.env.FRONTEND_URL || '');
@@ -167,35 +139,35 @@ const generateToken = (user) => {
   );
 };
 
+// Google OAuth callback URL - MUST match what's configured in Google Cloud Console
+// Do NOT use dynamically generated URLs from request headers - Google will reject them
+const GOOGLE_CALLBACK_BASE_URL = trimTrailingSlash(process.env.GOOGLE_CALLBACK_BASE_URL || process.env.SERVER_BASE_URL || '');
+const GOOGLE_CALLBACK_URL = `${GOOGLE_CALLBACK_BASE_URL}/api/auth/google/callback`;
+
 // Google OAuth routes - Only register if credentials are available
 if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
   // Availability probe for clients using HEAD
   router.head('/google', (req, res) => res.sendStatus(200));
   router.get('/google', (req, res, next) => {
     const returnTo = req.query.returnTo || '/';
-    const callbackURL = getGoogleCallbackUrlForRequest(req);
 
     return passport.authenticate('google', {
       scope: ['profile', 'email'],
-      ...(callbackURL ? { callbackURL } : {}),
+      callbackURL: GOOGLE_CALLBACK_URL,
     })(req, res, next);
   });
 
   router.get(
     '/google/callback',
-    (req, res, next) => {
-      const callbackURL = getGoogleCallbackUrlForRequest(req);
-
-      return passport.authenticate('google', {
-        failureRedirect: buildFrontendRedirectUrl('/login', {
-          query: {
-            error: 'Authentication failed',
-          },
-        }),
-        session: false,
-        ...(callbackURL ? { callbackURL } : {}),
-      })(req, res, next);
-    },
+    passport.authenticate('google', {
+      failureRedirect: buildFrontendRedirectUrl('/login', {
+        query: {
+          error: 'Authentication failed',
+        },
+      }),
+      session: false,
+      callbackURL: GOOGLE_CALLBACK_URL,
+    }),
     // Use the unified success handler that generates tokens with the correct secrets
     handleSocialAuthSuccess
   );

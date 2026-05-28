@@ -23,10 +23,13 @@ const SERVER_BASE_URL =
   trimTrailingSlash(process.env.BACKEND_URL || '') ||
   trimTrailingSlash(process.env.SERVER_URL || '') ||
   `http://localhost:${process.env.PORT || 5000}`;
+// Google OAuth callback URL - MUST be a fixed, pre-configured URL
+// This URL must be added to Google Cloud Console > APIs & Services > Credentials > Authorized redirect URIs
+// Do NOT use dynamically generated URLs from request headers - Google will reject them
 const GOOGLE_CALLBACK_URL =
   shouldUseConfiguredGoogleCallbackUrl
     ? configuredGoogleCallbackUrl
-    : `${SERVER_BASE_URL}/api/auth/google/callback`;
+    : `${trimTrailingSlash(process.env.GOOGLE_CALLBACK_BASE_URL || SERVER_BASE_URL)}/api/auth/google/callback`;
 
 if (!process.env.JWT_SECRET) {
   console.warn('JWT_SECRET is not configured; passport JWT strategy will use fallback-secret.');
