@@ -853,6 +853,11 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
     if (fulfillmentMethod === 'delivery') {
       return (
         <>
+          {/* Fulfillment method toggle */}
+          <div className="mb-4 grid grid-cols-2 rounded-card overflow-hidden border border-brown-100 dark:border-dm-border text-sm font-semibold">
+            <button type="button" onClick={() => setFulfillmentMethod('delivery')} className="py-2.5 bg-plum-700 text-white">🚚 Delivery</button>
+            <button type="button" onClick={() => { setFulfillmentMethod('pickup'); setPickupLocation(''); }} className="py-2.5 bg-white dark:bg-dm-card text-charcoal dark:text-white/70 hover:bg-plum-50 dark:hover:bg-plum-900/20 transition-colors">🏪 Pickup</button>
+          </div>
           <h3 className='text-lg font-semibold text-charcoal dark:text-white mb-3'>Delivery Address</h3>
           {!hasActiveAddresses && (
             <div className="bg-gold-100 dark:bg-gold-600/10 border border-gold-300 dark:border-gold-600/30 text-gold-700 dark:text-gold-300 px-4 py-2 rounded-card mb-4 text-sm">
@@ -979,29 +984,50 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
     } else {
       return (
         <>
-          <h3 className='text-lg font-semibold dark:text-white mb-2'>Pickup Information</h3>
-          <div className='bg-white dark:bg-dm-card p-4 rounded shadow transition-colors duration-200'>
-            <div className="flex items-center gap-2 mb-3">
-              <FaStore className="text-purple-500" />
-              <span className="font-medium dark:text-white">Pickup Location:</span>
+          {/* Fulfillment method toggle */}
+          <div className="mb-4 grid grid-cols-2 rounded-card overflow-hidden border border-brown-100 dark:border-dm-border text-sm font-semibold">
+            <button type="button" onClick={() => setFulfillmentMethod('delivery')} className="py-2.5 bg-white dark:bg-dm-card text-charcoal dark:text-white/70 hover:bg-plum-50 dark:hover:bg-plum-900/20 transition-colors">🚚 Delivery</button>
+            <button type="button" onClick={() => setFulfillmentMethod('pickup')} className="py-2.5 bg-plum-700 text-white">🏪 Pickup</button>
+          </div>
+          <h3 className='text-lg font-semibold text-charcoal dark:text-white mb-3'>Select Pickup Location</h3>
+          {!pickupLocation && (
+            <div className="bg-gold-100 dark:bg-gold-600/10 border border-gold-300 dark:border-gold-600/30 text-gold-700 dark:text-gold-300 px-4 py-2 rounded-card mb-4 text-sm">
+              Please select a pickup location to proceed with payment.
             </div>
-            <p className="mb-3 dark:text-white/85">{pickupLocation}</p>
-            
-            {pickupInstructions && (
-              <>
-                <div className="flex items-center gap-2 mb-2 mt-4">
-                  <span className="font-medium dark:text-white">Your Instructions:</span>
+          )}
+          <div className='grid gap-3 mb-4'>
+            {pickupLocations.map((loc) => (
+              <label key={loc.name} className="cursor-pointer">
+                <div className={`border-2 rounded-card p-4 flex gap-3 transition-all duration-200 ${
+                  pickupLocation === loc.name
+                    ? 'border-plum-700 bg-plum-50 dark:border-plum-400 dark:bg-plum-900/20'
+                    : 'border-brown-100 dark:border-dm-border bg-white dark:bg-dm-card hover:border-plum-200 dark:hover:border-plum-700/40'
+                }`}>
+                  <input
+                    type='radio'
+                    value={loc.name}
+                    checked={pickupLocation === loc.name}
+                    onChange={() => setPickupLocation(loc.name)}
+                    name='pickup_location'
+                    className="accent-plum-700 mt-1 flex-shrink-0"
+                  />
+                  <div className="text-sm text-charcoal dark:text-white/80 leading-relaxed">
+                    <p className="font-medium"><FaStore className="text-plum-500 inline mr-1 text-xs" />{loc.name}</p>
+                    <p className="text-brown-400 dark:text-white/50 text-xs mt-0.5">{loc.address}</p>
+                  </div>
                 </div>
-                <p className="text-brown-500 dark:text-white/55 italic">{pickupInstructions}</p>
-              </>
-            )}
-            
-            <button
-              onClick={() => navigate(-1)}
-              className="mt-4 px-4 py-2 rounded-pill text-sm font-medium bg-plum-100 text-plum-800 dark:bg-plum-900/40 dark:text-plum-200 hover:bg-plum-200 dark:hover:bg-plum-800/50 transition-colors"
-            >
-              Change Pickup Location
-            </button>
+              </label>
+            ))}
+          </div>
+          <div className='bg-white dark:bg-dm-card p-4 rounded-card border border-brown-100 dark:border-dm-border mb-4 transition-colors duration-200'>
+            <label className="block text-sm font-semibold text-charcoal dark:text-white mb-2">Pickup Instructions (optional)</label>
+            <textarea
+              value={pickupInstructions}
+              onChange={(e) => setPickupInstructions(e.target.value)}
+              placeholder="Any special instructions for pickup..."
+              rows={2}
+              className="w-full text-sm border border-brown-200 dark:border-dm-border rounded-card px-3 py-2 bg-ivory dark:bg-dm-surface text-charcoal dark:text-white/80 placeholder-brown-300 dark:placeholder-white/30 focus:outline-none focus:border-plum-500 dark:focus:border-plum-400 resize-none"
+            />
           </div>
         </>
       );
@@ -1182,41 +1208,41 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
             <p className="text-xs font-semibold uppercase tracking-widest text-brown-300 dark:text-white/30 mb-1">Choose Payment Method</p>
             <button
               className={`flex items-center justify-between w-full py-3 px-4 rounded-card border-2 font-semibold text-sm transition-all duration-200 press ${
-                (((fulfillmentMethod === 'delivery' && isPaymentEnabled) || (fulfillmentMethod === 'pickup')) && !isCheckoutBusy)
+                isPaymentEnabled && !isCheckoutBusy
                   ? 'border-plum-700 text-plum-700 dark:border-plum-400 dark:text-plum-200 bg-plum-50 dark:bg-plum-900/20 hover:bg-plum-100 dark:hover:bg-plum-900/40'
                   : 'border-brown-100 dark:border-dm-border text-brown-300 dark:text-white/20 cursor-not-allowed'
               }`}
               onClick={handleOnlinePayment}
-              disabled={(fulfillmentMethod === 'delivery' && !isPaymentEnabled) || isCheckoutBusy}
+              disabled={!isPaymentEnabled || isCheckoutBusy}
             >
               <span>{checkoutAction === 'card' ? 'Processing card payment...' : 'Pay with Card (Stripe)'}</span>
-              {fulfillmentMethod === 'delivery' && !isPaymentEnabled && <span className="text-xs font-normal opacity-60">Select address first</span>}
+              {!isPaymentEnabled && <span className="text-xs font-normal opacity-60">{fulfillmentMethod === 'delivery' ? 'Select address first' : 'Select pickup location'}</span>}
             </button>
 
             <button
               className={`flex items-center justify-between w-full py-3 px-4 rounded-card border-2 font-semibold text-sm transition-all duration-200 press ${
-                (((fulfillmentMethod === 'delivery' && isPaymentEnabled) || (fulfillmentMethod === 'pickup')) && !isCheckoutBusy)
+                isPaymentEnabled && !isCheckoutBusy
                   ? 'border-plum-600 text-plum-800 dark:border-plum-400 dark:text-plum-200 bg-plum-50 dark:bg-plum-900/25 hover:bg-plum-100 dark:hover:bg-plum-900/40'
                   : 'border-brown-100 dark:border-dm-border text-brown-300 dark:text-white/20 cursor-not-allowed'
               }`}
               onClick={handleShowMpesaForm}
-              disabled={(fulfillmentMethod === 'delivery' && !isPaymentEnabled) || isCheckoutBusy}
+              disabled={!isPaymentEnabled || isCheckoutBusy}
             >
               <span>Pay with M-Pesa</span>
-              {fulfillmentMethod === 'delivery' && !isPaymentEnabled && <span className="text-xs font-normal opacity-60">Select address first</span>}
+              {!isPaymentEnabled && <span className="text-xs font-normal opacity-60">{fulfillmentMethod === 'delivery' ? 'Select address first' : 'Select pickup location'}</span>}
             </button>
 
             <button
               className={`flex items-center justify-between w-full py-3 px-4 rounded-card border-2 font-semibold text-sm transition-all duration-200 press ${
-                (((fulfillmentMethod === 'delivery' && isPaymentEnabled) || (fulfillmentMethod === 'pickup')) && !isCheckoutBusy)
+                isPaymentEnabled && !isCheckoutBusy
                   ? 'border-brown-400 text-brown-500 dark:border-brown-500 dark:text-brown-300 bg-brown-50 dark:bg-brown-900/10 hover:bg-brown-100 dark:hover:bg-brown-900/20'
                   : 'border-brown-100 dark:border-dm-border text-brown-300 dark:text-white/20 cursor-not-allowed'
               }`}
               onClick={handleCashOnDelivery}
-              disabled={(fulfillmentMethod === 'delivery' && !isPaymentEnabled) || isCheckoutBusy}
+              disabled={!isPaymentEnabled || isCheckoutBusy}
             >
               <span>{checkoutAction === 'cash' ? 'Placing order...' : `Cash on ${fulfillmentMethod === 'delivery' ? 'Delivery' : 'Pickup'}`}</span>
-              {fulfillmentMethod === 'delivery' && !isPaymentEnabled && <span className="text-xs font-normal opacity-60">Select address first</span>}
+              {!isPaymentEnabled && <span className="text-xs font-normal opacity-60">{fulfillmentMethod === 'delivery' ? 'Select address first' : 'Select pickup location'}</span>}
             </button>
 
             <button
@@ -1229,17 +1255,17 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
               disabled={!isPaymentEnabled || isCheckoutBusy}
             >
               <span>{checkoutAction === 'pesapal' ? 'Processing...' : 'Pay with PesaPal'}</span>
-              {!isPaymentEnabled && <span className="text-xs font-normal opacity-60">Select address first</span>}
+              {!isPaymentEnabled && <span className="text-xs font-normal opacity-60">{fulfillmentMethod === 'delivery' ? 'Select address first' : 'Select pickup location'}</span>}
             </button>
 
             <button
               className={`w-full py-3.5 rounded-pill font-bold text-sm mt-1 transition-all duration-200 press shadow-sm ${
-                (((fulfillmentMethod === 'delivery' && isPaymentEnabled) || (fulfillmentMethod === 'pickup')) && !isCheckoutBusy)
+                isPaymentEnabled && !isCheckoutBusy
                   ? 'bg-gold-500 hover:bg-gold-400 text-charcoal hover:shadow-gold'
                   : 'bg-brown-100 dark:bg-dm-card-2 text-brown-300 dark:text-white/20 cursor-not-allowed'
               }`}
               onClick={handleOnlinePayment}
-              disabled={(fulfillmentMethod === 'delivery' && !isPaymentEnabled) || isCheckoutBusy}
+              disabled={!isPaymentEnabled || isCheckoutBusy}
             >
               {checkoutAction === 'card' ? 'Processing card payment...' : `Confirm & Pay - KES ${finalPrice?.toLocaleString()}`}
             </button>
