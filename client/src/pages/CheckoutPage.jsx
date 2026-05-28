@@ -32,10 +32,17 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
   const [showMpesaForm, setShowMpesaForm] = useState(false); // State to control M-Pesa form visibility
   const [showFulfillmentModal, setShowFulfillmentModal] = useState(false);
   
+  // Debug: Log location state
+  useEffect(() => {
+    console.log('CheckoutPage loaded, location.state:', location.state);
+  }, [location.state]);
+  
   // Get fulfillment method from location state if available
-  const [fulfillmentMethod, setFulfillmentMethod] = useState(
-    location.state?.fulfillmentMethod || location.state?.fulfillment_type || 'delivery'
-  );
+  const [fulfillmentMethod, setFulfillmentMethod] = useState(() => {
+    const method = location.state?.fulfillmentMethod || location.state?.fulfillment_type || 'delivery';
+    console.log('Fulfillment method:', method, 'from state:', location.state);
+    return method;
+  });
   const [pickupLocation, setPickupLocation] = useState(
     location.state?.pickupLocation || location.state?.pickup_location || ''
   );
