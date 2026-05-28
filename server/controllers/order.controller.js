@@ -21,6 +21,7 @@ import {
 import { markRewardAsUsed, processOrderContribution } from './communitycampaign.controller.js'; // Add this import
 import { nawiriBrand } from "../utils/brand.js";
 import { renderOrderNoticeEmail } from "../utils/emailTemplates.js";
+import { nanoid } from 'nanoid'; // For generating session IDs
 
 // Add this helper function to better log objects
 const inspectObject = (obj) => util.inspect(obj, {depth: 3, colors: true});
@@ -267,7 +268,206 @@ const sendOrderLifecycleEmail = async ({
     });
 }
 
-export async function CashOnDeliveryOrderController(request, response) {
+// Checkout controller - creates orders and redirects to payment
+export async function checkoutController(request, response) {
+    try {
+        const userId = request.userId;
+        const {
+            list_items,
+            addressId,
+            fulfillment_type = 'delivery',
+            pickup_location,
+            pickup_instructions,
+            usePoints = false,
+            pointsUsed = 0,
+            communityRewardId = null,
+            communityDiscountAmount = 0,
+        } = request.body;
+        
+        const deliveryMode = getDeliveryModeFromPayload(request.body);
+        const customerLocation = extractCoordinatesFromPayload(request.body);
+        
+        // Validate fulfillment type
+        if (fulfillment_type === 'delivery' && !addressId) {
+            return response.status(400).json({
+                message: "Delivery address is required for delivery orders",
+                error: true,
+                success: false
+            });
+        }
+        
+        if (fulfillment_type === 'pickup' && !pickup_location) {
+            return response.status(400).json({
+                message: "Pickup location is required for pickup orders",
+                error: true,
+                success: false
+            });
+        }
+        
+        // Validate foot delivery for CBD
+        if (fulfillment_type === 'delivery' && isFootDeliveryMode(deliveryMode)) {
+            const cbdStatus = getCbdFootDeliveryStatus(customerLocation);
+            
+            if (!cbdStatus.allowed) {
+                const outsideZoneMessage = cbdStatus.reason === 'outside_cbd'
+                    ? `Foot delivery is available only within Nairobi CBD (${cbdStatus.radiusKm}km radius). Your selected location is ${Number(cbdStatus.distanceKm || 0).toFixed(2)}km away.`
+                    : 'Please enable location and pin your delivery point to use foot delivery in Nairobi CBD.';
+                
+                return response.status(400).json({
+                    message: outsideZoneMessage,
+                    error: true,
+                    success: false,
+                    code: 'FOOT_DELIVERY_OUTSIDE_CBD',
+                    details: {
+                        radiusKm: cbdStatus.radiusKm,
+                        distanceKm: cbdStatus.distanceKm,
+                        center: cbdStatus.center,
+                    },
+                });
+            }
+        }
+        
+        const {
+            normalizedItems,
+            subTotalAmt,
+            totalAmt,
+            loyaltyCard,
+            appliedPoints,
+            communityReward,
+        } = await buildValidatedOrderPricing({
+            items: list_items,
+            userId,
+            usePoints,
+            pointsUsed,
+            communityRewardId,
+            communityDiscountAmount,
+        });
+        
+        // Generate order data for multiple items
+        const payload = normalizedItems.map((item) => ({
+            userId: userId,
+            orderId: `ORD-${new mongoose.Types.ObjectId()}`,
+            productId: item.productId._id,
+            product_details: {
+                name: item.productId.name,
+                image: item.productId.image,
+            },
+            paymentId: "",
+            payment_status: "PENDING",
+            delivery_address: fulfillment_type === 'delivery' ? addressId : null,
+            fulfillment_type: fulfillment_type || 'delivery',
+            pickup_location: pickup_location || '',
+            pickup_instructions: pickup_instructions || '',
+            delivery_mode: deliveryMode || 'standard',
+            customer_location: customerLocation || undefined,
+            subTotalAmt: subTotalAmt,
+            totalAmt: totalAmt,
+        }));
+        
+        const generatedOrder = await OrderModel.insertMany(payload);
+        
+        // Update product stock after order creation
+        const stockUpdatePromises = normalizedItems.map(async (item) => {
+            const product = await ProductModel.findById(item.productId._id);
+            product.stock -= item.quantity;
+            
+            if (product.stock < 5) {
+                await NotificationModel.create({
+                    type: 'low_stock',
+                    title: 'Low Stock Alert',
+                    message: `Product "${product.name}" is running low (${product.stock} remaining)`,
+                    isRead: false,
+                    forAdmin: true,
+                });
+            }
+            
+            return product.save();
+        });
+        
+        await Promise.all(stockUpdatePromises);
+        
+        // Remove from cart
+        await CartProductModel.deleteMany({ userId: userId });
+        await UserModel.updateOne({ _id: userId }, { shopping_cart: [] });
+        
+        // Update loyalty points
+        await updateLoyaltyPoints(userId, totalAmt, payload[0].orderId);
+        
+        // Contribute to community campaigns
+        try {
+            const contributedCampaigns = await processOrderContribution(userId, totalAmt, payload[0].orderId);
+            if (contributedCampaigns && contributedCampaigns.length > 0) {
+                console.log(`User ${userId} contributed to ${contributedCampaigns.length} community campaigns`);
+                const achievedCampaign = contributedCampaigns.find(campaign => campaign.isAchieved);
+                if (achievedCampaign) {
+                    console.log(`Community campaign "${achievedCampaign.title}" was achieved!`);
+                }
+            }
+        } catch (error) {
+            console.error("Error processing community campaign contribution:", error);
+        }
+        
+        // Update loyalty points
+        if (appliedPoints > 0 && loyaltyCard) {
+            await redeemLoyaltyPoints({
+                loyaltyCard,
+                pointsToRedeem: appliedPoints,
+                orderId: payload[0].orderId,
+            });
+        }
+        
+        // Mark community reward as used
+        if (communityReward?._id) {
+            await markRewardAsUsed(userId, communityReward._id, payload[0].orderId);
+        }
+        
+        // Create notification
+        const orderNotification = {
+            type: 'order_placed',
+            title: 'Order Placed Successfully',
+            message: fulfillment_type === 'delivery'
+                ? 'Your order has been placed and will be delivered soon.'
+                : `Your order has been placed. You can pick it up at ${pickup_location}.`,
+            isRead: false,
+            userId: userId,
+        };
+        await NotificationModel.create(orderNotification);
+        
+        // Send order confirmation email
+        const customer = await UserModel.findById(userId).select('name email');
+        if (customer) {
+            try {
+                await sendOrderLifecycleEmail({
+                    user: customer,
+                    title: 'Your order has been placed',
+                    intro: 'Thank you for shopping with Nawiri Hair Kenya. Your order is confirmed and our team is preparing it now.',
+                    orderId: payload[0].orderId,
+                    totalAmt,
+                    fulfillmentType: fulfillment_type || 'delivery',
+                    pickupLocation: pickup_location,
+                    verificationCode: '',
+                });
+            } catch (emailError) {
+                console.error('Error sending order confirmation email:', emailError);
+            }
+        }
+        
+        return response.json({
+            message: "Order created successfully. Redirecting to payment...",
+            error: false,
+            success: true,
+            data: generatedOrder,
+            redirect: 'payment',
+        });
+    } catch (error) {
+        console.error("Checkout error:", error);
+        return response.status(error.statusCode || 500).json({
+            message: error.message || error,
+            error: true,
+            success: false,
+        });
+    }
+}
     try {
         const userId = request.userId // auth middleware 
     const {

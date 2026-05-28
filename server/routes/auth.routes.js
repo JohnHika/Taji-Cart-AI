@@ -33,7 +33,17 @@ const getRequestOrigin = (req) => {
 
 const getGoogleCallbackUrlForRequest = (req) => {
   const requestOrigin = trimTrailingSlash(getRequestOrigin(req));
-  return requestOrigin ? `${requestOrigin}/api/auth/google/callback` : undefined;
+  const returnTo = req.query.returnTo || '/';
+  
+  if (!requestOrigin) {
+    return undefined;
+  }
+  
+  // Build callback URL with returnTo parameter
+  const callbackUrl = `${requestOrigin}/api/auth/google/callback`;
+  const url = new URL(callbackUrl);
+  url.searchParams.set('returnTo', returnTo);
+  return url.toString();
 };
 
 const getFrontendBaseUrl = () => {
@@ -110,10 +120,17 @@ const handleSocialAuthSuccess = async (req, res) => {
     const loyaltyPoints = loyaltyCard?.points || 0;
     const loyaltyClass = loyaltyCard?.tier || "Basic";
 
+    // Get the returnTo parameter from query string or default to login
+    const returnTo = req.query.returnTo || '/';
+
     // Redirect to frontend with tokens in the URL hash so edge/CDN layers do not
     // receive sensitive JWT query parameters (which can trigger 403 blocks).
+    // Pass returnTo as a query parameter to redirect to the original URL after auth.
     res.redirect(
       buildFrontendRedirectUrl('/social-auth-success', {
+        query: {
+          returnTo,
+        },
         hash: {
           accessToken,
           refreshToken,
@@ -155,6 +172,7 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
   // Availability probe for clients using HEAD
   router.head('/google', (req, res) => res.sendStatus(200));
   router.get('/google', (req, res, next) => {
+    const returnTo = req.query.returnTo || '/';
     const callbackURL = getGoogleCallbackUrlForRequest(req);
 
     return passport.authenticate('google', {

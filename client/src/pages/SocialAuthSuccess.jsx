@@ -131,8 +131,18 @@ const SocialAuthSuccess = () => {
         // Fetch cart items after successful authentication
         dispatch(fetchCartItems());
 
+        // Check for returnTo parameter in hash or search params
+        const returnTo = params.get('returnTo');
+        
         toast.success('Successfully logged in with social account!');
-        navigate(getPostLoginPath(userObject));
+        
+        if (returnTo) {
+          // Redirect to the stored returnTo URL
+          navigate(returnTo);
+        } else {
+          // Fallback to role-based redirect
+          navigate(getPostLoginPath(userObject));
+        }
       } catch (error) {
         console.error('Social authentication error:', error);
         toast.error('Authentication failed. Please try again.');
