@@ -468,22 +468,24 @@ export async function checkoutController(request, response) {
         });
     }
 }
+
+export async function CashOnDeliveryOrderController(request, response) {
     try {
-        const userId = request.userId // auth middleware 
-    const {
-      list_items,
-      addressId,
-      fulfillment_type = 'delivery',
-      pickup_location,
-      pickup_instructions,
-      usePoints = false,
-      pointsUsed = 0,
-      communityRewardId = null,
-      communityDiscountAmount = 0,
-    } = request.body
-        const deliveryMode = getDeliveryModeFromPayload(request.body)
-        const customerLocation = extractCoordinatesFromPayload(request.body)
-        const customer = await UserModel.findById(userId).select('name email')
+        const userId = request.userId; // auth middleware
+        const {
+            list_items,
+            addressId,
+            fulfillment_type = 'delivery',
+            pickup_location,
+            pickup_instructions,
+            usePoints = false,
+            pointsUsed = 0,
+            communityRewardId = null,
+            communityDiscountAmount = 0,
+        } = request.body;
+        const deliveryMode = getDeliveryModeFromPayload(request.body);
+        const customerLocation = extractCoordinatesFromPayload(request.body);
+        const customer = await UserModel.findById(userId).select('name email');
 
         // Validate inputs based on fulfillment type
         if (fulfillment_type === 'delivery' && !addressId) {
