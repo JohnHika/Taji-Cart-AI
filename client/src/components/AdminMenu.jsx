@@ -18,6 +18,7 @@ import {
   FaStore,
   FaTachometerAlt,
   FaTrophy,
+  FaTruck,
   FaUpload,
   FaUser,
   FaUsers,
@@ -189,6 +190,7 @@ const AdminMenu = ({ close, forLightPanel = false }) => {
 
         <p className={sectionClass}>Staff functions</p>
         <MenuLink to="/dashboard/staff/pending-pickups" icon={FaStore} label="Pending pickups" />
+        <MenuLink to="/dashboard/staff/delivery/pending" icon={FaTruck} label="Pending deliveries" />
         <MenuLink to="/dashboard/staff/verify-pickup" icon={FaCheck} label="Verify pickup" />
         <MenuLink to="/dashboard/staff/completed-verifications" icon={FaHistory} label="Verification history" />
         <MenuLink to="/dashboard/staff/delivery" icon={FaCog} label="Delivery management" />

@@ -153,6 +153,7 @@ const DashboardSidebar = ({ userRole, isStaff }) => {
             <SectionLabel title="Staff" />
             <MenuItem to="/dashboard/staff/verify-pickup" icon={FaQrcode} label="Verify Pickup" />
             <MenuItem to="/dashboard/staff/pending-pickups" icon={FaBoxes} label="Pending Pickups" />
+            <MenuItem to="/dashboard/staff/delivery/pending" icon={FaTruck} label="Pending Deliveries" />
             <MenuItem to="/dashboard/staff/completed-verifications" icon={FaClipboardCheck} label="Verification History" />
           </>
         )}

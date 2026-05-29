@@ -559,95 +559,95 @@ const OrderDetailModal = ({ order, onClose, onStatusChange, onDispatchStateSync 
           {/* Order Items */}
           <div>
             <h3 className="font-medium mb-3 dark:text-white">Order Items</h3>
-            <div className="border border-brown-100 dark:border-dm-border rounded-lg overflow-hidden">
-              <table className="min-w-full divide-y divide-brown-100 dark:divide-dm-border">
+            <div className="border border-brown-100 dark:border-dm-border rounded-lg overflow-x-auto">
+              <table className="min-w-full divide-y divide-brown-100 dark:divide-dm-border text-sm">
                 <thead className="bg-ivory dark:bg-dm-card-2">
                   <tr>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-brown-400 dark:text-white/40 uppercase tracking-wider">Product</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-brown-400 dark:text-white/40 uppercase tracking-wider">Price</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-brown-400 dark:text-white/40 uppercase tracking-wider">Quantity</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-brown-400 dark:text-white/40 uppercase tracking-wider">Total</th>
+                    <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-medium text-brown-400 dark:text-white/40 uppercase tracking-wider">Product</th>
+                    <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-medium text-brown-400 dark:text-white/40 uppercase tracking-wider">Price</th>
+                    <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-medium text-brown-400 dark:text-white/40 uppercase tracking-wider">Qty</th>
+                    <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-medium text-brown-400 dark:text-white/40 uppercase tracking-wider">Total</th>
                   </tr>
                 </thead>
                 <tbody className="bg-white dark:bg-dm-card divide-y divide-brown-100 dark:divide-dm-border">
                   {order.product_details ? (
                     <tr>
-                      <td className="px-4 py-3 whitespace-nowrap">
+                      <td className="px-2 sm:px-4 py-2 sm:py-3">
                         <div className="flex items-center">
                           {order.product_details.image && (
                             <img 
                               src={order.product_details.image[0]} 
                               alt={order.product_details.name} 
-                              className="h-12 w-12 object-cover rounded mr-3"
+                              className="h-10 w-10 sm:h-12 sm:w-12 object-cover rounded mr-2 sm:mr-3 shrink-0"
                             />
                           )}
-                          <div>
-                            <div className="font-medium dark:text-white">{order.product_details.name || 'Product'}</div>
+                          <div className="min-w-0">
+                            <div className="font-medium dark:text-white text-xs sm:text-sm truncate">{order.product_details.name || 'Product'}</div>
                           </div>
                         </div>
                       </td>
-                      <td className="px-4 py-3 whitespace-nowrap dark:text-white/70">
+                      <td className="px-2 sm:px-4 py-2 sm:py-3 whitespace-nowrap dark:text-white/70 text-xs sm:text-sm">
                         KSh {Number(order.totalAmt / (order.quantity || 1)).toLocaleString()}
                       </td>
-                      <td className="px-4 py-3 whitespace-nowrap dark:text-white/70">
+                      <td className="px-2 sm:px-4 py-2 sm:py-3 whitespace-nowrap dark:text-white/70 text-xs sm:text-sm">
                         {order.quantity || 1}
                       </td>
-                      <td className="px-4 py-3 whitespace-nowrap font-medium dark:text-white">
+                      <td className="px-2 sm:px-4 py-2 sm:py-3 whitespace-nowrap font-medium dark:text-white text-xs sm:text-sm">
                         KSh {Number(order.totalAmt).toLocaleString()}
                       </td>
                     </tr>
                   ) : order.products && order.products.length > 0 ? (
                     order.products.map((item, index) => (
                       <tr key={index}>
-                        <td className="px-4 py-3 whitespace-nowrap">
+                        <td className="px-2 sm:px-4 py-2 sm:py-3">
                           <div className="flex items-center">
                             {item.product?.image && (
                               <img 
                                 src={item.product.image} 
                                 alt={item.product?.title} 
-                                className="h-12 w-12 object-cover rounded mr-3"
+                                className="h-10 w-10 sm:h-12 sm:w-12 object-cover rounded mr-2 sm:mr-3 shrink-0"
                               />
                             )}
-                            <div>
-                              <div className="font-medium dark:text-white">{item.product?.title || 'Product'}</div>
+                            <div className="min-w-0">
+                              <div className="font-medium dark:text-white text-xs sm:text-sm truncate">{item.product?.title || 'Product'}</div>
                             </div>
                           </div>
                         </td>
-                        <td className="px-4 py-3 whitespace-nowrap dark:text-white/70">
+                        <td className="px-2 sm:px-4 py-2 sm:py-3 whitespace-nowrap dark:text-white/70 text-xs sm:text-sm">
                           KSh {Number(item.price / item.quantity).toLocaleString()}
                         </td>
-                        <td className="px-4 py-3 whitespace-nowrap dark:text-white/70">
+                        <td className="px-2 sm:px-4 py-2 sm:py-3 whitespace-nowrap dark:text-white/70 text-xs sm:text-sm">
                           {item.quantity}
                         </td>
-                        <td className="px-4 py-3 whitespace-nowrap font-medium dark:text-white">
+                        <td className="px-2 sm:px-4 py-2 sm:py-3 whitespace-nowrap font-medium dark:text-white text-xs sm:text-sm">
                           KSh {Number(item.price).toLocaleString()}
                         </td>
                       </tr>
                     ))
                   ) : (
                     <tr>
-                      <td colSpan="4" className="px-4 py-3 text-center text-brown-400 dark:text-white/40">
+                      <td colSpan="4" className="px-2 sm:px-4 py-2 sm:py-3 text-center text-brown-400 dark:text-white/40 text-xs sm:text-sm">
                         No product details available
                       </td>
                     </tr>
                   )}
                 </tbody>
-                <tfoot className="bg-ivory dark:bg-dm-card-2">
+                <tfoot className="bg-ivory dark:bg-dm-card-2 text-xs sm:text-sm">
                   <tr>
-                    <td colSpan="3" className="px-4 py-2 text-right text-sm dark:text-white/70">Subtotal:</td>
-                    <td className="px-4 py-2 font-medium dark:text-white">
+                    <td colSpan="3" className="px-2 sm:px-4 py-1.5 sm:py-2 text-right dark:text-white/70">Subtotal:</td>
+                    <td className="px-2 sm:px-4 py-1.5 sm:py-2 font-medium dark:text-white">
                       KSh {Number(order.subTotalAmt || order.subTotal || 0).toLocaleString()}
                     </td>
                   </tr>
                   <tr>
-                    <td colSpan="3" className="px-4 py-2 text-right text-sm dark:text-white/70">Shipping:</td>
-                    <td className="px-4 py-2 font-medium dark:text-white">
+                    <td colSpan="3" className="px-2 sm:px-4 py-1.5 sm:py-2 text-right dark:text-white/70">Shipping:</td>
+                    <td className="px-2 sm:px-4 py-1.5 sm:py-2 font-medium dark:text-white">
                       KSh {Number(order.shippingPrice || 0).toLocaleString()}
                     </td>
                   </tr>
                   <tr>
-                    <td colSpan="3" className="px-4 py-2 text-right font-medium dark:text-white">Total:</td>
-                    <td className="px-4 py-2 font-bold dark:text-white">
+                    <td colSpan="3" className="px-2 sm:px-4 py-1.5 sm:py-2 text-right font-medium dark:text-white">Total:</td>
+                    <td className="px-2 sm:px-4 py-1.5 sm:py-2 font-bold dark:text-white">
                       KSh {Number(order.totalAmt || order.totalPrice || 0).toLocaleString()}
                     </td>
                   </tr>
@@ -779,7 +779,7 @@ const OrderStatistics = ({ orders, scopeLabel }) => {
           </span>
         </div>
 
-        <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
           <div className="rounded-2xl bg-emerald-100 p-3 text-emerald-800 shadow-sm sm:p-4 dark:bg-emerald-900/30 dark:text-emerald-300">
             <div className="mb-2 flex h-9 w-9 items-center justify-center rounded-xl bg-white/60 sm:mb-3 sm:h-11 sm:w-11 dark:bg-white/10">
               <FaMoneyBillWave size={16} />
@@ -814,7 +814,7 @@ const OrderStatistics = ({ orders, scopeLabel }) => {
         </div>
       </div>
 
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,1.1fr)_minmax(280px,0.9fr)]">
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-[minmax(0,1.1fr)_minmax(280px,0.9fr)]">
         <div className="rounded-2xl border border-brown-100 bg-white p-4 shadow-sm dark:border-dm-border dark:bg-dm-card sm:p-5">
           <div className="mb-3 flex items-center justify-between gap-3">
             <h3 className="text-sm font-bold uppercase tracking-wide text-charcoal dark:text-white">Status Breakdown</h3>
@@ -1265,7 +1265,7 @@ const AllOrdersAdmin = () => {
         </div>
         
         {/* Search and Controls Row */}
-        <div className="grid gap-3 lg:grid-cols-[auto_180px_minmax(0,1fr)_auto] lg:items-center">
+        <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-[auto_180px_minmax(0,1fr)_auto] md:items-center lg:items-center">
           {/* View Toggle */}
           <div className="flex items-center gap-2 self-start">
             <button

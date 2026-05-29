@@ -1,53 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { MapContainer, TileLayer, Marker, useMapEvents, useMap } from 'react-leaflet';
-import 'leaflet/dist/leaflet.css';
-import L from 'leaflet';
+import maplibregl from 'maplibre-gl';
+import 'maplibre-gl/dist/maplibre-gl.css';
 import { FaMapMarkerAlt, FaCrosshairs, FaSearch } from 'react-icons/fa';
 import toast from 'react-hot-toast';
 
-// Fix for default marker icon in Leaflet with Vite
-delete L.Icon.Default.prototype._getIconUrl;
-L.Icon.Default.mergeOptions({
-  iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png',
-  iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png',
-  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
-});
-
-// Custom delivery pin icon
-const deliveryIcon = new L.Icon({
-  iconUrl: 'https://cdn-icons-png.flaticon.com/512/684/684908.png',
-  iconSize: [40, 40],
-  iconAnchor: [20, 40],
-  popupAnchor: [0, -40]
-});
-
-// Component to handle map click and center
-function LocationMarker({ position, setPosition, onLocationSelect }) {
-  const map = useMapEvents({
-    click(e) {
-      const newPos = { lat: e.latlng.lat, lng: e.latlng.lng };
-      setPosition(newPos);
-      if (onLocationSelect) {
-        onLocationSelect(newPos);
-      }
-    },
-  });
-
-  return position ? (
-    <Marker position={[position.lat, position.lng]} icon={deliveryIcon} />
-  ) : null;
-}
-
-// Component to recenter map
-function RecenterMap({ center }) {
-  const map = useMap();
-  useEffect(() => {
-    if (center) {
-      map.setView([center.lat, center.lng], 16);
-    }
-  }, [center, map]);
-  return null;
-}
+const NAIROBI = { lat: -1.286389, lng: 36.817223 };
+const MAP_STYLE = 'https://tiles.openfreemap.org/styles/liberty';
 
 const LocationPicker = ({ onLocationSelect, initialPosition = null, className = "" }) => {
   const [position, setPosition] = useState(initialPosition);
@@ -56,10 +14,56 @@ const LocationPicker = ({ onLocationSelect, initialPosition = null, className = 
   const [searchResults, setSearchResults] = useState([]);
   const [showResults, setShowResults] = useState(false);
   const searchTimeout = useRef(null);
-  
-  // Nairobi center as default
-  const defaultCenter = { lat: -1.286389, lng: 36.817223 };
-  const mapCenter = position || defaultCenter;
+  const mapContainerRef = useRef(null);
+  const mapInstanceRef = useRef(null);
+  const markerRef = useRef(null);
+
+  // Initialise MapLibre once the container div mounts
+  useEffect(() => {
+    if (!mapContainerRef.current || mapInstanceRef.current) return;
+    const center = position || NAIROBI;
+    const map = new maplibregl.Map({
+      container: mapContainerRef.current,
+      style: MAP_STYLE,
+      center: [center.lng, center.lat],
+      zoom: position ? 16 : 13,
+    });
+
+    map.addControl(new maplibregl.NavigationControl(), 'top-right');
+
+    map.on('click', (e) => {
+      const { lng, lat } = e.lngLat;
+      const newPos = { lat, lng };
+      setPosition(newPos);
+      if (onLocationSelect) onLocationSelect(newPos);
+
+      // Replace marker
+      if (markerRef.current) markerRef.current.remove();
+      markerRef.current = new maplibregl.Marker({ color: '#e74c3c' })
+        .setLngLat([lng, lat])
+        .addTo(map);
+    });
+
+    mapInstanceRef.current = map;
+    return () => {
+      map.remove();
+      mapInstanceRef.current = null;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Fly to position and update marker whenever position changes externally
+  useEffect(() => {
+    const map = mapInstanceRef.current;
+    if (!map || !position) return;
+
+    map.flyTo({ center: [position.lng, position.lat], zoom: 16 });
+
+    if (markerRef.current) markerRef.current.remove();
+    markerRef.current = new maplibregl.Marker({ color: '#e74c3c' })
+      .setLngLat([position.lng, position.lat])
+      .addTo(map);
+  }, [position]);
 
   // Get current location
   const getCurrentLocation = () => {
@@ -187,27 +191,11 @@ const LocationPicker = ({ onLocationSelect, initialPosition = null, className = 
 
       {/* Map */}
       <div className="relative h-[300px] sm:h-[350px] rounded-lg overflow-hidden border border-gray-300 shadow-sm">
-        <MapContainer 
-          center={[mapCenter.lat, mapCenter.lng]} 
-          zoom={position ? 16 : 13} 
-          style={{ height: '100%', width: '100%' }}
-          zoomControl={true}
-        >
-          <TileLayer
-            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-          />
-          <LocationMarker 
-            position={position} 
-            setPosition={setPosition}
-            onLocationSelect={onLocationSelect}
-          />
-          {position && <RecenterMap center={position} />}
-        </MapContainer>
+        <div ref={mapContainerRef} style={{ height: '100%', width: '100%' }} />
 
-        {/* Center pin indicator when no position selected */}
+        {/* Center pin hint when no position selected */}
         {!position && (
-          <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-[500]">
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-[1]">
             <div className="text-center bg-white/90 px-4 py-2 rounded-lg shadow-md">
               <FaMapMarkerAlt className="text-red-500 text-2xl mx-auto mb-1" />
               <p className="text-sm text-gray-700 font-medium">Tap to select delivery location</p>

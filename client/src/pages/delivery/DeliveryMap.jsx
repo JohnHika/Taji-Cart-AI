@@ -1,55 +1,12 @@
-import L from 'leaflet';
-import 'leaflet/dist/leaflet.css';
+import maplibregl from 'maplibre-gl';
+import 'maplibre-gl/dist/maplibre-gl.css';
 import React, { useEffect, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
 import { FaBoxOpen, FaBullseye, FaCalendarCheck, FaChartLine, FaCheck, FaCloud, FaCloudRain, FaCloudSun, FaCompressAlt, FaExchangeAlt, FaExpandAlt, FaList, FaLocationArrow, FaMapMarkerAlt, FaRoute, FaSpinner, FaStar, FaStopwatch, FaSun, FaThermometerHalf, FaTimes, FaTrafficLight, FaTruck, FaUserAlt, FaWind } from 'react-icons/fa';
-import { MapContainer, Marker, Polyline, Popup, TileLayer, useMap, ZoomControl } from 'react-leaflet';
 import useCriteriaGate from '../../hooks/useCriteriaGate';
 import Axios from '../../utils/Axios';
 import AxiosToastError from '../../utils/AxiosToastError';
 import { getCurrentWeather, getForecast } from '../../utils/WeatherService';
-
-// Fix for Leaflet marker icons
-delete L.Icon.Default.prototype._getIconUrl;
-L.Icon.Default.mergeOptions({
-  iconRetinaUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon-2x.png',
-  iconUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon.png',
-  shadowUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-shadow.png'
-});
-
-// Custom truck icon for delivery driver
-const truckIcon = new L.Icon({
-  iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-blue.png',
-  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
-  popupAnchor: [1, -34],
-  shadowSize: [41, 41]
-});
-
-// Custom icon for delivery destinations
-const destinationIcon = new L.Icon({
-  iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
-  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
-  popupAnchor: [1, -34],
-  shadowSize: [41, 41]
-});
-
-// Component to recenter map when location changes
-function MapCenterSetter({ center }) {
-  const map = useMap();
-  useEffect(() => {
-    if (center) {
-      map.flyTo(center, map.getZoom(), {
-        duration: 1
-      });
-    }
-  }, [center, map]);
-  
-  return null;
-}
 
 const DeliveryMap = () => {
   const [activeDeliveries, setActiveDeliveries] = useState([]);
@@ -66,6 +23,14 @@ const DeliveryMap = () => {
   const [isRouteFetching, setIsRouteFetching] = useState(false);
   const mapRef = useRef(null);
   const mapContainerRef = useRef(null);
+  // MapLibre-specific refs
+  const mapCanvasRef = useRef(null);      // inner div where MapLibre renders
+  const mapReadyRef = useRef(false);      // true after map 'load' fires
+  const truckMarkerRef = useRef(null);    // current-location truck marker
+  const deliveryMarkersRef = useRef({}); // keyed by delivery._id
+  const waypointMarkersRef = useRef([]); // numbered stop markers
+  const weatherModeRef = useRef(false);  // mirrors weatherMode state for click handler
+  const fetchLocWeatherRef = useRef(null); // mirrors fetchLocationWeather fn for closure
   const [showOrderDetails, setShowOrderDetails] = useState(false);
   const [selectedOrderDetails, setSelectedOrderDetails] = useState(null);
   const [loadingOrderDetails, setLoadingOrderDetails] = useState(false);
@@ -87,28 +52,39 @@ const DeliveryMap = () => {
   const hasWeatherApiKey = Boolean(weatherApiKey && weatherApiKey !== 'your_weatherapi_key_here');
   const { ensureCriteria, gateModal } = useCriteriaGate();
 
-  // Available tile layers
+  // MapLibre-compatible tile layers (no {s} subdomain — use arrays instead)
   const tileLayers = {
     osm: {
-      url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+      tiles: [
+        'https://a.tile.openstreetmap.org/{z}/{x}/{y}.png',
+        'https://b.tile.openstreetmap.org/{z}/{x}/{y}.png',
+        'https://c.tile.openstreetmap.org/{z}/{x}/{y}.png',
+      ],
       attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-      name: 'Street Map'
+      name: 'Street Map',
     },
     satellite: {
-      url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-      attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community',
-      name: 'Satellite'
+      tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'],
+      attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS',
+      name: 'Satellite',
     },
     cycle: {
-      url: 'https://{s}.tile-cyclosm.openstreetmap.fr/cyclosm/{z}/{x}/{y}.png',
-      attribution: '<a href="https://github.com/cyclosm/cyclosm-cartocss-style/releases" title="CyclOSM - Open Bicycle render">CyclOSM</a> | Map data: &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-      name: 'Cycling'
+      tiles: [
+        'https://a.tile-cyclosm.openstreetmap.fr/cyclosm/{z}/{x}/{y}.png',
+        'https://b.tile-cyclosm.openstreetmap.fr/cyclosm/{z}/{x}/{y}.png',
+        'https://c.tile-cyclosm.openstreetmap.fr/cyclosm/{z}/{x}/{y}.png',
+      ],
+      attribution: 'CyclOSM | Map data &copy; OpenStreetMap contributors',
+      name: 'Cycling',
     },
     transport: {
-      url: 'https://{s}.tile.thunderforest.com/transport/{z}/{x}/{y}.png?apikey=6170aad10dfd42a38d4d8c709a536f38',
-      attribution: '&copy; <a href="http://www.thunderforest.com/">Thunderforest</a>, &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-      name: 'Transport'
-    }
+      tiles: [
+        'https://a.tile.thunderforest.com/transport/{z}/{x}/{y}.png?apikey=6170aad10dfd42a38d4d8c709a536f38',
+        'https://b.tile.thunderforest.com/transport/{z}/{x}/{y}.png?apikey=6170aad10dfd42a38d4d8c709a536f38',
+      ],
+      attribution: '&copy; <a href="http://www.thunderforest.com/">Thunderforest</a>, &copy; OpenStreetMap contributors',
+      name: 'Transport',
+    },
   };
 
   useEffect(() => {
@@ -514,14 +490,211 @@ const DeliveryMap = () => {
     }
   };
   
+  // Keep refs in sync so map-event closures always see latest values
+  useEffect(() => { weatherModeRef.current = weatherMode; }, [weatherMode]);
+  useEffect(() => { fetchLocWeatherRef.current = fetchLocationWeather; });
+
+  // ── MapLibre initialisation ─────────────────────────────────────────────────
+  useEffect(() => {
+    if (!mapCanvasRef.current || mapRef.current) return;
+
+    const buildRasterStyle = (tiles, attribution) => ({
+      version: 8,
+      sources: {
+        'raster-tiles': { type: 'raster', tiles, tileSize: 256, attribution },
+      },
+      layers: [{ id: 'simple-tiles', type: 'raster', source: 'raster-tiles' }],
+    });
+
+    const map = new maplibregl.Map({
+      container: mapCanvasRef.current,
+      style: buildRasterStyle(tileLayers.osm.tiles, tileLayers.osm.attribution),
+      center: [36.817223, -1.286389],
+      zoom: 14,
+    });
+
+    map.addControl(new maplibregl.NavigationControl(), 'bottom-right');
+
+    map.on('load', () => {
+      // Route sources/layers
+      map.addSource('delivery-route', {
+        type: 'geojson',
+        data: { type: 'Feature', geometry: { type: 'LineString', coordinates: [] } },
+      });
+      map.addLayer({
+        id: 'delivery-route-line',
+        type: 'line',
+        source: 'delivery-route',
+        layout: { 'line-join': 'round', 'line-cap': 'round' },
+        paint: { 'line-color': '#3B82F6', 'line-width': 4, 'line-opacity': 0.7 },
+      });
+
+      map.addSource('optimized-route', {
+        type: 'geojson',
+        data: { type: 'Feature', geometry: { type: 'LineString', coordinates: [] } },
+      });
+      map.addLayer({
+        id: 'optimized-route-line',
+        type: 'line',
+        source: 'optimized-route',
+        layout: { 'line-join': 'round', 'line-cap': 'round' },
+        paint: {
+          'line-color': '#10B981',
+          'line-width': 5,
+          'line-opacity': 0.8,
+          'line-dasharray': [2, 1],
+        },
+      });
+
+      mapReadyRef.current = true;
+    });
+
+    // Weather-mode click
+    map.on('click', (e) => {
+      if (weatherModeRef.current) {
+        const { lat, lng } = e.lngLat;
+        setClickedLocation({ lat, lng });
+        fetchLocWeatherRef.current?.(lat, lng);
+      }
+    });
+
+    mapRef.current = map;
+    return () => { map.remove(); mapRef.current = null; mapReadyRef.current = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Fly to new centre whenever mapCenter state changes
+  useEffect(() => {
+    const map = mapRef.current;
+    if (map && mapCenter) {
+      map.flyTo({ center: [mapCenter[1], mapCenter[0]], duration: 1000 });
+    }
+  }, [mapCenter]);
+
+  // Swap tile source when user picks a different layer
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !mapReadyRef.current) return;
+    const src = map.getSource('raster-tiles');
+    if (src) src.setTiles(tileLayers[selectedTileLayer].tiles);
+  }, [selectedTileLayer]);
+
+  // Update traffic overlay
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !mapReadyRef.current) return;
+    if (trafficLayer) {
+      if (!map.getSource('traffic-tiles')) {
+        map.addSource('traffic-tiles', {
+          type: 'raster',
+          tiles: ['https://tile.thunderforest.com/transport/{z}/{x}/{y}.png?apikey=6170aad10dfd42a38d4d8c709a536f38'],
+          tileSize: 256,
+        });
+        map.addLayer({ id: 'traffic-layer', type: 'raster', source: 'traffic-tiles', paint: { 'raster-opacity': 0.6 } });
+      }
+    } else {
+      if (map.getLayer('traffic-layer')) map.removeLayer('traffic-layer');
+      if (map.getSource('traffic-tiles')) map.removeSource('traffic-tiles');
+    }
+  }, [trafficLayer]);
+
+  // Update route polylines whenever route data changes
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !mapReadyRef.current) return;
+    const coords = routePoints.map(([lat, lng]) => [lng, lat]);
+    map.getSource('delivery-route')?.setData({
+      type: 'Feature',
+      geometry: { type: 'LineString', coordinates: optimizedRoute.length > 0 ? [] : coords },
+    });
+  }, [routePoints, optimizedRoute]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !mapReadyRef.current) return;
+    const coords = optimizedRoute.map(([lat, lng]) => [lng, lat]);
+    map.getSource('optimized-route')?.setData({
+      type: 'Feature',
+      geometry: { type: 'LineString', coordinates: coords },
+    });
+  }, [optimizedRoute]);
+
+  // Maintain all map markers (truck + delivery pins + waypoint numbers)
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+
+    // ── Truck (current location) ────────────────────────────────────────────
+    if (currentLocation) {
+      const el = document.createElement('div');
+      el.innerHTML = '🚚';
+      el.style.cssText = 'font-size:22px;line-height:1;cursor:pointer;';
+      if (truckMarkerRef.current) {
+        truckMarkerRef.current.setLngLat([currentLocation.lng, currentLocation.lat]);
+      } else {
+        truckMarkerRef.current = new maplibregl.Marker({ element: el, anchor: 'center' })
+          .setLngLat([currentLocation.lng, currentLocation.lat])
+          .setPopup(new maplibregl.Popup({ offset: 25 }).setHTML('<strong>Your current location</strong>'))
+          .addTo(map);
+      }
+    } else if (truckMarkerRef.current) {
+      truckMarkerRef.current.remove();
+      truckMarkerRef.current = null;
+    }
+
+    // ── Delivery destination markers ────────────────────────────────────────
+    const currentIds = new Set(activeDeliveries.map(d => d._id));
+    // Remove stale markers
+    Object.keys(deliveryMarkersRef.current).forEach(id => {
+      if (!currentIds.has(id)) {
+        deliveryMarkersRef.current[id].remove();
+        delete deliveryMarkersRef.current[id];
+      }
+    });
+    // Add/update markers
+    activeDeliveries.forEach(delivery => {
+      if (!delivery.coordinates) return;
+      const popupHtml = `
+        <div style="text-align:center;min-width:160px">
+          <strong>Order #${delivery.orderId}</strong>
+          <p style="margin:2px 0">${delivery.customer.name}</p>
+          <p style="margin:2px 0;font-size:12px;color:#888">${delivery.deliveryAddress}</p>
+          ${delivery.deliveryNotes ? `<div style="margin-top:6px;padding:4px;background:#fefce8;border:1px solid #fde047;border-radius:4px;font-size:11px"><strong>Notes:</strong> ${delivery.deliveryNotes}</div>` : ''}
+        </div>`;
+      if (deliveryMarkersRef.current[delivery._id]) {
+        deliveryMarkersRef.current[delivery._id].setLngLat([delivery.coordinates.lng, delivery.coordinates.lat]);
+      } else {
+        const el = document.createElement('div');
+        el.innerHTML = '📍';
+        el.style.cssText = 'font-size:22px;line-height:1;cursor:pointer;';
+        deliveryMarkersRef.current[delivery._id] = new maplibregl.Marker({ element: el, anchor: 'bottom' })
+          .setLngLat([delivery.coordinates.lng, delivery.coordinates.lat])
+          .setPopup(new maplibregl.Popup({ offset: 25 }).setHTML(popupHtml))
+          .addTo(map);
+      }
+    });
+
+    // ── Numbered waypoint markers ────────────────────────────────────────────
+    waypointMarkersRef.current.forEach(m => m.remove());
+    waypointMarkersRef.current = [];
+    selectedDeliveries.forEach((delivery, index) => {
+      if (!delivery.coordinates) return;
+      const el = document.createElement('div');
+      el.innerHTML = `<div style="background:#10B981;color:#fff;border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:bold;border:2px solid #fff">${index + 1}</div>`;
+      const marker = new maplibregl.Marker({ element: el, anchor: 'center' })
+        .setLngLat([delivery.coordinates.lng, delivery.coordinates.lat])
+        .setPopup(new maplibregl.Popup({ offset: 15 }).setHTML(`<strong>Stop #${index + 1}</strong><p>Order #${delivery.orderId}</p><p>${delivery.customer.name}</p>`))
+        .addTo(map);
+      waypointMarkersRef.current.push(marker);
+    });
+  }, [currentLocation, activeDeliveries, selectedDeliveries]);
+
   // Update weather when location changes
   useEffect(() => {
     if (currentLocation) {
       fetchWeatherData(currentLocation.lat, currentLocation.lng);
     }
   }, [currentLocation]);
-  
-  // Weather icon based on condition code from WeatherAPI.com
   const getWeatherIcon = (condition) => {
     const code = condition?.code;
     
@@ -1142,126 +1315,12 @@ const DeliveryMap = () => {
         ref={mapContainerRef} 
         className={`bg-white dark:bg-dm-card rounded-xl shadow overflow-hidden flex flex-col ${isFullscreen ? '' : 'md:flex-row'}`}
       >
-        {/* Map */}
+        {/* Map canvas — MapLibre renders here */}
         <div 
-          className={`${isFullscreen ? 'w-full h-screen' : `h-[${mapHeight}] md:h-[${mapHeight}] md:flex-grow w-full`}`}
+          className={`${isFullscreen ? 'w-full h-screen' : 'w-full md:flex-grow'}`}
           style={{ height: mapHeight }}
         >
-          <MapContainer 
-            center={mapCenter} 
-            zoom={14} 
-            style={{ height: '100%', width: '100%' }}
-            ref={mapRef}
-            zoomControl={false}
-            onClick={handleMapClick}
-          >
-            <TileLayer
-              attribution={tileLayers[selectedTileLayer].attribution}
-              url={tileLayers[selectedTileLayer].url}
-            />
-            
-            {/* Traffic layer */}
-            {trafficLayer && (
-              <TileLayer
-                url="https://tile.thunderforest.com/transport/{z}/{x}/{y}.png?apikey=6170aad10dfd42a38d4d8c709a536f38"
-                attribution="Maps &copy; Thunderforest, Data &copy; OpenStreetMap contributors"
-                opacity={0.6}
-              />
-            )}
-            
-            <ZoomControl position="bottomright" />
-            <MapCenterSetter center={mapCenter} />
-            
-            {/* Current location marker */}
-            {currentLocation && (
-              <Marker 
-                position={[currentLocation.lat, currentLocation.lng]} 
-                icon={truckIcon}
-              >
-                <Popup>
-                  <strong>Your current location</strong>
-                </Popup>
-              </Marker>
-            )}
-            
-            {/* Delivery destination markers */}
-            {activeDeliveries.map(delivery => 
-              delivery.coordinates && (
-                <Marker 
-                  key={delivery._id}
-                  position={[delivery.coordinates.lat, delivery.coordinates.lng]} 
-                  icon={destinationIcon}
-                >
-                  <Popup>
-                    <div className="text-center">
-                      <strong className="block">Order #{delivery.orderId}</strong>
-                      <p>{delivery.customer.name}</p>
-                      <p className="text-sm text-brown-500">{delivery.deliveryAddress}</p>
-                      {delivery.deliveryNotes && (
-                        <div className="mt-2 p-2 bg-yellow-50 rounded border border-yellow-200 text-xs">
-                          <p className="font-medium">Delivery Notes:</p>
-                          <p>{delivery.deliveryNotes}</p>
-                        </div>
-                      )}
-                      <button
-                        onClick={() => handleDeliverySelect(delivery)}
-                        className="mt-2 bg-gold-500 hover:bg-gold-400 text-charcoal font-semibold px-2 py-1 rounded-pill text-xs w-full transition-colors"
-                      >
-                        Navigate Here
-                      </button>
-                    </div>
-                  </Popup>
-                </Marker>
-              )
-            )}
-            
-            {/* Optimized Multi-stop Route */}
-            {currentLocation && optimizedRoute.length > 0 && (
-              <Polyline 
-                positions={optimizedRoute}
-                color="green"
-                weight={5}
-                opacity={0.8}
-                lineJoin="round"
-                dashArray="10, 10"
-              />
-            )}
-            
-            {/* Regular route line to selected delivery */}
-            {currentLocation && selectedDelivery && selectedDelivery.coordinates && routePoints.length > 0 && optimizedRoute.length === 0 && (
-              <Polyline 
-                positions={routePoints}
-                color="blue"
-                weight={4}
-                opacity={0.7}
-                lineJoin="round"
-              />
-            )}
-            
-            {/* Add numbered waypoint markers for the optimized route */}
-            {selectedDeliveries.length > 0 && selectedDeliveries.map((delivery, index) => (
-              delivery.coordinates && (
-                <Marker
-                  key={`waypoint-${delivery._id}`}
-                  position={[delivery.coordinates.lat, delivery.coordinates.lng]}
-                  icon={new L.DivIcon({
-                    className: 'custom-div-icon',
-                    html: `<div style="background-color: #10B981; color: white; border-radius: 50%; width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: bold; border: 2px solid white;">${index + 1}</div>`,
-                    iconSize: [22, 22],
-                    iconAnchor: [11, 11],
-                  })}
-                >
-                  <Popup>
-                    <div>
-                      <strong>Stop #{index + 1}</strong>
-                      <p>Order #{delivery.orderId}</p>
-                      <p>{delivery.customer.name}</p>
-                    </div>
-                  </Popup>
-                </Marker>
-              )
-            ))}
-          </MapContainer>
+          <div ref={mapCanvasRef} style={{ width: '100%', height: '100%' }} />
         </div>
         
         {/* Active deliveries sidebar - hide in fullscreen mode */}

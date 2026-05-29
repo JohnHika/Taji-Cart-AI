@@ -1,47 +1,13 @@
-import React, { useState, useEffect } from 'react';
-import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
-import 'leaflet/dist/leaflet.css';
+import React, { useState, useEffect, useRef } from 'react';
+import maplibregl from 'maplibre-gl';
+import 'maplibre-gl/dist/maplibre-gl.css';
 import { toast } from 'react-toastify';
 import { socketBaseUrl } from '../common/apiBaseUrl';
 import Axios from '../utils/Axios';
-import L from 'leaflet';
 import io from 'socket.io-client';
 
-// Custom marker icon
-const deliveryIcon = new L.Icon({
-  iconUrl: '/images/delivery-marker.png',
-  iconSize: [40, 40],
-  iconAnchor: [20, 40],
-  popupAnchor: [0, -40]
-});
-
-function LocationMarker({ position, setPosition, socket, orderId, setStatus }) {
-  const map = useMapEvents({
-    click(e) {
-      setPosition(e.latlng);
-      
-      // Send location update to server via socket
-      if (socket && orderId) {
-        socket.emit('updateLocation', {
-          orderId,
-          location: {
-            lat: e.latlng.lat,
-            lng: e.latlng.lng
-          }
-        });
-        
-        toast.info('Location updated');
-      }
-    },
-  });
-
-  return position === null ? null : (
-    <Marker 
-      position={position}
-      icon={deliveryIcon}
-    />
-  );
-}
+const NAIROBI = [36.817223, -1.286389]; // [lng, lat]
+const MAP_STYLE = 'https://tiles.openfreemap.org/styles/liberty';
 
 const DeliverySimulator = () => {
   const [socket, setSocket] = useState(null);
@@ -49,70 +15,93 @@ const DeliverySimulator = () => {
   const [orderId, setOrderId] = useState('');
   const [orders, setOrders] = useState([]);
   const [status, setStatus] = useState('driver_assigned');
-  
-  // Connect to socket server
+
+  const mapContainerRef = useRef(null);
+  const mapInstanceRef = useRef(null);
+  const markerRef = useRef(null);
+
+  // ── Connect socket ──────────────────────────────────────────────────────
   useEffect(() => {
-    const newSocket = io(socketBaseUrl, {
-      withCredentials: true
-    });
-    
+    const newSocket = io(socketBaseUrl, { withCredentials: true });
     setSocket(newSocket);
-    
-    return () => {
-      newSocket.disconnect();
-    };
+    return () => newSocket.disconnect();
   }, []);
-  
-  // Load assigned orders for testing
+
+  // ── Fetch assignable orders ─────────────────────────────────────────────
   useEffect(() => {
     const fetchOrders = async () => {
       try {
-        const response = await Axios({
-          url: '/api/order/delivery-assigned',
-          method: 'GET'
-        });
-        if (response.data.success) {
-          setOrders(response.data.data);
-        }
+        const response = await Axios({ url: '/api/order/delivery-assigned', method: 'GET' });
+        if (response.data.success) setOrders(response.data.data);
       } catch (error) {
         console.error('Error fetching orders:', error);
       }
     };
-    
     fetchOrders();
   }, []);
-  
-  // Join order room when order selected
+
+  // ── Join socket room when order is selected ─────────────────────────────
   useEffect(() => {
-    if (socket && orderId) {
-      socket.emit('joinOrderRoom', orderId);
-    }
+    if (socket && orderId) socket.emit('joinOrderRoom', orderId);
+  }, [socket, orderId]);
+
+  // ── Initialise MapLibre (once) ──────────────────────────────────────────
+  useEffect(() => {
+    if (!mapContainerRef.current || mapInstanceRef.current) return;
+
+    const map = new maplibregl.Map({
+      container: mapContainerRef.current,
+      style: MAP_STYLE,
+      center: NAIROBI,
+      zoom: 13,
+    });
+
+    map.addControl(new maplibregl.NavigationControl(), 'top-right');
+    mapInstanceRef.current = map;
+
+    return () => {
+      map.remove();
+      mapInstanceRef.current = null;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // ── Re-register click handler when socket/orderId change ───────────────
+  useEffect(() => {
+    const map = mapInstanceRef.current;
+    if (!map) return;
+
+    const handleClick = (e) => {
+      const { lng, lat } = e.lngLat;
+      setPosition({ lat, lng });
+
+      if (markerRef.current) markerRef.current.remove();
+      markerRef.current = new maplibregl.Marker({ color: '#3b82f6' })
+        .setLngLat([lng, lat])
+        .addTo(map);
+
+      if (socket && orderId) {
+        socket.emit('updateLocation', { orderId, location: { lat, lng } });
+        toast.info('Location updated');
+      }
+    };
+
+    map.on('click', handleClick);
+    return () => map.off('click', handleClick);
   }, [socket, orderId]);
   
-  const handleOrderSelect = (e) => {
-    setOrderId(e.target.value);
-  };
-  
+  // ── Update status via REST ──────────────────────────────────────────────
   const updateStatus = async () => {
     if (!orderId || !position) {
       toast.error('Please select an order and mark your location');
       return;
     }
-    
     try {
       const response = await Axios({
         url: '/api/order/update-location',
         method: 'POST',
-        data: {
-          orderId,
-          location: {
-            lat: position.lat,
-            lng: position.lng
-          },
-          status
-        }
+        data: { orderId, location: { lat: position.lat, lng: position.lng }, status },
       });
-      
       if (response.data.success) {
         toast.success(`Status updated to: ${status}`);
       } else {
@@ -122,6 +111,10 @@ const DeliverySimulator = () => {
       console.error('Error updating status:', error);
       toast.error('Error updating status');
     }
+  };
+
+  const handleOrderSelect = (e) => {
+    setOrderId(e.target.value);
   };
   
   return (
@@ -173,23 +166,7 @@ const DeliverySimulator = () => {
       </div>
       
       <div className="h-96 border rounded-lg overflow-hidden">
-        <MapContainer 
-          center={[-1.286389, 36.817223]} 
-          zoom={13} 
-          style={{ height: '100%', width: '100%' }}
-        >
-          <TileLayer
-            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-          />
-          <LocationMarker 
-            position={position} 
-            setPosition={setPosition} 
-            socket={socket} 
-            orderId={orderId}
-            setStatus={setStatus}
-          />
-        </MapContainer>
+        <div ref={mapContainerRef} style={{ height: '100%', width: '100%' }} />
       </div>
       
       <div className="mt-4 p-4 bg-yellow-50 rounded-lg">
@@ -206,3 +183,4 @@ const DeliverySimulator = () => {
 };
 
 export default DeliverySimulator;
+
