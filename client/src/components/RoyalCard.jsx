@@ -435,30 +435,32 @@ const RoyalCard = () => {
       >
         {/* Card content with generous padding for premium feel */}
         <div className="relative p-5 pt-8 sm:p-6 sm:pt-10">
-          <div className="absolute top-3 right-3 flex space-x-2 z-10">
-            <button 
-              onClick={() => setViewMode('barcode')}
-              className={`p-2 rounded-full transition-all ${viewMode === 'barcode' ? 'bg-white text-charcoal shadow-lg' : 'bg-black/20 text-white hover:bg-black/30'}`}
-              title="Show Barcode"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 sm:h-6 sm:w-6" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clipRule="evenodd" />
-              </svg>
-            </button>
-            <button 
-              onClick={() => setViewMode('qrcode')}
-              className={`p-2 rounded-full transition-all ${viewMode === 'qrcode' ? 'bg-white text-charcoal shadow-lg' : 'bg-black/20 text-white hover:bg-black/30'}`}
-              title="Show QR Code"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 sm:h-6 sm:w-6" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M3 4a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1H4a1 1 0 01-1-1V4zm1 2v1h2V6H4zm5-2a1 1 0 00-1 1v4a1 1 0 001 1h4a1 1 0 001-1V4a1 1 0 00-1-1h-4zm1 2v1h2V6h-2zm-7 5a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1H4a1 1 0 01-1-1v-4zm1 2v1h2v-1H4zm5-2a1 1 0 00-1 1v4a1 1 0 001 1h4a1 1 0 001-1v-4a1 1 0 00-1-1h-4zm1 2v1h2v-1h-2z" />
-              </svg>
-            </button>
-          </div>
-          
-          <div className="flex items-center mb-4 sm:mb-5">
-            <FaCrown className="text-gold-300 mr-3 text-2xl sm:text-3xl drop-shadow-lg" />
-            <h2 className="font-display text-gold-300 text-xl sm:text-2xl font-semibold italic tracking-wide">Nawiri Royal Card</h2>
+          {/* Header row with title and view toggle buttons */}
+          <div className="flex items-start justify-between mb-4 sm:mb-5">
+            <div className="flex items-center min-w-0 flex-1 mr-3">
+              <FaCrown className="text-gold-300 mr-2 sm:mr-3 text-xl sm:text-3xl drop-shadow-lg flex-shrink-0" />
+              <h2 className="font-display text-gold-300 text-sm sm:text-xl font-semibold italic tracking-wide leading-tight">Nawiri Royal Card</h2>
+            </div>
+            <div className="flex space-x-1.5 sm:space-x-2 flex-shrink-0">
+              <button 
+                onClick={() => setViewMode('barcode')}
+                className={`p-1.5 sm:p-2 rounded-full transition-all ${viewMode === 'barcode' ? 'bg-white text-charcoal shadow-lg' : 'bg-black/20 text-white hover:bg-black/30'}`}
+                title="Show Barcode"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 sm:h-5 sm:w-5" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clipRule="evenodd" />
+                </svg>
+              </button>
+              <button 
+                onClick={() => setViewMode('qrcode')}
+                className={`p-1.5 sm:p-2 rounded-full transition-all ${viewMode === 'qrcode' ? 'bg-white text-charcoal shadow-lg' : 'bg-black/20 text-white hover:bg-black/30'}`}
+                title="Show QR Code"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 sm:h-5 sm:w-5" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M3 4a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1H4a1 1 0 01-1-1V4zm1 2v1h2V6H4zm5-2a1 1 0 00-1 1v4a1 1 0 001 1h4a1 1 0 001-1V4a1 1 0 00-1-1h-4zm1 2v1h2V6h-2zm-7 5a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1H4a1 1 0 01-1-1v-4zm1 2v1h2v-1H4zm5-2a1 1 0 00-1 1v4a1 1 0 001 1h4a1 1 0 001-1v-4a1 1 0 00-1-1h-4zm1 2v1h2v-1h-2z" />
+                </svg>
+              </button>
+            </div>
           </div>
 
           <div className="text-white/70 text-sm sm:text-base mb-1 uppercase tracking-wider">Member</div>
