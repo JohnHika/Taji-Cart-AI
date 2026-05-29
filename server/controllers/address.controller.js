@@ -4,7 +4,7 @@ import UserModel from "../models/user.model.js";
 export const addAddressController = async (request, response) => {
     try {
         const userId = request.userId; // middleware
-        const { address_line, city, state, pincode, country, mobile } = request.body;
+        const { address_line, city, state, pincode, country, mobile, coordinates, deliveryInstructions } = request.body;
 
         const createAddress = new AddressModel({
             address_line,
@@ -13,6 +13,8 @@ export const addAddressController = async (request, response) => {
             country,
             pincode,
             mobile,
+            coordinates: coordinates || null,
+            deliveryInstructions: deliveryInstructions || '',
             userId: userId 
         });
         const saveAddress = await createAddress.save();
@@ -65,16 +67,28 @@ export const getAddressController = async (request, response) => {
 export const updateAddressController = async (request, response) => {
     try {
         const userId = request.userId; // middleware auth 
-        const { _id, address_line, city, state, country, pincode, mobile } = request.body;
+        const { _id, address_line, city, state, country, pincode, mobile, coordinates, deliveryInstructions } = request.body;
 
-        const updateAddress = await AddressModel.updateOne({ _id: _id, userId: userId }, {
+        const updateData = {
             address_line,
             city,
             state,
             country,
             mobile,
             pincode
-        });
+        };
+
+        // Only update coordinates if provided
+        if (coordinates) {
+            updateData.coordinates = coordinates;
+        }
+        
+        // Only update delivery instructions if provided
+        if (deliveryInstructions !== undefined) {
+            updateData.deliveryInstructions = deliveryInstructions;
+        }
+
+        const updateAddress = await AddressModel.updateOne({ _id: _id, userId: userId }, updateData);
 
         return response.json({
             message: "Address Updated",

@@ -23,6 +23,22 @@ const addressSchema = new mongoose.Schema({
         type : Number,
         default : null
     },
+    // GPS coordinates for map-based location (like Uber)
+    coordinates : {
+        lat : {
+            type : Number,
+            default : null
+        },
+        lng : {
+            type : Number,
+            default : null
+        }
+    },
+    // Delivery instructions or landmarks
+    deliveryInstructions : {
+        type : String,
+        default : ""
+    },
     status : {
         type : Boolean,
         default : true
