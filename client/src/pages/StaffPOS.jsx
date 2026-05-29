@@ -2165,7 +2165,7 @@ Applied: {discount}% loyalty discount applied to cart
       {showPaymentModal && (
         <div className="fixed inset-0 bg-black/50 z-50">
           <div className="absolute inset-0" onClick={()=>setShowPaymentModal(false)} />
-          <div className="absolute right-0 top-0 h-full w-[420px] bg-ivory dark:bg-dm-card shadow-hover p-6 overflow-y-auto scrollbar-hide">
+          <div className="absolute right-0 top-0 h-full w-full sm:w-[420px] bg-ivory dark:bg-dm-card shadow-hover px-4 py-5 sm:p-6 overflow-y-auto scrollbar-hide">
             <div className="flex justify-between items-center mb-4">
               <h3 className="font-display text-lg italic text-plum-900 dark:text-white">Take Payment</h3>
               <button

@@ -388,42 +388,42 @@ const UserProfile = () => {
             </div>
 
             {/* Elegant Tab Navigation */}
-            <div className="relative mt-7 sm:mt-8 flex gap-1 sm:gap-1.5">
+            <div className="relative mt-7 sm:mt-8 flex gap-0.5 sm:gap-1.5 overflow-x-auto scrollbar-hide -mx-4 px-4 sm:mx-0 sm:px-0">
               <button
                 type="button"
                 onClick={() => setActiveTab('profile')}
-                className={`relative py-3 px-4 sm:px-5 font-semibold text-sm rounded-t-xl sm:rounded-t-2xl transition-all duration-200 flex items-center gap-2 min-w-0 ${
+                className={`relative py-2.5 sm:py-3 px-3 sm:px-5 font-semibold text-xs sm:text-sm rounded-t-xl sm:rounded-t-2xl transition-all duration-200 flex items-center gap-1.5 sm:gap-2 shrink-0 ${
                   activeTab === 'profile'
                     ? 'bg-ivory dark:bg-dm-surface/80 text-plum-800 dark:text-white shadow-[0_-6px_20px_rgba(0,0,0,0.12)] z-10 scale-[1.02]'
                     : 'text-white/80 hover:text-white hover:bg-white/8 active:bg-white/15'
                 }`}
               >
-                <FaUser className="text-sm sm:text-base shrink-0" /> 
-                <span className="truncate">Profile</span>
+                <FaUser className="text-xs sm:text-base shrink-0" /> 
+                <span>Profile</span>
               </button>
               <button
                 type="button"
                 onClick={() => setActiveTab('royal')}
-                className={`relative py-3 px-4 sm:px-5 font-semibold text-sm rounded-t-xl sm:rounded-t-2xl transition-all duration-200 flex items-center gap-2 min-w-0 ${
+                className={`relative py-2.5 sm:py-3 px-3 sm:px-5 font-semibold text-xs sm:text-sm rounded-t-xl sm:rounded-t-2xl transition-all duration-200 flex items-center gap-1.5 sm:gap-2 shrink-0 ${
                   activeTab === 'royal'
                     ? 'bg-ivory dark:bg-dm-surface/80 text-plum-800 dark:text-white shadow-[0_-6px_20px_rgba(0,0,0,0.12)] z-10 scale-[1.02]'
                     : 'text-white/80 hover:text-white hover:bg-white/8 active:bg-white/15'
                 }`}
               >
-                <FaCrown className="text-gold-400 text-sm sm:text-base shrink-0" /> 
-                <span className="truncate">Royal Card</span>
+                <FaCrown className="text-gold-400 text-xs sm:text-base shrink-0" /> 
+                <span>Royal Card</span>
               </button>
               <button
                 type="button"
                 onClick={() => setActiveTab('security')}
-                className={`relative py-3 px-4 sm:px-5 font-semibold text-sm rounded-t-xl sm:rounded-t-2xl transition-all duration-200 flex items-center gap-2 min-w-0 ${
+                className={`relative py-2.5 sm:py-3 px-3 sm:px-5 font-semibold text-xs sm:text-sm rounded-t-xl sm:rounded-t-2xl transition-all duration-200 flex items-center gap-1.5 sm:gap-2 shrink-0 ${
                   activeTab === 'security'
                     ? 'bg-ivory dark:bg-dm-surface/80 text-plum-800 dark:text-white shadow-[0_-6px_20px_rgba(0,0,0,0.12)] z-10 scale-[1.02]'
                     : 'text-white/80 hover:text-white hover:bg-white/8 active:bg-white/15'
                 }`}
               >
-                <FaShieldAlt className="text-sm sm:text-base shrink-0" /> 
-                <span className="truncate">Security</span>
+                <FaShieldAlt className="text-xs sm:text-base shrink-0" /> 
+                <span>Security</span>
               </button>
             </div>
           </div>

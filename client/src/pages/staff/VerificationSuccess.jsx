@@ -48,20 +48,20 @@ const VerificationSuccess = () => {
 
   return (
     <div className="container mx-auto px-4 py-8 print:py-0">
-      <div className="flex justify-between items-center mb-6 print:hidden">
-        <h1 className="text-2xl font-bold dark:text-white">Verification Completed</h1>
-        <div className="flex space-x-2">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-6 print:hidden">
+        <h1 className="text-xl sm:text-2xl font-bold dark:text-white">Verification Completed</h1>
+        <div className="flex flex-wrap gap-2">
           <button 
             onClick={() => navigate('/dashboard/staff/pending-pickups')}
-            className="bg-brown-100 dark:bg-dm-card-2 px-4 py-2 rounded-lg flex items-center text-charcoal dark:text-white/70 hover:bg-brown-200 dark:hover:bg-dm-border"
+            className="bg-brown-100 dark:bg-dm-card-2 px-3 sm:px-4 py-2 rounded-lg flex items-center text-charcoal dark:text-white/70 hover:bg-brown-200 dark:hover:bg-dm-border text-sm sm:text-base"
           >
-            <FaArrowLeft className="mr-2" /> Back to Pending Pickups
+            <FaArrowLeft className="mr-1.5 sm:mr-2 shrink-0" /> <span className="whitespace-nowrap">Back to Pending Pickups</span>
           </button>
           <button 
             onClick={handlePrint}
-            className="bg-plum-700 hover:bg-plum-600 px-4 py-2 rounded-lg flex items-center text-white"
+            className="bg-plum-700 hover:bg-plum-600 px-3 sm:px-4 py-2 rounded-lg flex items-center text-white text-sm sm:text-base"
           >
-            <FaPrint className="mr-2" /> Print Receipt
+            <FaPrint className="mr-1.5 sm:mr-2 shrink-0" /> <span className="whitespace-nowrap">Print Receipt</span>
           </button>
         </div>
       </div>
