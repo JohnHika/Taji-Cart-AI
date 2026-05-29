@@ -23,8 +23,8 @@ export const getAccountTypeMeta = (user = {}) => {
     return {
       role: 'admin',
       type: 'Administrator',
-      color: 'text-red-600 dark:text-red-400',
-      chipClass: 'bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200',
+      color: 'text-blush-500 dark:text-blush-300',
+      chipClass: 'bg-blush-100 dark:bg-blush-500/10 text-blush-500 dark:text-blush-300',
       icon: React.createElement(FaUserShield, { className: 'mr-1' }),
     };
   }
@@ -33,8 +33,8 @@ export const getAccountTypeMeta = (user = {}) => {
     return {
       role: 'staff',
       type: 'Staff',
-      color: 'text-purple-600 dark:text-purple-400',
-      chipClass: 'bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200',
+      color: 'text-gold-600 dark:text-gold-300',
+      chipClass: 'bg-gold-100 dark:bg-gold-900/20 text-gold-600 dark:text-gold-300',
       icon: React.createElement(FaUserTie, { className: 'mr-1' }),
     };
   }
@@ -43,8 +43,8 @@ export const getAccountTypeMeta = (user = {}) => {
     return {
       role: 'delivery',
       type: 'Delivery Personnel',
-      color: 'text-green-600 dark:text-green-400',
-      chipClass: 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200',
+      color: 'text-plum-600 dark:text-plum-300',
+      chipClass: 'bg-plum-100 dark:bg-plum-900/30 text-plum-700 dark:text-plum-200',
       icon: React.createElement(FaTruck, { className: 'mr-1' }),
     };
   }

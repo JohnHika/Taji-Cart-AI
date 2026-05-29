@@ -131,7 +131,7 @@ const POSDashboard = () => {
       <div className="mb-6">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-charcoal dark:text-white">Sales Hub</h1>
+            <h1 className="text-2xl font-black text-charcoal dark:text-white tracking-tight">Sales Hub</h1>
             <p className="text-brown-500 dark:text-white/40">
               Welcome back, {user.name} | {user.staff_branch || 'Main Store'}
             </p>
@@ -139,7 +139,7 @@ const POSDashboard = () => {
           <div className="mt-4 sm:mt-0 flex flex-col sm:flex-row gap-3">
             <button
               onClick={() => navigate('/dashboard/sales-counter')}
-              className="px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 flex items-center justify-center"
+              className="px-5 py-2.5 bg-plum-700 text-white rounded-pill hover:bg-plum-800 transition-colors flex items-center justify-center font-semibold shadow-sm"
             >
               <FaShoppingCart className="mr-2" />
               Open Sales Counter
@@ -150,9 +150,9 @@ const POSDashboard = () => {
 
       {/* Date Filter */}
       <div className="mb-6">
-        <div className="bg-white dark:bg-dm-card rounded-lg shadow-sm p-4">
+        <div className="bg-white dark:bg-dm-card rounded-2xl shadow-sm p-4">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
-            <h3 className="text-lg font-semibold text-charcoal dark:text-white mb-4 sm:mb-0">
+            <h3 className="text-base font-bold text-charcoal dark:text-white mb-4 sm:mb-0 tracking-tight">
               Daily Summary
             </h3>
             <div className="flex items-center space-x-4">
@@ -173,56 +173,56 @@ const POSDashboard = () => {
       {/* Daily Summary Cards */}
       {dailySummary && (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-          <div className="bg-white dark:bg-dm-card rounded-lg shadow-sm p-6">
+          <div className="bg-white dark:bg-dm-card rounded-2xl shadow-sm p-6">
             <div className="flex items-center">
-              <div className="p-3 rounded-full bg-green-100 dark:bg-green-900/20">
-                <FaDollarSign className="text-green-600 dark:text-green-400" />
+              <div className="p-3 rounded-xl bg-plum-100 dark:bg-plum-900/30">
+                <FaDollarSign className="text-plum-600 dark:text-plum-300" />
               </div>
               <div className="ml-4">
-                <p className="text-sm font-medium text-brown-500 dark:text-white/40">Total Sales</p>
-                <p className="text-2xl font-semibold text-charcoal dark:text-white">
+                <p className="text-xs font-semibold text-brown-400 dark:text-white/40 uppercase tracking-wide">Total Sales</p>
+                <p className="text-2xl font-black text-charcoal dark:text-white">
                   {DisplayPriceInShillings(dailySummary.summary.totalSales)}
                 </p>
               </div>
             </div>
           </div>
 
-          <div className="bg-white dark:bg-dm-card rounded-lg shadow-sm p-6">
+          <div className="bg-white dark:bg-dm-card rounded-2xl shadow-sm p-6">
             <div className="flex items-center">
-              <div className="p-3 rounded-full bg-plum-100 dark:bg-plum-900/20">
+              <div className="p-3 rounded-xl bg-plum-100 dark:bg-plum-900/20">
                 <FaShoppingCart className="text-plum-600 dark:text-plum-300" />
               </div>
               <div className="ml-4">
-                <p className="text-sm font-medium text-brown-500 dark:text-white/40">Transactions</p>
-                <p className="text-2xl font-semibold text-charcoal dark:text-white">
+                <p className="text-xs font-semibold text-brown-400 dark:text-white/40 uppercase tracking-wide">Transactions</p>
+                <p className="text-2xl font-black text-charcoal dark:text-white">
                   {dailySummary.summary.totalTransactions}
                 </p>
               </div>
             </div>
           </div>
 
-          <div className="bg-white dark:bg-dm-card rounded-lg shadow-sm p-6">
+          <div className="bg-white dark:bg-dm-card rounded-2xl shadow-sm p-6">
             <div className="flex items-center">
-              <div className="p-3 rounded-full bg-purple-100 dark:bg-purple-900/20">
-                <FaChartBar className="text-purple-600 dark:text-purple-400" />
+              <div className="p-3 rounded-xl bg-blush-100 dark:bg-blush-500/10">
+                <FaChartBar className="text-blush-500 dark:text-blush-300" />
               </div>
               <div className="ml-4">
-                <p className="text-sm font-medium text-brown-500 dark:text-white/40">Avg. Transaction</p>
-                <p className="text-2xl font-semibold text-charcoal dark:text-white">
+                <p className="text-xs font-semibold text-brown-400 dark:text-white/40 uppercase tracking-wide">Avg. Transaction</p>
+                <p className="text-2xl font-black text-charcoal dark:text-white">
                   {DisplayPriceInShillings(dailySummary.summary.averageTransaction)}
                 </p>
               </div>
             </div>
           </div>
 
-          <div className="bg-white dark:bg-dm-card rounded-lg shadow-sm p-6">
+          <div className="bg-white dark:bg-dm-card rounded-2xl shadow-sm p-6">
             <div className="flex items-center">
-              <div className="p-3 rounded-full bg-yellow-100 dark:bg-yellow-900/20">
-                <FaCreditCard className="text-yellow-600 dark:text-yellow-400" />
+              <div className="p-3 rounded-xl bg-gold-100 dark:bg-gold-900/20">
+                <FaCreditCard className="text-gold-600 dark:text-gold-300" />
               </div>
               <div className="ml-4">
-                <p className="text-sm font-medium text-brown-500 dark:text-white/40">Items Sold</p>
-                <p className="text-2xl font-semibold text-charcoal dark:text-white">
+                <p className="text-xs font-semibold text-brown-400 dark:text-white/40 uppercase tracking-wide">Items Sold</p>
+                <p className="text-2xl font-black text-charcoal dark:text-white">
                   {dailySummary.summary.totalItems}
                 </p>
               </div>
@@ -234,8 +234,8 @@ const POSDashboard = () => {
       {/* Payment Methods Breakdown */}
       {dailySummary && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-          <div className="bg-white dark:bg-dm-card rounded-lg shadow-sm p-6">
-            <h3 className="text-lg font-semibold text-charcoal dark:text-white mb-4">
+          <div className="bg-white dark:bg-dm-card rounded-2xl shadow-sm p-6">
+            <h3 className="text-base font-bold text-charcoal dark:text-white mb-4 tracking-tight">
               Payment Methods (Today)
             </h3>
             <div className="space-y-3">
@@ -261,8 +261,8 @@ const POSDashboard = () => {
           </div>
 
           {/* Top Products */}
-          <div className="bg-white dark:bg-dm-card rounded-lg shadow-sm p-6">
-            <h3 className="text-lg font-semibold text-charcoal dark:text-white mb-4">
+          <div className="bg-white dark:bg-dm-card rounded-2xl shadow-sm p-6">
+            <h3 className="text-base font-bold text-charcoal dark:text-white mb-4 tracking-tight">
               Top Products (Today)
             </h3>
             <div className="space-y-3">
@@ -293,9 +293,9 @@ const POSDashboard = () => {
 
       {/* Analytics Period Filter */}
       <div className="mb-6">
-        <div className="bg-white dark:bg-dm-card rounded-lg shadow-sm p-4">
+        <div className="bg-white dark:bg-dm-card rounded-2xl shadow-sm p-4">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
-            <h3 className="text-lg font-semibold text-charcoal dark:text-white mb-4 sm:mb-0">
+            <h3 className="text-base font-bold text-charcoal dark:text-white mb-4 sm:mb-0 tracking-tight">
               Sales Analytics
             </h3>
             <div className="flex flex-wrap gap-2">
@@ -303,10 +303,10 @@ const POSDashboard = () => {
                 <button
                   key={period}
                   onClick={() => setAnalyticsPeriod(period)}
-                  className={`px-3 py-2 rounded-lg text-sm font-medium ${
+                  className={`px-3 py-1.5 rounded-pill text-sm font-semibold transition-all ${
                     analyticsPeriod === period
-                      ? 'bg-primary-500 text-white'
-                      : 'bg-brown-50 dark:bg-dm-card-2 text-charcoal dark:text-white/55 hover:bg-brown-100 dark:hover:bg-dm-border'
+                      ? 'bg-plum-700 text-white shadow-sm'
+                      : 'bg-brown-100 dark:bg-dm-card-2 text-charcoal dark:text-white/55 hover:bg-brown-200 dark:hover:bg-dm-border'
                   }`}
                 >
                   {period === '24h' ? '24 Hours' : 
@@ -320,10 +320,10 @@ const POSDashboard = () => {
       </div>
 
       {/* Recent Sales */}
-      <div className="bg-white dark:bg-dm-card rounded-lg shadow-sm p-6">
-        <h3 className="text-lg font-semibold text-charcoal dark:text-white mb-4">
-          Recent Sales
-        </h3>
+        <div className="bg-white dark:bg-dm-card rounded-2xl shadow-sm p-6">
+          <h3 className="text-base font-bold text-charcoal dark:text-white mb-4 tracking-tight">
+            Recent Sales
+          </h3>
         <div className="space-y-3 md:hidden">
           {recentSales.map((sale) => (
             <div key={sale._id} className="rounded-2xl border border-brown-100 p-4 dark:border-dm-border">
@@ -357,10 +357,10 @@ const POSDashboard = () => {
               </div>
 
               <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
-                <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                  sale.paymentMethod === 'cash' ? 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400' :
-                  sale.paymentMethod === 'card' ? 'bg-gold-100 text-gold-800 dark:bg-gold-900/25 dark:text-gold-300' :
-                  'bg-purple-100 text-purple-800 dark:bg-purple-900/20 dark:text-purple-400'
+                <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-pill ${
+                  sale.paymentMethod === 'cash' ? 'bg-plum-100 text-plum-700 dark:bg-plum-900/30 dark:text-plum-200' :
+                  sale.paymentMethod === 'card' ? 'bg-gold-100 text-gold-600 dark:bg-gold-900/20 dark:text-gold-300' :
+                  'bg-blush-100 text-blush-500 dark:bg-blush-500/10 dark:text-blush-300'
                 }`}>
                   {sale.paymentMethod.charAt(0).toUpperCase() + sale.paymentMethod.slice(1)}
                 </span>

@@ -59,34 +59,35 @@ const BottomNavigation = () => {
   if (hiddenRoutes.includes(location.pathname)) return null;
 
   return (
-    <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40 border-t border-brown-100/80 bg-white/95 shadow-[0_-8px_30px_rgba(15,23,42,0.08)] backdrop-blur dark:border-dm-border/80 dark:bg-dm-card/95 safe-area-bottom">
-      <div className={`grid items-center gap-0.5 px-1 py-1.5 ${navItems.length >= 6 ? 'grid-cols-6' : 'grid-cols-5'}`}>
+    <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/97 dark:bg-dm-card/98 backdrop-blur-xl border-t border-plum-100/50 dark:border-dm-border/60 shadow-[0_-2px_24px_rgba(75,30,62,0.12)]" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
+      <div className={`grid items-end gap-0 px-1.5 pt-2 pb-2 ${navItems.length >= 6 ? 'grid-cols-6' : 'grid-cols-5'}`}>
         {navItems.map((item, index) => {
           const Icon = item.icon;
           return (
             <Link
               key={index}
               to={item.path}
-              className={`relative flex min-w-0 flex-col items-center justify-center rounded-2xl px-0.5 py-2 transition-all ${
-                item.active
-                  ? 'bg-primary-50 text-primary-200 dark:bg-primary-900/20'
-                  : 'text-brown-400 dark:text-white/40 hover:bg-ivory hover:text-primary-200 dark:hover:bg-dm-card-2/60'
-              }`}
+              className="relative flex min-w-0 flex-col items-center justify-end gap-[3px] py-0.5 transition-all duration-200 active:scale-95"
             >
-              <div className="relative mb-1">
+              <div className={`relative flex items-center justify-center rounded-xl transition-all duration-200 ${
+                item.active
+                  ? 'bg-gradient-to-b from-plum-700 to-plum-600 text-white shadow-[0_3px_10px_rgba(75,30,62,0.38)] px-3 py-[7px]'
+                  : 'text-brown-300 dark:text-white/40 px-2.5 py-[7px] hover:bg-plum-50 dark:hover:bg-dm-card-2/50 hover:text-plum-600 dark:hover:text-plum-200'
+              }`}>
                 <Icon size={18} />
                 {item.badge && (
-                  <span className="absolute -top-2 -right-2 bg-gold-500 text-charcoal rounded-pill min-w-[18px] h-[18px] px-0.5 flex items-center justify-center text-xs font-bold leading-none">
+                  <span className="absolute -top-1.5 -right-1.5 bg-gold-500 text-charcoal rounded-pill min-w-[16px] h-[16px] px-0.5 flex items-center justify-center text-[10px] font-bold leading-none shadow-sm">
                     {item.badge > 99 ? '99+' : item.badge}
                   </span>
                 )}
               </div>
-              <span className="w-full truncate text-center text-[10px] font-medium leading-tight sm:text-[11px]">
+              <span className={`w-full truncate text-center leading-none ${
+                item.active
+                  ? 'text-[9.5px] font-semibold text-plum-700 dark:text-plum-200'
+                  : 'text-[9.5px] font-medium text-brown-300 dark:text-white/35'
+              }`}>
                 {item.label}
               </span>
-              {item.active && (
-                <div className="absolute top-1 left-1/2 h-1 w-1 -translate-x-1/2 rounded-full bg-primary-200"></div>
-              )}
             </Link>
           );
         })}

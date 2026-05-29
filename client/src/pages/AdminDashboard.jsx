@@ -65,11 +65,11 @@ const AdminDashboard = () => {
     const customers = Math.max(users.length - admins - staff - delivery, 0);
 
     return [
-      { label: 'Total Users', value: users.length, icon: FaUsers, tone: 'bg-slate-100 text-slate-700 dark:bg-slate-800/70 dark:text-slate-200' },
-      { label: 'Admins', value: admins, icon: FaUsers, tone: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300' },
-      { label: 'Sellers', value: staff, icon: FaStore, tone: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300' },
-      { label: 'Drivers', value: delivery, icon: FaClipboardList, tone: 'bg-plum-100 text-plum-800 dark:bg-plum-900/30 dark:text-plum-200' },
-      { label: 'Customers', value: customers, icon: FaUsers, tone: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300' }
+      { label: 'Total Users', value: users.length, icon: FaUsers, tone: 'bg-plum-50 text-plum-700 dark:bg-plum-900/30 dark:text-plum-200', iconBg: 'bg-plum-100 dark:bg-plum-800/50' },
+      { label: 'Admins', value: admins, icon: FaUsers, tone: 'bg-gold-100 text-gold-600 dark:bg-gold-900/20 dark:text-gold-300', iconBg: 'bg-gold-200/70 dark:bg-gold-900/40' },
+      { label: 'Sellers', value: staff, icon: FaStore, tone: 'bg-plum-100 text-plum-700 dark:bg-plum-900/30 dark:text-plum-200', iconBg: 'bg-plum-200/60 dark:bg-plum-800/50' },
+      { label: 'Drivers', value: delivery, icon: FaClipboardList, tone: 'bg-blush-100 text-blush-500 dark:bg-blush-500/10 dark:text-blush-300', iconBg: 'bg-blush-200/60 dark:bg-blush-500/20' },
+      { label: 'Customers', value: customers, icon: FaUsers, tone: 'bg-brown-50 text-brown-500 dark:bg-dm-card-2/80 dark:text-white/70', iconBg: 'bg-brown-100 dark:bg-dm-border/60' }
     ];
   }, [users]);
 
@@ -123,35 +123,35 @@ const AdminDashboard = () => {
         </div>
       </div>
 
-      <div className="mb-6 grid grid-cols-1 gap-3 xs:grid-cols-2 lg:grid-cols-5">
+      <div className="mb-6 grid grid-cols-3 gap-3 lg:grid-cols-5">
         {roleSummary.map((item) => {
           const Icon = item.icon;
           return (
             <div key={item.label} className={`min-w-0 rounded-2xl p-4 shadow-sm ${item.tone}`}>
-              <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-white/70 dark:bg-black/10">
-                <Icon />
+              <div className={`mb-3 flex h-9 w-9 items-center justify-center rounded-xl ${item.iconBg}`}>
+                <Icon size={16} />
               </div>
-              <div className="break-words text-xl sm:text-2xl font-bold">{item.value}</div>
-              <div className="mt-1 text-sm font-medium">{item.label}</div>
+              <div className="break-words text-2xl sm:text-3xl font-black tracking-tight">{item.value}</div>
+              <div className="mt-1 text-xs font-semibold uppercase tracking-wide opacity-75">{item.label}</div>
             </div>
           );
         })}
       </div>
 
-      <div className="mb-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="mb-8 grid grid-cols-2 gap-3 xl:grid-cols-4">
         {quickLinks.map((link) => {
           const Icon = link.icon;
           return (
             <Link
               key={link.label}
               to={link.path}
-              className="rounded-2xl border border-brown-100 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md dark:border-dm-border dark:bg-dm-card"
+              className="rounded-2xl border border-brown-100 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md dark:border-dm-border dark:bg-dm-card"
             >
-              <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-plum-100 text-plum-700 dark:bg-plum-900/30 dark:text-plum-300">
-                <Icon />
+              <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-plum-100 text-plum-700 dark:bg-plum-900/30 dark:text-plum-300">
+                <Icon size={16} />
               </div>
-              <h2 className="text-base font-semibold text-charcoal dark:text-white">{link.label}</h2>
-              <p className="mt-2 text-sm text-brown-500 dark:text-white/60">{link.description}</p>
+              <h2 className="text-sm font-semibold text-charcoal dark:text-white">{link.label}</h2>
+              <p className="mt-1 text-xs text-brown-500 dark:text-white/60 leading-snug">{link.description}</p>
             </Link>
           );
         })}
@@ -243,13 +243,13 @@ const AdminDashboard = () => {
       <div>
         <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h2 className="text-xl font-semibold mb-1 dark:text-white">Recent System Users</h2>
+            <h2 className="text-xl font-bold tracking-tight dark:text-white">Recent System Users</h2>
             <p className="text-sm text-brown-500 dark:text-white/55">
               Quick visibility into the people using the store, selling, and delivering.
             </p>
           </div>
-          <Link to="/dashboard/users-admin" className="text-sm font-medium text-primary-200 hover:text-primary-300">
-            Open full user management
+          <Link to="/dashboard/users-admin" className="text-sm font-semibold text-plum-600 hover:text-plum-500 dark:text-plum-300 dark:hover:text-plum-200 transition-colors">
+            View all users →
           </Link>
         </div>
         <div className="rounded-2xl border border-brown-100 bg-white shadow-sm dark:border-dm-border dark:bg-dm-card">

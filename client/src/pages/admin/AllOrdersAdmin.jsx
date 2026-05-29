@@ -823,46 +823,46 @@ const OrderStatistics = ({ orders }) => {
       </h2>
       
       {/* Revenue Summary */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-        <div className="min-w-0 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-800 dark:text-emerald-300 rounded-lg p-4 sm:p-6 shadow-sm">
-          <div className="flex items-center justify-between">
+      <div className="grid grid-cols-3 gap-2 sm:gap-4 mb-6">
+        <div className="min-w-0 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-800 dark:text-emerald-300 rounded-lg p-3 sm:p-5 shadow-sm">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1">
             <div className="min-w-0">
-              <div className="break-words text-xl sm:text-3xl font-bold">KSh {totalRevenue.toLocaleString()}</div>
-              <div className="text-sm">Total Revenue</div>
+              <div className="break-words text-base sm:text-2xl font-bold">KSh {totalRevenue.toLocaleString()}</div>
+              <div className="text-xs sm:text-sm">Total Revenue</div>
             </div>
-            <FaMoneyBillWave className="text-emerald-600 dark:text-emerald-400" size={32} />
+            <FaMoneyBillWave className="text-emerald-600 dark:text-emerald-400 hidden sm:block" size={28} />
           </div>
         </div>
         
-        <div className="min-w-0 bg-plum-100 dark:bg-plum-900/30 text-plum-800 dark:text-plum-200 rounded-lg p-4 sm:p-6 shadow-sm">
-          <div className="flex items-center justify-between">
+        <div className="min-w-0 bg-plum-100 dark:bg-plum-900/30 text-plum-800 dark:text-plum-200 rounded-lg p-3 sm:p-5 shadow-sm">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1">
             <div className="min-w-0">
-              <div className="break-words text-xl sm:text-3xl font-bold">KSh {onlineRevenue.toLocaleString()}</div>
-              <div className="text-sm">Online Orders</div>
+              <div className="break-words text-base sm:text-2xl font-bold">KSh {onlineRevenue.toLocaleString()}</div>
+              <div className="text-xs sm:text-sm">Online Orders</div>
             </div>
-            <FaShoppingCart className="text-plum-600 dark:text-plum-300" size={32} />
+            <FaShoppingCart className="text-plum-600 dark:text-plum-300 hidden sm:block" size={28} />
           </div>
         </div>
         
-        <div className="min-w-0 bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300 rounded-lg p-4 sm:p-6 shadow-sm">
-          <div className="flex items-center justify-between">
+        <div className="min-w-0 bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300 rounded-lg p-3 sm:p-5 shadow-sm">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1">
             <div className="min-w-0">
-              <div className="break-words text-xl sm:text-3xl font-bold">
+              <div className="break-words text-base sm:text-2xl font-bold">
                 {loading ? '...' : `KSh ${posRevenue.toLocaleString()}`}
               </div>
-              <div className="text-sm">Counter Sales</div>
+              <div className="text-xs sm:text-sm">Counter Sales</div>
             </div>
-            <FaCashRegister className="text-purple-600 dark:text-purple-400" size={32} />
+            <FaCashRegister className="text-purple-600 dark:text-purple-400 hidden sm:block" size={28} />
           </div>
         </div>
       </div>
 
       {/* Order Statistics */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 sm:gap-4">
         {statItems.map((item, index) => (
-          <div key={index} className={`${item.color} min-w-0 rounded-lg p-4 shadow-sm`}>
+          <div key={index} className={`${item.color} min-w-0 rounded-lg p-3 shadow-sm`}>
             <div className="flex justify-between items-center mb-1">
-              <div className="break-words text-2xl sm:text-3xl font-bold">{item.value}</div>
+              <div className="break-words text-xl sm:text-2xl font-bold">{item.value}</div>
               {item.icon === 'truck' && <FaTruck className="text-plum-600 dark:text-plum-300" size={20} />}
               {item.icon === 'truck-check' && (
                 <div className="relative">
@@ -885,9 +885,9 @@ const OrderStatistics = ({ orders }) => {
         
         {/* POS Statistics */}
         {posStatItems.map((item, index) => (
-          <div key={`pos-${index}`} className={`${item.color} min-w-0 rounded-lg p-4 shadow-sm`}>
+          <div key={`pos-${index}`} className={`${item.color} min-w-0 rounded-lg p-3 shadow-sm`}>
             <div className="flex justify-between items-center mb-1">
-              <div className="break-words text-2xl sm:text-3xl font-bold">{item.value}</div>
+              <div className="break-words text-xl sm:text-2xl font-bold">{item.value}</div>
               {item.icon === 'pos' && <FaCashRegister className="text-purple-600 dark:text-purple-400" size={20} />}
               {item.icon === 'items' && <FaBoxes className="text-cyan-600 dark:text-cyan-400" size={20} />}
               {item.icon === 'avg' && <FaCalculator className="text-teal-600 dark:text-teal-400" size={20} />}
@@ -1040,28 +1040,28 @@ const AllOrdersAdmin = () => {
   
   const getStatusColor = (status) => {
     if (!status) {
-      return 'bg-brown-50 text-charcoal dark:bg-dm-card-2 dark:text-white/70'; // Default color for unknown status
+      return 'bg-brown-50 text-brown-500 dark:bg-dm-card-2 dark:text-white/70';
     }
     
     switch (status) {
       case 'pending':
-        return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300';
+        return 'bg-gold-100 text-gold-600 dark:bg-gold-900/20 dark:text-gold-300';
       case 'processing':
-        return 'bg-plum-100 text-plum-800 dark:bg-plum-900/30 dark:text-plum-200';
+        return 'bg-plum-100 text-plum-700 dark:bg-plum-900/30 dark:text-plum-200';
       case 'shipped':
-        return 'bg-plum-100 text-plum-800 dark:bg-plum-900/30 dark:text-plum-200';
+        return 'bg-plum-100 text-plum-700 dark:bg-plum-900/30 dark:text-plum-200';
       case 'driver_assigned':
       case 'out_for_delivery':
       case 'nearby':
-        return 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300';
+        return 'bg-blush-100 text-blush-500 dark:bg-blush-500/10 dark:text-blush-300';
       case 'delivered':
-        return 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300';
+        return 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-300';
       case 'cancelled':
-        return 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300';
+        return 'bg-brown-100 text-brown-600 dark:bg-dm-card-2/80 dark:text-white/60';
       case 'POS':
-        return 'bg-plum-100 text-plum-800 dark:bg-plum-900/30 dark:text-plum-200';
+        return 'bg-plum-100 text-plum-700 dark:bg-plum-900/30 dark:text-plum-200';
       default:
-        return 'bg-brown-50 text-charcoal dark:bg-dm-card-2 dark:text-white/70';
+        return 'bg-brown-50 text-brown-500 dark:bg-dm-card-2 dark:text-white/70';
     }
   };
   
@@ -1115,7 +1115,7 @@ const AllOrdersAdmin = () => {
   const renderStatusBadge = (status) => {
     const statusColor = getStatusColor(status);
     return (
-      <span className={`px-2 py-1 rounded-full text-xs font-medium ${statusColor}`}>
+      <span className={`px-2.5 py-0.5 rounded-pill text-[11px] font-semibold tracking-wide ${statusColor}`}>
         {status ? status.charAt(0).toUpperCase() + status.slice(1).replace(/_/g, ' ') : 'Unknown'}
       </span>
     );
@@ -1143,7 +1143,7 @@ const AllOrdersAdmin = () => {
   
   return (
     <div className="w-full max-w-full overflow-x-hidden p-4 md:p-6 pb-24 lg:pb-6">
-      <h1 className="text-2xl font-bold mb-6 dark:text-white">Order Management</h1>
+      <h1 className="text-2xl font-bold mb-6 dark:text-white tracking-tight">Order Management</h1>
       
       {/* Statistics */}
       {showStatistics && (
@@ -1187,7 +1187,7 @@ const AllOrdersAdmin = () => {
           <button
             className={`px-3 py-1.5 text-sm font-medium rounded-full 
               ${activeTab === 'pending' ? 
-                'bg-yellow-500 text-white' : 
+                'bg-gold-500 text-white' : 
                 'bg-brown-100 dark:bg-dm-card-2 text-charcoal dark:text-white hover:bg-brown-200 dark:hover:bg-dm-border'}`}
             onClick={() => { setActiveTab('pending'); setCurrentPage(1); }}
           >
@@ -1440,14 +1440,14 @@ const AllOrdersAdmin = () => {
               >
                 {/* Card Header with Status */}
                 <div className={`px-4 py-2 ${
-                  order.status === 'delivered' ? 'bg-green-100 dark:bg-green-900/30' :
-                  order.status === 'cancelled' ? 'bg-red-100 dark:bg-red-900/30' :
+                  order.status === 'delivered' ? 'bg-emerald-50 dark:bg-emerald-900/20' :
+                  order.status === 'cancelled' ? 'bg-brown-100 dark:bg-dm-card-2/80' :
                   order.status === 'shipped' ? 'bg-plum-100 dark:bg-plum-900/30' :
                   order.status === 'POS' ? 'bg-plum-100 dark:bg-plum-900/30' :
                   order.status === 'driver_assigned' || order.status === 'out_for_delivery' || order.status === 'nearby' ? 
-                    'bg-purple-100 dark:bg-purple-900/30' :
+                    'bg-blush-100 dark:bg-blush-500/10' :
                   order.status === 'processing' ? 'bg-plum-100 dark:bg-plum-900/30' :
-                  'bg-yellow-100 dark:bg-yellow-900/30'
+                  'bg-gold-100 dark:bg-gold-900/20'
                 }`}>
                   <div className="flex justify-between items-center">
                     <div className="flex items-center">

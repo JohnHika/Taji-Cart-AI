@@ -365,7 +365,7 @@ const UserProfile = () => {
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div>
                 <p className="font-display italic text-gold-300 text-sm mb-1">Nawiri Hair</p>
-                <h1 className="text-2xl sm:text-3xl font-bold text-white">My Account</h1>
+                <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight">My Account</h1>
               </div>
               {activeTab === 'profile' && !isEditing && (
                 <button
@@ -533,7 +533,7 @@ const UserProfile = () => {
                       </div>
                       
                       <div className="flex-grow min-w-0">
-                        <h2 className="text-xl sm:text-2xl font-semibold text-charcoal dark:text-white">{user.name}</h2>
+                        <h2 className="text-xl sm:text-2xl font-bold text-charcoal dark:text-white">{user.name}</h2>
                         <p className="text-brown-600 dark:text-white/65 mt-1 flex items-center gap-2">
                           <FaEnvelope className="text-plum-500 shrink-0 text-sm" />
                           {user.email}
@@ -547,7 +547,7 @@ const UserProfile = () => {
                     
                     <div className="border-t border-brown-100 dark:border-dm-border mt-6 pt-6">
                       <div className="rounded-card border border-brown-100 dark:border-dm-border bg-white dark:bg-dm-card p-5 sm:p-6 shadow-sm">
-                      <h3 className="text-lg font-semibold text-charcoal dark:text-white mb-4">Account Details</h3>
+                      <h3 className="text-lg font-bold tracking-tight text-charcoal dark:text-white mb-4">Account Details</h3>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
                         <div>
                           <p className="text-sm text-brown-500 dark:text-white/50">Account Created</p>
@@ -561,7 +561,7 @@ const UserProfile = () => {
                         <div>
                           <p className="text-sm text-brown-500 dark:text-white/50">Account Type</p>
                           <div className="flex items-center">
-                            <span className={`px-2 py-1 text-xs font-medium rounded-full ${accountTypeMeta.chipClass}`}>
+                            <span className={`px-2.5 py-1 text-xs font-semibold rounded-pill tracking-wide ${accountTypeMeta.chipClass}`}>
                               {accountTypeMeta.type}
                             </span>
                           </div>
@@ -670,7 +670,7 @@ const UserProfile = () => {
                     
                     <div className="border-t border-brown-100 dark:border-dm-border mt-6 pt-6">
                       <div className="rounded-card border border-brown-100 dark:border-dm-border bg-white dark:bg-dm-card p-5 sm:p-6 shadow-sm">
-                      <h3 className="text-lg font-semibold text-charcoal dark:text-white mb-4">Notification Preferences</h3>
+                      <h3 className="text-lg font-bold tracking-tight text-charcoal dark:text-white mb-4">Notification Preferences</h3>
                       <div className="space-y-3">
                         <div className="flex items-center justify-between">
                           <div className="flex items-center space-x-2">
@@ -727,7 +727,7 @@ const UserProfile = () => {
                       <FaShieldAlt className="h-5 w-5" />
                     </div>
                     <div>
-                      <h3 className="text-sm font-semibold text-charcoal dark:text-white">Account security</h3>
+                      <h3 className="text-sm font-bold tracking-tight text-charcoal dark:text-white">Account security</h3>
                       <p className="mt-1 text-sm text-brown-600 dark:text-white/60 leading-relaxed">
                         Use a strong password and update it from time to time to keep your Nawiri Hair account safe.
                       </p>
@@ -736,7 +736,7 @@ const UserProfile = () => {
                 </div>
                 
                 <form onSubmit={handleChangePassword} className="space-y-5 rounded-card border border-brown-100 dark:border-dm-border bg-white dark:bg-dm-card p-5 sm:p-6 shadow-sm">
-                  <h3 className="text-lg font-semibold text-charcoal dark:text-white">Change password</h3>
+                  <h3 className="text-lg font-bold tracking-tight text-charcoal dark:text-white">Change password</h3>
                   
                   <div>
                     <label htmlFor="currentPassword" className="block text-sm font-medium text-charcoal dark:text-white/80 mb-1">
@@ -853,7 +853,7 @@ const UserProfile = () => {
                 </form>
                 
                 <div className="mt-8 border-t border-brown-100 dark:border-dm-border pt-6">
-                  <h3 className="text-lg font-semibold text-charcoal dark:text-white mb-4">Account recovery</h3>
+                  <h3 className="text-lg font-bold tracking-tight text-charcoal dark:text-white mb-4">Account recovery</h3>
                   <div className="mb-6">
                     <p className="text-sm text-brown-600 dark:text-white/55 mb-2 leading-relaxed">
                       If you forget your password, you can recover your account using your registered email address.

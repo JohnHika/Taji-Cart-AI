@@ -42,23 +42,23 @@ const UserTable = ({ users, onDelete, onChangeRole, onBlockUser, onUnblockUser, 
                 </div>
               </div>
 
-              <span className={`shrink-0 inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium ${
+              <span className={`shrink-0 inline-flex items-center rounded-pill px-2.5 py-1 text-xs font-semibold tracking-wide ${
                 user.status === 'Active'
-                  ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300'
+                  ? 'bg-plum-100 text-plum-700 dark:bg-plum-900/30 dark:text-plum-200'
                   : user.status === 'Inactive'
-                  ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300'
-                  : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300'
+                  ? 'bg-brown-100 text-brown-500 dark:bg-dm-card-2 dark:text-white/60'
+                  : 'bg-blush-100 text-blush-500 dark:bg-blush-500/10 dark:text-blush-300'
               }`}>
                 {user.status || 'Unknown'}
               </span>
             </div>
 
             <div className="mt-3 flex flex-wrap gap-2">
-              <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${
-                user.isAdmin ? 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200' : 
-                user.isStaff || user.role === 'staff' ? 'bg-teal-100 text-teal-800 dark:bg-teal-900 dark:text-teal-200' :
-                user.isDelivery || user.role === 'delivery' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' :
-                'bg-plum-100 text-plum-800 dark:bg-plum-900 dark:text-plum-200'
+              <span className={`inline-flex items-center px-2.5 py-1 rounded-pill text-xs font-semibold tracking-wide ${
+                user.isAdmin ? 'bg-plum-100 text-plum-700 dark:bg-plum-900/30 dark:text-plum-200' : 
+                user.isStaff || user.role === 'staff' ? 'bg-gold-100 text-gold-600 dark:bg-gold-900/20 dark:text-gold-300' :
+                user.isDelivery || user.role === 'delivery' ? 'bg-blush-100 text-blush-500 dark:bg-blush-500/10 dark:text-blush-300' :
+                'bg-brown-100 text-brown-500 dark:bg-dm-card-2 dark:text-white/70'
               }`}>
                 {user.isAdmin ? <FaUserShield className="mr-1" size={12} /> : 
                  user.isStaff || user.role === 'staff' ? <FaIdBadge className="mr-1" size={12} /> :
@@ -93,7 +93,7 @@ const UserTable = ({ users, onDelete, onChangeRole, onBlockUser, onUnblockUser, 
                 {onSetDelivery && (
                   <button 
                     onClick={() => onSetDelivery(user)}
-                    className="inline-flex items-center rounded-lg bg-green-100 px-3 py-2 text-xs font-medium text-green-800 transition-colors hover:bg-green-200 dark:bg-green-900 dark:text-green-300 dark:hover:bg-green-800"
+                    className="inline-flex items-center rounded-lg bg-brown-100 px-3 py-2 text-xs font-medium text-brown-700 transition-colors hover:bg-brown-200 dark:bg-brown-900/30 dark:text-brown-200 dark:hover:bg-brown-800/50"
                     title="Delivery Status"
                   >
                     <FaTruck size={14} className="mr-2" />
@@ -104,7 +104,7 @@ const UserTable = ({ users, onDelete, onChangeRole, onBlockUser, onUnblockUser, 
                 {user.status !== 'Suspended' && onBlockUser && (
                   <button 
                     onClick={() => onBlockUser(user)}
-                    className="inline-flex items-center rounded-lg bg-yellow-100 px-3 py-2 text-xs font-medium text-yellow-800 transition-colors hover:bg-yellow-200 dark:bg-yellow-900 dark:text-yellow-300 dark:hover:bg-yellow-800"
+                    className="inline-flex items-center rounded-lg bg-gold-100 px-3 py-2 text-xs font-medium text-gold-700 transition-colors hover:bg-gold-200 dark:bg-gold-900/20 dark:text-gold-300 dark:hover:bg-gold-800/30"
                     title="Block User"
                   >
                     <FaBan size={14} className="mr-2" />
@@ -115,7 +115,7 @@ const UserTable = ({ users, onDelete, onChangeRole, onBlockUser, onUnblockUser, 
                 {user.status === 'Suspended' && onUnblockUser && (
                   <button 
                     onClick={() => onUnblockUser(user)}
-                    className="inline-flex items-center rounded-lg bg-green-100 px-3 py-2 text-xs font-medium text-green-800 transition-colors hover:bg-green-200 dark:bg-green-900 dark:text-green-300 dark:hover:bg-green-800"
+                    className="inline-flex items-center rounded-lg bg-brown-100 px-3 py-2 text-xs font-medium text-brown-700 transition-colors hover:bg-brown-200 dark:bg-brown-900/30 dark:text-brown-200 dark:hover:bg-brown-800/50"
                     title="Unblock User"
                   >
                     <FaUnlock size={14} className="mr-2" />
@@ -126,7 +126,7 @@ const UserTable = ({ users, onDelete, onChangeRole, onBlockUser, onUnblockUser, 
                 {onDelete && (
                   <button 
                     onClick={() => onDelete(user)}
-                    className="inline-flex items-center rounded-lg bg-red-100 px-3 py-2 text-xs font-medium text-red-800 transition-colors hover:bg-red-200 dark:bg-red-900 dark:text-red-300 dark:hover:bg-red-800"
+                    className="inline-flex items-center rounded-lg bg-blush-100 px-3 py-2 text-xs font-medium text-blush-500 transition-colors hover:bg-blush-200 dark:bg-blush-500/10 dark:text-blush-300 dark:hover:bg-blush-500/20"
                     title="Delete User"
                   >
                     <FaTrash size={14} className="mr-2" />

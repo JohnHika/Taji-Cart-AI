@@ -438,7 +438,7 @@ const UsersAdmin = () => {
     <div className="container mx-auto w-full max-w-full overflow-x-hidden px-3 py-4 sm:px-4 sm:py-6 pb-24 lg:pb-6">
       <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold dark:text-white mb-2">User Management</h1>
+          <h1 className="text-2xl font-black text-charcoal dark:text-white mb-2 tracking-tight">User Management</h1>
           <p className="text-brown-500 dark:text-white/55">
             View and manage admins, sellers, drivers, and customers in one place.
           </p>
@@ -448,7 +448,7 @@ const UsersAdmin = () => {
           <button
             onClick={handleBulkSendVerification}
             disabled={bulkSending}
-            className="px-4 py-2 bg-rose-600 text-white rounded-lg hover:bg-rose-700 disabled:opacity-50 flex items-center justify-center gap-2"
+            className="px-4 py-2 bg-plum-700 text-white rounded-lg hover:bg-plum-800 disabled:opacity-50 flex items-center justify-center gap-2"
             title="Send verification email to all unverified users"
           >
             {bulkSending ? <FaSpinner className="animate-spin" /> : <FaEnvelope />}
@@ -457,32 +457,37 @@ const UsersAdmin = () => {
 
           <button
             onClick={fetchUsersWithCacheBusting}
-            className="px-4 py-2 bg-plum-700 text-white rounded-lg hover:bg-plum-600 flex items-center justify-center"
+            className="px-4 py-2 bg-plum-700 text-white rounded-pill hover:bg-plum-600 flex items-center justify-center font-semibold transition-colors shadow-sm"
           >
             <FaUsersCog className="mr-2" /> Refresh Users
           </button>
         </div>
       </div>
 
-      <div className="mb-6 flex gap-3 overflow-x-auto pb-2">
+      {/* Role filter chips — 3-col on mobile, 5-col on sm+ to avoid horizontal scroll */}
+      <div className="mb-6 grid grid-cols-3 gap-2 sm:grid-cols-5">
         {roleSummary.map((item) => (
           <button
             key={item.filter}
             onClick={() => setRoleFilter(item.filter)}
-            className={`min-w-[110px] rounded-2xl border px-4 py-3 text-left transition ${
+            className={`rounded-2xl border px-3 py-3 text-center transition-colors ${
               roleFilter === item.filter
-                ? 'border-plum-300 bg-plum-50 text-plum-800 dark:border-plum-600 dark:bg-plum-900/25 dark:text-plum-200'
-                : 'border-brown-200 bg-white text-brown-700 dark:border-dm-border dark:bg-dm-card dark:text-white/85'
+                ? 'border-plum-400 bg-plum-700 text-white shadow-sm dark:border-plum-500 dark:bg-plum-700'
+                : 'border-brown-200 bg-white text-brown-700 hover:border-plum-200 hover:bg-plum-50 dark:border-dm-border dark:bg-dm-card dark:text-white/85 dark:hover:bg-plum-900/20'
             }`}
           >
-            <div className="text-lg font-bold">{item.value}</div>
-            <div className="text-xs font-medium uppercase tracking-wide">{item.label}</div>
+            <div className={`text-lg font-bold ${roleFilter === item.filter ? 'text-white' : 'text-plum-700 dark:text-plum-300'}`}>
+              {item.value}
+            </div>
+            <div className="text-xs font-medium uppercase tracking-wide leading-tight mt-0.5">
+              {item.label}
+            </div>
           </button>
         ))}
       </div>
       
       {/* Filters and Search */}
-      <div className="bg-white dark:bg-dm-card rounded-lg shadow border border-brown-100 dark:border-dm-border p-4 mb-6">
+      <div className="bg-white dark:bg-dm-card rounded-2xl shadow-sm border border-brown-100 dark:border-dm-border p-4 mb-6">
         <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
           <div className="relative w-full xl:max-w-md">
             <input
@@ -490,7 +495,7 @@ const UsersAdmin = () => {
               placeholder="Search users by name, email or phone..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full p-2 pl-10 pr-4 border rounded-lg dark:bg-dm-card-2 dark:border-dm-border dark:text-white"
+              className="w-full p-2 pl-10 pr-4 border border-brown-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-plum-400 dark:bg-dm-card-2 dark:border-dm-border dark:text-white"
             />
             <FaSearch className="absolute left-3 top-3 text-brown-400 dark:text-white/40" />
           </div>
@@ -529,7 +534,7 @@ const UsersAdmin = () => {
       </div>
       
       {/* Users Table */}
-      <div className="bg-white dark:bg-dm-card rounded-lg shadow border border-brown-100 dark:border-dm-border overflow-hidden">
+      <div className="bg-white dark:bg-dm-card rounded-2xl shadow-sm border border-brown-100 dark:border-dm-border overflow-hidden">
         {loading ? (
           <div className="flex justify-center items-center p-8">
             <FaSpinner className="animate-spin text-4xl text-plum-600" />
