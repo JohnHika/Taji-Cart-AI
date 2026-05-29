@@ -15,6 +15,7 @@ const DisplayCartItem = ({ close, variant = 'drawer' }) => {
     const isEmbedded = variant === 'embedded'
     const { notDiscountTotalPrice, totalPrice, totalQty, royalCardData, royalDiscount, clearCartItems } = useGlobalContext()
     const cartItem = useSelector(state => state.cartItem.cart)
+    const cartLoading = useSelector(state => state.cartItem.loading)
     const user = useSelector(state => state.user)
     const navigate = useNavigate()
     const [showClearConfirm, setShowClearConfirm] = useState(false)
@@ -215,6 +216,14 @@ const DisplayCartItem = ({ close, variant = 'drawer' }) => {
                                     </div>
                                 </div>
                             </>
+                        )
+                        :
+                        cartLoading ?
+                        (
+                            <div className="flex flex-col items-center justify-center py-12 px-4 flex-1">
+                                <div className="w-10 h-10 border-4 border-gold-500 border-t-transparent rounded-full animate-spin mb-4"></div>
+                                <p className="text-sm text-brown-400 dark:text-white/50">Loading cart...</p>
+                            </div>
                         )
                         :
                         (
