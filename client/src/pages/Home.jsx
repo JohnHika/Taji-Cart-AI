@@ -6,6 +6,7 @@ import CategoryBannerGrid from '../components/CategoryBannerGrid';
 import CommunityCampaignProgress from '../components/CommunityCampaignProgress';
 import HomeProductShelf from '../components/HomeProductShelf';
 import PromoBanner from '../components/PromoBanner';
+import PWAInstallBanner from '../components/PWAInstallBanner';
 import UserActiveCampaigns from '../components/UserActiveCampaigns';
 import Axios from '../utils/Axios';
 import { valideURLConvert } from '../utils/valideURLConvert';
@@ -195,6 +196,11 @@ const Home = () => {
         ) : (
           <PromoBanner products={heroProducts} />
         )}
+      </div>
+
+      {/* PWA install prompt — mobile / md only, below the hero banner */}
+      <div className="container mx-auto">
+        <PWAInstallBanner />
       </div>
 
       <div className="container mx-auto px-3 pt-6 sm:px-4 sm:pt-8">
