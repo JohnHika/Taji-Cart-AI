@@ -193,43 +193,43 @@ const POSDashboard = () => {
           </div>
 
           {dailySummary ? (
-            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-2">
-              <div className="rounded-2xl border border-brown-100 bg-ivory p-4 dark:border-dm-border dark:bg-dm-card-2">
-                <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-xl bg-plum-100 text-plum-700 dark:bg-plum-900/30 dark:text-plum-300">
-                  <FaDollarSign />
+            <div className="grid grid-cols-2 gap-3 sm:gap-4">
+              <div className="rounded-2xl border border-brown-100 bg-ivory p-3 dark:border-dm-border dark:bg-dm-card-2 sm:p-4">
+                <div className="mb-2 flex h-9 w-9 items-center justify-center rounded-xl bg-plum-100 text-plum-700 dark:bg-plum-900/30 dark:text-plum-300 sm:mb-3 sm:h-11 sm:w-11">
+                  <FaDollarSign size={16} />
                 </div>
-                <p className="text-xs font-semibold uppercase tracking-wide text-brown-500 dark:text-white/40">Total Sales</p>
-                <p className="mt-2 text-2xl font-black tracking-tight text-charcoal dark:text-white">
+                <p className="text-[10px] font-semibold uppercase tracking-wide text-brown-500 dark:text-white/40 sm:text-xs">Total Sales</p>
+                <p className="mt-1 text-xl font-black tracking-tight text-charcoal dark:text-white sm:mt-2 sm:text-2xl">
                   {DisplayPriceInShillings(dailySummary.summary.totalSales)}
                 </p>
               </div>
 
-              <div className="rounded-2xl border border-brown-100 bg-ivory p-4 dark:border-dm-border dark:bg-dm-card-2">
-                <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-xl bg-gold-100 text-gold-700 dark:bg-gold-900/20 dark:text-gold-300">
-                  <FaShoppingCart />
+              <div className="rounded-2xl border border-brown-100 bg-ivory p-3 dark:border-dm-border dark:bg-dm-card-2 sm:p-4">
+                <div className="mb-2 flex h-9 w-9 items-center justify-center rounded-xl bg-gold-100 text-gold-700 dark:bg-gold-900/20 dark:text-gold-300 sm:mb-3 sm:h-11 sm:w-11">
+                  <FaShoppingCart size={16} />
                 </div>
-                <p className="text-xs font-semibold uppercase tracking-wide text-brown-500 dark:text-white/40">Transactions</p>
-                <p className="mt-2 text-2xl font-black tracking-tight text-charcoal dark:text-white">
+                <p className="text-[10px] font-semibold uppercase tracking-wide text-brown-500 dark:text-white/40 sm:text-xs">Transactions</p>
+                <p className="mt-1 text-xl font-black tracking-tight text-charcoal dark:text-white sm:mt-2 sm:text-2xl">
                   {dailySummary.summary.totalTransactions}
                 </p>
               </div>
 
-              <div className="rounded-2xl border border-brown-100 bg-ivory p-4 dark:border-dm-border dark:bg-dm-card-2">
-                <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-xl bg-blush-100 text-blush-500 dark:bg-blush-500/10 dark:text-blush-300">
-                  <FaChartBar />
+              <div className="rounded-2xl border border-brown-100 bg-ivory p-3 dark:border-dm-border dark:bg-dm-card-2 sm:p-4">
+                <div className="mb-2 flex h-9 w-9 items-center justify-center rounded-xl bg-blush-100 text-blush-500 dark:bg-blush-500/10 dark:text-blush-300 sm:mb-3 sm:h-11 sm:w-11">
+                  <FaChartBar size={16} />
                 </div>
-                <p className="text-xs font-semibold uppercase tracking-wide text-brown-500 dark:text-white/40">Average Ticket</p>
-                <p className="mt-2 text-2xl font-black tracking-tight text-charcoal dark:text-white">
+                <p className="text-[10px] font-semibold uppercase tracking-wide text-brown-500 dark:text-white/40 sm:text-xs">Average Ticket</p>
+                <p className="mt-1 text-xl font-black tracking-tight text-charcoal dark:text-white sm:mt-2 sm:text-2xl">
                   {DisplayPriceInShillings(dailySummary.summary.averageTransaction)}
                 </p>
               </div>
 
-              <div className="rounded-2xl border border-brown-100 bg-ivory p-4 dark:border-dm-border dark:bg-dm-card-2">
-                <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-xl bg-plum-100 text-plum-700 dark:bg-plum-900/20 dark:text-plum-300">
-                  <FaCreditCard />
+              <div className="rounded-2xl border border-brown-100 bg-ivory p-3 dark:border-dm-border dark:bg-dm-card-2 sm:p-4">
+                <div className="mb-2 flex h-9 w-9 items-center justify-center rounded-xl bg-plum-100 text-plum-700 dark:bg-plum-900/20 dark:text-plum-300 sm:mb-3 sm:h-11 sm:w-11">
+                  <FaCreditCard size={16} />
                 </div>
-                <p className="text-xs font-semibold uppercase tracking-wide text-brown-500 dark:text-white/40">Items Sold</p>
-                <p className="mt-2 text-2xl font-black tracking-tight text-charcoal dark:text-white">
+                <p className="text-[10px] font-semibold uppercase tracking-wide text-brown-500 dark:text-white/40 sm:text-xs">Items Sold</p>
+                <p className="mt-1 text-xl font-black tracking-tight text-charcoal dark:text-white sm:mt-2 sm:text-2xl">
                   {dailySummary.summary.totalItems}
                 </p>
               </div>
@@ -269,22 +269,22 @@ const POSDashboard = () => {
             </div>
           </div>
 
-          <div className="grid gap-3 sm:grid-cols-3 xl:grid-cols-1">
-            <div className="rounded-2xl border border-brown-100 bg-ivory p-4 dark:border-dm-border dark:bg-dm-card-2">
-              <p className="text-xs font-semibold uppercase tracking-wide text-brown-500 dark:text-white/40">Period Sales</p>
-              <p className="mt-2 text-xl font-black tracking-tight text-charcoal dark:text-white">
+          <div className="grid grid-cols-3 gap-3">
+            <div className="rounded-2xl border border-brown-100 bg-ivory p-3 dark:border-dm-border dark:bg-dm-card-2 sm:p-4">
+              <p className="text-[10px] font-semibold uppercase tracking-wide text-brown-500 dark:text-white/40 sm:text-xs">Period Sales</p>
+              <p className="mt-1 text-base font-black tracking-tight text-charcoal dark:text-white sm:mt-2 sm:text-xl">
                 {DisplayPriceInShillings(analyticsTotalSales)}
               </p>
             </div>
-            <div className="rounded-2xl border border-brown-100 bg-ivory p-4 dark:border-dm-border dark:bg-dm-card-2">
-              <p className="text-xs font-semibold uppercase tracking-wide text-brown-500 dark:text-white/40">Transactions</p>
-              <p className="mt-2 text-xl font-black tracking-tight text-charcoal dark:text-white">
+            <div className="rounded-2xl border border-brown-100 bg-ivory p-3 dark:border-dm-border dark:bg-dm-card-2 sm:p-4">
+              <p className="text-[10px] font-semibold uppercase tracking-wide text-brown-500 dark:text-white/40 sm:text-xs">Transactions</p>
+              <p className="mt-1 text-base font-black tracking-tight text-charcoal dark:text-white sm:mt-2 sm:text-xl">
                 {analyticsTransactionCount}
               </p>
             </div>
-            <div className="rounded-2xl border border-brown-100 bg-ivory p-4 dark:border-dm-border dark:bg-dm-card-2">
-              <p className="text-xs font-semibold uppercase tracking-wide text-brown-500 dark:text-white/40">Average Ticket</p>
-              <p className="mt-2 text-xl font-black tracking-tight text-charcoal dark:text-white">
+            <div className="rounded-2xl border border-brown-100 bg-ivory p-3 dark:border-dm-border dark:bg-dm-card-2 sm:p-4">
+              <p className="text-[10px] font-semibold uppercase tracking-wide text-brown-500 dark:text-white/40 sm:text-xs">Average Ticket</p>
+              <p className="mt-1 text-base font-black tracking-tight text-charcoal dark:text-white sm:mt-2 sm:text-xl">
                 {DisplayPriceInShillings(analyticsAverageTicket)}
               </p>
             </div>
@@ -320,22 +320,22 @@ const POSDashboard = () => {
               </h3>
               <span className="text-xs text-brown-500 dark:text-white/45">{selectedDate}</span>
             </div>
-            <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-1 xl:grid-cols-3">
-              <div className="rounded-2xl border border-brown-100 bg-ivory p-4 dark:border-dm-border dark:bg-dm-card-2">
-                <p className="text-xs font-semibold uppercase tracking-wide text-brown-500 dark:text-white/40">Cash</p>
-                <p className="mt-2 text-lg font-black text-charcoal dark:text-white">
+            <div className="grid grid-cols-3 gap-3">
+              <div className="rounded-2xl border border-brown-100 bg-ivory p-3 dark:border-dm-border dark:bg-dm-card-2 sm:p-4">
+                <p className="text-[10px] font-semibold uppercase tracking-wide text-brown-500 dark:text-white/40 sm:text-xs">Cash</p>
+                <p className="mt-1 text-base font-black text-charcoal dark:text-white sm:mt-2 sm:text-lg">
                   {DisplayPriceInShillings(dailySummary.summary.cashSales)}
                 </p>
               </div>
-              <div className="rounded-2xl border border-brown-100 bg-ivory p-4 dark:border-dm-border dark:bg-dm-card-2">
-                <p className="text-xs font-semibold uppercase tracking-wide text-brown-500 dark:text-white/40">Card</p>
-                <p className="mt-2 text-lg font-black text-charcoal dark:text-white">
+              <div className="rounded-2xl border border-brown-100 bg-ivory p-3 dark:border-dm-border dark:bg-dm-card-2 sm:p-4">
+                <p className="text-[10px] font-semibold uppercase tracking-wide text-brown-500 dark:text-white/40 sm:text-xs">Card</p>
+                <p className="mt-1 text-base font-black text-charcoal dark:text-white sm:mt-2 sm:text-lg">
                   {DisplayPriceInShillings(dailySummary.summary.cardSales)}
                 </p>
               </div>
-              <div className="rounded-2xl border border-brown-100 bg-ivory p-4 dark:border-dm-border dark:bg-dm-card-2">
-                <p className="text-xs font-semibold uppercase tracking-wide text-brown-500 dark:text-white/40">M-Pesa</p>
-                <p className="mt-2 text-lg font-black text-charcoal dark:text-white">
+              <div className="rounded-2xl border border-brown-100 bg-ivory p-3 dark:border-dm-border dark:bg-dm-card-2 sm:p-4">
+                <p className="text-[10px] font-semibold uppercase tracking-wide text-brown-500 dark:text-white/40 sm:text-xs">M-Pesa</p>
+                <p className="mt-1 text-base font-black text-charcoal dark:text-white sm:mt-2 sm:text-lg">
                   {DisplayPriceInShillings(dailySummary.summary.mobileSales)}
                 </p>
               </div>

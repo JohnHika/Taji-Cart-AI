@@ -427,71 +427,71 @@ const RoyalCard = () => {
   
   // Render the loyalty card
   return (
-    <div className="relative flex flex-col items-center w-full max-w-sm mx-auto px-2 sm:max-w-md sm:px-0">
+    <div className="relative flex flex-col items-center w-full max-w-md mx-auto px-3 sm:max-w-lg sm:px-0">
       {/* Card container with the tier-specific background */}
       <div
-        className={`w-full rounded-[1.5rem] overflow-hidden shadow-2xl relative ${tierBackground}`}
-        style={{ minHeight: 'auto' }}
+        className={`w-full rounded-[2rem] overflow-hidden shadow-2xl relative ${tierBackground}`}
+        style={{ minHeight: '280px' }}
       >
-        {/* Rest of your card component */}
-        <div className="relative p-3 pt-6 sm:p-4 sm:pt-8"> {/* Reduced padding on mobile */}
-          <div className="absolute top-2 right-2 flex space-x-1 z-10">
+        {/* Card content with generous padding for premium feel */}
+        <div className="relative p-5 pt-8 sm:p-6 sm:pt-10">
+          <div className="absolute top-3 right-3 flex space-x-2 z-10">
             <button 
               onClick={() => setViewMode('barcode')}
-              className={`p-1 rounded-full ${viewMode === 'barcode' ? 'bg-white text-charcoal' : 'bg-black/20 text-white'}`}
+              className={`p-2 rounded-full transition-all ${viewMode === 'barcode' ? 'bg-white text-charcoal shadow-lg' : 'bg-black/20 text-white hover:bg-black/30'}`}
               title="Show Barcode"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 sm:h-5 sm:w-5" viewBox="0 0 20 20" fill="currentColor">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 sm:h-6 sm:w-6" viewBox="0 0 20 20" fill="currentColor">
                 <path fillRule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clipRule="evenodd" />
               </svg>
             </button>
             <button 
               onClick={() => setViewMode('qrcode')}
-              className={`p-1 rounded-full ${viewMode === 'qrcode' ? 'bg-white text-charcoal' : 'bg-black/20 text-white'}`}
+              className={`p-2 rounded-full transition-all ${viewMode === 'qrcode' ? 'bg-white text-charcoal shadow-lg' : 'bg-black/20 text-white hover:bg-black/30'}`}
               title="Show QR Code"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 sm:h-5 sm:w-5" viewBox="0 0 20 20" fill="currentColor">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 sm:h-6 sm:w-6" viewBox="0 0 20 20" fill="currentColor">
                 <path fillRule="evenodd" d="M3 4a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1H4a1 1 0 01-1-1V4zm1 2v1h2V6H4zm5-2a1 1 0 00-1 1v4a1 1 0 001 1h4a1 1 0 001-1V4a1 1 0 00-1-1h-4zm1 2v1h2V6h-2zm-7 5a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1H4a1 1 0 01-1-1v-4zm1 2v1h2v-1H4zm5-2a1 1 0 00-1 1v4a1 1 0 001 1h4a1 1 0 001-1v-4a1 1 0 00-1-1h-4zm1 2v1h2v-1h-2z" />
               </svg>
             </button>
           </div>
           
-          <div className="flex items-center mb-3 sm:mb-4">
-            <FaCrown className="text-gold-300 mr-2 text-lg sm:text-xl" />
-            <h2 className="font-display text-gold-300 text-lg sm:text-xl font-semibold italic">Nawiri Royal Card</h2>
+          <div className="flex items-center mb-4 sm:mb-5">
+            <FaCrown className="text-gold-300 mr-3 text-2xl sm:text-3xl drop-shadow-lg" />
+            <h2 className="font-display text-gold-300 text-xl sm:text-2xl font-semibold italic tracking-wide">Nawiri Royal Card</h2>
           </div>
 
-          <div className="text-white/60 text-xs sm:text-sm mb-0.5">Member</div>
-          <div className="text-white font-display font-semibold italic mb-3 sm:mb-4 text-base sm:text-lg">{user.name || 'Valued Customer'}</div>
+          <div className="text-white/70 text-sm sm:text-base mb-1 uppercase tracking-wider">Member</div>
+          <div className="text-white font-display font-semibold italic mb-4 sm:mb-5 text-xl sm:text-2xl">{user.name || 'Valued Customer'}</div>
           
-          <div className="text-white text-xs sm:text-sm mb-1">Membership Level:</div>
-          <div className="flex items-center mb-3 sm:mb-4">
+          <div className="text-white/70 text-sm sm:text-base mb-2">Membership Level:</div>
+          <div className="flex items-center mb-4 sm:mb-5">
             <span className={`${
               cardData.tier === 'Basic' ? 'bg-brown-200 text-charcoal' :
               cardData.tier === 'Bronze' ? 'bg-amber-300 text-amber-900' :
               cardData.tier === 'Silver' ? 'bg-brown-200 text-charcoal' :
               cardData.tier === 'Gold' ? 'bg-yellow-300 text-amber-900' :
               'bg-plum-200 text-plum-900'
-            } px-2 py-0.5 rounded-full font-medium text-xs sm:text-sm`}>
+            } px-4 py-1.5 rounded-full font-bold text-sm sm:text-base shadow-md`}>
               {cardData.tier}
             </span>
-            <span className="ml-2 text-white text-xs sm:text-sm">
+            <span className="ml-3 text-white text-base sm:text-lg font-medium">
               {formatNumber(cardData.points)} points
             </span>
           </div>
           
-          <div className="text-white text-xs">
+          <div className="text-white/80 text-sm sm:text-base font-medium">
             Valid until: {formatDate(cardData.expiresAt)}
           </div>
         </div>
         
-        <div className="bg-white p-2 sm:p-4 flex justify-center items-center">
+        <div className="bg-white p-4 sm:p-6 flex justify-center items-center">
           {viewMode === 'barcode' ? (
             <div className="overflow-hidden max-w-full">
               <Barcode 
                 value={cardData.cardNumber} 
-                width={1.2}
-                height={40}
+                width={1.8}
+                height={60}
                 format="CODE128"
                 displayValue={true}
                 background="#FFFFFF"
@@ -503,35 +503,35 @@ const RoyalCard = () => {
                   '#2563EB'
                 }
                 margin={0}
-                fontSize={10}
+                fontSize={14}
               />
             </div>
           ) : (
             <QRCode 
               value={`${hostname}/verify/${cardData.cardNumber}`}
-              size={100}
+              size={140}
               level="H"
             />
           )}
         </div>
         
-        <div className={`${secondaryBackground} p-2 sm:p-3`}>
-          <div className="grid grid-cols-3 gap-1 sm:gap-2 text-center text-xs">
-            <div className={`${buttonBackground} p-1.5 sm:p-2 rounded`}>
-              <FaPercent className="mx-auto text-white mb-1 text-xs" />
-              <span className="text-white text-xs">{discountPercentage} Off</span>
+        <div className={`${secondaryBackground} p-3 sm:p-4`}>
+          <div className="grid grid-cols-3 gap-2 sm:gap-3 text-center">
+            <div className={`${buttonBackground} p-3 sm:p-4 rounded-xl shadow-md`}>
+              <FaPercent className="mx-auto text-white mb-2 text-base sm:text-lg" />
+              <span className="text-white text-sm sm:text-base font-medium">{discountPercentage} Off</span>
             </div>
-            <div className={`${buttonBackground} p-1.5 sm:p-2 rounded`}>
-              <FaGift className="mx-auto text-white mb-1 text-xs" />
-              <span className="text-white text-xs">
+            <div className={`${buttonBackground} p-3 sm:p-4 rounded-xl shadow-md`}>
+              <FaGift className="mx-auto text-white mb-2 text-base sm:text-lg" />
+              <span className="text-white text-sm sm:text-base font-medium">
                 {cardData.tier === 'Basic' ? 'Join Now' : 'Free Gifts'}
               </span>
             </div>
-            <div className={`${buttonBackground} p-1.5 sm:p-2 rounded`}>
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 sm:h-4 sm:w-4 mx-auto text-white mb-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <div className={`${buttonBackground} p-3 sm:p-4 rounded-xl shadow-md`}>
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 sm:h-6 sm:w-6 mx-auto text-white mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
-              <span className="text-white text-xs">
+              <span className="text-white text-sm sm:text-base font-medium">
                 {cardData.tier === 'Basic' ? 'Earn Points' : 'Early Access'}
               </span>
             </div>

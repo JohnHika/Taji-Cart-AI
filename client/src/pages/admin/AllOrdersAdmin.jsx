@@ -779,37 +779,37 @@ const OrderStatistics = ({ orders, scopeLabel }) => {
           </span>
         </div>
 
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          <div className="rounded-2xl bg-emerald-100 p-4 text-emerald-800 shadow-sm dark:bg-emerald-900/30 dark:text-emerald-300">
-            <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-xl bg-white/60 dark:bg-white/10">
-              <FaMoneyBillWave size={18} />
+        <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
+          <div className="rounded-2xl bg-emerald-100 p-3 text-emerald-800 shadow-sm sm:p-4 dark:bg-emerald-900/30 dark:text-emerald-300">
+            <div className="mb-2 flex h-9 w-9 items-center justify-center rounded-xl bg-white/60 sm:mb-3 sm:h-11 sm:w-11 dark:bg-white/10">
+              <FaMoneyBillWave size={16} />
             </div>
-            <div className="text-xs font-semibold uppercase tracking-wide">Revenue</div>
-            <div className="mt-2 text-2xl font-black tracking-tight">KSh {totalRevenue.toLocaleString()}</div>
+            <div className="text-[10px] font-semibold uppercase tracking-wide sm:text-xs">Revenue</div>
+            <div className="mt-1 text-xl font-black tracking-tight sm:mt-2 sm:text-2xl">KSh {totalRevenue.toLocaleString()}</div>
           </div>
 
-          <div className="rounded-2xl bg-plum-100 p-4 text-plum-800 shadow-sm dark:bg-plum-900/30 dark:text-plum-200">
-            <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-xl bg-white/60 dark:bg-white/10">
-              <FaShoppingCart size={18} />
+          <div className="rounded-2xl bg-plum-100 p-3 text-plum-800 shadow-sm sm:p-4 dark:bg-plum-900/30 dark:text-plum-200">
+            <div className="mb-2 flex h-9 w-9 items-center justify-center rounded-xl bg-white/60 sm:mb-3 sm:h-11 sm:w-11 dark:bg-white/10">
+              <FaShoppingCart size={16} />
             </div>
-            <div className="text-xs font-semibold uppercase tracking-wide">Pending + Processing</div>
-            <div className="mt-2 text-2xl font-black tracking-tight">{pendingOrders}</div>
+            <div className="text-[10px] font-semibold uppercase tracking-wide sm:text-xs">Pending + Processing</div>
+            <div className="mt-1 text-xl font-black tracking-tight sm:mt-2 sm:text-2xl">{pendingOrders}</div>
           </div>
 
-          <div className="rounded-2xl bg-blush-100 p-4 text-blush-500 shadow-sm dark:bg-blush-500/10 dark:text-blush-300">
-            <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-xl bg-white/70 dark:bg-white/10">
-              <FaTruck size={18} />
+          <div className="rounded-2xl bg-blush-100 p-3 text-blush-500 shadow-sm sm:p-4 dark:bg-blush-500/10 dark:text-blush-300">
+            <div className="mb-2 flex h-9 w-9 items-center justify-center rounded-xl bg-white/70 sm:mb-3 sm:h-11 sm:w-11 dark:bg-white/10">
+              <FaTruck size={16} />
             </div>
-            <div className="text-xs font-semibold uppercase tracking-wide">Fulfillment Active</div>
-            <div className="mt-2 text-2xl font-black tracking-tight">{inTransitOrders}</div>
+            <div className="text-[10px] font-semibold uppercase tracking-wide sm:text-xs">Fulfillment Active</div>
+            <div className="mt-1 text-xl font-black tracking-tight sm:mt-2 sm:text-2xl">{inTransitOrders}</div>
           </div>
 
-          <div className="rounded-2xl bg-brown-100 p-4 text-brown-700 shadow-sm dark:bg-brown-600/20 dark:text-brown-300">
-            <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-xl bg-white/70 dark:bg-white/10">
-              <FaCashRegister size={18} />
+          <div className="rounded-2xl bg-brown-100 p-3 text-brown-700 shadow-sm sm:p-4 dark:bg-brown-600/20 dark:text-brown-300">
+            <div className="mb-2 flex h-9 w-9 items-center justify-center rounded-xl bg-white/70 sm:mb-3 sm:h-11 sm:w-11 dark:bg-white/10">
+              <FaCashRegister size={16} />
             </div>
-            <div className="text-xs font-semibold uppercase tracking-wide">Completed / Counter</div>
-            <div className="mt-2 text-2xl font-black tracking-tight">{completedOrders + posOrders}</div>
+            <div className="text-[10px] font-semibold uppercase tracking-wide sm:text-xs">Completed / Counter</div>
+            <div className="mt-1 text-xl font-black tracking-tight sm:mt-2 sm:text-2xl">{completedOrders + posOrders}</div>
           </div>
         </div>
       </div>

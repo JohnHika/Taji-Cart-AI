@@ -74,24 +74,24 @@ const CompletedDeliveriesManagement = () => {
 
   return (
     <section className="flex flex-col gap-4 lg:gap-5">
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <div className="mobile-surface p-4">
+      <div className="grid grid-cols-2 gap-2.5 xl:grid-cols-4">
+        <div className="mobile-surface p-3 sm:p-4">
           <p className="text-xs uppercase tracking-[0.16em] text-brown-400">Completed</p>
-          <p className="mt-2 text-3xl font-bold text-charcoal dark:text-white">{filteredOrders.length}</p>
+          <p className="mt-1.5 text-2xl font-bold text-charcoal sm:mt-2 sm:text-3xl dark:text-white">{filteredOrders.length}</p>
         </div>
-        <div className="mobile-surface p-4">
+        <div className="mobile-surface p-3 sm:p-4">
           <p className="text-xs uppercase tracking-[0.16em] text-brown-400">Revenue</p>
-          <p className="mt-2 text-xl font-bold text-charcoal dark:text-white">{formatCurrency(totalRevenue)}</p>
+          <p className="mt-1.5 text-lg font-bold text-charcoal sm:mt-2 sm:text-xl dark:text-white">{formatCurrency(totalRevenue)}</p>
         </div>
-        <div className="mobile-surface p-4">
-          <p className="text-xs uppercase tracking-[0.16em] text-brown-400">With driver record</p>
-          <p className="mt-2 text-3xl font-bold text-charcoal dark:text-white">{deliveredWithDrivers}</p>
+        <div className="mobile-surface p-3 sm:p-4">
+          <p className="text-xs uppercase tracking-[0.16em] text-brown-400">With driver</p>
+          <p className="mt-1.5 text-2xl font-bold text-charcoal sm:mt-2 sm:text-3xl dark:text-white">{deliveredWithDrivers}</p>
         </div>
-        <div className="mobile-surface p-4">
+        <div className="mobile-surface p-3 sm:p-4">
           <p className="text-xs uppercase tracking-[0.16em] text-brown-400">Status</p>
-          <p className="mt-2 flex items-center gap-2 text-sm font-medium text-emerald-700 dark:text-emerald-300">
-            <FaCheckCircle />
-            Delivered successfully
+          <p className="mt-1.5 flex items-center gap-1.5 text-sm font-medium text-emerald-700 dark:text-emerald-300">
+            <FaCheckCircle className="shrink-0" />
+            Delivered
           </p>
         </div>
       </div>
@@ -116,8 +116,8 @@ const CompletedDeliveriesManagement = () => {
             </button>
           </div>
 
-          <div className="grid gap-2 lg:grid-cols-[minmax(0,1fr)_180px_180px_auto]">
-            <div className="relative min-w-0">
+          <div className="flex flex-col gap-2">
+            <div className="relative">
               <FaSearch className="pointer-events-none absolute left-3 top-3.5 text-brown-400" />
               <input
                 type="text"
@@ -127,37 +127,39 @@ const CompletedDeliveriesManagement = () => {
                 className="w-full rounded-xl border border-brown-100 bg-white py-3 pl-10 pr-4 text-sm outline-none transition focus:border-cyan-500 focus:ring-2 focus:ring-cyan-100 dark:border-dm-border dark:bg-dm-surface dark:text-white"
               />
             </div>
-            <div>
-              <label className="mb-1 flex items-center gap-2 text-xs font-medium uppercase tracking-[0.16em] text-brown-400">
-                <FaCalendarAlt />
-                From
-              </label>
-              <input
-                type="date"
-                value={dateFrom}
-                onChange={(e) => setDateFrom(e.target.value)}
-                className="w-full rounded-xl border border-brown-100 bg-white px-4 py-3 text-sm outline-none transition focus:border-cyan-500 focus:ring-2 focus:ring-cyan-100 dark:border-dm-border dark:bg-dm-surface dark:text-white"
-              />
+            <div className="flex items-end gap-2">
+              <div className="flex-1">
+                <label className="mb-1 flex items-center gap-2 text-xs font-medium uppercase tracking-[0.16em] text-brown-400">
+                  <FaCalendarAlt />
+                  From
+                </label>
+                <input
+                  type="date"
+                  value={dateFrom}
+                  onChange={(e) => setDateFrom(e.target.value)}
+                  className="w-full rounded-xl border border-brown-100 bg-white px-4 py-3 text-sm outline-none transition focus:border-cyan-500 focus:ring-2 focus:ring-cyan-100 dark:border-dm-border dark:bg-dm-surface dark:text-white"
+                />
+              </div>
+              <div className="flex-1">
+                <label className="mb-1 flex items-center gap-2 text-xs font-medium uppercase tracking-[0.16em] text-brown-400">
+                  <FaCalendarAlt />
+                  To
+                </label>
+                <input
+                  type="date"
+                  value={dateTo}
+                  onChange={(e) => setDateTo(e.target.value)}
+                  className="w-full rounded-xl border border-brown-100 bg-white px-4 py-3 text-sm outline-none transition focus:border-cyan-500 focus:ring-2 focus:ring-cyan-100 dark:border-dm-border dark:bg-dm-surface dark:text-white"
+                />
+              </div>
+              <button
+                type="button"
+                onClick={fetchOrders}
+                className="shrink-0 rounded-xl bg-cyan-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-cyan-700"
+              >
+                Apply
+              </button>
             </div>
-            <div>
-              <label className="mb-1 flex items-center gap-2 text-xs font-medium uppercase tracking-[0.16em] text-brown-400">
-                <FaCalendarAlt />
-                To
-              </label>
-              <input
-                type="date"
-                value={dateTo}
-                onChange={(e) => setDateTo(e.target.value)}
-                className="w-full rounded-xl border border-brown-100 bg-white px-4 py-3 text-sm outline-none transition focus:border-cyan-500 focus:ring-2 focus:ring-cyan-100 dark:border-dm-border dark:bg-dm-surface dark:text-white"
-              />
-            </div>
-            <button
-              type="button"
-              onClick={fetchOrders}
-              className="self-end rounded-xl bg-cyan-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-cyan-700"
-            >
-              Apply
-            </button>
           </div>
         </div>
       </div>

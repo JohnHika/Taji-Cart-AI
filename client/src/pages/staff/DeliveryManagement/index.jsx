@@ -72,12 +72,12 @@ const DeliveryManagement = () => {
     <div className="mobile-page-shell lg:h-full lg:overflow-hidden lg:pb-6">
       <div className="flex flex-col gap-4 lg:h-full">
         <section className="mobile-surface overflow-hidden">
-          <div className="bg-gradient-to-r from-sky-700 via-cyan-700 to-emerald-700 px-4 py-5 text-white sm:px-6">
+          <div className="bg-gradient-to-r from-sky-700 via-cyan-700 to-emerald-700 px-4 py-4 text-white sm:px-6 sm:py-5">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.2em] text-white/75">Staff delivery</p>
                 <h1 className="mt-2 text-2xl font-bold text-white sm:text-3xl">Delivery Management</h1>
-                <p className="mt-2 max-w-2xl text-sm text-cyan-50/90 sm:text-base">
+                <p className="mt-1.5 hidden max-w-2xl text-sm text-cyan-50/90 sm:mt-2 sm:block sm:text-base">
                   Dispatch orders, assign drivers, monitor active deliveries, and review completed drop-offs from one workspace.
                 </p>
               </div>
@@ -102,29 +102,31 @@ const DeliveryManagement = () => {
             </div>
           </div>
 
-          <div className="border-t border-white/10 bg-white px-3 py-3 dark:border-dm-border dark:bg-dm-card sm:px-4">
-            <nav className="mobile-chip-row">
-              {tabs.map((tab) => {
-                const Icon = tab.icon;
-                return (
-                  <NavLink
-                    key={tab.to}
-                    to={tab.to}
-                    className={({ isActive }) =>
-                      `inline-flex min-w-fit items-center gap-2 rounded-full border px-3 py-2 text-sm font-medium transition ${
-                        isActive || location.pathname.endsWith(`/${tab.to}`)
-                          ? 'border-cyan-600 bg-cyan-600 text-white shadow-sm'
-                          : 'border-brown-100 bg-ivory text-charcoal hover:border-cyan-200 hover:bg-cyan-50 hover:text-cyan-700 dark:border-dm-border dark:bg-dm-surface dark:text-white/70 dark:hover:border-cyan-800 dark:hover:bg-cyan-900/20 dark:hover:text-cyan-200'
-                      }`
-                    }
-                  >
-                    <Icon className="h-4 w-4 flex-shrink-0" />
-                    <span>{tab.name}</span>
-                    <span className="rounded-full bg-black/10 px-2 py-0.5 text-xs dark:bg-white/10">{tab.count}</span>
-                  </NavLink>
-                );
-              })}
-            </nav>
+          <div className="border-t border-white/10 bg-white dark:border-dm-border dark:bg-dm-card">
+            <div className="overflow-x-auto scrollbar-hide">
+              <nav className="flex min-w-max gap-2 px-3 pb-2.5 pt-2.5 sm:px-4">
+                {tabs.map((tab) => {
+                  const Icon = tab.icon;
+                  return (
+                    <NavLink
+                      key={tab.to}
+                      to={tab.to}
+                      className={({ isActive }) =>
+                        `inline-flex items-center gap-2 whitespace-nowrap rounded-full border px-3 py-2 text-sm font-medium transition ${
+                          isActive || location.pathname.endsWith(`/${tab.to}`)
+                            ? 'border-cyan-600 bg-cyan-600 text-white shadow-sm'
+                            : 'border-brown-100 bg-ivory text-charcoal hover:border-cyan-200 hover:bg-cyan-50 hover:text-cyan-700 dark:border-dm-border dark:bg-dm-surface dark:text-white/70 dark:hover:border-cyan-800 dark:hover:bg-cyan-900/20 dark:hover:text-cyan-200'
+                        }`
+                      }
+                    >
+                      <Icon className="h-4 w-4 flex-shrink-0" />
+                      <span>{tab.name}</span>
+                      <span className="rounded-full bg-black/10 px-2 py-0.5 text-xs dark:bg-white/10">{tab.count}</span>
+                    </NavLink>
+                  );
+                })}
+              </nav>
+            </div>
           </div>
         </section>
 
