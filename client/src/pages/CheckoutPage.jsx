@@ -1,4 +1,3 @@
-import { loadStripe } from '@stripe/stripe-js';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
 import { FaCrown, FaStore } from 'react-icons/fa';
@@ -12,7 +11,6 @@ import ActiveRewards from '../components/ActiveRewards'; // Import the ActiveRew
 import AddAddress from '../components/AddAddress';
 import CommunityCampaignProgress from '../components/CommunityCampaignProgress'; // Import the CommunityCampaignProgress component
 import FulfillmentModal from '../components/FulfillmentModal';
-import MpesaPayment from '../components/MpesaPayment'; // Import the MpesaPayment component
 import { useTheme } from '../context/ThemeContext';
 import useCriteriaGate from '../hooks/useCriteriaGate';
 import { useGlobalContext } from '../provider/GlobalProvider';
@@ -29,7 +27,6 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
   const { darkMode } = useTheme();
   const location = useLocation();
   const [openAddress, setOpenAddress] = useState(false);
-  const [showMpesaForm, setShowMpesaForm] = useState(false); // State to control M-Pesa form visibility
   const [showFulfillmentModal, setShowFulfillmentModal] = useState(false);
   
   // Debug: Log location state
@@ -322,176 +319,6 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
       }
     });
   }
-
-  const handleOnlinePayment = async() => {
-    if (!(await ensureCriteria('checkout'))) return;
-    if (!validateAddress()) return;
-
-    await runCheckoutAction('card', async () => {
-      const loadingToastId = toast.loading("Loading...");
-
-      try {
-          const stripePublicKey = import.meta.env.VITE_STRIPE_PUBLIC_KEY;
-          const stripe = await loadStripe(stripePublicKey);
-
-          if (!stripe) {
-            throw new Error('Stripe failed to initialize.');
-          }
-
-          try {
-            dispatch(clearCartItems());
-
-            await Axios({
-              ...SummaryApi.clearCart,
-              requestLockKey: `checkout:clear:${checkoutScope}`
-            });
-          } catch (clearError) {
-            console.error("Failed to clear cart before payment:", clearError);
-          }
-
-          const response = await Axios({
-              ...SummaryApi.payment_url,
-              data: {
-                list_items: cartItemsList,
-                addressId: fulfillmentMethod === 'delivery' ? addressList[selectAddress]._id : null,
-                subTotalAmt: totalPrice,
-                totalAmt: finalPrice,
-                royalDiscount: royalDiscount,
-                communityRewardId: selectedReward ? selectedReward._id : null,
-                communityDiscountAmount: selectedReward && selectedReward.type === 'discount' ? communityDiscount : 0,
-                fulfillment_type: fulfillmentMethod,
-                delivery_mode: fulfillmentMethod === 'delivery' ? deliveryMode : 'standard',
-                customerLocation,
-                pickup_location: pickupLocation,
-                pickup_instructions: pickupInstructions
-              },
-              requestLockKey: `checkout:stripe:${checkoutScope}`
-          });
-
-          const { data: responseData } = response;
-          localStorage.setItem('cartClearedAt', new Date().toISOString());
-
-          if(fetchCartItem){
-            fetchCartItem();
-          }
-
-          if (isCutView && onClose) {
-            onClose();
-          }
-
-          toast.dismiss(loadingToastId);
-          const stripeRedirectResult = await stripe.redirectToCheckout({ sessionId: responseData.id });
-
-          if (stripeRedirectResult?.error) {
-            throw stripeRedirectResult.error;
-          }
-      } catch (error) {
-          toast.dismiss(loadingToastId);
-          AxiosToastError(error);
-      }
-    });
-  }
-
-  const handleShowMpesaForm = async () => {
-    if (isCheckoutBusy) return;
-    if (!(await ensureCriteria('checkout'))) return;
-    if (!validateAddress()) return;
-    setShowMpesaForm(true);
-  };
-
-  const handleMpesaSuccess = () => {
-    // Clear cart state immediately after successful order
-    dispatch(clearCartItems());
-    
-    toast.success("M-Pesa payment initiated. Enter your PIN on your phone.");
-    setShowMpesaForm(false);
-    
-    // Close cut view if applicable before navigating
-    if (isCutView && onClose) {
-      onClose();
-    }
-    
-    // Navigate to payment status page
-    navigate('/mpesa-payment-status');
-    
-    // Clear cart after initiating payment
-    if(fetchCartItem) {
-      fetchCartItem();
-    }
-  }
-
-  const handleMpesaError = (errorMessage) => {
-    toast.error(errorMessage || "M-Pesa payment failed");
-    setShowMpesaForm(false);
-  }
-
-  const handlePesapalPayment = async () => {
-    if (!(await ensureCriteria('checkout'))) return;
-    if (!validateAddress()) return;
-
-    await runCheckoutAction('pesapal', async () => {
-      try {
-        const orderId = `ORD-${Date.now()}-${Math.floor(Math.random()*1000)}`;
-        const token = getStoredAccessToken();
-
-        const res = await Axios({
-          url: buildApiUrl('/api/pesapal/initiate'),
-          method: 'POST',
-          ...(token ? { headers: { Authorization: `Bearer ${token}` } } : {}),
-          data: {
-            orderId,
-            amount: finalPrice,
-            currency: 'KES',
-            description: `Nawiri Hair checkout ${orderId}`,
-            customer: {
-              email: user?.email,
-              firstName: user?.name?.split(' ')[0] || 'Customer',
-              lastName: user?.name?.split(' ').slice(1).join(' ') || 'User',
-              phone: user?.mobile,
-              countryCode: 'KE'
-            }
-          },
-          requestLockKey: `checkout:pesapal:${checkoutScope}`
-        });
-
-        const { data } = res;
-
-        if (data?.success && data.redirect_url) {
-          const width = 480;
-          const height = 720;
-          const left = window.screenX + (window.innerWidth - width) / 2;
-          const top = window.screenY + (window.innerHeight - height) / 2;
-          const popup = window.open(data.redirect_url, 'pesapalPopup', `width=${width},height=${height},left=${left},top=${top}`);
-
-          if (!popup) {
-            throw new Error('Popup blocked. Please allow popups and try again.');
-          }
-
-          await new Promise((resolve) => {
-            const poll = setInterval(() => {
-              try {
-                if (popup.closed) {
-                  clearInterval(poll);
-                  navigate('/success', { state: { orderId, paymentMethod: 'PesaPal', amount: finalPrice } });
-                  resolve();
-                }
-              } catch (_) {
-                // Ignore cross-origin popup access while the gateway is open.
-              }
-            }, 800);
-          });
-        } else {
-          throw new Error('Failed to start Pesapal payment');
-        }
-      } catch (err) {
-        console.error('Pesapal init error:', err.response?.data || err.message);
-        const raw = err.response?.data;
-        const detail = raw?.details || raw?.message || err.message || 'Failed to initiate PesaPal';
-        const guidance = /invalid\s*ipn/i.test(detail) ? ' - Please register your IPN in the Pesapal dashboard and set PESAPAL_NOTIFICATION_ID.' : '';
-        toast.error(`PesaPal Payment Error: ${detail}${guidance}`);
-      }
-    });
-  };
 
   // Handle fulfillment method selection
   const handleFulfillmentSelect = (data) => {
@@ -791,32 +618,10 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
               </div>
             </div>
 
-            {/* Payment Methods */}
+            {/* Payment Methods - Cash Only for Customers */}
             <div className='space-y-4'>
               <button 
-                className={`w-full py-2 px-4 rounded text-white font-semibold transition-colors duration-200 ${
-                  isPaymentEnabled && !isCheckoutBusy
-                    ? 'bg-gold-500 hover:bg-gold-400 text-charcoal dark:text-charcoal' 
-                    : 'bg-brown-200 dark:bg-dm-border text-brown-400 dark:text-white/35 cursor-not-allowed'
-                }`}
-                onClick={handleOnlinePayment}
-                disabled={!isPaymentEnabled || isCheckoutBusy}
-              >
-                {checkoutAction === 'card' ? 'Processing card payment...' : `Pay with Card ${!isPaymentEnabled ? '(Select Address First)' : ''}`}
-              </button>
-              <button 
-                className={`w-full py-2 px-4 rounded text-white font-semibold transition-colors duration-200 ${
-                  isPaymentEnabled && !isCheckoutBusy
-                    ? 'bg-plum-700 hover:bg-plum-600 dark:bg-plum-600 dark:hover:bg-plum-500' 
-                    : 'bg-brown-200 dark:bg-dm-border text-brown-400 dark:text-white/35 cursor-not-allowed'
-                }`}
-                onClick={handleShowMpesaForm}
-                disabled={!isPaymentEnabled || isCheckoutBusy}
-              >
-                Pay with M-Pesa {!isPaymentEnabled && '(Select Address First)'}
-              </button>
-              <button 
-                className={`w-full py-2 px-4 border-2 font-semibold transition-colors duration-200 ${
+                className={`w-full py-2 px-4 border-2 font-semibold transition-colors duration-200 rounded ${
                   isPaymentEnabled && !isCheckoutBusy
                     ? 'border-plum-600 text-plum-700 hover:bg-plum-50 hover:text-plum-900 dark:border-plum-500 dark:text-plum-200 dark:hover:bg-plum-900/40 dark:hover:text-white' 
                     : 'border-brown-200 text-brown-300 dark:border-dm-border dark:text-white/30 cursor-not-allowed'
@@ -825,17 +630,6 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
                 disabled={!isPaymentEnabled || isCheckoutBusy}
               >
                 {checkoutAction === 'cash' ? 'Placing order...' : `Cash on Delivery ${!isPaymentEnabled ? '(Select Address First)' : ''}`}
-              </button>
-              <button 
-                className={`w-full py-2 px-4 rounded text-white font-semibold transition-colors duration-200 ${
-                  isPaymentEnabled && !isCheckoutBusy
-                    ? 'bg-charcoal hover:bg-plum-900 text-white dark:bg-plum-800 dark:hover:bg-plum-700' 
-                    : 'bg-brown-200 dark:bg-dm-border text-brown-400 dark:text-white/35 cursor-not-allowed'
-                }`}
-                onClick={handlePesapalPayment}
-                disabled={!isPaymentEnabled || isCheckoutBusy}
-              >
-                {checkoutAction === 'pesapal' ? 'Processing...' : `Pay with PesaPal ${!isPaymentEnabled ? '(Select Address First)' : ''}`}
               </button>
             </div>
           </div>
@@ -1195,56 +989,17 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
           )}
 
           <div className='w-full flex flex-col gap-3 mt-5'>
-            <p className="text-xs font-semibold uppercase tracking-widest text-brown-300 dark:text-white/30 mb-1">Choose Payment Method</p>
+            <p className="text-xs font-semibold uppercase tracking-widest text-brown-300 dark:text-white/30 mb-1">Payment Method</p>
             <button
               className={`flex items-center justify-between w-full py-3 px-4 rounded-card border-2 font-semibold text-sm transition-all duration-200 press ${
                 isPaymentEnabled && !isCheckoutBusy
-                  ? 'border-plum-700 text-plum-700 dark:border-plum-400 dark:text-plum-200 bg-plum-50 dark:bg-plum-900/20 hover:bg-plum-100 dark:hover:bg-plum-900/40'
-                  : 'border-brown-100 dark:border-dm-border text-brown-300 dark:text-white/20 cursor-not-allowed'
-              }`}
-              onClick={handleOnlinePayment}
-              disabled={!isPaymentEnabled || isCheckoutBusy}
-            >
-              <span>{checkoutAction === 'card' ? 'Processing card payment...' : 'Pay with Card (Stripe)'}</span>
-              {!isPaymentEnabled && <span className="text-xs font-normal opacity-60">{fulfillmentMethod === 'delivery' ? 'Select address first' : 'Select pickup location'}</span>}
-            </button>
-
-            <button
-              className={`flex items-center justify-between w-full py-3 px-4 rounded-card border-2 font-semibold text-sm transition-all duration-200 press ${
-                isPaymentEnabled && !isCheckoutBusy
-                  ? 'border-plum-600 text-plum-800 dark:border-plum-400 dark:text-plum-200 bg-plum-50 dark:bg-plum-900/25 hover:bg-plum-100 dark:hover:bg-plum-900/40'
-                  : 'border-brown-100 dark:border-dm-border text-brown-300 dark:text-white/20 cursor-not-allowed'
-              }`}
-              onClick={handleShowMpesaForm}
-              disabled={!isPaymentEnabled || isCheckoutBusy}
-            >
-              <span>Pay with M-Pesa</span>
-              {!isPaymentEnabled && <span className="text-xs font-normal opacity-60">{fulfillmentMethod === 'delivery' ? 'Select address first' : 'Select pickup location'}</span>}
-            </button>
-
-            <button
-              className={`flex items-center justify-between w-full py-3 px-4 rounded-card border-2 font-semibold text-sm transition-all duration-200 press ${
-                isPaymentEnabled && !isCheckoutBusy
-                  ? 'border-brown-400 text-brown-500 dark:border-brown-500 dark:text-brown-300 bg-brown-50 dark:bg-brown-900/10 hover:bg-brown-100 dark:hover:bg-brown-900/20'
+                  ? 'border-plum-600 text-plum-700 dark:border-plum-500 dark:text-plum-200 bg-plum-50 dark:bg-plum-900/20 hover:bg-plum-100 dark:hover:bg-plum-900/40'
                   : 'border-brown-100 dark:border-dm-border text-brown-300 dark:text-white/20 cursor-not-allowed'
               }`}
               onClick={handleCashOnDelivery}
               disabled={!isPaymentEnabled || isCheckoutBusy}
             >
               <span>{checkoutAction === 'cash' ? 'Placing order...' : `Cash on ${fulfillmentMethod === 'delivery' ? 'Delivery' : 'Pickup'}`}</span>
-              {!isPaymentEnabled && <span className="text-xs font-normal opacity-60">{fulfillmentMethod === 'delivery' ? 'Select address first' : 'Select pickup location'}</span>}
-            </button>
-
-            <button
-              className={`flex items-center justify-between w-full py-3 px-4 rounded-card border-2 font-semibold text-sm transition-all duration-200 press ${
-                isPaymentEnabled && !isCheckoutBusy
-                  ? 'border-plum-500 text-plum-700 dark:border-plum-400 dark:text-plum-200 bg-plum-50 dark:bg-plum-900/20 hover:bg-plum-100 dark:hover:bg-plum-900/40'
-                  : 'border-brown-100 dark:border-dm-border text-brown-300 dark:text-white/20 cursor-not-allowed'
-              }`}
-              onClick={handlePesapalPayment}
-              disabled={!isPaymentEnabled || isCheckoutBusy}
-            >
-              <span>{checkoutAction === 'pesapal' ? 'Processing...' : 'Pay with PesaPal'}</span>
               {!isPaymentEnabled && <span className="text-xs font-normal opacity-60">{fulfillmentMethod === 'delivery' ? 'Select address first' : 'Select pickup location'}</span>}
             </button>
 
@@ -1265,35 +1020,6 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
           </div>
         </div>
         </div>
-
-        {/* M-Pesa Payment Modal */}
-        {showMpesaForm && (
-          <div className="fixed inset-0 bg-plum-900/60 flex items-center justify-center z-50 p-4">
-            <div className="bg-white dark:bg-dm-card p-6 rounded-card shadow-hover max-w-md w-full transition-colors duration-200 animate-scale-in">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="text-lg font-bold dark:text-white">M-Pesa Payment</h3>
-                <button 
-                  onClick={() => setShowMpesaForm(false)}
-                  className="text-brown-400 hover:text-charcoal dark:text-white/50 dark:hover:text-white"
-                ><FaXmark /></button>
-              </div>
-              <MpesaPayment
-                cartItems={cartItemsList}
-                totalAmount={totalPrice}
-                addressId={fulfillmentMethod === 'delivery' ? addressList[selectAddress]?._id : null}
-                onSuccess={handleMpesaSuccess}
-                onError={handleMpesaError}
-                communityRewardId={selectedReward?._id}
-                communityDiscountAmount={selectedReward?.type === 'discount' ? communityDiscount : 0}
-                fulfillment_type={fulfillmentMethod}
-                delivery_mode={fulfillmentMethod === 'delivery' ? deliveryMode : 'standard'}
-                customerLocation={customerLocation}
-                pickup_location={pickupLocation}
-                pickup_instructions={pickupInstructions}
-              />
-            </div>
-          </div>
-        )}
 
         {/* Fulfillment Method Modal */}
         <FulfillmentModal 

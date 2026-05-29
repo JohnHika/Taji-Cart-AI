@@ -859,6 +859,12 @@ const StaffPOS = () => {
       return;
     }
 
+    // For M-Pesa payments: require either payment photo OR transaction code in paymentNote
+    if (mpesaRows.length > 0 && !paymentPhotoDataUrl && !paymentNote?.trim()) {
+      toast.error('M-Pesa payment requires: attach a photo OR enter the transaction code');
+      return;
+    }
+
     // Allocate M-Pesa: use confirmed sentAmount where available; otherwise split remaining equally
     if (mpesaRows.length > 0) {
       const totalSent = mpesaRows.reduce((s, r) => s + (parseFloat(r.sentAmount || '0') || 0), 0);
@@ -2194,8 +2200,7 @@ Applied: {discount}% loyalty discount applied to cart
                 <div key={idx} className="grid grid-cols-6 gap-2 items-center">
                   <select value={row.method} onChange={e=>updateSplitRow(idx, 'method', e.target.value)} className="col-span-2 px-3 py-2 border border-blush-200 dark:border-dm-border rounded-pill bg-white dark:bg-dm-card text-charcoal dark:text-white">
                     <option value="cash">Cash</option>
-                    <option value="card">Card</option>
-                    <option value="mobile">M-Pesa</option>
+                    <option value="mobile">M-Pesa / Paybill</option>
                   </select>
                   {row.method === 'mobile' ? (
                     <div className="col-span-3 flex items-center gap-2">
@@ -2238,19 +2243,29 @@ Applied: {discount}% loyalty discount applied to cart
 
             {/* Payment reference note */}
             <div className="mb-3">
-              <label className="block text-xs font-medium text-brown-500 dark:text-white/50 mb-1">Payment Reference / Note</label>
+              <label className="block text-xs font-medium text-brown-500 dark:text-white/50 mb-1">
+                {splitPayments.some(r => r.method === 'mobile') 
+                  ? 'M-Pesa Transaction Code (required if no photo)' 
+                  : 'Payment Reference / Note'}
+              </label>
               <input
                 type="text"
                 value={paymentNote}
                 onChange={(e) => setPaymentNote(e.target.value)}
-                placeholder="e.g. Cash received, M-Pesa ref: ABC123..."
+                placeholder={splitPayments.some(r => r.method === 'mobile') 
+                  ? "Enter M-Pesa confirmation code e.g. ABC123XYZ"
+                  : "e.g. Cash received, transaction ref..."}
                 className="w-full px-3 py-2 border border-blush-200 dark:border-dm-border rounded-pill bg-white dark:bg-dm-card text-charcoal dark:text-white text-sm outline-none focus:ring-2 focus:ring-plum-500"
               />
             </div>
 
             {/* Payment proof photo */}
             <div className="mb-5">
-              <label className="block text-xs font-medium text-brown-500 dark:text-white/50 mb-2">Payment Proof Photo</label>
+              <label className="block text-xs font-medium text-brown-500 dark:text-white/50 mb-2">
+                {splitPayments.some(r => r.method === 'mobile') 
+                  ? 'M-Pesa Screenshot (required if no transaction code)' 
+                  : 'Payment Proof Photo (optional)'}
+              </label>
               <input
                 ref={photoInputRef}
                 type="file"
@@ -2292,6 +2307,15 @@ Applied: {discount}% loyalty discount applied to cart
               )}
             </div>
 
+            {/* M-Pesa proof warning */}
+            {splitPayments.some(r => r.method === 'mobile') && !paymentPhotoDataUrl && !paymentNote?.trim() && (
+              <div className="mb-3 p-2 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-lg">
+                <p className="text-xs text-amber-700 dark:text-amber-300 text-center">
+                  ⚠️ M-Pesa requires: Screenshot <strong>OR</strong> Transaction Code
+                </p>
+              </div>
+            )}
+
             <div className="flex gap-2">
               <button
                 onClick={() => setShowPaymentModal(false)}
@@ -2299,14 +2323,17 @@ Applied: {discount}% loyalty discount applied to cart
               >
                 Cancel
               </button>
-              {(()=>{ const anyMobilePending = splitPayments.some(r => r.method==='mobile' && r.mpesaStatus !== 'success');
+              {(()=>{ 
+                const anyMobilePending = splitPayments.some(r => r.method==='mobile' && r.mpesaStatus !== 'success');
+                const hasMobile = splitPayments.some(r => r.method === 'mobile');
+                const missingProof = hasMobile && !paymentPhotoDataUrl && !paymentNote?.trim();
               return (
               <button
-                onClick={() => !anyMobilePending && !loading && setShowCompleteConfirm(true)}
-                disabled={loading || anyMobilePending}
+                onClick={() => !anyMobilePending && !loading && !missingProof && setShowCompleteConfirm(true)}
+                disabled={loading || anyMobilePending || missingProof}
                 className="flex-1 px-4 py-2 bg-gold-500 hover:bg-gold-400 text-charcoal font-semibold rounded-pill disabled:opacity-50 press transition-colors"
               >
-                {loading ? <LoadingSpinner size="small" /> : (anyMobilePending ? 'Awaiting M-Pesa...' : 'Complete Sale')}
+                {loading ? <LoadingSpinner size="small" /> : (anyMobilePending ? 'Awaiting M-Pesa...' : (missingProof ? 'Add Proof' : 'Complete Sale'))}
               </button>
               )})()}
             </div>
