@@ -8,11 +8,11 @@ import { setOrder } from '../store/orderSlice'
 import Axios from '../utils/Axios'
 
 const statusColors = {
-  pending: 'bg-yellow-100 text-yellow-800 border-yellow-200',
+  pending: 'bg-gold-100 text-gold-600 border-gold-200',
   processing: 'bg-plum-100 text-plum-800 border-plum-200',
   shipped: 'bg-plum-100 text-plum-800 border-plum-200',
-  delivered: 'bg-green-100 text-green-800 border-green-200',
-  cancelled: 'bg-red-100 text-red-800 border-red-200',
+  delivered: 'bg-brown-100 text-brown-700 border-brown-200',
+  cancelled: 'bg-blush-100 text-blush-500 border-blush-200',
   default: 'bg-brown-50 text-charcoal border-brown-100'
 }
 
@@ -124,7 +124,7 @@ const MyOrders = () => {
                       <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium shrink-0 ${
                         order.fulfillment_type === 'delivery'
                           ? 'bg-plum-100 text-plum-800 dark:bg-plum-900 dark:text-plum-200'
-                          : 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200'
+                          : 'bg-gold-100 text-gold-700 dark:bg-gold-600/20 dark:text-gold-300'
                       }`}>
                         {order.fulfillment_type === 'delivery'
                           ? <><FaTruck className="mr-1" size={10} /> Delivery</>
@@ -182,7 +182,7 @@ const MyOrders = () => {
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 text-sm">
                     <div className="bg-plum-50/50 dark:bg-plum-900/15 p-3 rounded-card border border-brown-100/80 dark:border-dm-border">
                       <div className="flex items-center gap-2 mb-2 text-charcoal dark:text-white/85 font-medium">
-                        <FaMoneyBillWave className="text-green-600" />
+                        <FaMoneyBillWave className="text-gold-500" />
                         <span>Payment Information</span>
                       </div>
                       <div className="text-brown-600 dark:text-white/55 space-y-1">
@@ -192,7 +192,7 @@ const MyOrders = () => {
                         </div>
                         <div className="flex justify-between">
                           <span>Status:</span>
-                          <span className={`${order.isPaid ? 'text-green-600' : 'text-yellow-600'}`}>
+                          <span className={`${order.isPaid ? 'text-brown-700 dark:text-brown-300' : 'text-gold-600 dark:text-gold-400'}`}>
                             {order.isPaid ? 'Paid' : 'Pending'}
                           </span>
                         </div>

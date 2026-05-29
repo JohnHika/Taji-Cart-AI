@@ -3,7 +3,6 @@ import { FaBarcode, FaBullhorn, FaCashRegister, FaClipboardList, FaSpinner, FaSt
 import { useSelector } from 'react-redux';
 import { Link, useNavigate } from 'react-router-dom';
 import SummaryApi from '../common/SummaryApi';
-import UserTable from '../components/UserTable';
 import Axios from '../utils/Axios';
 import AxiosToastError from '../utils/AxiosToastError';
 import isadmin from '../utils/isAdmin';
@@ -102,6 +101,34 @@ const AdminDashboard = () => {
 
   const recentUsers = users.slice(0, 6);
 
+  const getUserRoleMeta = (user) => {
+    if (user.isAdmin || user.role === 'admin') {
+      return {
+        label: 'Admin',
+        className: 'bg-plum-100 text-plum-700 dark:bg-plum-900/30 dark:text-plum-200'
+      };
+    }
+
+    if (user.isStaff || user.role === 'staff') {
+      return {
+        label: 'Seller',
+        className: 'bg-gold-100 text-gold-700 dark:bg-gold-900/20 dark:text-gold-300'
+      };
+    }
+
+    if (user.isDelivery || user.role === 'delivery') {
+      return {
+        label: 'Driver',
+        className: 'bg-blush-100 text-blush-500 dark:bg-blush-500/10 dark:text-blush-300'
+      };
+    }
+
+    return {
+      label: 'Customer',
+      className: 'bg-brown-100 text-brown-600 dark:bg-dm-card-2 dark:text-white/70'
+    };
+  };
+
   return (
     <div className="container mx-auto w-full max-w-full overflow-x-hidden px-3 py-4 sm:px-4 sm:py-6 pb-24 lg:pb-6">
       <div className="mb-6 rounded-3xl bg-gradient-to-r from-plum-800 via-plum-600 to-gold-500 p-5 text-white shadow-lg sm:p-6">
@@ -157,103 +184,136 @@ const AdminDashboard = () => {
         })}
       </div>
       
-      {/* Active Campaigns Section */}
-      <div className="mb-8">
-        <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <h2 className="text-xl font-semibold">Active Campaigns</h2>
-          <div className="flex flex-wrap items-center gap-3">
-            <Link to="/dashboard/active-campaigns" className="text-plum-600 hover:text-plum-500 dark:text-plum-300 dark:hover:text-plum-200 text-sm underline underline-offset-2 transition-colors">
-              View Active Campaigns
-            </Link>
-            <Link to="/dashboard/admin-community-perks" className="text-sm font-medium bg-plum-700 hover:bg-plum-800 text-white px-3 py-1.5 rounded-pill transition-colors">
-                {'Manage ->'}
-            </Link>
-          </div>
-        </div>
-        
-        {loadingCampaigns ? (
-          <div className="flex justify-center items-center h-32 bg-white dark:bg-dm-card rounded-card shadow-card">
-            <FaSpinner className="animate-spin text-plum-500 text-2xl" />
-          </div>
-        ) : campaigns.length === 0 ? (
-          <div className="bg-white dark:bg-dm-card rounded-card shadow-card p-8 text-center">
-            <div className="w-14 h-14 bg-plum-50 dark:bg-plum-900/30 rounded-full flex items-center justify-center mx-auto mb-3">
-              <FaBullhorn className="text-plum-400 text-2xl" />
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,1.35fr)_minmax(280px,0.95fr)] xl:items-start">
+        {/* Active Campaigns Section */}
+        <div className="min-w-0">
+          <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <h2 className="text-xl font-semibold">Active Campaigns</h2>
+            <div className="flex flex-wrap items-center gap-3">
+              <Link to="/dashboard/active-campaigns" className="text-plum-600 hover:text-plum-500 dark:text-plum-300 dark:hover:text-plum-200 text-sm underline underline-offset-2 transition-colors">
+                View Active Campaigns
+              </Link>
+              <Link to="/dashboard/admin-community-perks" className="text-sm font-medium bg-plum-700 hover:bg-plum-800 text-white px-3 py-1.5 rounded-pill transition-colors">
+                  {'Manage ->'}
+              </Link>
             </div>
-            <p className="text-brown-400 dark:text-white/50 mb-3">No active campaigns at the moment</p>
-            <Link to="/dashboard/admin-community-perks" className="inline-block bg-gold-500 hover:bg-gold-400 text-charcoal font-semibold px-4 py-2 rounded-pill text-sm transition-colors">
-              Create New Campaign
-            </Link>
           </div>
-        ) : (
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {campaigns.map(campaign => {
-              const progress = calculateProgress(campaign);
-              const isPerk = campaign.metadata?.isPerk === true;
-              
-              return (
-                <div
-                  key={campaign._id}
-                  className={`p-4 rounded-card shadow-card border hover-lift transition-all ${
-                    isPerk
-                      ? 'bg-gold-50 dark:bg-gold-900/10 border-gold-200 dark:border-gold-800/30'
-                      : 'bg-white dark:bg-dm-card border-brown-100 dark:border-dm-border'
-                  }`}
-                >
-                  <div className="flex items-start">
-                    <div className={`p-2 rounded-full mr-3 flex-shrink-0 ${isPerk ? 'bg-gold-100 dark:bg-gold-900/30' : 'bg-plum-50 dark:bg-plum-900/30'}`}>
-                      <FaBullhorn className={isPerk ? 'text-gold-600 dark:text-gold-400' : 'text-plum-600 dark:text-plum-400'} />
-                    </div>
-                    
-                    <div className="flex-1 min-w-0">
-                      <h3 className="font-semibold text-charcoal dark:text-white truncate">{campaign.title}</h3>
-                      <p className="text-sm text-brown-400 dark:text-white/50 line-clamp-2 mt-0.5">{campaign.description}</p>
-                      
-                      <div className="mt-3">
-                        <div className="flex justify-between text-xs text-brown-400 dark:text-white/40 mb-1.5">
-                          <span>{campaign.currentProgress || 0} / {campaign.goalTarget} {campaign.goalType || 'purchases'}</span>
-                          <span className="font-semibold text-charcoal dark:text-white">{progress}%</span>
-                        </div>
-                        <div className="w-full bg-brown-100 dark:bg-dm-border rounded-full h-1.5">
-                          <div
-                            className={`h-1.5 rounded-full transition-all ${isPerk ? 'bg-gradient-to-r from-gold-400 to-gold-600' : 'bg-gradient-to-r from-plum-400 to-plum-700'}`}
-                            style={{ width: `${progress}%` }}
-                          />
-                        </div>
+          
+          {loadingCampaigns ? (
+            <div className="flex justify-center items-center h-32 bg-white dark:bg-dm-card rounded-card shadow-card">
+              <FaSpinner className="animate-spin text-plum-500 text-2xl" />
+            </div>
+          ) : campaigns.length === 0 ? (
+            <div className="bg-white dark:bg-dm-card rounded-card shadow-card p-8 text-center">
+              <div className="w-14 h-14 bg-plum-50 dark:bg-plum-900/30 rounded-full flex items-center justify-center mx-auto mb-3">
+                <FaBullhorn className="text-plum-400 text-2xl" />
+              </div>
+              <p className="text-brown-400 dark:text-white/50 mb-3">No active campaigns at the moment</p>
+              <Link to="/dashboard/admin-community-perks" className="inline-block bg-gold-500 hover:bg-gold-400 text-charcoal font-semibold px-4 py-2 rounded-pill text-sm transition-colors">
+                Create New Campaign
+              </Link>
+            </div>
+          ) : (
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {campaigns.map(campaign => {
+                const progress = calculateProgress(campaign);
+                const isPerk = campaign.metadata?.isPerk === true;
+                
+                return (
+                  <div
+                    key={campaign._id}
+                    className={`p-4 rounded-card shadow-card border hover-lift transition-all ${
+                      isPerk
+                        ? 'bg-gold-50 dark:bg-gold-900/10 border-gold-200 dark:border-gold-800/30'
+                        : 'bg-white dark:bg-dm-card border-brown-100 dark:border-dm-border'
+                    }`}
+                  >
+                    <div className="flex items-start">
+                      <div className={`p-2 rounded-full mr-3 flex-shrink-0 ${isPerk ? 'bg-gold-100 dark:bg-gold-900/30' : 'bg-plum-50 dark:bg-plum-900/30'}`}>
+                        <FaBullhorn className={isPerk ? 'text-gold-600 dark:text-gold-400' : 'text-plum-600 dark:text-plum-400'} />
                       </div>
                       
-                      <div className="mt-3 text-right">
-                        <Link
-                          to={`/dashboard/admin-community-perks?edit=${campaign._id}`}
-                          className={`text-xs font-semibold hover:underline ${isPerk ? 'text-gold-600 dark:text-gold-400' : 'text-plum-600 dark:text-plum-300'}`}
-                        >
-                            {'Manage ->'}
-                        </Link>
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-semibold text-charcoal dark:text-white truncate">{campaign.title}</h3>
+                        <p className="text-sm text-brown-400 dark:text-white/50 line-clamp-2 mt-0.5">{campaign.description}</p>
+                        
+                        <div className="mt-3">
+                          <div className="flex justify-between text-xs text-brown-400 dark:text-white/40 mb-1.5">
+                            <span>{campaign.currentProgress || 0} / {campaign.goalTarget} {campaign.goalType || 'purchases'}</span>
+                            <span className="font-semibold text-charcoal dark:text-white">{progress}%</span>
+                          </div>
+                          <div className="w-full bg-brown-100 dark:bg-dm-border rounded-full h-1.5">
+                            <div
+                              className={`h-1.5 rounded-full transition-all ${isPerk ? 'bg-gradient-to-r from-gold-400 to-gold-600' : 'bg-gradient-to-r from-plum-400 to-plum-700'}`}
+                              style={{ width: `${progress}%` }}
+                            />
+                          </div>
+                        </div>
+                        
+                        <div className="mt-3 text-right">
+                          <Link
+                            to={`/dashboard/admin-community-perks?edit=${campaign._id}`}
+                            className={`text-xs font-semibold hover:underline ${isPerk ? 'text-gold-600 dark:text-gold-400' : 'text-plum-600 dark:text-plum-300'}`}
+                          >
+                              {'Manage ->'}
+                          </Link>
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
-      
-      {/* Users Section */}
-      <div>
-        <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h2 className="text-xl font-bold tracking-tight dark:text-white">Recent System Users</h2>
-            <p className="text-sm text-brown-500 dark:text-white/55">
-              Quick visibility into the people using the store, selling, and delivering.
-            </p>
-          </div>
-          <Link to="/dashboard/users-admin" className="text-sm font-semibold text-plum-600 hover:text-plum-500 dark:text-plum-300 dark:hover:text-plum-200 transition-colors">
-            View all users →
-          </Link>
+                );
+              })}
+            </div>
+          )}
         </div>
-        <div className="rounded-2xl border border-brown-100 bg-white shadow-sm dark:border-dm-border dark:bg-dm-card">
-          <UserTable users={recentUsers} />
+
+        <div className="rounded-2xl border border-brown-100 bg-white p-4 shadow-sm dark:border-dm-border dark:bg-dm-card sm:p-5">
+          <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h2 className="text-xl font-bold tracking-tight dark:text-white">Recent System Users</h2>
+              <p className="text-sm text-brown-500 dark:text-white/55">
+                Quick visibility into the newest staff, drivers, and customers.
+              </p>
+            </div>
+            <Link to="/dashboard/users-admin" className="text-sm font-semibold text-plum-600 hover:text-plum-500 dark:text-plum-300 dark:hover:text-plum-200 transition-colors">
+              View all users →
+            </Link>
+          </div>
+
+          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-1">
+            {recentUsers.length === 0 ? (
+              <div className="rounded-2xl border border-dashed border-brown-200 bg-ivory px-4 py-8 text-center text-sm text-brown-500 dark:border-dm-border dark:bg-dm-card-2 dark:text-white/50">
+                No recent users yet.
+              </div>
+            ) : (
+              recentUsers.map((user) => {
+                const roleMeta = getUserRoleMeta(user);
+
+                return (
+                  <div key={user._id} className="rounded-2xl border border-brown-100 bg-ivory p-4 dark:border-dm-border dark:bg-dm-card-2">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-semibold text-charcoal dark:text-white">{user.name || 'Unnamed user'}</p>
+                        <p className="mt-1 truncate text-xs text-brown-500 dark:text-white/45">{user.email || 'No email yet'}</p>
+                      </div>
+                      <span className={`inline-flex shrink-0 items-center rounded-pill px-2.5 py-1 text-[11px] font-semibold tracking-wide ${roleMeta.className}`}>
+                        {roleMeta.label}
+                      </span>
+                    </div>
+
+                    <div className="mt-3 flex flex-wrap gap-2 text-xs text-brown-500 dark:text-white/45">
+                      <span className="rounded-full bg-white px-2.5 py-1 dark:bg-dm-card">
+                        Joined {user.createdAt ? new Date(user.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'Recently'}
+                      </span>
+                      <span className="rounded-full bg-white px-2.5 py-1 dark:bg-dm-card">
+                        {user.status || 'Active'}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
         </div>
       </div>
     </div>

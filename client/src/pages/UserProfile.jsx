@@ -350,7 +350,7 @@ const UserProfile = () => {
 
   return (
     <div className="min-h-full w-full">
-      <div className="container mx-auto px-4 py-6 sm:py-8 max-w-4xl">
+      <div className="mx-auto w-full max-w-6xl px-2 py-4 sm:px-3 sm:py-6 md:px-4 lg:px-6">
       {!user || Object.keys(user).length === 0 ? (
         <div className="rounded-card border border-brown-100 dark:border-dm-border bg-white dark:bg-dm-card shadow-hover p-8 sm:p-10 text-center">
           <h2 className="text-xl font-bold text-plum-700 dark:text-plum-300 mb-3">Unable to load profile</h2>
@@ -361,7 +361,7 @@ const UserProfile = () => {
         </div>
       ) : (
         <div className="rounded-card border border-brown-100 dark:border-dm-border shadow-hover overflow-hidden bg-white dark:bg-dm-card">
-          <div className="bg-gradient-to-br from-plum-900 via-plum-700 to-charcoal px-5 sm:px-8 pt-8 pb-0">
+          <div className="bg-gradient-to-br from-plum-900 via-plum-700 to-charcoal px-4 pt-6 pb-0 sm:px-5 sm:pt-7 md:px-6">
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div>
                 <p className="font-display italic text-gold-300 text-sm mb-1">Nawiri Hair</p>
@@ -378,7 +378,7 @@ const UserProfile = () => {
               )}
             </div>
 
-            <div className="flex flex-wrap gap-1 sm:gap-2 mt-8">
+            <div className="mt-6 flex flex-wrap gap-1.5 sm:gap-2">
               <button
                 type="button"
                 onClick={() => setActiveTab('profile')}
@@ -415,7 +415,7 @@ const UserProfile = () => {
             </div>
           </div>
 
-          <div className="p-5 sm:p-8 bg-ivory dark:bg-dm-surface/50">
+          <div className="bg-ivory p-4 dark:bg-dm-surface/50 sm:p-5 md:p-6">
             {/* Profile Tab Content */}
             {activeTab === 'profile' && (
               <div className="space-y-6">
@@ -516,7 +516,7 @@ const UserProfile = () => {
                   </div>
                 ) : (
                   <div>
-                    <div className="rounded-card border border-brown-100 dark:border-dm-border bg-white dark:bg-dm-card p-5 sm:p-6 shadow-sm">
+                    <div className="rounded-card border border-brown-100 dark:border-dm-border bg-white dark:bg-dm-card p-4 shadow-sm sm:p-5 md:p-6">
                     <div className="flex items-start gap-4 sm:gap-6">
                       <div className="flex-shrink-0">
                         <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-full bg-gradient-to-br from-plum-100 to-blush-100 dark:from-plum-900/50 dark:to-plum-800/30 ring-2 ring-plum-200/80 dark:ring-plum-700 flex items-center justify-center overflow-hidden">
@@ -546,7 +546,7 @@ const UserProfile = () => {
                     </div>
                     
                     <div className="border-t border-brown-100 dark:border-dm-border mt-6 pt-6">
-                      <div className="rounded-card border border-brown-100 dark:border-dm-border bg-white dark:bg-dm-card p-5 sm:p-6 shadow-sm">
+                      <div className="rounded-card border border-brown-100 dark:border-dm-border bg-white dark:bg-dm-card p-4 shadow-sm sm:p-5 md:p-6">
                       <h3 className="text-lg font-bold tracking-tight text-charcoal dark:text-white mb-4">Account Details</h3>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
                         <div>
@@ -669,7 +669,7 @@ const UserProfile = () => {
                     </div>
                     
                     <div className="border-t border-brown-100 dark:border-dm-border mt-6 pt-6">
-                      <div className="rounded-card border border-brown-100 dark:border-dm-border bg-white dark:bg-dm-card p-5 sm:p-6 shadow-sm">
+                      <div className="rounded-card border border-brown-100 dark:border-dm-border bg-white dark:bg-dm-card p-4 shadow-sm sm:p-5 md:p-6">
                       <h3 className="text-lg font-bold tracking-tight text-charcoal dark:text-white mb-4">Notification Preferences</h3>
                       <div className="space-y-3">
                         <div className="flex items-center justify-between">
@@ -735,7 +735,7 @@ const UserProfile = () => {
                   </div>
                 </div>
                 
-                <form onSubmit={handleChangePassword} className="space-y-5 rounded-card border border-brown-100 dark:border-dm-border bg-white dark:bg-dm-card p-5 sm:p-6 shadow-sm">
+                <form onSubmit={handleChangePassword} className="space-y-5 rounded-card border border-brown-100 dark:border-dm-border bg-white dark:bg-dm-card p-4 shadow-sm sm:p-5 md:p-6">
                   <h3 className="text-lg font-bold tracking-tight text-charcoal dark:text-white">Change password</h3>
                   
                   <div>

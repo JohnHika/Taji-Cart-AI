@@ -359,7 +359,7 @@ const CommunityPerksAdmin = () => {
                   key={campaign._id}
                   className={`p-4 border rounded-lg shadow-sm ${
                     isPerk 
-                    ? 'bg-yellow-50 border-yellow-300 dark:bg-yellow-900/20 dark:border-yellow-800/30' 
+                    ? 'bg-gold-50 border-gold-300 dark:bg-gold-600/10 dark:border-gold-600/20' 
                     : 'bg-white dark:bg-dm-card dark:border-dm-border'
                   }`}
                 >
@@ -367,11 +367,11 @@ const CommunityPerksAdmin = () => {
                     <div className="flex items-start">
                       <div className={`p-2 rounded-full ${
                         isPerk 
-                        ? 'bg-yellow-100 dark:bg-yellow-900/50' 
+                        ? 'bg-gold-100 dark:bg-gold-600/20' 
                         : 'bg-plum-100 dark:bg-plum-900/30'
                       } mr-3`}>
                         {isPerk 
-                          ? <FaGift className="text-yellow-600 dark:text-yellow-400" /> 
+                          ? <FaGift className="text-gold-600 dark:text-gold-400" /> 
                           : <FaTrophy className="text-plum-600 dark:text-plum-300" />
                         }
                       </div>
@@ -381,7 +381,7 @@ const CommunityPerksAdmin = () => {
                         <p className="text-brown-500 dark:text-white/55 text-sm">{campaign.description}</p>
                         <div className="mt-1 flex flex-wrap gap-2">
                           {isPerk && (
-                            <span className="px-2 py-0.5 bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400 text-xs rounded-full">
+                            <span className="px-2 py-0.5 bg-gold-100 text-gold-700 dark:bg-gold-600/20 dark:text-gold-300 text-xs rounded-full">
                               Community Perk
                             </span>
                           )}
@@ -405,7 +405,7 @@ const CommunityPerksAdmin = () => {
                       </button>
                       <button 
                         onClick={() => confirmDelete(campaign)}
-                        className="p-2 text-brown-500 dark:text-white/40 hover:text-red-500 dark:hover:text-red-400"
+                        className="p-2 text-brown-500 dark:text-white/40 hover:text-blush-500 dark:hover:text-blush-400"
                         title="Delete campaign"
                       >
                         <FaTrash />
@@ -421,7 +421,7 @@ const CommunityPerksAdmin = () => {
                     
                     <div className="w-full bg-brown-100 dark:bg-dm-card-2 rounded-full h-2.5">
                       <div 
-                        className={`${isPerk ? 'bg-yellow-500' : 'bg-plum-600'} h-2.5 rounded-full`}
+                        className={`${isPerk ? 'bg-gold-500' : 'bg-plum-600'} h-2.5 rounded-full`}
                         style={{ width: `${progress}%` }}
                       />
                     </div>
@@ -450,7 +450,7 @@ const CommunityPerksAdmin = () => {
               </button>
               <button
                 onClick={handleDelete}
-                className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 dark:bg-red-600 dark:hover:bg-red-700"
+                className="px-4 py-2 bg-blush-500 text-white rounded-lg hover:bg-blush-600 dark:bg-blush-600 dark:hover:bg-blush-700"
               >
                 {loading ? <FaSpinner className="animate-spin" /> : 'Delete'}
               </button>

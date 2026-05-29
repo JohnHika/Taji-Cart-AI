@@ -128,15 +128,15 @@ const Profile = () => {
         
         switch (count) {
             case 1:
-                return { label: 'Very Weak', color: 'bg-red-500', width: '20%' };
+                return { label: 'Very Weak', color: 'bg-blush-500', width: '20%' };
             case 2:
-                return { label: 'Weak', color: 'bg-orange-500', width: '40%' };
+                return { label: 'Weak', color: 'bg-blush-400', width: '40%' };
             case 3:
-                return { label: 'Fair', color: 'bg-yellow-500', width: '60%' };
+                return { label: 'Fair', color: 'bg-gold-500', width: '60%' };
             case 4:
                 return { label: 'Good', color: 'bg-plum-500', width: '80%' };
             case 5:
-                return { label: 'Strong', color: 'bg-green-500', width: '100%' };
+                return { label: 'Strong', color: 'bg-brown-500', width: '100%' };
             default:
                 return { label: '', color: '', width: '0%' };
         }
@@ -306,8 +306,8 @@ const Profile = () => {
                     onClick={() => setActiveTab('profile')}
                     className={`shrink-0 py-3 px-4 font-medium text-sm sm:text-base transition-colors duration-200 ${
                         activeTab === 'profile' 
-                        ? 'text-green-800 dark:text-green-500 border-b-2 border-green-800 dark:border-green-500' 
-                        : 'text-brown-500 dark:text-white/40 hover:text-green-700 dark:hover:text-green-400'
+                        ? 'text-plum-700 dark:text-plum-400 border-b-2 border-plum-700 dark:border-plum-400' 
+                        : 'text-brown-500 dark:text-white/40 hover:text-plum-700 dark:hover:text-plum-400'
                     }`}
                 >
                     My Profile
@@ -316,8 +316,8 @@ const Profile = () => {
                     onClick={() => setActiveTab('security')}
                     className={`shrink-0 py-3 px-4 font-medium text-sm sm:text-base transition-colors duration-200 ${
                         activeTab === 'security' 
-                        ? 'text-green-800 dark:text-green-500 border-b-2 border-green-800 dark:border-green-500' 
-                        : 'text-brown-500 dark:text-white/40 hover:text-green-700 dark:hover:text-green-400'
+                        ? 'text-plum-700 dark:text-plum-400 border-b-2 border-plum-700 dark:border-plum-400' 
+                        : 'text-brown-500 dark:text-white/40 hover:text-plum-700 dark:hover:text-plum-400'
                     }`}
                 >
                     Security
@@ -326,8 +326,8 @@ const Profile = () => {
                     onClick={() => setActiveTab('royal-card')}
                     className={`shrink-0 py-3 px-4 font-medium text-sm sm:text-base transition-colors duration-200 ${
                         activeTab === 'royal-card' 
-                        ? 'text-green-800 dark:text-green-500 border-b-2 border-green-800 dark:border-green-500' 
-                        : 'text-brown-500 dark:text-white/40 hover:text-green-700 dark:hover:text-green-400'
+                        ? 'text-plum-700 dark:text-plum-400 border-b-2 border-plum-700 dark:border-plum-400' 
+                        : 'text-brown-500 dark:text-white/40 hover:text-plum-700 dark:hover:text-plum-400'
                     }`}
                 >
                     Royal Card
@@ -336,8 +336,8 @@ const Profile = () => {
                     onClick={() => setActiveTab('rewards')}
                     className={`shrink-0 py-3 px-4 font-medium text-sm sm:text-base transition-colors duration-200 ${
                         activeTab === 'rewards' 
-                        ? 'text-green-800 dark:text-green-500 border-b-2 border-green-800 dark:border-green-500' 
-                        : 'text-brown-500 dark:text-white/40 hover:text-green-700 dark:hover:text-green-400'
+                        ? 'text-plum-700 dark:text-plum-400 border-b-2 border-plum-700 dark:border-plum-400' 
+                        : 'text-brown-500 dark:text-white/40 hover:text-plum-700 dark:hover:text-plum-400'
                     }`}
                 >
                     My Rewards

@@ -18,7 +18,7 @@ export default defineConfig({
 
   use: {
     /* Base URL — Vite dev server */
-    baseURL: 'http://localhost:5173',
+    baseURL: process.env.PLAYWRIGHT_BASE_URL || 'http://localhost:5173',
     /* Capture screenshots + traces on failure */
     screenshot: 'only-on-failure',
     trace: 'on-first-retry',

@@ -785,7 +785,7 @@ const LoyaltyProgramAdmin = () => {
               >
                 {isThresholdLoading ? <FaSpinner className="animate-spin inline mr-2" /> : 'Save Thresholds'}
               </button>
-              {thresholdSuccess && <p className="text-green-500 text-sm ml-4">Thresholds saved successfully!</p>}
+              {thresholdSuccess && <p className="text-brown-600 dark:text-brown-400 text-sm ml-4">Thresholds saved successfully!</p>}
             </div>
           </div>
         )}
@@ -914,7 +914,7 @@ const LoyaltyProgramAdmin = () => {
                   >
                     {isBenefitRangeLoading ? <FaSpinner className="animate-spin inline mr-2" /> : 'Save Benefit Ranges'}
                   </button>
-                  {benefitRangeSuccess && <p className="text-green-500 text-sm ml-4">Benefit ranges saved successfully!</p>}
+                  {benefitRangeSuccess && <p className="text-brown-600 dark:text-brown-400 text-sm ml-4">Benefit ranges saved successfully!</p>}
                 </div>
               </div>
             </div>

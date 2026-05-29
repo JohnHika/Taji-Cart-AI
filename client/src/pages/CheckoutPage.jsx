@@ -362,8 +362,6 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
                 fulfillment_type: fulfillmentMethod,
                 delivery_mode: fulfillmentMethod === 'delivery' ? deliveryMode : 'standard',
                 customerLocation,
-                delivery_mode: fulfillmentMethod === 'delivery' ? deliveryMode : 'standard',
-                customerLocation,
                 pickup_location: pickupLocation,
                 pickup_instructions: pickupInstructions
               },
@@ -693,7 +691,7 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
                 </div>
                 
                 {/* Product discounts line */}
-                <div className='flex gap-4 justify-between ml-1 text-green-600 dark:text-green-400'>
+                <div className='flex gap-4 justify-between ml-1 text-gold-600 dark:text-gold-400'>
                   <p>Product discounts</p>
                   <p>Applied</p>
                 </div>
@@ -710,7 +708,7 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
                 
                 {/* Community reward discount line */}
                 {selectedReward && selectedReward.type === 'discount' && (
-                  <div className='flex gap-4 justify-between ml-1 text-green-600 dark:text-green-400'>
+                  <div className='flex gap-4 justify-between ml-1 text-gold-600 dark:text-gold-400'>
                     <p className='flex items-center'>
                       Community reward discount
                     </p>

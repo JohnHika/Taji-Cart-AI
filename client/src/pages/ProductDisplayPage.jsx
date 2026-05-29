@@ -27,8 +27,8 @@ const getRatingPercentage = (avg) => {
 
 const StockBadge = ({ stock }) => {
   if (stock === 0) return (
-    <span className="inline-flex items-center gap-1.5 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 text-xs font-semibold px-3 py-1.5 rounded-pill">
-      <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" /> Out of Stock
+    <span className="inline-flex items-center gap-1.5 bg-blush-100 dark:bg-blush-500/20 text-blush-500 dark:text-blush-300 text-xs font-semibold px-3 py-1.5 rounded-pill">
+      <span className="w-1.5 h-1.5 rounded-full bg-blush-500 animate-pulse" /> Out of Stock
     </span>
   );
   if (stock < 5) return (
@@ -37,8 +37,8 @@ const StockBadge = ({ stock }) => {
     </span>
   );
   return (
-    <span className="inline-flex items-center gap-1.5 bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-300 text-xs font-semibold px-3 py-1.5 rounded-pill">
-      <span className="w-1.5 h-1.5 rounded-full bg-green-500" /> In Stock
+    <span className="inline-flex items-center gap-1.5 bg-brown-50 dark:bg-brown-600/20 text-brown-700 dark:text-brown-300 text-xs font-semibold px-3 py-1.5 rounded-pill">
+      <span className="w-1.5 h-1.5 rounded-full bg-brown-500" /> In Stock
     </span>
   );
 };

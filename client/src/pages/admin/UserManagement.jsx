@@ -8,12 +8,12 @@ const UserProfile = ({ user, currentUser, handleRoleChange, selectedRole }) => {
 
         // Check for staff role
         if (user.isStaff || user.role === 'staff') {
-            return { type: 'Staff', color: 'text-purple-600 dark:text-purple-400', icon: <FaUserTie className="mr-1" /> };
+            return { type: 'Staff', color: 'text-plum-600 dark:text-plum-400', icon: <FaUserTie className="mr-1" /> };
         }
 
         // Check for admin role
         if (user.isAdmin || user.role === 'admin') {
-            return { type: 'Admin', color: 'text-red-600 dark:text-red-400', icon: <FaUserShield className="mr-1" /> };
+            return { type: 'Admin', color: 'text-blush-600 dark:text-blush-400', icon: <FaUserShield className="mr-1" /> };
         }
 
         // Check for delivery personnel
@@ -22,7 +22,7 @@ const UserProfile = ({ user, currentUser, handleRoleChange, selectedRole }) => {
         }
 
         // Default to customer
-        return { type: 'Customer', color: 'text-green-600 dark:text-green-400', icon: <FaUser className="mr-1" /> };
+        return { type: 'Customer', color: 'text-brown-600 dark:text-brown-400', icon: <FaUser className="mr-1" /> };
     };
 
     const handleRoleChange = async (userId, newRole) => {

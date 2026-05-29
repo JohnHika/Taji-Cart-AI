@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { FaApple, FaChrome, FaDownload, FaMobileAlt, FaShareSquare, FaTimes } from 'react-icons/fa';
 
 const DISMISS_KEY = 'nawiri_pwa_install_dismissed_v2';
@@ -21,6 +21,8 @@ export default function PWAInstallBanner() {
   const [dismissed, setDismissed] = useState(false);
   const [installing, setInstalling] = useState(false);
   const [alreadyInstalled, setAlreadyInstalled] = useState(false);
+  const [showGuide, setShowGuide] = useState(false);
+  const guideRef = useRef(null);
   const ios = isIOS();
 
   useEffect(() => {
@@ -49,6 +51,18 @@ export default function PWAInstallBanner() {
       window.removeEventListener('beforeinstallprompt', handler);
     };
   }, []);
+
+  // Close guide panel when clicking outside
+  useEffect(() => {
+    if (!showGuide) return;
+    const onOutside = (e) => {
+      if (guideRef.current && !guideRef.current.contains(e.target)) {
+        setShowGuide(false);
+      }
+    };
+    document.addEventListener('mousedown', onOutside);
+    return () => document.removeEventListener('mousedown', onOutside);
+  }, [showGuide]);
 
   const handleInstall = async () => {
     if (!deferredPrompt) return;
@@ -121,12 +135,39 @@ export default function PWAInstallBanner() {
                 </p>
               )}
 
-              {/* Other browsers — generic guidance */}
+              {/* Other browsers — Install button that opens a step-by-step guide */}
               {!ios && !deferredPrompt && (
-                <p className="text-xs text-plum-700 dark:text-plum-300 flex items-center gap-1.5 font-medium">
-                  <FaChrome size={12} />
-                  Open in Chrome for the best experience
-                </p>
+                <div ref={guideRef} className="relative">
+                  <button
+                    onClick={() => setShowGuide((v) => !v)}
+                    className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-plum-700 hover:bg-plum-800 active:scale-95 text-white text-xs font-semibold rounded-xl transition-all shadow-sm"
+                  >
+                    <FaDownload size={10} />
+                    Install App
+                  </button>
+
+                  {/* Step-by-step guide popover */}
+                  {showGuide && (
+                    <div className="absolute left-0 top-9 z-50 w-64 rounded-2xl border border-plum-200/60 dark:border-plum-700/40 bg-white dark:bg-dm-card shadow-xl p-3.5 text-xs leading-relaxed">
+                      <p className="font-semibold text-charcoal dark:text-white mb-2 flex items-center gap-1.5">
+                        <FaChrome size={12} className="text-plum-600" />
+                        Install in Chrome
+                      </p>
+                      <ol className="space-y-1.5 text-brown-600 dark:text-white/60 list-decimal list-inside">
+                        <li>Open this page in <strong className="text-charcoal dark:text-white">Google Chrome</strong></li>
+                        <li>Tap the <strong className="text-charcoal dark:text-white">⋮ menu</strong> (top-right)</li>
+                        <li>Select <strong className="text-charcoal dark:text-white">"Add to Home screen"</strong></li>
+                        <li>Tap <strong className="text-charcoal dark:text-white">Install</strong> — done!</li>
+                      </ol>
+                      <button
+                        onClick={() => setShowGuide(false)}
+                        className="mt-2.5 w-full text-center text-xs text-plum-600 dark:text-plum-300 hover:underline"
+                      >
+                        Got it
+                      </button>
+                    </div>
+                  )}
+                </div>
               )}
             </div>
           </div>

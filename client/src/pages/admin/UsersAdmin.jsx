@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import toast from 'react-hot-toast';
-import { FaEnvelope, FaExclamationTriangle, FaSearch, FaSpinner, FaUsersCog } from 'react-icons/fa';
+import { FaExclamationTriangle, FaSearch, FaSpinner, FaSyncAlt } from 'react-icons/fa';
 import UserTable from '../../components/UserTable';
 import BlockUserModal from '../../components/modals/BlockUserModal';
 import ConfirmationModal from '../../components/modals/ConfirmationModal';
@@ -24,7 +24,6 @@ const UsersAdmin = () => {
   const [isConfirmationModalOpen, setIsConfirmationModalOpen] = useState(false);
   const [confirmationAction, setConfirmationAction] = useState(null);
   const [isDeliveryModalOpen, setIsDeliveryModalOpen] = useState(false);
-  const [bulkSending, setBulkSending] = useState(false);
 
   useEffect(() => {
     fetchUsersWithCacheBusting();
@@ -417,26 +416,9 @@ const UsersAdmin = () => {
 
   const confirmationConfig = getConfirmationConfig();
 
-  const handleBulkSendVerification = async () => {
-    if (!window.confirm('Send verification emails to ALL unverified users? This cannot be undone.')) return;
-    try {
-      setBulkSending(true);
-      const res = await Axios({ url: '/api/user/admin/bulk-send-verification', method: 'POST' });
-      if (res.data.success) {
-        toast.success(`Sent ${res.data.sent} verification emails (${res.data.failed} failed)`);
-      } else {
-        toast.error(res.data.message || 'Bulk send failed');
-      }
-    } catch (err) {
-      toast.error('Error: ' + (err.response?.data?.message || err.message));
-    } finally {
-      setBulkSending(false);
-    }
-  };
-
   return (
     <div className="container mx-auto w-full max-w-full overflow-x-hidden px-3 py-4 sm:px-4 sm:py-6 pb-24 lg:pb-6">
-      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
         <div>
           <h1 className="text-2xl font-black text-charcoal dark:text-white mb-2 tracking-tight">User Management</h1>
           <p className="text-brown-500 dark:text-white/55">
@@ -444,22 +426,15 @@ const UsersAdmin = () => {
           </p>
         </div>
         
-        <div className="flex flex-wrap gap-3">
-          <button
-            onClick={handleBulkSendVerification}
-            disabled={bulkSending}
-            className="px-4 py-2 bg-plum-700 text-white rounded-lg hover:bg-plum-800 disabled:opacity-50 flex items-center justify-center gap-2"
-            title="Send verification email to all unverified users"
-          >
-            {bulkSending ? <FaSpinner className="animate-spin" /> : <FaEnvelope />}
-            {bulkSending ? 'Sending…' : 'Verify Unverified Users'}
-          </button>
-
+        <div className="flex items-center gap-3 self-start">
           <button
             onClick={fetchUsersWithCacheBusting}
-            className="px-4 py-2 bg-plum-700 text-white rounded-pill hover:bg-plum-600 flex items-center justify-center font-semibold transition-colors shadow-sm"
+            type="button"
+            className="flex h-11 w-11 items-center justify-center rounded-full border border-plum-200 bg-white text-plum-700 shadow-sm transition hover:border-plum-300 hover:bg-plum-50 dark:border-dm-border dark:bg-dm-card dark:text-plum-300 dark:hover:bg-dm-card-2"
+            title="Refresh users"
+            aria-label="Refresh users"
           >
-            <FaUsersCog className="mr-2" /> Refresh Users
+            {loading ? <FaSpinner className="animate-spin" /> : <FaSyncAlt />}
           </button>
         </div>
       </div>
@@ -488,8 +463,8 @@ const UsersAdmin = () => {
       
       {/* Filters and Search */}
       <div className="bg-white dark:bg-dm-card rounded-2xl shadow-sm border border-brown-100 dark:border-dm-border p-4 mb-6">
-        <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
-          <div className="relative w-full xl:max-w-md">
+        <div className="grid gap-3 lg:grid-cols-[minmax(0,1.4fr)_180px_180px_auto] lg:items-center">
+          <div className="relative min-w-0">
             <input
               type="text"
               placeholder="Search users by name, email or phone..."
@@ -499,36 +474,34 @@ const UsersAdmin = () => {
             />
             <FaSearch className="absolute left-3 top-3 text-brown-400 dark:text-white/40" />
           </div>
-          
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:w-auto">
-            <div className="flex items-center gap-2">
-              <label className="text-charcoal dark:text-white/55 whitespace-nowrap">Status:</label>
-              <select
-                value={statusFilter}
-                onChange={handleStatusFilterChange}
-                className="min-w-0 flex-1 p-2 border rounded-lg dark:bg-dm-card-2 dark:border-dm-border dark:text-white"
-              >
-                <option value="all">All Users</option>
-                <option value="Active">Active</option>
-                <option value="Inactive">Inactive</option>
-                <option value="Suspended">Suspended</option>
-              </select>
-            </div>
 
-            <div className="flex items-center gap-2">
-              <label className="text-charcoal dark:text-white/55 whitespace-nowrap">Role:</label>
-              <select
-                value={roleFilter}
-                onChange={(e) => setRoleFilter(e.target.value)}
-                className="min-w-0 flex-1 p-2 border rounded-lg dark:bg-dm-card-2 dark:border-dm-border dark:text-white"
-              >
-                <option value="all">All Roles</option>
-                <option value="admin">Admins</option>
-                <option value="staff">Sellers</option>
-                <option value="delivery">Drivers</option>
-                <option value="customer">Customers</option>
-              </select>
-            </div>
+          <div className="flex items-center gap-2 rounded-xl border border-brown-200 bg-ivory px-3 py-2 dark:border-dm-border dark:bg-dm-card-2">
+            <label className="text-xs font-semibold uppercase tracking-wide text-brown-500 dark:text-white/45 whitespace-nowrap">Status</label>
+            <select
+              value={statusFilter}
+              onChange={handleStatusFilterChange}
+              className="min-w-0 flex-1 bg-transparent text-sm font-medium text-charcoal outline-none dark:text-white"
+            >
+              <option value="all">All Users</option>
+              <option value="Active">Active</option>
+              <option value="Inactive">Inactive</option>
+              <option value="Suspended">Suspended</option>
+            </select>
+          </div>
+
+          <div className="flex items-center gap-2 rounded-xl border border-brown-200 bg-ivory px-3 py-2 dark:border-dm-border dark:bg-dm-card-2">
+            <label className="text-xs font-semibold uppercase tracking-wide text-brown-500 dark:text-white/45 whitespace-nowrap">Role</label>
+            <select
+              value={roleFilter}
+              onChange={(e) => setRoleFilter(e.target.value)}
+              className="min-w-0 flex-1 bg-transparent text-sm font-medium text-charcoal outline-none dark:text-white"
+            >
+              <option value="all">All Roles</option>
+              <option value="admin">Admins</option>
+              <option value="staff">Sellers</option>
+              <option value="delivery">Drivers</option>
+              <option value="customer">Customers</option>
+            </select>
           </div>
         </div>
       </div>

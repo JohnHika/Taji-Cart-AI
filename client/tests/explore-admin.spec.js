@@ -3,8 +3,6 @@ import { test, expect } from '@playwright/test';
 const ADMIN_EMAIL = 'admin@nawiri.test';
 const ADMIN_PASS  = 'Admin1234!';
 
-test.use({ viewport: { width: 393, height: 851 } }); // Pixel 5
-
 async function loginAsAdmin(page) {
   await page.goto('/login');
   await page.waitForLoadState('networkidle');
