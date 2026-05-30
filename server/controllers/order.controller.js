@@ -962,7 +962,7 @@ export async function getOrderDetailsController(request, response) {
                     as: 'delivery_address'
                 }
             },
-            { $unwind: { path: '$delivery_address', preserveNullAndEmpty: true } }
+            { $unwind: { path: '$delivery_address', preserveNullAndEmptyArrays: true } }
         ]);
 
         return response.json({

@@ -33,10 +33,9 @@ const DisplayCartItem = ({ close, variant = 'drawer' }) => {
             return
         }
         // Guest users - redirect to guest checkout
+        // Note: do NOT call close() here — on CartMobile, close = navigate(-1)
+        // which would immediately undo the navigation to guest checkout.
         navigate('/guest-checkout')
-        if(close){
-            close()
-        }
     }
     
     // Handle fulfillment selection and continue to checkout

@@ -9,6 +9,7 @@ import { buildApiUrl } from '../common/apiBaseUrl';
 import { nawiriBrand } from '../config/brand';
 import ActiveRewards from '../components/ActiveRewards'; // Import the ActiveRewards component
 import AddAddress from '../components/AddAddress';
+import CheckoutRoyalCard from '../components/CheckoutRoyalCard'; // Premium Royal Card for Order Summary
 import CommunityCampaignProgress from '../components/CommunityCampaignProgress'; // Import the CommunityCampaignProgress component
 import FulfillmentModal from '../components/FulfillmentModal';
 import { useTheme } from '../context/ThemeContext';
@@ -482,16 +483,10 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
             <div className='bg-white dark:bg-dm-card p-4 rounded shadow mb-4 transition-colors duration-200'>
               <h3 className='font-semibold mb-4 dark:text-white'>Order Summary</h3>
               
-              {/* Royal Card Badge */}
-              {royalDiscount > 0 && (
-                <div className="mb-4 p-3 bg-amber-100 dark:bg-amber-900/30 rounded-lg text-amber-800 dark:text-amber-200 flex items-center">
-                  <FaCrown className="mr-2 text-xl" />
-                  <div>
-                    <p className="font-medium">Royal {royalCardData?.tier} Card</p>
-                    <p className="text-sm">You're getting an additional {royalDiscount}% discount on all products!</p>
-                  </div>
-                </div>
-              )}
+              {/* Premium Royal Membership Card */}
+              <div className="mb-4">
+                <CheckoutRoyalCard compact={false} showTeaser={true} />
+              </div>
               
               {/* Community Rewards */}
               <div className="mb-4">
@@ -860,16 +855,10 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
           {/**summary**/}
           <h3 className='text-lg font-semibold text-charcoal dark:text-white px-1 mb-3'>Order Summary</h3>
           
-          {/* Royal Card Badge */}
-          {royalDiscount > 0 && (
-            <div className="mb-4 p-3 bg-gradient-to-r from-gold-500/20 to-gold-100 dark:from-gold-600/20 dark:to-gold-900/10 border border-gold-300 dark:border-gold-600/40 rounded-card text-charcoal dark:text-white flex items-center gap-3">
-              <FaCrown className="text-gold-500 text-xl flex-shrink-0" />
-              <div>
-                <p className="font-semibold text-sm">Royal {royalCardData?.tier} Card</p>
-                <p className="text-xs text-brown-400 dark:text-white/50">+{royalDiscount}% discount applied on all products!</p>
-              </div>
-            </div>
-          )}
+          {/* Premium Royal Membership Card */}
+          <div className="mb-4">
+            <CheckoutRoyalCard compact={false} showTeaser={true} />
+          </div>
           
           {/* Community Rewards */}
           <div className="mx-4 mb-4">

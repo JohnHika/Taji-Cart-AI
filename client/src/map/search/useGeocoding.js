@@ -1,9 +1,15 @@
 /**
  * useGeocoding - Hook for Nominatim geocoding with debounce
  * Handles forward geocoding (text → coordinates) and reverse geocoding (coordinates → text)
+ * 
+ * NOW WITH FUZZY SEARCH: 
+ * - "karren" finds "Karen"
+ * - "westlnds" finds "Westlands"
+ * - Handles common Nairobi typos via alias map and edit-distance variants
  */
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { API_ENDPOINTS, MAP_CONFIG } from '../core/constants';
+import { fuzzyGeocode, rankAndFilter } from './fuzzySearch';
 
 /**
  * @param {Object} options
@@ -37,7 +43,7 @@ export function useGeocoding({
     };
   }, []);
 
-  // Forward geocoding (search text → locations)
+  // Forward geocoding (search text → locations) - NOW WITH FUZZY SEARCH
   const search = useCallback(async (searchQuery) => {
     if (!searchQuery || searchQuery.length < minLength) {
       setResults([]);
@@ -54,39 +60,12 @@ export function useGeocoding({
     setError(null);
 
     try {
-      const params = new URLSearchParams({
-        q: searchQuery,
-        format: 'json',
-        addressdetails: 1,
+      // Use fuzzy geocode for typo-tolerant search
+      const data = await fuzzyGeocode(searchQuery, {
+        countryCode: countryCode,
         limit: maxResults,
-        'accept-language': 'en'
+        signal: abortControllerRef.current.signal
       });
-
-      if (countryCode) {
-        params.append('countrycodes', countryCode);
-      }
-
-      if (viewbox) {
-        params.append('viewbox', viewbox.join(','));
-        params.append('bounded', 1);
-      }
-
-      const response = await fetch(
-        `${API_ENDPOINTS.nominatim.search}?${params}`,
-        {
-          signal: abortControllerRef.current.signal,
-          headers: {
-            'Accept': 'application/json'
-            // User-Agent cannot be set by browser fetch — browsers block/ignore it
-          }
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error(`Search failed: ${response.status}`);
-      }
-
-      const data = await response.json();
       
       // Transform results to consistent format
       const transformedResults = data.map((item, index) => ({
@@ -114,7 +93,7 @@ export function useGeocoding({
       setIsSearching(false);
       return [];
     }
-  }, [minLength, maxResults, countryCode, viewbox]);
+  }, [minLength, maxResults, countryCode]);
 
   // Debounced search
   const debouncedSearch = useCallback((searchQuery) => {

@@ -140,6 +140,37 @@
   }
 }
 
+/* Premium Royal Card Gold Shimmer Sweep */
+@keyframes cardShimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  50% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+/* Premium Member Card Shimmer Sweep Animation (6s cycle) */
+@keyframes shimmerSweep {
+  0% {
+    transform: translateX(-100%);
+    opacity: 0;
+  }
+  20% {
+    opacity: 1;
+  }
+  80% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+}
+
 @keyframes float {
   0%,
   100% {
@@ -203,6 +234,11 @@
 
   .animate-shimmer {
     animation: shimmer 1.6s linear infinite;
+  }
+
+  /* Royal Card gold sweep animation */
+  .animate-card-shimmer {
+    animation: cardShimmer 5s ease-in-out infinite;
   }
 
   .animate-float {

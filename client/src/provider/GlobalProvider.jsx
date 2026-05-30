@@ -10,7 +10,22 @@ import Axios from "../utils/Axios";
 import AxiosToastError from "../utils/AxiosToastError";
 import { getRoyalCardDiscount, pricewithDiscount } from "../utils/PriceWithDiscount";
 
-const globalContext = createContext();
+// Default context value to prevent undefined destructuring during concurrent rendering
+const defaultContextValue = {
+    fetchCartItem: () => {},
+    updateCartItem: () => {},
+    deleteCartItem: () => {},
+    clearCartItems: () => {},
+    fetchAddress: () => {},
+    totalPrice: 0,
+    totalQty: 0,
+    notDiscountTotalPrice: 0,
+    fetchOrder: () => {},
+    royalCardData: null,
+    royalDiscount: 0
+};
+
+const globalContext = createContext(defaultContextValue);
 
 const GlobalProvider = ({ children }) => {
     const dispatch = useDispatch();
@@ -172,7 +187,8 @@ const GlobalProvider = ({ children }) => {
         setTotalPrice(tPrice);
 
         const notDiscountPrice = cart.reduce((preve, curr) => {
-            return preve + (curr?.productId?.price * curr.quantity);
+            const price = Number(curr?.productId?.price) || 0;
+            return preve + (price * curr.quantity);
         }, 0);
         setNotDiscountTotalPrice(notDiscountPrice);
     }, [cart, royalDiscount]); // Added royalDiscount as dependency

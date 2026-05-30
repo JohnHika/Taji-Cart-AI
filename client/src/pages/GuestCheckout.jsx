@@ -9,6 +9,7 @@ import SummaryApi from '../common/SummaryApi';
 import { clearGuestCart } from '../utils/guestCart';
 import { fetchCartItems } from '../store/cartProduct';
 import { nawiriBrand } from '../config/brand';
+import CheckoutRoyalCard from '../components/CheckoutRoyalCard'; // Premium Royal Card teaser
 import GuestAccountPrompt from '../components/GuestAccountPrompt';
 import { formatDistanceKm, getFootDeliveryEligibility, NAIROBI_CBD_RADIUS_KM } from '../utils/cbdDelivery';
 import { DisplayPriceInShillings } from '../utils/DisplayPriceInShillings';
@@ -410,6 +411,11 @@ function GuestCheckout() {
         <div className="w-full self-start rounded-card border border-brown-100 bg-white px-3 py-4 sm:px-4 shadow transition-colors duration-200 dark:border-dm-border dark:bg-dm-card lg:sticky lg:top-24 lg:max-w-sm xl:max-w-md">
 
           <h3 className="text-lg font-semibold text-charcoal dark:text-white px-1 mb-3">Order Summary</h3>
+
+          {/* Royal Card Guest Teaser */}
+          <div className="mb-4">
+            <CheckoutRoyalCard showTeaser={true} />
+          </div>
 
           {/* Cart items */}
           <div className="bg-white dark:bg-dm-card-2 rounded-card border border-brown-100 dark:border-dm-border p-4 mb-4 space-y-2 max-h-48 overflow-y-auto">
