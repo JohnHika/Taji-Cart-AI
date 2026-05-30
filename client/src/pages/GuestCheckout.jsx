@@ -15,8 +15,6 @@ import { DisplayPriceInShillings } from '../utils/DisplayPriceInShillings';
 
 const PICKUP_LOCATIONS = [
   { name: 'Main Store', address: nawiriBrand.location },
-  { name: 'Westlands Branch', address: '456 Westlands Road, Westlands, Nairobi' },
-  { name: 'Mombasa Road Store', address: '789 Mombasa Road, Nairobi' },
 ];
 
 function GuestCheckout() {

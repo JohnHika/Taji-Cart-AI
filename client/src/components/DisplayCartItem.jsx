@@ -23,9 +23,7 @@ const DisplayCartItem = ({ close, variant = 'drawer' }) => {
     
     // Pickup locations data
     const pickupLocations = [
-        { name: 'Main Store', address: nawiriBrand.location },
-        { name: 'Westlands Branch', address: '456 Westlands Road, Westlands, Nairobi' },
-        { name: 'Mombasa Road Store', address: '789 Mombasa Road, Nairobi' }
+        { name: 'Main Store', address: nawiriBrand.location }
     ];
 
     const redirectToCheckoutPage = () => {

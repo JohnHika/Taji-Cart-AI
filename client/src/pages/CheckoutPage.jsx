@@ -190,9 +190,7 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
 
   // Pickup locations (in a real app, these would likely come from an API)
   const pickupLocations = [
-    { name: 'Main Store', address: nawiriBrand.location },
-    { name: 'Westlands Branch', address: '456 Westlands Road, Westlands, Nairobi' },
-    { name: 'Mombasa Road Store', address: '789 Mombasa Road, Nairobi' }
+    { name: 'Main Store', address: nawiriBrand.location }
   ];
 
   // Validate address is selected before payment

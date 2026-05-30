@@ -8,18 +8,6 @@ const pickupLocations = [
     name: 'Main Store',
     address: nawiriBrand.location,
     hours: '9:00 AM - 8:00 PM'
-  },
-  {
-    id: 'westlands-branch',
-    name: 'Westlands Branch',
-    address: '456 Westlands Avenue, Nairobi',
-    hours: '10:00 AM - 7:00 PM'
-  },
-  {
-    id: 'mombasa-store',
-    name: 'Mombasa Store',
-    address: '789 Beach Road, Mombasa',
-    hours: '9:00 AM - 6:00 PM'
   }
 ];
 
