@@ -169,7 +169,11 @@ const CompletedDeliveries = () => {
                       </div>
                       
                       <a
-                        href={`https://maps.google.com/?q=${order.deliveryAddress}`}
+                        href={
+                          order.coordinates?.lat && order.coordinates?.lng
+                            ? `https://maps.google.com/?q=${order.coordinates.lat},${order.coordinates.lng}`
+                            : `https://maps.google.com/?q=${encodeURIComponent(order.deliveryAddress || '')}`
+                        }
                         target="_blank"
                         rel="noopener noreferrer"
                         className="px-3 py-1 border border-brown-200 text-brown-500 dark:border-dm-border dark:text-white/55 rounded hover:bg-brown-50 dark:hover:bg-dm-card-2 flex items-center"

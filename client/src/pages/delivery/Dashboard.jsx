@@ -312,7 +312,11 @@ const Dashboard = () => {
                   
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <a
-                      href={`https://maps.google.com/?q=${order.deliveryAddress}`}
+                      href={
+                        order.coordinates?.lat && order.coordinates?.lng
+                          ? `https://maps.google.com/?q=${order.coordinates.lat},${order.coordinates.lng}`
+                          : `https://maps.google.com/?q=${encodeURIComponent(order.deliveryAddress || '')}`
+                      }
                       target="_blank"
                       rel="noopener noreferrer"
                       className="inline-flex items-center text-sm font-medium text-plum-600 hover:text-plum-500 dark:text-plum-300 dark:hover:text-plum-200"

@@ -86,7 +86,7 @@ const ActiveDeliveries = () => {
           path: '/socket.io',
           transports: ['websocket'],
           auth: {
-            token: sessionStorage.getItem('accesstoken') || ''
+            token: sessionStorage.getItem('accesstoken') || localStorage.getItem('accesstoken') || ''
           }
         });
 
@@ -466,7 +466,11 @@ const ActiveDeliveries = () => {
                   
                   <div className="flex flex-col gap-2 sm:flex-row sm:space-x-3">
                     <a
-                      href={`https://maps.google.com/?q=${order.deliveryAddress}`}
+                      href={
+                        order.coordinates?.lat && order.coordinates?.lng
+                          ? `https://maps.google.com/?q=${order.coordinates.lat},${order.coordinates.lng}`
+                          : `https://maps.google.com/?q=${encodeURIComponent(order.deliveryAddress || '')}`
+                      }
                       target="_blank"
                       rel="noopener noreferrer"
                       className="px-3 py-2 border border-plum-300 text-plum-700 rounded hover:bg-plum-50 dark:hover:bg-plum-900/20 flex items-center justify-center"

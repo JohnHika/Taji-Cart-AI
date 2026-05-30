@@ -72,7 +72,7 @@ userRouter.post('/admin/bulk-send-verification', auth, admin, adminBulkSendVerif
 userRouter.get('/delivery/profile', auth, delivery, userDetails)
 
 // Staff routes
-userRouter.post('/staff/verify-pickup', auth, verifyPickupController);
+userRouter.post('/staff/verify-pickup', auth, staff, verifyPickupController);
 userRouter.get('/search', auth, staff, searchUsers); // General search route for staff
 userRouter.get('/customers', auth, staff, getAllCustomers); // Get all customers for POS
 userRouter.post('/scan-loyalty-card', auth, staff, scanLoyaltyCard); // Scan loyalty card for POS

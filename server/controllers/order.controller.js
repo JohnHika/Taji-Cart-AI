@@ -342,10 +342,13 @@ export async function checkoutController(request, response) {
             communityDiscountAmount,
         });
         
-        // Generate order data for multiple items
+        // All items in one checkout share the same orderId so reports can
+        // deduplicate by orderId and avoid counting the total multiple times.
+        const sharedOrderId = `ORD-${new mongoose.Types.ObjectId()}`;
+
         const payload = normalizedItems.map((item) => ({
             userId: userId,
-            orderId: `ORD-${new mongoose.Types.ObjectId()}`,
+            orderId: sharedOrderId,
             productId: item.productId._id,
             product_details: {
                 name: item.productId.name,
@@ -364,27 +367,25 @@ export async function checkoutController(request, response) {
         }));
         
         const generatedOrder = await OrderModel.insertMany(payload);
-        
-        // Update product stock after order creation
-        const stockUpdatePromises = normalizedItems.map(async (item) => {
-            const product = await ProductModel.findById(item.productId._id);
-            product.stock -= item.quantity;
-            
-            if (product.stock < 5) {
+
+        // Atomically reduce stock for each item, then flag low-stock items
+        await Promise.all(normalizedItems.map(async (item) => {
+            const updated = await ProductModel.findByIdAndUpdate(
+                item.productId._id,
+                { $inc: { stock: -item.quantity } },
+                { new: true }
+            );
+            if (updated && updated.stock < 5) {
                 await NotificationModel.create({
                     type: 'low_stock',
                     title: 'Low Stock Alert',
-                    message: `Product "${product.name}" is running low (${product.stock} remaining)`,
+                    message: `Product "${updated.name}" is running low (${updated.stock} remaining)`,
                     isRead: false,
                     forAdmin: true,
                 });
             }
-            
-            return product.save();
-        });
-        
-        await Promise.all(stockUpdatePromises);
-        
+        }));
+
         // Remove from cart
         await CartProductModel.deleteMany({ userId: userId });
         await UserModel.updateOne({ _id: userId }, { shopping_cart: [] });
@@ -550,53 +551,50 @@ export async function CashOnDeliveryOrderController(request, response) {
             ? generateVerificationCode() 
             : "";
 
-        const payload = normalizedItems.map(el => {
-            return({
-                userId: userId,
-                orderId: `ORD-${new mongoose.Types.ObjectId()}`,
-                productId: el.productId._id, 
-                product_details: {
-                    name: el.productId.name,
-                    image: el.productId.image
-                },
-                paymentId: "",
-                payment_status: "CASH ON DELIVERY",
-                delivery_address: fulfillment_type === 'delivery' ? addressId : null,
-                fulfillment_type: fulfillment_type || 'delivery',
-                pickup_location: pickup_location || '',
-                pickup_instructions: pickup_instructions || '',
-                delivery_mode: deliveryMode || 'standard',
-                customer_location: customerLocation || undefined,
-                pickupVerificationCode: pickupVerificationCode,
-                subTotalAmt: subTotalAmt,
-                totalAmt: totalAmt,
-            })
-        })
+        // All items in one checkout share the same orderId so reports can
+        // deduplicate by orderId and avoid counting the total multiple times.
+        const sharedOrderId = `ORD-${new mongoose.Types.ObjectId()}`;
+
+        const payload = normalizedItems.map(el => ({
+            userId: userId,
+            orderId: sharedOrderId,
+            productId: el.productId._id,
+            product_details: {
+                name: el.productId.name,
+                image: el.productId.image
+            },
+            paymentId: "",
+            payment_status: "CASH ON DELIVERY",
+            delivery_address: fulfillment_type === 'delivery' ? addressId : null,
+            fulfillment_type: fulfillment_type || 'delivery',
+            pickup_location: pickup_location || '',
+            pickup_instructions: pickup_instructions || '',
+            delivery_mode: deliveryMode || 'standard',
+            customer_location: customerLocation || undefined,
+            pickupVerificationCode: pickupVerificationCode,
+            subTotalAmt: subTotalAmt,
+            totalAmt: totalAmt,
+        }))
 
         const generatedOrder = await OrderModel.insertMany(payload)
 
-        // Update product stock after order creation
-        const stockUpdatePromises = normalizedItems.map(async (item) => {
-            const product = await ProductModel.findById(item.productId._id);
-            
-            // Reduce stock
-            product.stock -= item.quantity;
-            
-            // Create low stock notification if needed
-            if (product.stock < 5) {
+        // Atomically reduce stock for each item, then flag low-stock items
+        await Promise.all(normalizedItems.map(async (item) => {
+            const updated = await ProductModel.findByIdAndUpdate(
+                item.productId._id,
+                { $inc: { stock: -item.quantity } },
+                { new: true }
+            );
+            if (updated && updated.stock < 5) {
                 await NotificationModel.create({
                     type: 'low_stock',
                     title: 'Low Stock Alert',
-                    message: `Product "${product.name}" is running low (${product.stock} remaining)`,
+                    message: `Product "${updated.name}" is running low (${updated.stock} remaining)`,
                     isRead: false,
                     forAdmin: true
                 });
             }
-            
-            return product.save();
-        });
-        
-        await Promise.all(stockUpdatePromises);
+        }));
 
         // Remove from the cart
         const removeCartItems = await CartProductModel.deleteMany({ userId: userId })
@@ -806,10 +804,12 @@ export async function guestCheckoutController(request, response) {
         const orderId = `ORD-${Date.now()}-${Math.random().toString(36).substring(2, 5).toUpperCase()}`
 
         // Create the order
+        const normalizedGuestEmail = guestEmail.toLowerCase().trim()
+
         const generatedOrder = await OrderModel.create({
             orderId,
             isGuest: true,
-            guestEmail,
+            guestEmail: normalizedGuestEmail,
             guestPhone: guestPhone || '',
             guestShipping: guestShipping || {},
             fulfillment_type,
@@ -916,24 +916,67 @@ export async function guestCheckoutController(request, response) {
     }
 }
 
-export async function getOrderDetailsController(request,response){
+export async function getOrderDetailsController(request, response) {
     try {
-        const userId = request.userId // order id
+        const userId = request.userId;
 
-        const orderlist = await OrderModel.find({ userId : userId }).sort({ createdAt : -1 }).populate('delivery_address')
+        // Group by orderId so each order appears once regardless of item count.
+        // totalAmt and subTotalAmt are taken from the first doc (they're identical
+        // across all line-item docs for the same orderId).
+        const orderlist = await OrderModel.aggregate([
+            { $match: { userId: new mongoose.Types.ObjectId(String(userId)) } },
+            { $sort: { createdAt: -1 } },
+            {
+                $group: {
+                    _id: '$orderId',
+                    orderId: { $first: '$orderId' },
+                    userId: { $first: '$userId' },
+                    delivery_address: { $first: '$delivery_address' },
+                    payment_status: { $first: '$payment_status' },
+                    paymentId: { $first: '$paymentId' },
+                    invoice_receipt: { $first: '$invoice_receipt' },
+                    fulfillment_type: { $first: '$fulfillment_type' },
+                    pickup_location: { $first: '$pickup_location' },
+                    pickup_instructions: { $first: '$pickup_instructions' },
+                    status: { $first: '$status' },
+                    subTotalAmt: { $first: '$subTotalAmt' },
+                    totalAmt: { $first: '$totalAmt' },
+                    deliveryPersonnel: { $first: '$deliveryPersonnel' },
+                    estimatedDeliveryTime: { $first: '$estimatedDeliveryTime' },
+                    createdAt: { $first: '$createdAt' },
+                    updatedAt: { $max: '$updatedAt' },
+                    items: {
+                        $push: {
+                            productId: '$productId',
+                            product_details: '$product_details',
+                        }
+                    }
+                }
+            },
+            { $sort: { createdAt: -1 } },
+            {
+                $lookup: {
+                    from: 'addresses',
+                    localField: 'delivery_address',
+                    foreignField: '_id',
+                    as: 'delivery_address'
+                }
+            },
+            { $unwind: { path: '$delivery_address', preserveNullAndEmpty: true } }
+        ]);
 
         return response.json({
-            message : "order list",
-            data : orderlist,
-            error : false,
-            success : true
-        })
+            message: "order list",
+            data: orderlist,
+            error: false,
+            success: true
+        });
     } catch (error) {
         return response.status(500).json({
-            message : error.message || error,
-            error : true,
-            success : false
-        })
+            message: error.message || error,
+            error: true,
+            success: false
+        });
     }
 }
 
@@ -1174,22 +1217,64 @@ export async function getAllOrdersAdmin(request, response) {
       query.status = status;
     }
 
-    // Improve the populate to include more user information
-    const orders = await OrderModel.find(query)
-      .sort({ createdAt: -1 })
-      .populate({
-        path: 'userId',
-        select: 'name email mobile profile_pic'
-      })
-      .populate('delivery_address')
-      .lean(); // Use lean for better performance
-    
-    // Add debug info to help diagnose user data issues
-    console.log(`Successfully retrieved ${orders.length} orders for admin`);
-    if (orders.length > 0) {
-      console.log(`Sample order user info: ${JSON.stringify(orders[0].userId || 'No user data')}`);
-    }
-    
+    // Aggregate by orderId so each order appears once regardless of item count.
+    // Each document in the order collection represents one line item; grouping
+    // them avoids inflated row counts and double-counted totals in the UI.
+    const aggregatePipeline = [
+      { $match: query },
+      { $sort: { createdAt: -1 } },
+      {
+        $group: {
+          _id: '$orderId',
+          orderId: { $first: '$orderId' },
+          userId: { $first: '$userId' },
+          delivery_address: { $first: '$delivery_address' },
+          payment_status: { $first: '$payment_status' },
+          paymentId: { $first: '$paymentId' },
+          fulfillment_type: { $first: '$fulfillment_type' },
+          pickup_location: { $first: '$pickup_location' },
+          status: { $first: '$status' },
+          subTotalAmt: { $first: '$subTotalAmt' },
+          totalAmt: { $first: '$totalAmt' },
+          isGuest: { $first: '$isGuest' },
+          guestEmail: { $first: '$guestEmail' },
+          guestShipping: { $first: '$guestShipping' },
+          deliveryPersonnel: { $first: '$deliveryPersonnel' },
+          createdAt: { $first: '$createdAt' },
+          updatedAt: { $max: '$updatedAt' },
+          // Collect all line items into an array
+          items: {
+            $push: {
+              productId: '$productId',
+              product_details: '$product_details',
+            }
+          }
+        }
+      },
+      { $sort: { createdAt: -1 } },
+      {
+        $lookup: {
+          from: 'users',
+          localField: 'userId',
+          foreignField: '_id',
+          as: 'userId',
+          pipeline: [{ $project: { name: 1, email: 1, mobile: 1, profile_pic: 1 } }]
+        }
+      },
+      { $unwind: { path: '$userId', preserveNullAndEmpty: true } },
+      {
+        $lookup: {
+          from: 'addresses',
+          localField: 'delivery_address',
+          foreignField: '_id',
+          as: 'delivery_address'
+        }
+      },
+      { $unwind: { path: '$delivery_address', preserveNullAndEmpty: true } }
+    ];
+
+    const orders = await OrderModel.aggregate(aggregatePipeline);
+
     return response.json({
       message: "All orders retrieved successfully",
       data: orders,
@@ -1213,7 +1298,7 @@ export async function updateOrderStatus(request, response) {
     const { status } = request.body;
     
     // Validate status
-    const validStatuses = ['pending', 'processing', 'shipped', 'delivered', 'cancelled'];
+    const validStatuses = ['pending', 'processing', 'shipped', 'dispatched', 'driver_assigned', 'out_for_delivery', 'nearby', 'delivered', 'ready_for_pickup', 'picked_up', 'cancelled'];
     
     if (!validStatuses.includes(status)) {
       return response.status(400).json({
@@ -1231,29 +1316,61 @@ export async function updateOrderStatus(request, response) {
       });
     }
     
-    // Update the status
-    order.status = status;
-    
-    // If order is cancelled, consider restoring stock
-    if (status === 'cancelled' && order.status !== 'cancelled') {
-      // Implement product stock restoration logic here if needed
-    }
-    
-    // If order is delivered, mark delivery date and update driver performance
-    if (status === 'delivered') {
-      order.deliveredAt = new Date();
+    const previousStatus = order.status;
 
-      // Update driver performance if this order has a delivery personnel assigned
-      if (order.deliveryPersonnel) {
-        try {
-          await updateDriverPerformanceOnDelivery(order, order.deliveryPersonnel);
-        } catch (performanceError) {
-          console.error("Error updating driver performance:", performanceError);
-        }
+    // Restore stock for ALL line-item docs in this order when cancelling
+    if (status === 'cancelled' && previousStatus !== 'cancelled') {
+      try {
+        const allDocs = await OrderModel.find(
+          { orderId: order.orderId },
+          { productId: 1 }
+        ).lean();
+        await Promise.all(
+          allDocs
+            .filter(doc => doc.productId)
+            .map(doc =>
+              ProductModel.findByIdAndUpdate(doc.productId, { $inc: { stock: 1 } })
+            )
+        );
+      } catch (stockError) {
+        console.error('Error restoring stock on cancellation:', stockError);
       }
     }
     
-    await order.save();
+    // Propagate status change to ALL line-item docs sharing the same orderId
+    const updateFields = { status };
+    if (status === 'delivered') {
+      updateFields.deliveredAt = new Date();
+    }
+
+    await OrderModel.updateMany(
+      { orderId: order.orderId },
+      {
+        $set: updateFields,
+        $push: {
+          statusHistory: {
+            status,
+            timestamp: new Date(),
+            updatedBy: request.userId
+          }
+        }
+      }
+    );
+
+    // Driver performance update (once, not per line item)
+    if (status === 'delivered' && order.deliveryPersonnel) {
+      try {
+        await updateDriverPerformanceOnDelivery(
+          { ...order.toObject(), deliveredAt: updateFields.deliveredAt },
+          order.deliveryPersonnel
+        );
+      } catch (performanceError) {
+        console.error("Error updating driver performance:", performanceError);
+      }
+    }
+
+    // Re-fetch updated doc for response
+    const updatedOrder = await OrderModel.findById(order._id);
     
     // Create notification for the user
     try {
@@ -1291,7 +1408,7 @@ export async function updateOrderStatus(request, response) {
     return response.json({
       message: "Order status updated successfully",
       success: true,
-      data: order
+      data: updatedOrder
     });
   } catch (error) {
     console.error("Error updating order status:", error);
@@ -1396,42 +1513,51 @@ export async function assignDeliveryPersonnel(request, response) {
         }
         
         // Update order with delivery personnel and status
-        order.deliveryPersonnel = personnelId;
-        order.status = 'driver_assigned';
-        order.statusHistory.push({
-            status: 'driver_assigned',
-            timestamp: new Date(),
-            note: `Assigned to ${personnel.name}`
-        });
-        
         // Calculate estimated delivery time (e.g., 45 minutes from now)
         const estimatedDelivery = new Date();
         estimatedDelivery.setMinutes(estimatedDelivery.getMinutes() + 45);
-        order.estimatedDeliveryTime = estimatedDelivery;
-        
-        await order.save();
-        
+
+        // Propagate assignment to ALL line-item docs that share the same orderId
+        // so the full order (not just one product doc) is updated.
+        await OrderModel.updateMany(
+            { orderId: order.orderId },
+            {
+                $set: {
+                    deliveryPersonnel: personnelId,
+                    status: 'driver_assigned',
+                    estimatedDeliveryTime: estimatedDelivery
+                },
+                $push: {
+                    statusHistory: {
+                        status: 'driver_assigned',
+                        timestamp: new Date(),
+                        note: `Assigned to ${personnel.name}`
+                    }
+                }
+            }
+        );
+
+        // Re-fetch for response
+        const updatedOrder = await OrderModel.findById(order._id);
+
         // Update delivery personnel status
         personnel.isAvailable = false;
-        personnel.activeOrders.push(orderId);
+        personnel.activeOrders.push(order._id);
         await personnel.save();
         
         // Send real-time notification
         const io = getIO();
-        io.to(`order_${orderId}`).emit('statusUpdated', {
-            orderId,
+        io.to(`order_${order.orderId}`).emit('statusUpdated', {
+            orderId: order.orderId,
             status: 'driver_assigned',
             personnelName: personnel.name,
             estimatedDelivery: estimatedDelivery
         });
-        
-        // If you have a notification model, create a notification for the user
-        // await NotificationModel.create({...})
-        
+
         return response.json({
             message: "Delivery personnel assigned successfully",
             success: true,
-            data: order
+            data: updatedOrder
         });
     } catch (error) {
         console.error("Error assigning delivery personnel:", error);
@@ -1462,61 +1588,62 @@ export async function updateOrderLocation(request, response) {
             });
         }
         
-        // Update order location
-        order.currentLocation = {
+        const locationUpdate = {
             lat: location.lat,
             lng: location.lng,
             lastUpdated: new Date()
         };
-        
-        // Update status if provided
+
+        // Build the update payload for all sibling docs
+        const setFields = { currentLocation: locationUpdate };
+        const pushFields = {};
+
         if (status && status !== order.status) {
-            order.status = status;
-            order.statusHistory.push({
+            setFields.status = status;
+            pushFields.statusHistory = {
                 status,
                 timestamp: new Date(),
-                location: {
-                    lat: location.lat,
-                    lng: location.lng
-                }
-            });
-            
-            // If delivered, update necessary fields
+                location: { lat: location.lat, lng: location.lng }
+            };
+
             if (status === 'delivered') {
-                order.deliveredAt = new Date();
-                
-                // Update delivery personnel status
+                setFields.deliveredAt = new Date();
+
                 if (order.deliveryPersonnel) {
                     const personnel = await DeliveryPersonnelModel.findById(order.deliveryPersonnel);
                     if (personnel) {
                         personnel.isAvailable = true;
                         personnel.activeOrders = personnel.activeOrders.filter(
-                            id => id.toString() !== orderId.toString()
+                            id => id.toString() !== order._id.toString()
                         );
                         await personnel.save();
                     }
                 }
             }
         }
-        
-        await order.save();
-        
+
+        const updateOp = { $set: setFields };
+        if (Object.keys(pushFields).length) updateOp.$push = pushFields;
+
+        // Propagate to all line-item docs sharing the same orderId
+        await OrderModel.updateMany({ orderId: order.orderId }, updateOp);
+
         // Send real-time update
         const io = getIO();
-        io.to(`order_${orderId}`).emit('locationUpdated', {
-            orderId,
+        io.to(`order_${order.orderId}`).emit('locationUpdated', {
+            orderId: order.orderId,
             location,
-            status: order.status,
+            status: setFields.status || order.status,
             timestamp: new Date()
         });
-        
+
         return response.json({
             message: "Order location updated successfully",
             success: true,
             data: {
-                orderId,
-                location: order.currentLocation,
-                status: order.status
+                orderId: order.orderId,
+                location: locationUpdate,
+                status: setFields.status || order.status
             }
         });
     } catch (error) {
@@ -1709,33 +1836,57 @@ export async function getMostRecentOrder(request, response) {
       });
     }
     
-    console.log(`Fetching most recent order for user ${userId}`);
-    
-    // Find most recent order for this user
-    const recentOrder = await OrderModel.findOne({ 
-      userId: userId 
-    })
-    .sort({ createdAt: -1 })
-    .populate({
-      path: 'items.productId',
-      select: 'name image price'
-    })
-    .populate('delivery_address');
-    
-    if (!recentOrder) {
-      console.log(`No orders found for user ${userId}`);
+    // Group by orderId so we get a single order with all its line items,
+    // not just the first doc (which would be one product from a multi-item cart).
+    const results = await OrderModel.aggregate([
+      { $match: { userId: new mongoose.Types.ObjectId(String(userId)) } },
+      { $sort: { createdAt: -1 } },
+      {
+        $group: {
+          _id: '$orderId',
+          orderId: { $first: '$orderId' },
+          userId: { $first: '$userId' },
+          delivery_address: { $first: '$delivery_address' },
+          payment_status: { $first: '$payment_status' },
+          paymentId: { $first: '$paymentId' },
+          fulfillment_type: { $first: '$fulfillment_type' },
+          pickup_location: { $first: '$pickup_location' },
+          status: { $first: '$status' },
+          subTotalAmt: { $first: '$subTotalAmt' },
+          totalAmt: { $first: '$totalAmt' },
+          createdAt: { $first: '$createdAt' },
+          items: {
+            $push: {
+              productId: '$productId',
+              product_details: '$product_details',
+            }
+          }
+        }
+      },
+      { $sort: { createdAt: -1 } },
+      { $limit: 1 },
+      {
+        $lookup: {
+          from: 'addresses',
+          localField: 'delivery_address',
+          foreignField: '_id',
+          as: 'delivery_address'
+        }
+      },
+      { $unwind: { path: '$delivery_address', preserveNullAndEmpty: true } }
+    ]);
+
+    if (!results.length) {
       return response.status(404).json({
         message: "No orders found",
         success: false
       });
     }
-    
-    console.log(`Successfully found recent order ${recentOrder._id} for user ${userId}`);
-    
+
     return response.json({
       message: "Recent order retrieved successfully",
       success: true,
-      order: recentOrder
+      order: results[0]
     });
     
   } catch (error) {
@@ -1767,7 +1918,7 @@ export const verifyPickupController = async (req, res) => {
     const order = await OrderModel.findOne({ 
       pickupCode, 
       deliveryMethod: 'store-pickup', 
-      status: { $nin: ['Cancelled', 'Picked Up'] }
+      status: { $nin: ['cancelled', 'picked_up'] }
     }).populate('userId', 'name email mobile');
     
     if (!order) {
@@ -1985,15 +2136,11 @@ export const getVerificationHistoryController = async (req, res) => {
     // Find all orders that have been picked up and have verification records
     // Using $or to handle different status formats and field names
     const verifiedPickups = await OrderModel.find({
-      $or: [
-        { fulfillment_type: 'pickup' },
-        { deliveryMethod: 'store-pickup' }
-      ],
-      $or: [
+      $and: [
+        { $or: [{ fulfillment_type: 'pickup' }, { deliveryMethod: 'store-pickup' }] },
         { status: 'picked_up' },
-        { status: 'Picked Up' }
-      ],
-      'pickupVerification.verifiedAt': { $exists: true }
+        { 'pickupVerification.verifiedAt': { $exists: true } }
+      ]
     }).populate('userId', 'name email mobile')
       .populate('pickupVerification.verifiedById', 'name email')
       .sort({ 'pickupVerification.verifiedAt': -1 });

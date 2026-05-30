@@ -103,35 +103,39 @@ export const useDeliveryRoute = (map) => {
   }, [map]);
   
   // Calculate full delivery route
-  const calculateRoute = useCallback(async (driverLocation, pickupLocation, deliveryLocation) => {
+  // deliveryMode: 'foot' | 'walking' | 'walker' → use 'foot' profile; otherwise 'driving'
+  const calculateRoute = useCallback(async (driverLocation, pickupLocation, deliveryLocation, deliveryMode = 'driving') => {
     if (!driverLocation || !deliveryLocation) {
       setError('Missing locations');
       return null;
     }
-    
+
+    const FOOT_MODES = ['foot', 'walking', 'walker'];
+    const routingProfile = FOOT_MODES.includes(deliveryMode) ? 'foot' : 'driving';
+
     setIsLoading(true);
     setError(null);
-    
+
     try {
       const routeResults = {};
-      
+
       // Route from driver to pickup (if pickup exists and driver hasn't reached it)
       if (pickupLocation) {
         try {
           const toPickup = await fetchRoute(
             [driverLocation, pickupLocation],
-            'driving'
+            routingProfile
           );
           routeResults.driverToPickup = toPickup;
         } catch (err) {
           console.warn('Could not calculate driver to pickup route:', err);
         }
-        
+
         // Route from pickup to delivery
         try {
           const toDelivery = await fetchRoute(
             [pickupLocation, deliveryLocation],
-            'driving'
+            routingProfile
           );
           routeResults.pickupToDelivery = toDelivery;
         } catch (err) {
@@ -142,7 +146,7 @@ export const useDeliveryRoute = (map) => {
         try {
           const direct = await fetchRoute(
             [driverLocation, deliveryLocation],
-            'driving'
+            routingProfile
           );
           routeResults.pickupToDelivery = direct;
         } catch (err) {

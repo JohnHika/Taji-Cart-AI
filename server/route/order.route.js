@@ -7,6 +7,7 @@ import {
     getAllOrdersAdmin,
     getAllPickupOrdersHistory,
     getAssignedOrders,
+    getMostRecentOrder,
     getOrderBySessionController,
     getOrderDetailsController,
     getOrderTrackingDetails,
@@ -32,6 +33,8 @@ orderRouter.post('/guest-checkout', guestCheckoutController) // Guest checkout (
 orderRouter.get('/track-guest', trackGuestOrderController) // Guest order tracking (no auth required)
 orderRouter.get("/order-list", auth, getOrderDetailsController)
 orderRouter.get("/details", auth, getOrderBySessionController)
+orderRouter.get("/recent", auth, getMostRecentOrder)
+orderRouter.get("/receipt", auth, getOrderBySessionController)
 
 // Admin order management routes
 orderRouter.get('/admin/all', auth, admin, getAllOrdersAdmin)

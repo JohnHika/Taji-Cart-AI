@@ -76,9 +76,8 @@ export function useGeocoding({
         {
           signal: abortControllerRef.current.signal,
           headers: {
-            'Accept': 'application/json',
-            // Nominatim requires a User-Agent
-            'User-Agent': 'TajiCartApp/1.0'
+            'Accept': 'application/json'
+            // User-Agent cannot be set by browser fetch — browsers block/ignore it
           }
         }
       );
@@ -154,8 +153,8 @@ export function useGeocoding({
         `${API_ENDPOINTS.nominatim.reverse}?${params}`,
         {
           headers: {
-            'Accept': 'application/json',
-            'User-Agent': 'TajiCartApp/1.0'
+            'Accept': 'application/json'
+            // User-Agent cannot be set by browser fetch — browsers block/ignore it
           }
         }
       );

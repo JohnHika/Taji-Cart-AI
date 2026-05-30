@@ -112,26 +112,13 @@ const Dashboard = () => {
 
       setError(errorMessage);
 
-      // Use placeholder data for development if API fails
-      if (import.meta.env.DEV) {
+      // Mock fallback removed — showing fake stats alongside a real error state is misleading.
+      // The error message set above is sufficient; staff will see the error UI instead.
+      if (false) {
         setDashboardData({
-          counts: {
-            pendingOrders: 12,
-            dispatchedOrders: 5,
-            activeDeliveries: 8,
-            completedToday: 23,
-            availableDrivers: 4,
-            totalDrivers: 7
-          },
-          recentOrders: [
-            { _id: '1', orderId: '2351', status: 'dispatched', customerName: 'John Doe', total: 1200, createdAt: new Date().toISOString() },
-            { _id: '2', orderId: '2344', status: 'driver_assigned', customerName: 'Jane Smith', total: 850, createdAt: new Date().toISOString() },
-            { _id: '3', orderId: '2332', status: 'delivered', customerName: 'Robert Johnson', total: 2100, createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString() }
-          ],
-          activeDrivers: [
-            { _id: '1', name: 'David Driver', isAvailable: true, activeOrdersCount: 1, currentLocation: { lat: -1.2855, lng: 36.8126, lastUpdated: new Date() } },
-            { _id: '2', name: 'Sarah Speedy', isAvailable: false, activeOrdersCount: 3, currentLocation: { lat: -1.2755, lng: 36.8226, lastUpdated: new Date() } }
-          ],
+          counts: {},
+          recentOrders: [],
+          activeDrivers: [],
           deliveryPerformance: {
             avgDeliveryTime: 45,
             deliveriesLast7Days: 87,

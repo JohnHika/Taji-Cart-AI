@@ -1,9 +1,2 @@
-const express = require('express');
-const router = express.Router();
-const orderController = require('../controllers/order.controller');
-const { verifyToken } = require('../middleware/auth.middleware');
-
-// Add this route near your other order routes
-router.get("/recent", verifyToken, orderController.getMostRecentOrder);
-
-module.exports = router;
+// DEPRECATED – this file is not registered in app.js. The /recent endpoint is
+// now registered in server/route/order.route.js. Do not add routes here.

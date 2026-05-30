@@ -8,8 +8,9 @@ const DeliveryLayout = () => {
   const user = useSelector(state => state.user);
   
   // Check if user is logged in and has delivery role
+  // Check BOTH role string AND isDelivery boolean for dual role system compatibility
   const isAuthenticated = user.isAuthenticated;
-  const isDelivery = user.role === 'delivery';
+  const isDelivery = user.role === 'delivery' || user.isDelivery === true;
   
   // Redirect to login if not authenticated
   if (!isAuthenticated) {

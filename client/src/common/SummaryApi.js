@@ -386,24 +386,7 @@ const SummaryApi = {
     }
 };
 
-// Now that SummaryApi is defined, you can perform logging and validation
-console.log("==================== SUMMARY API CONFIGURATION ====================");
-console.log("API endpoints available:", Object.keys(SummaryApi || {}));
-
-// Check if critical endpoints exist
-const REQUIRED_ENDPOINTS = [
-  'getCategory', 
-  'getSubCategory', 
-  'getProductByCategory',
-  'getProductByCategoryAndSubCategory'
-];
-
-REQUIRED_ENDPOINTS.forEach(endpoint => {
-  if (!SummaryApi[endpoint]) {
-    console.error(`[ERROR] Missing required API endpoint: ${endpoint}`);
-  } else {
-    console.log(`[OK] Found API endpoint: ${endpoint}`, SummaryApi[endpoint]);
-  }
-});
+// Endpoint validation removed from production bundle — noisy and risky to expose.
+// Run this in a dev-only script or test if needed.
 
 export default SummaryApi;

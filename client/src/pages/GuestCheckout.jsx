@@ -150,7 +150,7 @@ function GuestCheckout() {
     clearGuestCart();
     dispatch(fetchCartItems());
     setOrderSuccess({
-      orderId: paymentData.transactionId,
+      orderId: paymentData.orderId || paymentData.transactionId,
       total: calculateTotal(),
       email: formData.guestEmail
     });

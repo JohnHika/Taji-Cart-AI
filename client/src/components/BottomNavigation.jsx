@@ -28,10 +28,10 @@ const BottomNavigation = () => {
 
     if (isDelivery) {
       return [
-        { label: 'Dashboard', icon: FaTruck,        path: '/dashboard/delivery/dashboard', active: location.pathname.includes('/dashboard/delivery/dashboard') || location.pathname.includes('/delivery/dashboard') },
-        { label: 'Active',    icon: FaClipboardList, path: '/dashboard/delivery/active',   active: location.pathname.includes('/dashboard/delivery/active') || location.pathname.includes('/delivery/active') },
-        { label: 'Map',       icon: FaMapMarkedAlt, path: '/dashboard/delivery/map',       active: location.pathname.includes('/dashboard/delivery/map') || location.pathname.includes('/delivery/map') },
-        { label: 'History',   icon: FaStore,        path: '/dashboard/delivery/history',   active: location.pathname.includes('/dashboard/delivery/history') || location.pathname.includes('/delivery/history') },
+        { label: 'Dashboard', icon: FaTruck,         path: '/delivery/dashboard', active: location.pathname.includes('/delivery/dashboard') },
+        { label: 'Active',    icon: FaClipboardList, path: '/delivery/active',    active: location.pathname.includes('/delivery/active') },
+        { label: 'Map',       icon: FaMapMarkedAlt,  path: '/delivery/map',       active: location.pathname.includes('/delivery/map') },
+        { label: 'History',   icon: FaStore,         path: '/delivery/history',   active: location.pathname.includes('/delivery/history') },
         { label: 'Profile',   icon: FaUser,         path: '/dashboard/profile',            active: location.pathname === '/mobile/profile' || location.pathname === '/dashboard/profile' },
       ];
     }

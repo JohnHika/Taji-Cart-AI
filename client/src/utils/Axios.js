@@ -209,18 +209,8 @@ instance.interceptors.response.use(
   }
 );
 
-instance.interceptors.request.use(
-  (config) => {
-    const token = getStoredAccessToken();
-
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-
-    return config;
-  },
-  (error) => Promise.reject(error)
-);
+// Duplicate request interceptor removed — auth header is already set by the
+// interceptor registered at line 78.
 
 const Axios = (options = {}) => {
   const token = getStoredAccessToken();

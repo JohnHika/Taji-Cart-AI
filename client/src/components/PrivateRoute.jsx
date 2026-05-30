@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useSelector } from 'react-redux';
 import { Navigate, useLocation } from 'react-router-dom';
 import CriteriaGateModal from './CriteriaGateModal';
@@ -15,9 +15,14 @@ import fetchUserDetails from '../utils/fetchUserDetails';
  * @param {boolean} [props.requireDelivery=false] - Whether the route requires delivery privileges
  * @returns {React.ReactNode}
  */
+const SESSION_RESTORE_TIMEOUT_MS = 5000;
+
 const PrivateRoute = ({ children, requireAdmin = false, requireStaff = false, requireDelivery = false }) => {
   const user = useSelector(state => state.user);
   const location = useLocation();
+  const [sessionTimedOut, setSessionTimedOut] = useState(false);
+  const timerRef = useRef(null);
+
   const hasStoredSession = Boolean(
     sessionStorage.getItem('accesstoken') ||
     sessionStorage.getItem('refreshToken') ||
@@ -47,16 +52,25 @@ const PrivateRoute = ({ children, requireAdmin = false, requireStaff = false, re
     user?.role === 'delivery' ||
     user?.isDelivery === true;
   
+  // Start a timeout when waiting for session restore so the spinner can't get stuck
+  useEffect(() => {
+    if (!isAuthenticated && hasStoredSession && !sessionTimedOut) {
+      timerRef.current = setTimeout(() => setSessionTimedOut(true), SESSION_RESTORE_TIMEOUT_MS);
+    } else {
+      clearTimeout(timerRef.current);
+    }
+    return () => clearTimeout(timerRef.current);
+  }, [isAuthenticated, hasStoredSession, sessionTimedOut]);
+
   // Check if logged in
   if (!isAuthenticated) {
-    if (hasStoredSession) {
+    if (hasStoredSession && !sessionTimedOut) {
       return (
         <div className="min-h-[50vh] flex items-center justify-center text-sm text-brown-400 dark:text-white/40">
           Restoring your session...
         </div>
       );
     }
-    console.log('User not authenticated, redirecting to login');
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
   

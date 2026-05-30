@@ -161,11 +161,11 @@ const DashboardSidebar = ({ userRole, isStaff }) => {
         {isDelivery && (
           <>
             <SectionLabel title="Delivery" />
-            <MenuItem to="/dashboard/delivery/dashboard" icon={FaTachometerAlt} label="Delivery Dashboard" />
-            <MenuItem to="/dashboard/delivery/active" icon={FaTruck} label="Active Deliveries" />
-            <MenuItem to="/dashboard/delivery/completed" icon={FaBoxOpen} label="Completed Deliveries" />
-            <MenuItem to="/dashboard/delivery/history" icon={FaHistory} label="Delivery History" />
-            <MenuItem to="/dashboard/delivery/map" icon={FaMapMarkedAlt} label="Map View" />
+            <MenuItem to="/delivery/dashboard" icon={FaTachometerAlt} label="Delivery Dashboard" />
+            <MenuItem to="/delivery/active" icon={FaTruck} label="Active Deliveries" />
+            <MenuItem to="/delivery/completed" icon={FaBoxOpen} label="Completed Deliveries" />
+            <MenuItem to="/delivery/history" icon={FaHistory} label="Delivery History" />
+            <MenuItem to="/delivery/map" icon={FaMapMarkedAlt} label="Map View" />
           </>
         )}
       </nav>

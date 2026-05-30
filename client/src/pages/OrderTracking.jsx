@@ -63,7 +63,7 @@ const OrderTracking = () => {
     const connectSocket = () => {
       console.log(`Connecting to socket server at ${backendUrl}`);
       
-      const token = sessionStorage.getItem('accesstoken') || '';
+      const token = sessionStorage.getItem('accesstoken') || localStorage.getItem('accesstoken') || '';
       const newSocket = io(backendUrl, {
         withCredentials: true,
         reconnection: true,

@@ -723,8 +723,12 @@ export const getActiveOrders = async (req, res) => {
             _id: order._id,
             orderId: order.orderId,
             status: order.status,
-        customer,
-        deliveryAddress: deliveryAddress.fullAddress || deliveryAddress.street || 'No address provided',
+            customer,
+            // Use the same structured shape as formatAvailableDeliveryOrder so clients
+            // don't need to branch on which endpoint they called.
+            deliveryAddress: deliveryAddress,
+            coordinates: order.delivery_address?.coordinates || null,
+            deliveryNotes: order.delivery_address?.deliveryInstructions || '',
             total: order.totalAmt,
             createdAt: order.createdAt,
             currentLocation: order.currentLocation || null,
@@ -906,13 +910,21 @@ export const exportDeliveryHistory = async (req, res) => {
     .sort({ createdAt: -1 });
     
     // Format data for export
+    // The address model uses address_line/city/state — build a readable string
+    const buildAddressString = (addr) => {
+        if (!addr) return 'N/A';
+        return [addr.address_line, addr.city, addr.state, addr.country]
+            .filter(Boolean)
+            .join(', ') || 'N/A';
+    };
+
     const exportData = orders.map(order => ({
         orderId: order.orderId,
         createdAt: order.createdAt,
         deliveredAt: order.deliveredAt || 'Not delivered',
         customerName: order.userId?.name || 'Unknown',
-        customerPhone: order.userId?.phone || 'N/A',
-        deliveryAddress: order.delivery_address?.fullAddress || 'N/A',
+        customerPhone: order.userId?.phone || order.userId?.mobile || 'N/A',
+        deliveryAddress: buildAddressString(order.delivery_address),
         status: order.status,
         amount: order.totalAmt
     }));
@@ -1022,9 +1034,11 @@ export const updateOrderStatus = async (req, res) => {
 export const updateDriverLocation = async (req, res) => {
   try {
     const driverId = req.userId;
-    const { latitude, longitude, orderId } = req.body;
+    // Accept extended position fields from the Geolocation API
+    const { latitude, longitude, accuracy, speed, heading, orderId } = req.body;
 
-    if (!latitude || !longitude) {
+    // Use != null to allow latitude/longitude of 0 (valid coordinate)
+    if (latitude == null || longitude == null) {
       return res.status(400).json({
         success: false,
         message: 'Latitude and longitude are required'
@@ -1039,16 +1053,21 @@ export const updateDriverLocation = async (req, res) => {
     const { userId: _omitUserId, isActive: _omitActive, ...insertOnlyFields } =
       buildDeliveryPersonnelSeed(driverUser || { _id: driverId });
 
+    const locationPayload = {
+      lat: latitude,
+      lng: longitude,
+      lastUpdated: new Date(),
+      ...(accuracy != null && { accuracy }),
+      ...(speed != null && { speed }),
+      ...(heading != null && { heading }),
+    };
+
     // Update driver location; create a delivery profile for legacy accounts that lack one
     const driverProfile = await DeliveryPersonnelModel.findOneAndUpdate(
       { userId: driverId },
       {
         $set: {
-          currentLocation: {
-            lat: latitude,
-            lng: longitude,
-            lastUpdated: new Date()
-          },
+          currentLocation: locationPayload,
           isActive: true
         },
         $setOnInsert: insertOnlyFields
@@ -1071,11 +1090,7 @@ export const updateDriverLocation = async (req, res) => {
       });
 
       if (order) {
-        order.currentLocation = {
-          lat: latitude,
-          lng: longitude,
-          lastUpdated: new Date()
-        };
+        order.currentLocation = locationPayload;
         await order.save();
 
         // Emit real-time location update — guard against socket not yet initialised
@@ -1728,9 +1743,9 @@ export const getDashboardStats = async (req, res) => {
     today.setHours(0, 0, 0, 0);
     
     // Count orders by status - Include all orders with delivery as fulfillment type
-    // that haven't been dispatched yet (pending, processing, confirmed)
+    // that haven't been dispatched yet (pending, processing)
     const pendingOrders = await Order.countDocuments(buildDeliveryQuery({
-      status: { $in: ['pending', 'processing', 'confirmed'] }
+      status: { $in: ['pending', 'processing'] }
     }));
     
     const dispatchedOrders = await Order.countDocuments(buildDeliveryQuery({
@@ -1761,7 +1776,7 @@ export const getDashboardStats = async (req, res) => {
     
     // Get recent orders for delivery (last 5)
     const recentOrders = await Order.find(buildDeliveryQuery({
-      status: { $in: ['confirmed', 'pending', 'processing', 'dispatched', 'driver_assigned', 'out_for_delivery', 'nearby', 'delivered'] }
+      status: { $in: ['pending', 'processing', 'dispatched', 'driver_assigned', 'out_for_delivery', 'nearby', 'delivered'] }
     }))
     .sort({ createdAt: -1 })
     .limit(5)
@@ -1898,10 +1913,10 @@ export const getPendingOrders = async (req, res) => {
     const sortConfig = {};
     sortConfig[sort] = direction === 'desc' ? -1 : 1;
     
-    // Find all orders that are confirmed/pending/processing and haven't been dispatched
+    // Find all orders that are pending/processing and haven't been dispatched
     // Only include delivery orders
     const pendingOrders = await Order.find(buildDeliveryQuery({
-      status: { $in: ['pending', 'processing', 'confirmed'] }
+      status: { $in: ['pending', 'processing'] }
     }))
     .populate('userId', 'name email phone mobile')
     .populate('delivery_address')

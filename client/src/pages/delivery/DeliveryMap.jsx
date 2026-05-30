@@ -1,6 +1,6 @@
 import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
 import { FaBoxOpen, FaBullseye, FaCalendarCheck, FaChartLine, FaCheck, FaCloud, FaCloudRain, FaCloudSun, FaCompressAlt, FaExchangeAlt, FaExpandAlt, FaList, FaLocationArrow, FaMapMarkerAlt, FaRoute, FaSpinner, FaStar, FaStopwatch, FaSun, FaThermometerHalf, FaTimes, FaTrafficLight, FaTruck, FaUserAlt, FaWind } from 'react-icons/fa';
 import useCriteriaGate from '../../hooks/useCriteriaGate';
@@ -14,6 +14,7 @@ const DeliveryMap = () => {
   const [error, setError] = useState(null);
   const [currentLocation, setCurrentLocation] = useState(null);
   const [updatingLocation, setUpdatingLocation] = useState(false);
+  const watchIdRef = useRef(null);
   const [mapCenter, setMapCenter] = useState([-1.286389, 36.817223]); // Default center (Nairobi)
   const [selectedDelivery, setSelectedDelivery] = useState(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -88,24 +89,26 @@ const DeliveryMap = () => {
   };
 
   useEffect(() => {
-    // Get user's current location
+    // Use watchPosition for continuous location updates instead of a one-shot getCurrentPosition
     if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
+      watchIdRef.current = navigator.geolocation.watchPosition(
         position => {
           const location = {
             lat: position.coords.latitude,
-            lng: position.coords.longitude
+            lng: position.coords.longitude,
+            accuracy: position.coords.accuracy,
+            speed: position.coords.speed,
+            heading: position.coords.heading,
           };
           setCurrentLocation(location);
           setMapCenter([location.lat, location.lng]);
-          
-          // Automatically update location on the server when first obtained
           updateLocationOnServer(location);
         },
         error => {
-          console.error('Error getting location:', error);
+          console.error('Error watching location:', error);
           toast.error('Unable to get your current location. Please enable location services.');
-        }
+        },
+        { enableHighAccuracy: true, maximumAge: 10000, timeout: 15000 }
       );
     } else {
       toast.error('Geolocation is not supported by your browser');
@@ -137,11 +140,18 @@ const DeliveryMap = () => {
     };
     
     fetchActiveDeliveries();
-    
+
     // Set up polling to refresh data every 60 seconds
     const intervalId = setInterval(fetchActiveDeliveries, 60000);
-    
-    return () => clearInterval(intervalId);
+
+    return () => {
+      clearInterval(intervalId);
+      // Clean up the geolocation watch when the component unmounts
+      if (watchIdRef.current != null) {
+        navigator.geolocation.clearWatch(watchIdRef.current);
+        watchIdRef.current = null;
+      }
+    };
   }, []);
 
   // Convert address to coordinates using OpenStreetMap Nominatim API
@@ -209,8 +219,10 @@ const DeliveryMap = () => {
         data: {
           latitude: locationToUpdate.lat,
           longitude: locationToUpdate.lng,
+          ...(locationToUpdate.accuracy != null && { accuracy: locationToUpdate.accuracy }),
+          ...(locationToUpdate.speed != null && { speed: locationToUpdate.speed }),
+          ...(locationToUpdate.heading != null && { heading: locationToUpdate.heading }),
           orderId: selectedDelivery?._id,
-          location: locationToUpdate
         }
       });
       
@@ -1422,7 +1434,11 @@ const DeliveryMap = () => {
                     <div className="mt-3 flex flex-col gap-2 xl:flex-row xl:items-center xl:justify-between">
                       <div className="flex flex-wrap gap-2">
                         <a
-                          href={`https://maps.google.com/?q=${delivery.deliveryAddress}`}
+                          href={
+                            delivery.coordinates?.lat && delivery.coordinates?.lng
+                              ? `https://maps.google.com/?q=${delivery.coordinates.lat},${delivery.coordinates.lng}`
+                              : `https://maps.google.com/?q=${encodeURIComponent(delivery.deliveryAddress || '')}`
+                          }
                           target="_blank"
                           rel="noopener noreferrer"
                           className="bg-blush-50 dark:bg-dm-card-2 hover:bg-blush-100 text-charcoal dark:text-white/60 px-2 py-0.5 rounded-pill text-xs flex items-center gap-1"

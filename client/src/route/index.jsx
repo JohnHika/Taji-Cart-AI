@@ -500,47 +500,13 @@ const router = createBrowserRouter([
             )
           },
           
-          // Delivery specific routes
-          {
-            path: 'delivery/dashboard',
-            element: (
-              <PrivateRoute requireDelivery={true}>
-                <DeliveryDashboard />
-              </PrivateRoute>
-            )
-          },
-          {
-            path: 'delivery/active',
-            element: (
-              <PrivateRoute requireDelivery={true}>
-                <ActiveDeliveries />
-              </PrivateRoute>
-            )
-          },
-          {
-            path: 'delivery/completed',
-            element: (
-              <PrivateRoute requireDelivery={true}>
-                <CompletedDeliveries />
-              </PrivateRoute>
-            )
-          },
-          {
-            path: 'delivery/history',
-            element: (
-              <PrivateRoute requireDelivery={true}>
-                <DeliveryHistory />
-              </PrivateRoute>
-            )
-          },
-          {
-            path: 'delivery/map',
-            element: (
-              <PrivateRoute requireDelivery={true}>
-                <DeliveryMap />
-              </PrivateRoute>
-            )
-          },
+          // Delivery driver routes — redirect to the canonical /delivery/* tree
+          // which uses DeliveryLayout with delivery-specific navigation.
+          { path: 'delivery/dashboard', element: <Navigate to="/delivery/dashboard" replace /> },
+          { path: 'delivery/active',    element: <Navigate to="/delivery/active"    replace /> },
+          { path: 'delivery/completed', element: <Navigate to="/delivery/completed" replace /> },
+          { path: 'delivery/history',   element: <Navigate to="/delivery/history"   replace /> },
+          { path: 'delivery/map',       element: <Navigate to="/delivery/map"       replace /> },
           
           // Staff specific routes - redirects for backward compatibility
           {
