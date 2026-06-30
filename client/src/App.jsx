@@ -156,6 +156,7 @@ function App() {
     }, 15000);
 
     const initializeApp = async () => {
+      lastVisibilityFetchRef.current = Date.now(); // stamp so visibility cooldown applies immediately
       try {
         const productDataResult = await fetchProductData();
         console.log("Product data fetch result:", productDataResult);
