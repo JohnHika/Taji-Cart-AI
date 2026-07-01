@@ -436,8 +436,7 @@ const UsersAdmin = () => {
             {bulkSending ? <FaSpinner className="animate-spin" /> : <FaEnvelope />}
             {bulkSending ? 'Sending…' : 'Verify Unverified Users'}
           </button>
-
-        <div className="flex items-center gap-3 self-start">
+          
           <button
             onClick={fetchUsersWithCacheBusting}
             type="button"
