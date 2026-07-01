@@ -426,7 +426,17 @@ const UsersAdmin = () => {
           </p>
         </div>
         
-        <div className="flex items-center gap-3 self-start">
+        <div className="flex flex-wrap gap-3">
+          <button
+            onClick={handleBulkSendVerification}
+            disabled={bulkSending}
+            className="px-4 py-2 bg-plum-700 text-white rounded-lg hover:bg-plum-600 disabled:opacity-50 flex items-center justify-center gap-2"
+            title="Send verification email to all unverified users"
+          >
+            {bulkSending ? <FaSpinner className="animate-spin" /> : <FaEnvelope />}
+            {bulkSending ? 'Sending…' : 'Verify Unverified Users'}
+          </button>
+          
           <button
             onClick={fetchUsersWithCacheBusting}
             type="button"

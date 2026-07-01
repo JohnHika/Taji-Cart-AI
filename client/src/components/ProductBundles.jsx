@@ -20,7 +20,7 @@ const BUNDLE_CONFIGS = [
       { id: 'bundle-care-1', name: 'Care Kit Basic', price: 2000, qty: 1 },
     ],
     badge: 'Best for Beginners',
-    color: 'from-blue-500 to-blue-400',
+    color: 'from-plum-600 to-plum-500',
   },
   {
     id: 'full-glam-bundle',
@@ -49,7 +49,7 @@ const BUNDLE_CONFIGS = [
       { id: 'bundle-tool-1', name: 'Heat Tool Set', price: 4500, qty: 1 },
     ],
     badge: 'Best Value',
-    color: 'from-purple-500 to-purple-400',
+    color: 'from-plum-700 to-plum-600',
   },
   {
     id: 'thin-hair-fill',
@@ -63,7 +63,7 @@ const BUNDLE_CONFIGS = [
       { id: 'bundle-fill-3', name: 'Edge Control Gel', price: 1200, qty: 1 },
     ],
     badge: 'Specialized',
-    color: 'from-pink-500 to-pink-400',
+    color: 'from-plum-600 to-plum-500',
   },
   {
     id: 'curly-collection',
@@ -250,7 +250,7 @@ function ProductBundles({ selectedProduct }) {
             icon: FaGift,
             title: 'Free Care Guide',
             description: 'Every bundle includes our premium hair care guide',
-            color: 'text-blue-600',
+            color: 'text-plum-600',
           },
           {
             icon: FaCheck,

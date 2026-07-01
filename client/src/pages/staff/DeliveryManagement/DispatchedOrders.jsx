@@ -155,7 +155,7 @@ const DispatchedOrders = () => {
                 placeholder="Search order or customer..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full rounded-xl border border-brown-100 bg-white py-3 pl-10 pr-4 text-sm outline-none transition focus:border-cyan-500 focus:ring-2 focus:ring-cyan-100 dark:border-dm-border dark:bg-dm-surface dark:text-white"
+                className="w-full rounded-xl border border-brown-100 bg-white py-3 pl-10 pr-4 text-sm outline-none transition focus:border-plum-500 focus:ring-2 focus:ring-plum-100 dark:border-dm-border dark:bg-dm-surface dark:text-white"
               />
             </div>
             <button
@@ -204,7 +204,7 @@ const DispatchedOrders = () => {
                   <button
                     type="button"
                     onClick={() => setSelectedOrder(order)}
-                    className="rounded-lg bg-cyan-600 px-3 py-2 text-sm font-medium text-white"
+                    className="rounded-lg bg-plum-700 px-3 py-2 text-sm font-medium text-white"
                   >
                     Assign
                   </button>
@@ -276,7 +276,7 @@ const DispatchedOrders = () => {
                         <button
                           type="button"
                           onClick={() => setSelectedOrder(order)}
-                          className="inline-flex items-center gap-2 rounded-lg bg-cyan-600 px-3 py-2 text-sm font-medium text-white transition hover:bg-cyan-700"
+                          className="inline-flex items-center gap-2 rounded-lg bg-plum-700 px-3 py-2 text-sm font-medium text-white transition hover:bg-plum-600"
                         >
                           <FaUserTie />
                           Assign Driver
@@ -343,7 +343,7 @@ const DispatchedOrders = () => {
                   <select
                     value={selectedDriver}
                     onChange={(e) => setSelectedDriver(e.target.value)}
-                    className="w-full rounded-xl border border-brown-100 bg-white px-4 py-3 text-sm outline-none transition focus:border-cyan-500 focus:ring-2 focus:ring-cyan-100 dark:border-dm-border dark:bg-dm-surface dark:text-white"
+                    className="w-full rounded-xl border border-brown-100 bg-white px-4 py-3 text-sm outline-none transition focus:border-plum-500 focus:ring-2 focus:ring-plum-100 dark:border-dm-border dark:bg-dm-surface dark:text-white"
                   >
                     <option value="">Select a driver</option>
                     {drivers.map((driver) => (
@@ -355,11 +355,11 @@ const DispatchedOrders = () => {
                 </div>
 
                 {selectedDriverDetails && (
-                  <div className="rounded-2xl border border-cyan-100 bg-cyan-50 p-4 text-sm dark:border-cyan-900/40 dark:bg-cyan-900/10">
-                    <p className="font-medium text-cyan-900 dark:text-cyan-100">{selectedDriverDetails.name}</p>
-                    <p className="mt-1 text-cyan-700 dark:text-cyan-200">{selectedDriverDetails.contact?.mobile || 'No phone saved'}</p>
-                    <p className="text-cyan-700 dark:text-cyan-200">{selectedDriverDetails.contact?.email || 'No email saved'}</p>
-                    <p className="mt-2 text-cyan-700 dark:text-cyan-200">
+                  <div className="rounded-2xl border border-plum-100 bg-plum-50 p-4 text-sm dark:border-plum-900/40 dark:bg-plum-900/10">
+                    <p className="font-medium text-plum-900 dark:text-plum-100">{selectedDriverDetails.name}</p>
+                    <p className="mt-1 text-plum-700 dark:text-plum-200">{selectedDriverDetails.contact?.mobile || 'No phone saved'}</p>
+                    <p className="text-plum-700 dark:text-plum-200">{selectedDriverDetails.contact?.email || 'No email saved'}</p>
+                    <p className="mt-2 text-plum-700 dark:text-plum-200">
                       {selectedDriverDetails.isAvailable !== false ? 'Available now' : 'Currently busy'} • {selectedDriverDetails.activeOrdersCount || 0} active orders
                     </p>
                   </div>
@@ -372,7 +372,7 @@ const DispatchedOrders = () => {
                     onChange={(e) => setAssignmentNote(e.target.value)}
                     rows={4}
                     placeholder="Optional instruction for the driver"
-                    className="w-full rounded-xl border border-brown-100 bg-white px-4 py-3 text-sm outline-none transition focus:border-cyan-500 focus:ring-2 focus:ring-cyan-100 dark:border-dm-border dark:bg-dm-surface dark:text-white"
+                    className="w-full rounded-xl border border-brown-100 bg-white px-4 py-3 text-sm outline-none transition focus:border-plum-500 focus:ring-2 focus:ring-plum-100 dark:border-dm-border dark:bg-dm-surface dark:text-white"
                   />
                 </div>
               </div>
@@ -395,7 +395,7 @@ const DispatchedOrders = () => {
                 type="button"
                 onClick={handleAssignDriver}
                 disabled={!selectedDriver || assigning}
-                className="inline-flex items-center justify-center gap-2 rounded-xl bg-cyan-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-cyan-700 disabled:cursor-not-allowed disabled:opacity-50"
+                className="inline-flex items-center justify-center gap-2 rounded-xl bg-plum-700 px-4 py-3 text-sm font-semibold text-white transition hover:bg-plum-600 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {assigning ? <FaSpinner className="animate-spin" /> : <FaTruck />}
                 Assign Driver

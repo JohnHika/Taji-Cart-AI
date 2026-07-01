@@ -253,7 +253,7 @@ const DriversManagement = () => {
                         disabled={isToggling}
                         className={`inline-flex items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold transition ${
                           driver.isActive === false
-                            ? 'bg-emerald-600 text-white hover:bg-emerald-700'
+                            ? 'bg-gold-500 text-charcoal hover:bg-gold-400'
                             : 'bg-plum-700 text-white hover:bg-plum-600'
                         } disabled:opacity-50`}
                       >

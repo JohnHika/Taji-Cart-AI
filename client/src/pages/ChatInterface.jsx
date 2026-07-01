@@ -407,7 +407,7 @@ const ChatInterface = () => {
                 {price != null && <div className="text-xs text-brown-500">KES {Number(price).toLocaleString()}</div>}
               </div>
               {id && (
-                <button onClick={() => addToCartFromChat(id)} className="px-3 py-1 text-xs bg-emerald-600 text-white rounded">
+                <button onClick={() => addToCartFromChat(id)} className="px-3 py-1 text-xs bg-gradient-to-r from-plum-700 to-plum-600 text-white rounded-lg hover:from-plum-800 hover:to-plum-700 transition-colors shadow-[0_2px_8px_rgba(75,30,62,0.35)]">
                   Add
                 </button>
               )}

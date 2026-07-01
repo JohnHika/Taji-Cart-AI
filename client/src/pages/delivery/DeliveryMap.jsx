@@ -936,7 +936,7 @@ const DeliveryMap = () => {
               setShowPerformance(true);
               fetchPerformanceData();
             }}
-            className="bg-indigo-500 text-white px-4 py-2 rounded hover:bg-indigo-600 flex items-center justify-center"
+            className="bg-plum-700 text-white px-4 py-2 rounded hover:bg-plum-600 flex items-center justify-center"
           >
             <FaChartLine size={13} />
             Performance
@@ -1267,8 +1267,8 @@ const DeliveryMap = () => {
           <button
             onClick={toggleWeatherMode}
             className={`rounded px-2 py-1 text-sm flex items-center ${
-              weatherMode 
-                ? 'bg-cyan-500 text-white hover:bg-cyan-600' 
+              weatherMode
+                ? 'bg-gold-500 text-charcoal hover:bg-gold-400'
                 : 'bg-brown-100 dark:bg-dm-card-2 text-charcoal dark:text-white/70 hover:bg-brown-200 dark:hover:bg-dm-border'
               } px-3 py-2`}
           >

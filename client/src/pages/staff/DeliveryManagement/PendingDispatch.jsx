@@ -198,33 +198,22 @@ const PendingDispatch = () => {
               Confirm delivery orders and move them into the dispatch queue.
             </p>
           </div>
-          <div className="flex flex-col gap-2 lg:flex-row">
-            <div className="flex gap-2 lg:min-w-[280px]">
-              <div className="relative flex-1">
-                <FaSearch className="pointer-events-none absolute left-3 top-3.5 text-brown-400" />
-                <input
-                  type="text"
-                  placeholder="Search order, customer, phone..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full rounded-xl border border-brown-100 bg-white py-3 pl-10 pr-4 text-sm outline-none transition focus:border-cyan-500 focus:ring-2 focus:ring-cyan-100 dark:border-dm-border dark:bg-dm-surface dark:text-white"
-                />
-              </div>
-              <button
-                type="button"
-                onClick={fetchPendingOrders}
-                disabled={loading}
-                className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl border border-brown-100 px-4 py-3 text-sm font-medium text-charcoal transition hover:bg-ivory disabled:opacity-60 dark:border-dm-border dark:text-white/70 dark:hover:bg-dm-surface"
-              >
-                {loading ? <FaSpinner className="animate-spin" /> : <FaRedo />}
-                <span className="hidden sm:inline">Refresh</span>
-              </button>
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <div className="relative min-w-0 sm:min-w-[280px]">
+              <FaSearch className="pointer-events-none absolute left-3 top-3.5 text-brown-400" />
+              <input
+                type="text"
+                placeholder="Search order, customer, phone..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full rounded-xl border border-brown-100 bg-white py-3 pl-10 pr-4 text-sm outline-none transition focus:border-plum-500 focus:ring-2 focus:ring-plum-100 dark:border-dm-border dark:bg-dm-surface dark:text-white"
+              />
             </div>
             <button
               type="button"
               onClick={handleDispatchSelected}
               disabled={selectedOrders.length === 0 || bulkProcessing}
-              className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-cyan-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-cyan-700 disabled:cursor-not-allowed disabled:opacity-50 lg:w-auto"
+              className="inline-flex items-center justify-center gap-2 rounded-xl bg-plum-700 px-4 py-3 text-sm font-semibold text-white transition hover:bg-plum-600 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {bulkProcessing ? <FaSpinner className="animate-spin" /> : <FaCheck />}
               Dispatch Selected
@@ -245,8 +234,8 @@ const PendingDispatch = () => {
               onClick={() => handleSort(field)}
               className={`rounded-full border px-3 py-1.5 text-xs font-medium transition ${
                 sortBy === field
-                  ? 'border-cyan-600 bg-cyan-50 text-cyan-700 dark:bg-cyan-900/20 dark:text-cyan-200'
-                  : 'border-brown-100 text-brown-500 hover:border-cyan-200 hover:text-cyan-700 dark:border-dm-border dark:text-white/55'
+                  ? 'border-plum-600 bg-plum-100 text-plum-700 dark:bg-plum-900/20 dark:text-plum-200'
+                  : 'border-brown-100 text-brown-500 hover:border-plum-300 hover:text-plum-700 dark:border-dm-border dark:text-white/55'
               }`}
             >
               {label} {getSortArrow(field)}
@@ -264,7 +253,7 @@ const PendingDispatch = () => {
         </div>
       ) : filteredOrders.length === 0 ? (
         <div className="mobile-surface p-8 text-center">
-          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-cyan-50 text-cyan-700 dark:bg-cyan-900/20 dark:text-cyan-200">
+          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-plum-100 text-plum-700 dark:bg-plum-900/20 dark:text-plum-200">
             <FaClock />
           </div>
           <h3 className="mt-4 text-lg font-semibold text-charcoal dark:text-white">No pending delivery orders</h3>
@@ -288,7 +277,7 @@ const PendingDispatch = () => {
                       type="checkbox"
                       checked={selectedOrders.includes(order._id)}
                       onChange={() => handleSelectOrder(order._id)}
-                      className="mt-1 h-4 w-4 rounded border-brown-200 text-cyan-600 focus:ring-cyan-500"
+                      className="mt-1 h-4 w-4 rounded border-brown-200 text-plum-600 focus:ring-plum-500"
                     />
                   </div>
 
@@ -314,7 +303,7 @@ const PendingDispatch = () => {
                     type="button"
                     onClick={() => dispatchOrderById(order._id)}
                     disabled={isBusy || bulkProcessing}
-                    className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-cyan-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-cyan-700 disabled:opacity-50"
+                    className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-plum-700 px-4 py-3 text-sm font-semibold text-white transition hover:bg-plum-600 disabled:opacity-50"
                   >
                     {isBusy ? <FaSpinner className="animate-spin" /> : <FaTruck />}
                     Dispatch Order
@@ -334,7 +323,7 @@ const PendingDispatch = () => {
                         type="checkbox"
                         checked={selectedOrders.length === filteredOrders.length && filteredOrders.length > 0}
                         onChange={handleSelectAll}
-                        className="h-4 w-4 rounded border-brown-200 text-cyan-600 focus:ring-cyan-500"
+                        className="h-4 w-4 rounded border-brown-200 text-plum-600 focus:ring-plum-500"
                       />
                     </th>
                     <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.16em] text-brown-400">Order</th>
@@ -356,7 +345,7 @@ const PendingDispatch = () => {
                             type="checkbox"
                             checked={selectedOrders.includes(order._id)}
                             onChange={() => handleSelectOrder(order._id)}
-                            className="h-4 w-4 rounded border-brown-200 text-cyan-600 focus:ring-cyan-500"
+                            className="h-4 w-4 rounded border-brown-200 text-plum-600 focus:ring-plum-500"
                           />
                         </td>
                         <td className="px-4 py-4">
@@ -389,7 +378,7 @@ const PendingDispatch = () => {
                             type="button"
                             onClick={() => dispatchOrderById(order._id)}
                             disabled={isBusy || bulkProcessing}
-                            className="inline-flex items-center gap-2 rounded-lg bg-cyan-600 px-3 py-2 text-sm font-medium text-white transition hover:bg-cyan-700 disabled:opacity-50"
+                            className="inline-flex items-center gap-2 rounded-lg bg-plum-700 px-3 py-2 text-sm font-medium text-white transition hover:bg-plum-600 disabled:opacity-50"
                           >
                             {isBusy ? <FaSpinner className="animate-spin" /> : <FaTruck />}
                             Dispatch

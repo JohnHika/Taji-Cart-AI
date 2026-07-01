@@ -169,7 +169,7 @@ function GuestCheckout() {
       <div className="min-h-screen bg-ivory dark:bg-dm-surface py-12 px-4">
         <div className="max-w-lg mx-auto text-center">
           <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-green-100 dark:bg-green-900/30 mb-6">
-            <FaCheckCircle className="text-4xl text-green-500" />
+            <FaCheckCircle className="text-4xl text-gold-500" />
           </div>
           <h1 className="text-3xl font-bold text-charcoal dark:text-white mb-2">Order Placed!</h1>
           <p className="text-brown-500 dark:text-white/60 mb-6">
@@ -204,8 +204,6 @@ function GuestCheckout() {
             </Link>
           </div>
         </div>
-
-        {/* Post-order account creation prompt */}
         <GuestAccountPrompt
           guestEmail={orderSuccess.email}
           orderId={orderSuccess.orderId}
@@ -288,14 +286,14 @@ function GuestCheckout() {
                 onClick={() => setFormData(prev => ({ ...prev, fulfillment_type: 'delivery', pickup_location: '' }))}
                 className={`py-2.5 transition-colors ${isDelivery ? 'bg-plum-700 text-white' : 'bg-white dark:bg-dm-card text-charcoal dark:text-white/70 hover:bg-plum-50 dark:hover:bg-plum-900/20'}`}
               >
-                🚚 Delivery
+                Delivery
               </button>
               <button
                 type="button"
                 onClick={() => setFormData(prev => ({ ...prev, fulfillment_type: 'pickup', delivery_mode: 'standard' }))}
                 className={`py-2.5 transition-colors ${!isDelivery ? 'bg-plum-700 text-white' : 'bg-white dark:bg-dm-card text-charcoal dark:text-white/70 hover:bg-plum-50 dark:hover:bg-plum-900/20'}`}
               >
-                🏪 Pickup
+                Pickup
               </button>
             </div>
 
