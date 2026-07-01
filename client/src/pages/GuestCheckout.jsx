@@ -423,18 +423,18 @@ function GuestCheckout() {
                           onClick={() => setPaymentMethod('mpesa-direct')}
                           className={`p-4 rounded-lg border-2 flex flex-col items-center gap-2 transition-all relative ${
                             paymentMethod === 'mpesa-direct'
-                              ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-900/20'
-                              : 'border-brown-200 dark:border-brown-700 hover:border-emerald-300'
+                              ? 'border-gold-500 bg-gold-50 dark:bg-gold-900/20'
+                              : 'border-brown-200 dark:border-brown-700 hover:border-gold-300'
                           }`}
                         >
-                          <div className="absolute -top-2 right-2 bg-emerald-500 text-white text-xs px-2 py-0.5 rounded-full font-semibold">
+                          <div className="absolute -top-2 right-2 bg-gold-500 text-charcoal text-xs px-2 py-0.5 rounded-full font-semibold">
                             BEST VALUE
                           </div>
                           <FaMoneyBillWave className={`text-2xl ${
-                            paymentMethod === 'mpesa-direct' ? 'text-emerald-600' : 'text-brown-400'
+                            paymentMethod === 'mpesa-direct' ? 'text-gold-600' : 'text-brown-400'
                           }`} />
                           <span className={`text-sm font-semibold ${
-                            paymentMethod === 'mpesa-direct' ? 'text-emerald-700' : 'text-brown-500'
+                            paymentMethod === 'mpesa-direct' ? 'text-gold-700' : 'text-brown-500'
                           }`}>M-Pesa Direct</span>
                           <p className="text-xs text-brown-400 text-center">0.55% fee • Secure</p>
                         </button>

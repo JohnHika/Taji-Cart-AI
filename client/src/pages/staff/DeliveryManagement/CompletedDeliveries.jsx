@@ -154,7 +154,7 @@ const CompletedDeliveriesManagement = () => {
             <button
               type="button"
               onClick={fetchOrders}
-              className="self-end rounded-xl bg-cyan-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-cyan-700"
+              className="self-end rounded-xl bg-plum-700 px-4 py-3 text-sm font-semibold text-white transition hover:bg-plum-600"
             >
               Apply
             </button>

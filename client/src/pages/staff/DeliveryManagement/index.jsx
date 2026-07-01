@@ -72,12 +72,12 @@ const DeliveryManagement = () => {
     <div className="mobile-page-shell lg:h-full lg:overflow-hidden lg:pb-6">
       <div className="flex flex-col gap-4 lg:h-full">
         <section className="mobile-surface overflow-hidden">
-          <div className="bg-gradient-to-r from-sky-700 via-cyan-700 to-emerald-700 px-4 py-5 text-white sm:px-6">
+          <div className="bg-gradient-to-r from-plum-900 via-plum-800 to-plum-700 px-4 py-5 text-white sm:px-6">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.2em] text-white/75">Staff delivery</p>
                 <h1 className="mt-2 text-2xl font-bold text-white sm:text-3xl">Delivery Management</h1>
-                <p className="mt-2 max-w-2xl text-sm text-cyan-50/90 sm:text-base">
+                <p className="mt-2 max-w-2xl text-sm text-plum-200/90 sm:text-base">
                   Dispatch orders, assign drivers, monitor active deliveries, and review completed drop-offs from one workspace.
                 </p>
               </div>
@@ -113,8 +113,8 @@ const DeliveryManagement = () => {
                     className={({ isActive }) =>
                       `inline-flex min-w-fit items-center gap-2 rounded-full border px-3 py-2 text-sm font-medium transition ${
                         isActive || location.pathname.endsWith(`/${tab.to}`)
-                          ? 'border-cyan-600 bg-cyan-600 text-white shadow-sm'
-                          : 'border-brown-100 bg-ivory text-charcoal hover:border-cyan-200 hover:bg-cyan-50 hover:text-cyan-700 dark:border-dm-border dark:bg-dm-surface dark:text-white/70 dark:hover:border-cyan-800 dark:hover:bg-cyan-900/20 dark:hover:text-cyan-200'
+                          ? 'border-plum-600 bg-plum-600 text-white shadow-sm'
+                          : 'border-brown-100 bg-ivory text-charcoal hover:border-plum-300 hover:bg-plum-50 hover:text-plum-700 dark:border-dm-border dark:bg-dm-surface dark:text-white/70 dark:hover:border-plum-700 dark:hover:bg-plum-900/30 dark:hover:text-plum-200'
                       }`
                     }
                   >

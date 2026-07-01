@@ -19,7 +19,7 @@ const statusTone = (status) => {
     case 'out_for_delivery':
       return 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-200';
     default:
-      return 'bg-sky-100 text-sky-800 dark:bg-sky-900/30 dark:text-sky-200';
+      return 'bg-plum-100 text-plum-800 dark:bg-plum-900/30 dark:text-plum-200';
   }
 };
 
@@ -131,7 +131,7 @@ const ActiveDeliveriesManagement = () => {
         </div>
       ) : filteredOrders.length === 0 ? (
         <div className="mobile-surface p-8 text-center">
-          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-sky-50 text-sky-700 dark:bg-sky-900/20 dark:text-sky-200">
+          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-plum-50 text-plum-700 dark:bg-plum-900/20 dark:text-plum-200">
             <FaRoute />
           </div>
           <h3 className="mt-4 text-lg font-semibold text-charcoal dark:text-white">No active deliveries right now</h3>

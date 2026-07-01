@@ -105,8 +105,8 @@ const StaffDashboard = () => {
             to="/dashboard/staff/delivery/drivers"
             className="bg-white dark:bg-dm-card hover:bg-ivory dark:hover:bg-dm-card-2 p-6 rounded-lg shadow-md hover:shadow-lg transition-all flex flex-col items-center text-center border border-brown-100 dark:border-dm-border"
           >
-            <div className="w-16 h-16 bg-indigo-100 dark:bg-indigo-900/30 rounded-full flex items-center justify-center mb-4">
-              <FaUsers className="text-indigo-600 dark:text-indigo-400 text-2xl" />
+            <div className="w-16 h-16 bg-plum-100 dark:bg-plum-900/30 rounded-full flex items-center justify-center mb-4">
+              <FaUsers className="text-plum-600 dark:text-plum-400 text-2xl" />
             </div>
             <h2 className="text-lg font-medium mb-2 text-charcoal dark:text-white">Drivers Management</h2>
             <p className="text-brown-500 dark:text-white/40 text-sm">

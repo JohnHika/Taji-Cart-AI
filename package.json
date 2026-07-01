@@ -16,6 +16,8 @@
     "concurrently": "^9.1.2"
   },
   "dependencies": {
+    "leaflet": "^1.9.4",
+    "react-leaflet": "^4.2.1",
     "xlsx": "^0.18.5"
   }
 }
