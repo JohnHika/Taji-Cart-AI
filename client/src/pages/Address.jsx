@@ -150,7 +150,7 @@ const Address = () => {
                                 setOpenEdit(true)
                                 setEditData(address)
                               }} 
-                              className='bg-green-100 dark:bg-green-900/30 p-2 rounded hover:text-white hover:bg-green-600 dark:hover:bg-green-700 text-green-700 dark:text-green-400 transition-colors duration-200'
+                              className='bg-brown-100 dark:bg-brown-600/20 p-2 rounded hover:text-white hover:bg-brown-500 dark:hover:bg-brown-500 text-brown-700 dark:text-brown-300 transition-colors duration-200'
                               aria-label="Edit address"
                               title="Edit address"
                             >

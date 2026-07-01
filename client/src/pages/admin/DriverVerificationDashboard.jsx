@@ -92,9 +92,9 @@ const DriverVerificationDashboard = () => {
         accessor: 'verificationStatus',
         Cell: ({ value }) => (
           <span className={`px-3 py-1 rounded-full text-sm font-medium ${
-            value === 'verified' ? 'bg-green-100 text-green-800' :
-            value === 'rejected' ? 'bg-red-100 text-red-800' :
-            'bg-yellow-100 text-yellow-800'
+            value === 'verified' ? 'bg-brown-100 text-brown-800 dark:bg-brown-600/20 dark:text-brown-200' :
+            value === 'rejected' ? 'bg-blush-100 text-blush-700 dark:bg-blush-500/20 dark:text-blush-300' :
+            'bg-gold-100 text-gold-700 dark:bg-gold-600/20 dark:text-gold-300'
           }`}>
             {value === 'pending' ? 'Pending' :
              value === 'verified' ? 'Verified' : 'Rejected'}
@@ -106,9 +106,9 @@ const DriverVerificationDashboard = () => {
         accessor: 'idNumber',
         Cell: ({ row }) => (
           <div className="flex items-center space-x-2">
-            {row.original.idNumber ? <FaIdCard className="text-green-500" title="ID Uploaded" /> : <FaIdCard className="text-gray-300" title="ID Missing" />}
-            {row.original.licenseNumber ? <FaFileAlt className="text-green-500" title="License Uploaded" /> : <FaFileAlt className="text-gray-300" title="License Missing" />}
-            {row.original.kraPin ? <FaFileAlt className="text-green-500" title="KRA PIN Uploaded" /> : <FaFileAlt className="text-gray-300" title="KRA PIN Missing" />}
+            {row.original.idNumber ? <FaIdCard className="text-brown-500" title="ID Uploaded" /> : <FaIdCard className="text-brown-200 dark:text-white/25" title="ID Missing" />}
+            {row.original.licenseNumber ? <FaFileAlt className="text-brown-500" title="License Uploaded" /> : <FaFileAlt className="text-brown-200 dark:text-white/25" title="License Missing" />}
+            {row.original.kraPin ? <FaFileAlt className="text-brown-500" title="KRA PIN Uploaded" /> : <FaFileAlt className="text-brown-200 dark:text-white/25" title="KRA PIN Missing" />}
           </div>
         )
       },
@@ -159,7 +159,7 @@ const DriverVerificationDashboard = () => {
                     toast.error('Failed to verify driver');
                   }
                 }}
-                className="p-2 text-green-600 hover:bg-green-50 rounded-full"
+                className="p-2 text-brown-600 hover:bg-brown-50 dark:hover:bg-dm-card-2 rounded-full"
                 title="Quick verify"
               >
                 <FaCheckCircle size={16} />
@@ -213,8 +213,8 @@ const DriverVerificationDashboard = () => {
                 {drivers.filter(d => d.verificationStatus === 'pending').length}
               </p>
             </div>
-            <div className="bg-yellow-100 p-3 rounded-full">
-              <FaClock className="text-yellow-600 w-6 h-6" />
+            <div className="bg-gold-100 dark:bg-gold-600/20 p-3 rounded-full">
+              <FaClock className="text-gold-600 dark:text-gold-400 w-6 h-6" />
             </div>
           </div>
         </div>
@@ -227,8 +227,8 @@ const DriverVerificationDashboard = () => {
                 {drivers.filter(d => d.verificationStatus === 'verified').length}
               </p>
             </div>
-            <div className="bg-green-100 p-3 rounded-full">
-              <FaCheckCircle className="text-green-600 w-6 h-6" />
+            <div className="bg-brown-100 dark:bg-brown-600/20 p-3 rounded-full">
+              <FaCheckCircle className="text-brown-600 dark:text-brown-400 w-6 h-6" />
             </div>
           </div>
         </div>
@@ -241,8 +241,8 @@ const DriverVerificationDashboard = () => {
                 {drivers.filter(d => d.verificationStatus === 'rejected').length}
               </p>
             </div>
-            <div className="bg-red-100 p-3 rounded-full">
-              <FaTimesCircle className="text-red-600 w-6 h-6" />
+            <div className="bg-blush-100 dark:bg-blush-500/20 p-3 rounded-full">
+              <FaTimesCircle className="text-blush-600 dark:text-blush-400 w-6 h-6" />
             </div>
           </div>
         </div>
@@ -403,8 +403,8 @@ const DriverVerificationDashboard = () => {
                 </div>
                 <div>
                   <p className="text-sm text-brown-500 dark:text-white/55">Current Status</p>
-                  <p className={`font-medium ${selectedDriver.verificationStatus === 'verified' ? 'text-green-600' :
-                                          selectedDriver.verificationStatus === 'rejected' ? 'text-red-600' : 'text-yellow-600'}`}>
+                  <p className={`font-medium ${selectedDriver.verificationStatus === 'verified' ? 'text-brown-600 dark:text-brown-400' :
+                                          selectedDriver.verificationStatus === 'rejected' ? 'text-blush-600 dark:text-blush-400' : 'text-gold-600 dark:text-gold-400'}`}>
                     {selectedDriver.verificationStatus}
                   </p>
                 </div>
@@ -420,9 +420,9 @@ const DriverVerificationDashboard = () => {
                   <div className="flex items-center justify-between mb-2">
                     <h4 className="font-medium">National ID</h4>
                     {selectedDriver.idNumber ? (
-                      <FaCheckCircle className="text-green-500" />
+                      <FaCheckCircle className="text-brown-500 dark:text-brown-400" />
                     ) : (
-                      <FaExclamationTriangle className="text-yellow-500" />
+                      <FaExclamationTriangle className="text-gold-500 dark:text-gold-400" />
                     )}
                   </div>
                   <p className="text-sm mb-2">
@@ -458,9 +458,9 @@ const DriverVerificationDashboard = () => {
                   <div className="flex items-center justify-between mb-2">
                     <h4 className="font-medium">Driving License</h4>
                     {selectedDriver.licenseNumber ? (
-                      <FaCheckCircle className="text-green-500" />
+                      <FaCheckCircle className="text-brown-500 dark:text-brown-400" />
                     ) : (
-                      <FaExclamationTriangle className="text-yellow-500" />
+                      <FaExclamationTriangle className="text-gold-500 dark:text-gold-400" />
                     )}
                   </div>
                   <p className="text-sm mb-2">
@@ -490,9 +490,9 @@ const DriverVerificationDashboard = () => {
                   <div className="flex items-center justify-between mb-2">
                     <h4 className="font-medium">KRA PIN</h4>
                     {selectedDriver.kraPin ? (
-                      <FaCheckCircle className="text-green-500" />
+                      <FaCheckCircle className="text-brown-500 dark:text-brown-400" />
                     ) : (
-                      <FaExclamationTriangle className="text-yellow-500" />
+                      <FaExclamationTriangle className="text-gold-500 dark:text-gold-400" />
                     )}
                   </div>
                   <p className="text-sm">
@@ -506,9 +506,9 @@ const DriverVerificationDashboard = () => {
                   <div className="flex items-center justify-between mb-2">
                     <h4 className="font-medium">Vehicle Details</h4>
                     {selectedDriver.vehicleDetails?.type ? (
-                      <FaCheckCircle className="text-green-500" />
+                      <FaCheckCircle className="text-brown-500 dark:text-brown-400" />
                     ) : (
-                      <FaExclamationTriangle className="text-yellow-500" />
+                      <FaExclamationTriangle className="text-gold-500 dark:text-gold-400" />
                     )}
                   </div>
                   {selectedDriver.vehicleDetails?.type ? (
@@ -562,7 +562,7 @@ const DriverVerificationDashboard = () => {
               {selectedDriver.verificationStatus !== 'verified' && (
                 <button
                   onClick={() => handleVerify('verified')}
-                  className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-500 transition-colors flex items-center gap-2"
+                  className="px-4 py-2 bg-brown-600 text-white rounded hover:bg-brown-500 transition-colors flex items-center gap-2"
                 >
                   <FaCheckCircle />
                   Approve
@@ -572,7 +572,7 @@ const DriverVerificationDashboard = () => {
               {selectedDriver.verificationStatus !== 'rejected' && (
                 <button
                   onClick={() => handleVerify('rejected')}
-                  className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-500 transition-colors flex items-center gap-2"
+                  className="px-4 py-2 bg-blush-500 text-white rounded hover:bg-blush-600 transition-colors flex items-center gap-2"
                 >
                   <FaTimesCircle />
                   Reject

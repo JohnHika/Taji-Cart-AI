@@ -2,17 +2,20 @@ import { createAsyncThunk, createSlice } from '@reduxjs/toolkit';
 import { toast } from 'react-toastify';
 import { baseURL } from '../common/SummaryApi';
 import Axios from '../utils/Axios';
+import { hasStoredAccessToken } from '../utils/authStorage';
 import { getGuestCart } from '../utils/guestCart';
 
 // Fetch cart items thunk
 export const fetchCartItems = createAsyncThunk(
   'cart/fetchItems',
-  async (_, { rejectWithValue }) => {
+  async (_, { getState, rejectWithValue }) => {
     try {
-      const token = localStorage.getItem('accesstoken');
+      const hasAuthenticatedSession = Boolean(
+        hasStoredAccessToken() || getState()?.user?._id
+      );
 
       // If user is logged in, fetch from server
-      if (token) {
+      if (hasAuthenticatedSession) {
         const response = await Axios({
           url: `${baseURL}/api/cart/get`,
           method: 'GET'
@@ -33,12 +36,14 @@ export const fetchCartItems = createAsyncThunk(
 // Clear cart items thunk
 export const clearCartItems = createAsyncThunk(
   'cart/clearItems',
-  async (_, { rejectWithValue }) => {
+  async (_, { getState, rejectWithValue }) => {
     try {
       console.log("Explicitly clearing cart items");
-      const token = localStorage.getItem('accesstoken');
+      const hasAuthenticatedSession = Boolean(
+        hasStoredAccessToken() || getState()?.user?._id
+      );
 
-      if (token) {
+      if (hasAuthenticatedSession) {
         try {
           await Axios({
             url: `${baseURL}/api/cart/clear`,

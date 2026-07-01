@@ -1,46 +1,15 @@
-import L from 'leaflet';
-import 'leaflet/dist/leaflet.css';
+import maplibregl from 'maplibre-gl';
+import 'maplibre-gl/dist/maplibre-gl.css';
 import React, { useEffect, useRef, useState } from 'react';
 import { FaArrowLeft, FaBox, FaBoxOpen, FaCheckCircle, FaExclamationTriangle, FaHistory, FaLock, FaMapMarkerAlt, FaSpinner, FaSync, FaTruck } from 'react-icons/fa';
-import { MapContainer, Marker, Polyline, Popup, TileLayer } from 'react-leaflet';
 import { Link, useParams } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import io from 'socket.io-client';
 import { socketBaseUrl } from '../common/apiBaseUrl';
 import Axios from '../utils/Axios';
 
-// Fix for default marker icons in Leaflet
-delete L.Icon.Default.prototype._getIconUrl;
-L.Icon.Default.mergeOptions({
-  iconRetinaUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon-2x.png',
-  iconUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon.png',
-  shadowUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-shadow.png',
-});
-
-// Custom icons for markers
-const deliveryIcon = new L.Icon({
-  iconUrl: '/images/delivery-marker.png',
-  iconRetinaUrl: '/images/delivery-marker.png',
-  iconSize: [40, 40],
-  iconAnchor: [20, 40],
-  popupAnchor: [0, -40],
-  // Add fallback
-  onError: function() {
-    this.src = 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon.png';
-  }
-});
-
-const homeIcon = new L.Icon({
-  iconUrl: '/images/home-marker.png',
-  iconRetinaUrl: '/images/home-marker.png',
-  iconSize: [40, 40],
-  iconAnchor: [20, 40],
-  popupAnchor: [0, -40],
-  // Add fallback
-  onError: function() {
-    this.src = 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon.png';
-  }
-});
+const NAIROBI_LNG_LAT = [36.817223, -1.286389];
+const MAP_STYLE = 'https://tiles.openfreemap.org/styles/liberty';
 
 const OrderTracking = () => {
   const { orderId } = useParams();
@@ -49,13 +18,16 @@ const OrderTracking = () => {
   const [socket, setSocket] = useState(null);
   const [deliveryLocation, setDeliveryLocation] = useState(null);
   const [destinationLocation, setDestinationLocation] = useState(null);
-  const [mapCenter, setMapCenter] = useState([-1.286389, 36.817223]); // Default to Nairobi
-  const [mapZoom, setMapZoom] = useState(12);
+  const [mapCenter, setMapCenter] = useState([-1.286389, 36.817223]); // kept for compat
+  const [mapZoom] = useState(12);
   const [eta, setEta] = useState(null);
   const [distance, setDistance] = useState(null);
   const [reconnectAttempts, setReconnectAttempts] = useState(0);
+  const mapContainerRef = useRef(null);
   const mapRef = useRef(null);
   const socketRef = useRef(null);
+  const deliveryMarkerRef = useRef(null);
+  const destMarkerRef = useRef(null);
   const [error, setError] = useState(null);
   const [errorCode, setErrorCode] = useState(null);
   const [retrying, setRetrying] = useState(false);
@@ -91,6 +63,7 @@ const OrderTracking = () => {
     const connectSocket = () => {
       console.log(`Connecting to socket server at ${backendUrl}`);
       
+      const token = sessionStorage.getItem('accesstoken') || localStorage.getItem('accesstoken') || '';
       const newSocket = io(backendUrl, {
         withCredentials: true,
         reconnection: true,
@@ -99,7 +72,8 @@ const OrderTracking = () => {
         reconnectionDelayMax: 5000,
         timeout: 30000, // Increased from 20000
         autoConnect: true,
-        query: { orderId } // Add orderId to query params
+        query: { orderId }, // Add orderId to query params
+        auth: { token }    // Pass auth token so socket middleware accepts the connection
       });
       
       socketRef.current = newSocket;
@@ -114,6 +88,16 @@ const OrderTracking = () => {
       
       newSocket.on('connect_error', (error) => {
         console.error('Socket connection error:', error);
+        // Auth errors: server rejected us — stop retrying immediately to avoid polling loops
+        if (
+          error.message === 'Authentication token required' ||
+          error.message === 'Authentication failed' ||
+          error.message === 'User not found' ||
+          error.message === 'Invalid token'
+        ) {
+          newSocket.disconnect();
+          return; // Do not toast or retry; user simply won't get live updates
+        }
         toast.error('Connection error. Attempting to reconnect...');
         // If not already retrying
         if (reconnectAttempts === 0) {
@@ -160,19 +144,12 @@ const OrderTracking = () => {
           if (data.distance) setDistance(data.distance);
           if (data.eta) setEta(data.eta);
           
-          // Center map on new location
-          if (mapRef.current) {
-            // Try both methods as leaflet component might be accessed differently
-            const mapInstance = mapRef.current.leafletElement || mapRef.current;
-            if (mapInstance && mapInstance.flyTo) {
-              mapInstance.flyTo(
-                [data.location.lat, data.location.lng], 
-                mapZoom,
-                { duration: 1.5 } // Smooth animation
-              );
-            } else {
-              setMapCenter([data.location.lat, data.location.lng]);
-            }
+          // Fly the MapLibre map to the new location
+          const map = mapRef.current;
+          if (map && map.flyTo) {
+            map.flyTo({ center: [data.location.lng, data.location.lat], zoom: mapZoom, duration: 1500 });
+          } else {
+            setMapCenter([data.location.lat, data.location.lng]);
           }
           
           // Update order status if included
@@ -287,6 +264,104 @@ const OrderTracking = () => {
       fetchOrderDetails();
     }
   }, [orderId]);
+
+  // ── MapLibre initialisation (once, after mount) ─────────────────────────
+  useEffect(() => {
+    if (!mapContainerRef.current || mapRef.current) return;
+
+    const map = new maplibregl.Map({
+      container: mapContainerRef.current,
+      style: MAP_STYLE,
+      center: NAIROBI_LNG_LAT,
+      zoom: 12,
+    });
+
+    map.addControl(new maplibregl.NavigationControl(), 'top-right');
+
+    map.on('load', () => {
+      // Dashed route line (empty initially)
+      map.addSource('delivery-route', {
+        type: 'geojson',
+        data: { type: 'Feature', geometry: { type: 'LineString', coordinates: [] } },
+      });
+      map.addLayer({
+        id: 'delivery-route-line',
+        type: 'line',
+        source: 'delivery-route',
+        layout: { 'line-join': 'round', 'line-cap': 'round' },
+        paint: { 'line-color': '#3b82f6', 'line-width': 4, 'line-opacity': 0.7, 'line-dasharray': [2, 2] },
+      });
+    });
+
+    mapRef.current = map;
+
+    return () => {
+      map.remove();
+      mapRef.current = null;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // ── Update markers + route line when locations change ──────────────────
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+
+    // Delivery person marker (blue)
+    if (deliveryLocation) {
+      const { lng, lat } = deliveryLocation;
+      if (deliveryMarkerRef.current) {
+        deliveryMarkerRef.current.setLngLat([lng, lat]);
+      } else {
+        const el = document.createElement('div');
+        el.innerHTML = '<div style="background:#3b82f6;color:#fff;border-radius:50%;width:36px;height:36px;display:flex;align-items:center;justify-content:center;font-size:18px;border:2px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.4)">🚚</div>';
+        deliveryMarkerRef.current = new maplibregl.Marker({ element: el })
+          .setLngLat([lng, lat])
+          .setPopup(new maplibregl.Popup({ offset: 25 }).setHTML('<p>Delivery personnel is here</p>'))
+          .addTo(map);
+      }
+    }
+
+    // Home / destination marker (red)
+    if (destinationLocation) {
+      const { lng, lat } = destinationLocation;
+      if (destMarkerRef.current) {
+        destMarkerRef.current.setLngLat([lng, lat]);
+      } else {
+        const el = document.createElement('div');
+        el.innerHTML = '<div style="background:#e74c3c;color:#fff;border-radius:50%;width:36px;height:36px;display:flex;align-items:center;justify-content:center;font-size:18px;border:2px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.4)">🏠</div>';
+        destMarkerRef.current = new maplibregl.Marker({ element: el })
+          .setLngLat([lng, lat])
+          .setPopup(new maplibregl.Popup({ offset: 25 }).setHTML('<p>Delivery destination</p>'))
+          .addTo(map);
+      }
+    }
+
+    // Update dashed route line
+    if (map.getSource('delivery-route') && deliveryLocation && destinationLocation) {
+      map.getSource('delivery-route').setData({
+        type: 'Feature',
+        geometry: {
+          type: 'LineString',
+          coordinates: [
+            [deliveryLocation.lng, deliveryLocation.lat],
+            [destinationLocation.lng, destinationLocation.lat],
+          ],
+        },
+      });
+    }
+
+    // Fit bounds so both markers are visible
+    if (deliveryLocation && destinationLocation) {
+      const bounds = new maplibregl.LngLatBounds(
+        [deliveryLocation.lng, deliveryLocation.lat],
+        [destinationLocation.lng, destinationLocation.lat]
+      );
+      map.fitBounds(bounds, { padding: 80, duration: 1000 });
+    } else if (deliveryLocation) {
+      map.flyTo({ center: [deliveryLocation.lng, deliveryLocation.lat], zoom: 14, duration: 1000 });
+    }
+  }, [deliveryLocation, destinationLocation]);
   
   const handleRetry = () => {
     setRetrying(true);
@@ -611,53 +686,7 @@ const OrderTracking = () => {
               </div>
             </div>
           )}
-          <MapContainer
-            center={mapCenter}
-            zoom={mapZoom}
-            style={{ height: '100%', width: '100%' }}
-            ref={mapRef}
-          >
-            <TileLayer
-              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-            />
-            
-            {deliveryLocation && (
-              <Marker 
-                position={[deliveryLocation.lat, deliveryLocation.lng]}
-                icon={deliveryIcon}
-              >
-                <Popup>
-                  Delivery personnel is here
-                </Popup>
-              </Marker>
-            )}
-            
-            {destinationLocation && (
-              <Marker 
-                position={[destinationLocation.lat, destinationLocation.lng]}
-                icon={homeIcon}
-              >
-                <Popup>
-                  Delivery destination
-                </Popup>
-              </Marker>
-            )}
-            
-            {/* Path between delivery and destination */}
-            {deliveryLocation && destinationLocation && (
-              <Polyline 
-                positions={[
-                  [deliveryLocation.lat, deliveryLocation.lng],
-                  [destinationLocation.lat, destinationLocation.lng]
-                ]}
-                color="#3B82F6"
-                weight={4}
-                opacity={0.7}
-                dashArray="10, 10"
-              />
-            )}
-          </MapContainer>
+          <div ref={mapContainerRef} style={{ height: '100%', width: '100%' }} />
         </div>
       </div>
       

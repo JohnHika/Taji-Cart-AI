@@ -121,7 +121,7 @@ const PickupManagement = () => {
           {activeTab === 'ready' && (
             <button
               onClick={() => updateOrderStatus(order._id, 'picked_up')}
-              className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+              className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-brown-600 hover:bg-brown-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brown-500"
             >
               Mark as Picked Up
             </button>
@@ -140,9 +140,9 @@ const PickupManagement = () => {
   const getStatusColor = (status) => {
     switch (status) {
       case 'ready_for_pickup':
-        return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200';
+        return 'bg-gold-100 text-gold-700 dark:bg-gold-600/20 dark:text-gold-300';
       case 'picked_up':
-        return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200';
+        return 'bg-brown-100 text-brown-800 dark:bg-brown-600/20 dark:text-brown-200';
       case 'processing':
         return 'bg-plum-100 text-plum-800 dark:bg-plum-900 dark:text-plum-200';
       case 'pending':
@@ -225,7 +225,7 @@ const PickupManagement = () => {
           </svg>
         </div>
       ) : error ? (
-        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 p-4 rounded-md text-red-700 dark:text-red-400">
+        <div className="bg-blush-50 dark:bg-blush-500/10 border border-blush-200 dark:border-blush-500/30 p-4 rounded-md text-blush-600 dark:text-blush-400">
           <FaExclamationTriangle className="inline mr-2" />
           {error}
         </div>

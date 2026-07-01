@@ -117,6 +117,29 @@ const POSDashboard = () => {
     }
   };
 
+  const analyticsTotalSales = (analytics?.salesOverTime || []).reduce(
+    (sum, entry) => sum + (entry.totalSales || 0),
+    0
+  );
+  const analyticsTransactionCount = (analytics?.salesOverTime || []).reduce(
+    (sum, entry) => sum + (entry.transactionCount || 0),
+    0
+  );
+  const analyticsAverageTicket = analyticsTransactionCount > 0
+    ? analyticsTotalSales / analyticsTransactionCount
+    : 0;
+  const maxTrendValue = Math.max(1, ...(analytics?.salesOverTime || []).map((entry) => entry.totalSales || 0));
+  const maxPaymentValue = Math.max(1, ...(analytics?.paymentBreakdown || []).map((entry) => entry.total || 0));
+  const busiestHours = [...(analytics?.hourlySales || [])]
+    .sort((a, b) => (b.totalSales || 0) - (a.totalSales || 0))
+    .slice(0, 4);
+  const analyticsPeriodLabel = {
+    '24h': 'last 24 hours',
+    '7d': 'last 7 days',
+    '30d': 'last 30 days',
+    '90d': 'last 90 days'
+  }[analyticsPeriod] || 'selected period';
+
   if (loading) {
     return (
       <div className="flex justify-center items-center min-h-screen">
@@ -131,7 +154,7 @@ const POSDashboard = () => {
       <div className="mb-6">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-charcoal dark:text-white">Sales Hub</h1>
+            <h1 className="text-2xl font-black text-charcoal dark:text-white tracking-tight">Sales Hub</h1>
             <p className="text-brown-500 dark:text-white/40">
               Welcome back, {user.name} | {user.staff_branch || 'Main Store'}
             </p>
@@ -139,7 +162,7 @@ const POSDashboard = () => {
           <div className="mt-4 sm:mt-0 flex flex-col sm:flex-row gap-3">
             <button
               onClick={() => navigate('/dashboard/sales-counter')}
-              className="px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 flex items-center justify-center"
+              className="px-5 py-2.5 bg-plum-700 text-white rounded-pill hover:bg-plum-800 transition-colors flex items-center justify-center font-semibold shadow-sm"
             >
               <FaShoppingCart className="mr-2" />
               Open Sales Counter
@@ -148,135 +171,196 @@ const POSDashboard = () => {
         </div>
       </div>
 
-      {/* Date Filter */}
-      <div className="mb-6">
-        <div className="bg-white dark:bg-dm-card rounded-lg shadow-sm p-4">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
-            <h3 className="text-lg font-semibold text-charcoal dark:text-white mb-4 sm:mb-0">
-              Daily Summary
-            </h3>
-            <div className="flex items-center space-x-4">
-              <div className="flex items-center space-x-2">
-                <FaCalendarAlt className="text-brown-400" />
-                <input
-                  type="date"
-                  value={selectedDate}
-                  onChange={(e) => setSelectedDate(e.target.value)}
-                  className="px-3 py-2 border border-brown-200 dark:border-dm-border rounded-lg dark:bg-dm-card-2 dark:text-white"
-                />
-              </div>
+      <div className="mb-6 grid gap-6 xl:grid-cols-[minmax(0,1.3fr)_minmax(320px,0.9fr)]">
+        <div className="rounded-2xl bg-white p-5 shadow-sm dark:bg-dm-card sm:p-6">
+          <div className="mb-5 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <div>
+              <h3 className="text-base font-bold tracking-tight text-charcoal dark:text-white">Daily Summary</h3>
+              <p className="mt-1 text-sm text-brown-500 dark:text-white/45">
+                Choose a trading day and review the counter performance without leaving the hub.
+              </p>
+            </div>
+
+            <div className="flex items-center gap-2 rounded-xl border border-brown-200 bg-ivory px-3 py-2 dark:border-dm-border dark:bg-dm-card-2">
+              <FaCalendarAlt className="text-brown-400" />
+              <input
+                type="date"
+                value={selectedDate}
+                onChange={(e) => setSelectedDate(e.target.value)}
+                className="bg-transparent text-sm font-medium text-charcoal outline-none dark:text-white"
+              />
             </div>
           </div>
-        </div>
-      </div>
 
-      {/* Daily Summary Cards */}
-      {dailySummary && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-          <div className="bg-white dark:bg-dm-card rounded-lg shadow-sm p-6">
-            <div className="flex items-center">
-              <div className="p-3 rounded-full bg-green-100 dark:bg-green-900/20">
-                <FaDollarSign className="text-green-600 dark:text-green-400" />
-              </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-brown-500 dark:text-white/40">Total Sales</p>
-                <p className="text-2xl font-semibold text-charcoal dark:text-white">
+          {dailySummary ? (
+            <div className="grid grid-cols-2 gap-3 sm:gap-4">
+              <div className="rounded-2xl border border-brown-100 bg-ivory p-3 dark:border-dm-border dark:bg-dm-card-2 sm:p-4">
+                <div className="mb-2 flex h-9 w-9 items-center justify-center rounded-xl bg-plum-100 text-plum-700 dark:bg-plum-900/30 dark:text-plum-300 sm:mb-3 sm:h-11 sm:w-11">
+                  <FaDollarSign size={16} />
+                </div>
+                <p className="text-[10px] font-semibold uppercase tracking-wide text-brown-500 dark:text-white/40 sm:text-xs">Total Sales</p>
+                <p className="mt-1 text-xl font-black tracking-tight text-charcoal dark:text-white sm:mt-2 sm:text-2xl">
                   {DisplayPriceInShillings(dailySummary.summary.totalSales)}
                 </p>
               </div>
-            </div>
-          </div>
 
-          <div className="bg-white dark:bg-dm-card rounded-lg shadow-sm p-6">
-            <div className="flex items-center">
-              <div className="p-3 rounded-full bg-plum-100 dark:bg-plum-900/20">
-                <FaShoppingCart className="text-plum-600 dark:text-plum-300" />
-              </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-brown-500 dark:text-white/40">Transactions</p>
-                <p className="text-2xl font-semibold text-charcoal dark:text-white">
+              <div className="rounded-2xl border border-brown-100 bg-ivory p-3 dark:border-dm-border dark:bg-dm-card-2 sm:p-4">
+                <div className="mb-2 flex h-9 w-9 items-center justify-center rounded-xl bg-gold-100 text-gold-700 dark:bg-gold-900/20 dark:text-gold-300 sm:mb-3 sm:h-11 sm:w-11">
+                  <FaShoppingCart size={16} />
+                </div>
+                <p className="text-[10px] font-semibold uppercase tracking-wide text-brown-500 dark:text-white/40 sm:text-xs">Transactions</p>
+                <p className="mt-1 text-xl font-black tracking-tight text-charcoal dark:text-white sm:mt-2 sm:text-2xl">
                   {dailySummary.summary.totalTransactions}
                 </p>
               </div>
-            </div>
-          </div>
 
-          <div className="bg-white dark:bg-dm-card rounded-lg shadow-sm p-6">
-            <div className="flex items-center">
-              <div className="p-3 rounded-full bg-purple-100 dark:bg-purple-900/20">
-                <FaChartBar className="text-purple-600 dark:text-purple-400" />
-              </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-brown-500 dark:text-white/40">Avg. Transaction</p>
-                <p className="text-2xl font-semibold text-charcoal dark:text-white">
+              <div className="rounded-2xl border border-brown-100 bg-ivory p-3 dark:border-dm-border dark:bg-dm-card-2 sm:p-4">
+                <div className="mb-2 flex h-9 w-9 items-center justify-center rounded-xl bg-blush-100 text-blush-500 dark:bg-blush-500/10 dark:text-blush-300 sm:mb-3 sm:h-11 sm:w-11">
+                  <FaChartBar size={16} />
+                </div>
+                <p className="text-[10px] font-semibold uppercase tracking-wide text-brown-500 dark:text-white/40 sm:text-xs">Average Ticket</p>
+                <p className="mt-1 text-xl font-black tracking-tight text-charcoal dark:text-white sm:mt-2 sm:text-2xl">
                   {DisplayPriceInShillings(dailySummary.summary.averageTransaction)}
                 </p>
               </div>
-            </div>
-          </div>
 
-          <div className="bg-white dark:bg-dm-card rounded-lg shadow-sm p-6">
-            <div className="flex items-center">
-              <div className="p-3 rounded-full bg-yellow-100 dark:bg-yellow-900/20">
-                <FaCreditCard className="text-yellow-600 dark:text-yellow-400" />
-              </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-brown-500 dark:text-white/40">Items Sold</p>
-                <p className="text-2xl font-semibold text-charcoal dark:text-white">
+              <div className="rounded-2xl border border-brown-100 bg-ivory p-3 dark:border-dm-border dark:bg-dm-card-2 sm:p-4">
+                <div className="mb-2 flex h-9 w-9 items-center justify-center rounded-xl bg-plum-100 text-plum-700 dark:bg-plum-900/20 dark:text-plum-300 sm:mb-3 sm:h-11 sm:w-11">
+                  <FaCreditCard size={16} />
+                </div>
+                <p className="text-[10px] font-semibold uppercase tracking-wide text-brown-500 dark:text-white/40 sm:text-xs">Items Sold</p>
+                <p className="mt-1 text-xl font-black tracking-tight text-charcoal dark:text-white sm:mt-2 sm:text-2xl">
                   {dailySummary.summary.totalItems}
                 </p>
               </div>
             </div>
+          ) : (
+            <div className="rounded-2xl border border-dashed border-brown-200 bg-ivory px-4 py-10 text-center text-sm text-brown-500 dark:border-dm-border dark:bg-dm-card-2 dark:text-white/50">
+              No daily summary available yet.
+            </div>
+          )}
+        </div>
+
+        <div className="rounded-2xl bg-white p-5 shadow-sm dark:bg-dm-card sm:p-6">
+          <div className="mb-4 flex flex-col gap-4">
+            <div>
+              <h3 className="text-base font-bold tracking-tight text-charcoal dark:text-white">Sales Analytics</h3>
+              <p className="mt-1 text-sm text-brown-500 dark:text-white/45">
+                Performance snapshot for the {analyticsPeriodLabel}.
+              </p>
+            </div>
+
+            <div className="flex flex-wrap gap-2">
+              {['24h', '7d', '30d', '90d'].map(period => (
+                <button
+                  key={period}
+                  onClick={() => setAnalyticsPeriod(period)}
+                  className={`px-3 py-1.5 rounded-pill text-sm font-semibold transition-all ${
+                    analyticsPeriod === period
+                      ? 'bg-plum-700 text-white shadow-sm'
+                      : 'bg-brown-100 dark:bg-dm-card-2 text-charcoal dark:text-white/55 hover:bg-brown-200 dark:hover:bg-dm-border'
+                  }`}
+                >
+                  {period === '24h' ? '24 Hours' : 
+                   period === '7d' ? '7 Days' :
+                   period === '30d' ? '30 Days' : '90 Days'}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-3 gap-3">
+            <div className="rounded-2xl border border-brown-100 bg-ivory p-3 dark:border-dm-border dark:bg-dm-card-2 sm:p-4">
+              <p className="text-[10px] font-semibold uppercase tracking-wide text-brown-500 dark:text-white/40 sm:text-xs">Period Sales</p>
+              <p className="mt-1 text-base font-black tracking-tight text-charcoal dark:text-white sm:mt-2 sm:text-xl">
+                {DisplayPriceInShillings(analyticsTotalSales)}
+              </p>
+            </div>
+            <div className="rounded-2xl border border-brown-100 bg-ivory p-3 dark:border-dm-border dark:bg-dm-card-2 sm:p-4">
+              <p className="text-[10px] font-semibold uppercase tracking-wide text-brown-500 dark:text-white/40 sm:text-xs">Transactions</p>
+              <p className="mt-1 text-base font-black tracking-tight text-charcoal dark:text-white sm:mt-2 sm:text-xl">
+                {analyticsTransactionCount}
+              </p>
+            </div>
+            <div className="rounded-2xl border border-brown-100 bg-ivory p-3 dark:border-dm-border dark:bg-dm-card-2 sm:p-4">
+              <p className="text-[10px] font-semibold uppercase tracking-wide text-brown-500 dark:text-white/40 sm:text-xs">Average Ticket</p>
+              <p className="mt-1 text-base font-black tracking-tight text-charcoal dark:text-white sm:mt-2 sm:text-xl">
+                {DisplayPriceInShillings(analyticsAverageTicket)}
+              </p>
+            </div>
+          </div>
+
+          <div className="mt-4 rounded-2xl border border-brown-100 bg-ivory p-4 dark:border-dm-border dark:bg-dm-card-2">
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <h4 className="text-sm font-bold tracking-tight text-charcoal dark:text-white">Peak hours</h4>
+              <span className="text-xs text-brown-500 dark:text-white/45">Highest selling slots</span>
+            </div>
+
+            {busiestHours.length > 0 ? (
+              <div className="flex flex-wrap gap-2">
+                {busiestHours.map((slot) => (
+                  <span key={slot._id} className="inline-flex items-center rounded-pill bg-white px-3 py-1.5 text-xs font-semibold text-charcoal dark:bg-dm-card dark:text-white/80">
+                    {String(slot._id).padStart(2, '0')}:00 · {DisplayPriceInShillings(slot.totalSales || 0)}
+                  </span>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-brown-500 dark:text-white/45">Not enough data in this period yet.</p>
+            )}
           </div>
         </div>
-      )}
+      </div>
 
-      {/* Payment Methods Breakdown */}
       {dailySummary && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-          <div className="bg-white dark:bg-dm-card rounded-lg shadow-sm p-6">
-            <h3 className="text-lg font-semibold text-charcoal dark:text-white mb-4">
-              Payment Methods (Today)
-            </h3>
-            <div className="space-y-3">
-              <div className="flex justify-between items-center">
-                <span className="text-brown-500 dark:text-white/40">Cash</span>
-                <span className="font-medium text-charcoal dark:text-white">
+        <div className="mb-6 grid gap-6 lg:grid-cols-2">
+          <div className="rounded-2xl bg-white p-5 shadow-sm dark:bg-dm-card sm:p-6">
+            <div className="mb-4 flex items-center justify-between gap-3">
+              <h3 className="text-base font-bold tracking-tight text-charcoal dark:text-white">
+                Payment Methods Today
+              </h3>
+              <span className="text-xs text-brown-500 dark:text-white/45">{selectedDate}</span>
+            </div>
+            <div className="grid grid-cols-3 gap-3">
+              <div className="rounded-2xl border border-brown-100 bg-ivory p-3 dark:border-dm-border dark:bg-dm-card-2 sm:p-4">
+                <p className="text-[10px] font-semibold uppercase tracking-wide text-brown-500 dark:text-white/40 sm:text-xs">Cash</p>
+                <p className="mt-1 text-base font-black text-charcoal dark:text-white sm:mt-2 sm:text-lg">
                   {DisplayPriceInShillings(dailySummary.summary.cashSales)}
-                </span>
+                </p>
               </div>
-              <div className="flex justify-between items-center">
-                <span className="text-brown-500 dark:text-white/40">Card</span>
-                <span className="font-medium text-charcoal dark:text-white">
+              <div className="rounded-2xl border border-brown-100 bg-ivory p-3 dark:border-dm-border dark:bg-dm-card-2 sm:p-4">
+                <p className="text-[10px] font-semibold uppercase tracking-wide text-brown-500 dark:text-white/40 sm:text-xs">Card</p>
+                <p className="mt-1 text-base font-black text-charcoal dark:text-white sm:mt-2 sm:text-lg">
                   {DisplayPriceInShillings(dailySummary.summary.cardSales)}
-                </span>
+                </p>
               </div>
-              <div className="flex justify-between items-center">
-                <span className="text-brown-500 dark:text-white/40">M-Pesa</span>
-                <span className="font-medium text-charcoal dark:text-white">
+              <div className="rounded-2xl border border-brown-100 bg-ivory p-3 dark:border-dm-border dark:bg-dm-card-2 sm:p-4">
+                <p className="text-[10px] font-semibold uppercase tracking-wide text-brown-500 dark:text-white/40 sm:text-xs">M-Pesa</p>
+                <p className="mt-1 text-base font-black text-charcoal dark:text-white sm:mt-2 sm:text-lg">
                   {DisplayPriceInShillings(dailySummary.summary.mobileSales)}
-                </span>
+                </p>
               </div>
             </div>
           </div>
 
-          {/* Top Products */}
-          <div className="bg-white dark:bg-dm-card rounded-lg shadow-sm p-6">
-            <h3 className="text-lg font-semibold text-charcoal dark:text-white mb-4">
-              Top Products (Today)
-            </h3>
+          <div className="rounded-2xl bg-white p-5 shadow-sm dark:bg-dm-card sm:p-6">
+            <div className="mb-4 flex items-center justify-between gap-3">
+              <h3 className="text-base font-bold tracking-tight text-charcoal dark:text-white">
+                Top Products Today
+              </h3>
+              <span className="text-xs text-brown-500 dark:text-white/45">Best movers</span>
+            </div>
             <div className="space-y-3">
               {dailySummary.topProducts.slice(0, 5).map((product, index) => (
-                <div key={product._id} className="flex justify-between items-center">
-                  <div>
-                    <p className="font-medium text-charcoal dark:text-white">
+                <div key={product._id} className="flex items-center justify-between gap-3 rounded-2xl border border-brown-100 bg-ivory px-4 py-3 dark:border-dm-border dark:bg-dm-card-2">
+                  <div className="min-w-0">
+                    <p className="truncate font-medium text-charcoal dark:text-white">
                       {index + 1}. {product.productName}
                     </p>
                     <p className="text-sm text-brown-500 dark:text-white/40">
                       {product.totalQuantity} units sold
                     </p>
                   </div>
-                  <span className="font-medium text-charcoal dark:text-white">
+                  <span className="shrink-0 text-sm font-semibold text-charcoal dark:text-white">
                     {DisplayPriceInShillings(product.totalRevenue)}
                   </span>
                 </div>
@@ -291,39 +375,82 @@ const POSDashboard = () => {
         </div>
       )}
 
-      {/* Analytics Period Filter */}
-      <div className="mb-6">
-        <div className="bg-white dark:bg-dm-card rounded-lg shadow-sm p-4">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
-            <h3 className="text-lg font-semibold text-charcoal dark:text-white mb-4 sm:mb-0">
-              Sales Analytics
-            </h3>
-            <div className="flex flex-wrap gap-2">
-              {['24h', '7d', '30d', '90d'].map(period => (
-                <button
-                  key={period}
-                  onClick={() => setAnalyticsPeriod(period)}
-                  className={`px-3 py-2 rounded-lg text-sm font-medium ${
-                    analyticsPeriod === period
-                      ? 'bg-primary-500 text-white'
-                      : 'bg-brown-50 dark:bg-dm-card-2 text-charcoal dark:text-white/55 hover:bg-brown-100 dark:hover:bg-dm-border'
-                  }`}
-                >
-                  {period === '24h' ? '24 Hours' : 
-                   period === '7d' ? '7 Days' :
-                   period === '30d' ? '30 Days' : '90 Days'}
-                </button>
+      <div className="mb-6 grid gap-6 xl:grid-cols-[minmax(0,1.15fr)_minmax(320px,0.85fr)]">
+        <div className="rounded-2xl bg-white p-5 shadow-sm dark:bg-dm-card sm:p-6">
+          <div className="mb-4 flex items-center justify-between gap-3">
+            <h3 className="text-base font-bold tracking-tight text-charcoal dark:text-white">Sales Trend</h3>
+            <span className="text-xs text-brown-500 dark:text-white/45">{analyticsPeriodLabel}</span>
+          </div>
+
+          {(analytics?.salesOverTime || []).length > 0 ? (
+            <div className="space-y-3">
+              {analytics.salesOverTime.map((entry) => (
+                <div key={entry._id} className="rounded-2xl border border-brown-100 bg-ivory p-4 dark:border-dm-border dark:bg-dm-card-2">
+                  <div className="mb-2 flex items-center justify-between gap-3 text-sm">
+                    <span className="font-medium text-charcoal dark:text-white">{entry._id}</span>
+                    <span className="text-brown-500 dark:text-white/45">{entry.transactionCount} sales</span>
+                  </div>
+                  <div className="h-2 rounded-full bg-brown-100 dark:bg-dm-border">
+                    <div
+                      className="h-2 rounded-full bg-gradient-to-r from-plum-500 to-gold-500"
+                      style={{ width: `${Math.max(10, ((entry.totalSales || 0) / maxTrendValue) * 100)}%` }}
+                    />
+                  </div>
+                  <p className="mt-2 text-sm font-semibold text-charcoal dark:text-white">
+                    {DisplayPriceInShillings(entry.totalSales || 0)}
+                  </p>
+                </div>
               ))}
             </div>
+          ) : (
+            <div className="rounded-2xl border border-dashed border-brown-200 bg-ivory px-4 py-10 text-center text-sm text-brown-500 dark:border-dm-border dark:bg-dm-card-2 dark:text-white/50">
+              No analytics trend data for this period yet.
+            </div>
+          )}
+        </div>
+
+        <div className="space-y-6">
+          <div className="rounded-2xl bg-white p-5 shadow-sm dark:bg-dm-card sm:p-6">
+            <div className="mb-4 flex items-center justify-between gap-3">
+              <h3 className="text-base font-bold tracking-tight text-charcoal dark:text-white">Payment Breakdown</h3>
+              <span className="text-xs text-brown-500 dark:text-white/45">Period mix</span>
+            </div>
+
+            {(analytics?.paymentBreakdown || []).length > 0 ? (
+              <div className="space-y-3">
+                {analytics.paymentBreakdown.map((entry) => (
+                  <div key={entry._id} className="rounded-2xl border border-brown-100 bg-ivory p-4 dark:border-dm-border dark:bg-dm-card-2">
+                    <div className="mb-2 flex items-center justify-between gap-3 text-sm">
+                      <span className="font-medium capitalize text-charcoal dark:text-white">{entry._id}</span>
+                      <span className="text-brown-500 dark:text-white/45">{entry.count} payments</span>
+                    </div>
+                    <div className="h-2 rounded-full bg-brown-100 dark:bg-dm-border">
+                      <div
+                        className="h-2 rounded-full bg-gradient-to-r from-gold-500 to-plum-500"
+                        style={{ width: `${Math.max(10, ((entry.total || 0) / maxPaymentValue) * 100)}%` }}
+                      />
+                    </div>
+                    <p className="mt-2 text-sm font-semibold text-charcoal dark:text-white">
+                      {DisplayPriceInShillings(entry.total || 0)}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-brown-500 dark:text-white/45">No payment data for this period yet.</p>
+            )}
           </div>
         </div>
       </div>
 
       {/* Recent Sales */}
-      <div className="bg-white dark:bg-dm-card rounded-lg shadow-sm p-6">
-        <h3 className="text-lg font-semibold text-charcoal dark:text-white mb-4">
-          Recent Sales
-        </h3>
+        <div className="bg-white dark:bg-dm-card rounded-2xl shadow-sm p-6">
+          <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <h3 className="text-base font-bold text-charcoal dark:text-white tracking-tight">
+            Recent Sales
+            </h3>
+            <span className="text-xs text-brown-500 dark:text-white/45">Latest 10 counter sales</span>
+          </div>
         <div className="space-y-3 md:hidden">
           {recentSales.map((sale) => (
             <div key={sale._id} className="rounded-2xl border border-brown-100 p-4 dark:border-dm-border">
@@ -357,10 +484,10 @@ const POSDashboard = () => {
               </div>
 
               <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
-                <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                  sale.paymentMethod === 'cash' ? 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400' :
-                  sale.paymentMethod === 'card' ? 'bg-gold-100 text-gold-800 dark:bg-gold-900/25 dark:text-gold-300' :
-                  'bg-purple-100 text-purple-800 dark:bg-purple-900/20 dark:text-purple-400'
+                <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-pill ${
+                  sale.paymentMethod === 'cash' ? 'bg-plum-100 text-plum-700 dark:bg-plum-900/30 dark:text-plum-200' :
+                  sale.paymentMethod === 'card' ? 'bg-gold-100 text-gold-600 dark:bg-gold-900/20 dark:text-gold-300' :
+                  'bg-blush-100 text-blush-500 dark:bg-blush-500/10 dark:text-blush-300'
                 }`}>
                   {sale.paymentMethod.charAt(0).toUpperCase() + sale.paymentMethod.slice(1)}
                 </span>

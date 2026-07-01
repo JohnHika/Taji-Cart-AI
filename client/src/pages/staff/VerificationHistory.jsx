@@ -437,53 +437,59 @@ const VerificationHistory = () => {
   };
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold dark:text-white">Verification History</h1>
-        <div className="flex space-x-2">
+    <div className="mobile-page-shell min-h-screen bg-brown-50 dark:bg-dm-surface">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-6">
+        <h1 className="text-xl sm:text-2xl font-bold dark:text-white">Verification History</h1>
+        <div className="flex flex-wrap gap-2">
           <button 
             onClick={() => navigate('/dashboard/profile')}
-            className="bg-brown-100 dark:bg-dm-card-2 px-4 py-2 rounded-lg flex items-center text-charcoal dark:text-white/70 hover:bg-brown-200 dark:hover:bg-dm-border"
+            className="bg-brown-100 dark:bg-dm-card-2 px-3 py-2 rounded-lg flex items-center text-charcoal dark:text-white/70 hover:bg-brown-200 dark:hover:bg-dm-border text-sm"
           >
-            <FaArrowLeft className="mr-2" /> Back to Dashboard
+            <FaArrowLeft className="mr-1 sm:mr-2" />
+            <span className="hidden xs:inline">Back</span>
           </button>
           <button 
             onClick={fetchVerificationHistory}
-            className="bg-primary-100 px-4 py-2 rounded-lg flex items-center text-white hover:bg-primary-200"
+            className="bg-primary-100 px-3 py-2 rounded-lg flex items-center text-white hover:bg-primary-200 text-sm"
           >
             Refresh
           </button>
           <button
             onClick={() => setShowFilters(!showFilters)}
-            className="bg-plum-700 hover:bg-plum-600 px-4 py-2 rounded-lg flex items-center text-white"
+            className="bg-plum-700 hover:bg-plum-600 px-3 py-2 rounded-lg flex items-center text-white text-sm"
           >
-            <FaFilter className="mr-2" /> {showFilters ? 'Hide Filters' : 'Show Filters'}
+            <FaFilter className="mr-1" /> {showFilters ? 'Hide' : 'Filters'}
           </button>
         </div>
       </div>
 
       {/* View toggle buttons */}
-      <div className="flex mb-4 justify-end">
+      <div className="flex mb-4 justify-between sm:justify-end items-center gap-2">
+        <span className="text-sm text-brown-500 dark:text-white/40 sm:hidden">
+          {filteredHistory.length} results
+        </span>
         <div className="inline-flex rounded-md shadow-sm">
           <button
             onClick={() => setViewMode('grid')}
-            className={`py-2 px-4 text-sm font-medium rounded-l-lg border ${
+            className={`py-1.5 sm:py-2 px-3 sm:px-4 text-xs sm:text-sm font-medium rounded-l-lg border ${
               viewMode === 'grid'
                 ? 'bg-primary-100 text-white border-primary-100'
                 : 'bg-white dark:bg-dm-card text-charcoal dark:text-white border-brown-200 dark:border-dm-border hover:bg-brown-50 dark:hover:bg-dm-card-2'
             }`}
           >
-            Grid View
+            <span className="hidden sm:inline">Grid View</span>
+            <span className="sm:hidden">Grid</span>
           </button>
           <button
             onClick={() => setViewMode('table')}
-            className={`py-2 px-4 text-sm font-medium rounded-r-lg border ${
+            className={`py-1.5 sm:py-2 px-3 sm:px-4 text-xs sm:text-sm font-medium rounded-r-lg border ${
               viewMode === 'table'
                 ? 'bg-primary-100 text-white border-primary-100'
                 : 'bg-white dark:bg-dm-card text-charcoal dark:text-white border-brown-200 dark:border-dm-border hover:bg-brown-50 dark:hover:bg-dm-card-2'
             }`}
           >
-            Table View
+            <span className="hidden sm:inline">Table View</span>
+            <span className="sm:hidden">Table</span>
           </button>
         </div>
       </div>
@@ -561,8 +567,8 @@ const VerificationHistory = () => {
 
       {/* Results summary */}
       {!loading && !error && (
-        <div className="mb-4">
-          <p className="text-brown-500 dark:text-white/40">
+        <div className="mb-4 hidden sm:block">
+          <p className="text-brown-500 dark:text-white/40 text-sm">
             <span className="font-medium">{filteredHistory.length}</span> verification{filteredHistory.length !== 1 ? 's' : ''} found
             {(selectedStaff || searchTerm || dateRange.startDate || dateRange.endDate) && ' with current filters'}
           </p>

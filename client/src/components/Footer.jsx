@@ -72,9 +72,6 @@ const FooterBanner = () => {
       <div
         className={`relative overflow-hidden rounded-2xl sm:rounded-3xl bg-gradient-to-r ${slide.accent} shadow-hover transition-all duration-500`}
       >
-        {/* Decorative blobs */}
-        <div className={`pointer-events-none absolute -top-16 -right-16 h-48 w-48 rounded-full ${slide.glow} blur-3xl transition-all duration-700`} />
-        <div className="pointer-events-none absolute -bottom-20 -left-12 h-52 w-52 rounded-full bg-gold-500/8 blur-3xl" />
         {/* Shimmer sweep */}
         <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-transparent via-white/[0.04] to-transparent animate-shimmer bg-[length:200%_100%]" />
 
@@ -101,19 +98,7 @@ const FooterBanner = () => {
           </LinkWrapper>
         </div>
 
-        {/* Dot indicators */}
-        <div className="absolute bottom-2 left-1/2 z-20 flex -translate-x-1/2 gap-1.5 sm:bottom-3">
-          {bannerSlides.map((_, i) => (
-            <button
-              key={i}
-              onClick={() => { setIsAnimating(true); setTimeout(() => { setCurrent(i); setIsAnimating(false); }, 300); }}
-              aria-label={`Slide ${i + 1}`}
-              className={`h-1.5 rounded-full transition-all duration-300 ${
-                i === current ? 'w-5 bg-gold-400' : 'w-1.5 bg-white/25 hover:bg-white/50'
-              }`}
-            />
-          ))}
-        </div>
+
       </div>
     </div>
   );

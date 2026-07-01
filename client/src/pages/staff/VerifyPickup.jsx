@@ -127,23 +127,23 @@ const VerifyPickup = () => {
   };
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold dark:text-white">Verify Order Pickup</h1>
+    <div className="mobile-page-shell min-h-screen bg-brown-50 dark:bg-dm-surface">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-6">
+        <h1 className="text-xl sm:text-2xl font-bold dark:text-white">Verify Order Pickup</h1>
         <button 
           onClick={() => navigate('/dashboard/staff/pending-pickups')}
-          className="bg-brown-100 dark:bg-dm-card-2 px-4 py-2 rounded-lg flex items-center text-charcoal dark:text-white/70 hover:bg-brown-200 dark:hover:bg-dm-border"
+          className="bg-brown-100 dark:bg-dm-card-2 px-3 py-2 rounded-lg flex items-center justify-center text-charcoal dark:text-white/70 hover:bg-brown-200 dark:hover:bg-dm-border text-sm"
         >
-          <FaArrowLeft className="mr-2" /> Back to Dashboard
+          <FaArrowLeft className="mr-2" /> <span className="hidden xs:inline">Back to </span>Dashboard
         </button>
       </div>
 
       {!verifying ? (
-        <div className="bg-white dark:bg-dm-card rounded-lg shadow-md p-6 max-w-lg mx-auto">
+        <div className="mobile-surface bg-white dark:bg-dm-card rounded-lg shadow-md p-4 sm:p-6 max-w-lg mx-auto">
           <div className="mb-4 text-center">
-            <FaQrcode className="text-5xl mx-auto mb-3 text-primary-100" />
-            <h2 className="text-xl font-semibold dark:text-white">Verify Pickup Code</h2>
-            <p className="text-brown-500 dark:text-white/40 mt-1">
+            <FaQrcode className="text-4xl sm:text-5xl mx-auto mb-3 text-primary-100" />
+            <h2 className="text-lg sm:text-xl font-semibold dark:text-white">Verify Pickup Code</h2>
+            <p className="text-brown-500 dark:text-white/40 mt-1 text-sm">
               Enter the customer's pickup code to verify their order
             </p>
           </div>
@@ -196,13 +196,13 @@ const VerifyPickup = () => {
           </form>
         </div>
       ) : (
-        <div className="bg-white dark:bg-dm-card rounded-lg shadow-md p-6 max-w-2xl mx-auto">
+        <div className="mobile-surface bg-white dark:bg-dm-card rounded-lg shadow-md p-4 sm:p-6 max-w-2xl mx-auto">
           <div className="mb-6 text-center">
             <div className="inline-block p-3 bg-green-100 dark:bg-green-900/30 rounded-full mb-3">
-              <FaBoxOpen className="text-4xl text-green-600 dark:text-green-400" />
+              <FaBoxOpen className="text-3xl sm:text-4xl text-green-600 dark:text-green-400" />
             </div>
-            <h2 className="text-xl font-semibold dark:text-white">Order Verified</h2>
-            <p className="text-brown-500 dark:text-white/40 mt-1">
+            <h2 className="text-lg sm:text-xl font-semibold dark:text-white">Order Verified</h2>
+            <p className="text-brown-500 dark:text-white/40 mt-1 text-sm">
               The pickup code has been verified. Review the order details below.
             </p>
           </div>

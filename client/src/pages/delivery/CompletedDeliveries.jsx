@@ -133,12 +133,12 @@ const CompletedDeliveries = () => {
                   <div className="flex justify-between mb-4">
                     <div>
                       <h4 className="text-sm font-medium text-brown-400 dark:text-white/40 mb-1">Customer</h4>
-                      <p className="text-charcoal dark:text-white/70">{order.customer.name}</p>
+                      <p className="text-charcoal dark:text-white/70">{order.customer?.name || 'N/A'}</p>
                     </div>
                     
                     <div className="text-right">
                       <h4 className="text-sm font-medium text-brown-400 dark:text-white/40 mb-1">Amount</h4>
-                      <p className="text-charcoal dark:text-white/70 font-medium">KSh {order.total.toFixed(2)}</p>
+                      <p className="text-charcoal dark:text-white/70 font-medium">KSh {order.total != null ? Number(order.total).toFixed(2) : '0.00'}</p>
                     </div>
                   </div>
                   
@@ -158,7 +158,7 @@ const CompletedDeliveries = () => {
                           {[...Array(5)].map((_, i) => (
                             <svg 
                               key={i}
-                              className={`w-5 h-5 ${i < order.rating ? 'text-yellow-400' : 'text-brown-200 dark:text-brown-500'}`}
+                              className={`w-5 h-5 ${i < (order.rating ?? 0) ? 'text-yellow-400' : 'text-brown-200 dark:text-brown-500'}`}
                               fill="currentColor"
                               viewBox="0 0 20 20"
                             >
@@ -169,7 +169,11 @@ const CompletedDeliveries = () => {
                       </div>
                       
                       <a
-                        href={`https://maps.google.com/?q=${order.deliveryAddress}`}
+                        href={
+                          order.coordinates?.lat && order.coordinates?.lng
+                            ? `https://maps.google.com/?q=${order.coordinates.lat},${order.coordinates.lng}`
+                            : `https://maps.google.com/?q=${encodeURIComponent(order.deliveryAddress || '')}`
+                        }
                         target="_blank"
                         rel="noopener noreferrer"
                         className="px-3 py-1 border border-brown-200 text-brown-500 dark:border-dm-border dark:text-white/55 rounded hover:bg-brown-50 dark:hover:bg-dm-card-2 flex items-center"

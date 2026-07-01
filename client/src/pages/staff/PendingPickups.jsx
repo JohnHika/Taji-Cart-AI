@@ -23,7 +23,7 @@ const PendingPickups = () => {
           path: '/socket.io',
           transports: ['websocket'],
           auth: {
-            token: localStorage.getItem('token')
+            token: sessionStorage.getItem('accesstoken') || ''
           }
         });
 

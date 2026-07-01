@@ -46,9 +46,11 @@ const SocialAuth = () => {
   const handleGoogleLogin = () => {
     setIsLoading(true);
     try {
+      // Get the current URL path to redirect back after OAuth
+      const currentPath = typeof window !== 'undefined' ? window.location.pathname + window.location.search : '';
       const authUrl = shouldUseBrandedOAuth
-        ? `${brandedOAuthBaseUrl}/api/auth/google`
-        : buildApiUrl('/api/auth/google');
+        ? `${brandedOAuthBaseUrl}/api/auth/google?returnTo=${encodeURIComponent(currentPath)}`
+        : `${buildApiUrl('/api/auth/google')}?returnTo=${encodeURIComponent(currentPath)}`;
       window.location.assign(authUrl);
     } catch (error) {
       console.error('Error starting Google OAuth flow:', error);

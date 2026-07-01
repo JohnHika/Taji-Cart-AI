@@ -1,6 +1,7 @@
 import axios from 'axios';
 import { apiBaseUrl } from '../common/apiBaseUrl';
 import SummaryApi from '../common/SummaryApi';
+import { getStoredAccessToken } from './authStorage';
 
 const inFlightMutationRequests = new Map();
 
@@ -75,11 +76,7 @@ const instance = axios.create({
 });
 
 instance.interceptors.request.use((config) => {
-  const token =
-    sessionStorage.getItem('accesstoken') ||
-    localStorage.getItem('accesstoken') ||
-    sessionStorage.getItem('token') ||
-    localStorage.getItem('token');
+  const token = getStoredAccessToken();
 
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
@@ -123,7 +120,9 @@ if (typeof window !== 'undefined') {
 
 const refreshToken = async () => {
   try {
-    const storedRefreshToken = sessionStorage.getItem('refreshToken');
+    const storedRefreshToken =
+      sessionStorage.getItem('refreshToken') ||
+      localStorage.getItem('refreshToken');
 
     if (!storedRefreshToken) {
       throw new Error('No refresh token available');
@@ -141,8 +140,11 @@ const refreshToken = async () => {
         refreshToken: newRefreshToken
       } = response.data.data;
 
+      // Persist to both storages so tokens survive mobile tab kills
       sessionStorage.setItem('accesstoken', accessToken);
       sessionStorage.setItem('refreshToken', newRefreshToken);
+      localStorage.setItem('accesstoken', accessToken);
+      localStorage.setItem('refreshToken', newRefreshToken);
       setupRefreshTimer();
 
       console.log('Token refreshed successfully');
@@ -154,6 +156,8 @@ const refreshToken = async () => {
     console.error('Token refresh failed:', error);
     sessionStorage.removeItem('accesstoken');
     sessionStorage.removeItem('refreshToken');
+    localStorage.removeItem('accesstoken');
+    localStorage.removeItem('refreshToken');
 
     if (typeof window !== 'undefined') {
       window.location.href = '/login';
@@ -163,7 +167,7 @@ const refreshToken = async () => {
   }
 };
 
-if (typeof window !== 'undefined' && sessionStorage.getItem('accesstoken')) {
+if (typeof window !== 'undefined' && (sessionStorage.getItem('accesstoken') || localStorage.getItem('accesstoken'))) {
   setupRefreshTimer();
 }
 
@@ -205,21 +209,11 @@ instance.interceptors.response.use(
   }
 );
 
-instance.interceptors.request.use(
-  (config) => {
-    const token = localStorage.getItem('accesstoken');
-
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-
-    return config;
-  },
-  (error) => Promise.reject(error)
-);
+// Duplicate request interceptor removed — auth header is already set by the
+// interceptor registered at line 78.
 
 const Axios = (options = {}) => {
-  const token = sessionStorage.getItem('accesstoken');
+  const token = getStoredAccessToken();
 
   const headers = {
     ...(token ? { Authorization: `Bearer ${token}` } : {})

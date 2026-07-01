@@ -34,6 +34,11 @@ coverage/
 client/.vite/
 client/.cache/
 
+# Playwright
+client/playwright-report/
+client/test-results/
+*.png
+
 # VS Code settings (optional but helpful)
 .vscode/
 

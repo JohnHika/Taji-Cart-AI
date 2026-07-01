@@ -1,4 +1,3 @@
-import { loadStripe } from '@stripe/stripe-js';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
 import { FaCrown, FaStore } from 'react-icons/fa';
@@ -10,14 +9,17 @@ import { buildApiUrl } from '../common/apiBaseUrl';
 import { nawiriBrand } from '../config/brand';
 import ActiveRewards from '../components/ActiveRewards'; // Import the ActiveRewards component
 import AddAddress from '../components/AddAddress';
+import CheckoutRoyalCard from '../components/CheckoutRoyalCard'; // Premium Royal Card for Order Summary
 import CommunityCampaignProgress from '../components/CommunityCampaignProgress'; // Import the CommunityCampaignProgress component
 import FulfillmentModal from '../components/FulfillmentModal';
-import MpesaPayment from '../components/MpesaPayment'; // Import the MpesaPayment component
 import { useTheme } from '../context/ThemeContext';
+import useCriteriaGate from '../hooks/useCriteriaGate';
 import { useGlobalContext } from '../provider/GlobalProvider';
 import { clearCartItems } from '../store/cartProduct';
 import Axios from '../utils/Axios';
 import AxiosToastError from '../utils/AxiosToastError';
+import { getStoredAccessToken } from '../utils/authStorage';
+import { formatDistanceKm, getFootDeliveryEligibility, NAIROBI_CBD_RADIUS_KM } from '../utils/cbdDelivery';
 import { DisplayPriceInShillings } from '../utils/DisplayPriceInShillings';
 import { Link } from 'react-router-dom';
 
@@ -26,19 +28,28 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
   const { darkMode } = useTheme();
   const location = useLocation();
   const [openAddress, setOpenAddress] = useState(false);
-  const [showMpesaForm, setShowMpesaForm] = useState(false); // State to control M-Pesa form visibility
   const [showFulfillmentModal, setShowFulfillmentModal] = useState(false);
   
+  // Debug: Log location state
+  useEffect(() => {
+    console.log('CheckoutPage loaded, location.state:', location.state);
+  }, [location.state]);
+  
   // Get fulfillment method from location state if available
-  const [fulfillmentMethod, setFulfillmentMethod] = useState(
-    location.state?.fulfillmentMethod || location.state?.fulfillment_type || 'delivery'
-  );
+  const [fulfillmentMethod, setFulfillmentMethod] = useState(() => {
+    const method = location.state?.fulfillmentMethod || location.state?.fulfillment_type || 'delivery';
+    console.log('Fulfillment method:', method, 'from state:', location.state);
+    return method;
+  });
   const [pickupLocation, setPickupLocation] = useState(
     location.state?.pickupLocation || location.state?.pickup_location || ''
   );
   const [pickupInstructions, setPickupInstructions] = useState(
     location.state?.pickupInstructions || location.state?.pickup_instructions || ''
   );
+  const [deliveryMode, setDeliveryMode] = useState(location.state?.delivery_mode || 'standard');
+  const [customerLocation, setCustomerLocation] = useState(location.state?.customerLocation || null);
+  const [locationLoading, setLocationLoading] = useState(false);
   
   const addressList = useSelector(state => state.addresses.addressList);
   const [selectAddress, setSelectAddress] = useState(null); // Changed from 0 to null to ensure validation
@@ -48,6 +59,7 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const user = useSelector(state => state.user);
+  const { ensureCriteria, gateModal } = useCriteriaGate();
 
   const [usePoints, setUsePoints] = useState(false);
   const [availablePoints, setAvailablePoints] = useState(0);
@@ -59,7 +71,11 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
   const [communityDiscount, setCommunityDiscount] = useState(0);
 
   // Check if payments should be enabled
-  const isPaymentEnabled = selectAddress !== null && addressList[selectAddress] && addressList[selectAddress].status;
+  // For delivery: need a selected address
+  // For pickup: need a pickup location
+  const isPaymentEnabled = 
+    (fulfillmentMethod === 'delivery' && selectAddress !== null && addressList[selectAddress] && addressList[selectAddress].status) ||
+    (fulfillmentMethod === 'pickup' && pickupLocation);
   const checkoutLockRef = useRef(false);
   const [checkoutAction, setCheckoutAction] = useState('');
 
@@ -81,8 +97,7 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
 
       try {
         setLoyaltyLoading(true);
-        // Get token from localStorage
-        const token = localStorage.getItem('accesstoken');
+        const token = getStoredAccessToken();
         
         if (!token) {
           console.log("No authentication token found, skipping loyalty card fetch");
@@ -91,10 +106,7 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
 
         const response = await Axios({
           url: `/api/users/${user._id}/loyalty-card`,
-          method: 'GET',
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
+          method: 'GET'
         });
         
         if (response.data.success && response.data.data) {
@@ -121,7 +133,7 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
       // If clicking the same reward, deselect it
       setSelectedReward(null);
       setCommunityDiscount(0);
-      toast.info(`Removed ${reward.type === 'discount' ? `${reward.value}% discount` : 'reward'}`);
+      toast(`Removed ${reward.type === 'discount' ? `${reward.value}% discount` : 'reward'}`);
     } else {
       // Select the reward and calculate discount if applicable
       setSelectedReward(reward);
@@ -146,6 +158,10 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
     ? Math.max(0, priceAfterCommunityDiscount - pointsValue) 
     : priceAfterCommunityDiscount;
   const isCheckoutBusy = checkoutAction !== '';
+  const footDeliveryEligibility = useMemo(
+    () => getFootDeliveryEligibility(customerLocation),
+    [customerLocation]
+  );
   const hasCheckoutAmount = useMemo(() => {
     const numericTotal = Number(totalPrice || 0);
 
@@ -175,9 +191,7 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
 
   // Pickup locations (in a real app, these would likely come from an API)
   const pickupLocations = [
-    { name: 'Main Store', address: nawiriBrand.location },
-    { name: 'Westlands Branch', address: '456 Westlands Road, Westlands, Nairobi' },
-    { name: 'Mombasa Road Store', address: '789 Mombasa Road, Nairobi' }
+    { name: 'Main Store', address: nawiriBrand.location }
   ];
 
   // Validate address is selected before payment
@@ -188,6 +202,20 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
         toast.error('Please select a delivery address before proceeding');
         return false;
       }
+
+      if (deliveryMode === 'foot') {
+        if (!customerLocation) {
+          toast.error('Foot delivery requires your live location within Nairobi CBD.');
+          return false;
+        }
+
+        if (!footDeliveryEligibility.eligible) {
+          toast.error(
+            `Foot delivery is only available within Nairobi CBD (${NAIROBI_CBD_RADIUS_KM}km radius).`
+          );
+          return false;
+        }
+      }
     } else if (fulfillmentMethod === 'pickup' && !pickupLocation) {
       toast.error('Please select a pickup location');
       return false;
@@ -195,7 +223,47 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
     return true;
   };
 
+  const captureCustomerLocation = () => {
+    if (!navigator.geolocation) {
+      toast.error('Geolocation is not supported on this device/browser.');
+      return;
+    }
+
+    setLocationLoading(true);
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const nextLocation = {
+          lat: Number(position.coords.latitude),
+          lng: Number(position.coords.longitude),
+        };
+
+        setCustomerLocation(nextLocation);
+        const eligibility = getFootDeliveryEligibility(nextLocation);
+
+        if (eligibility.eligible) {
+          toast.success('Great! You are within Nairobi CBD for foot delivery.');
+        } else {
+          toast.error(
+            `You are ${formatDistanceKm(eligibility.distanceKm)} from CBD center. Foot delivery is limited to ${eligibility.radiusKm}km.`
+          );
+        }
+
+        setLocationLoading(false);
+      },
+      () => {
+        setLocationLoading(false);
+        toast.error('Unable to access location. Please allow location permissions and try again.');
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 0,
+      }
+    );
+  };
+
   const handleCashOnDelivery = async() => {
+    if (!(await ensureCriteria('checkout'))) return;
     if (!validateAddress()) return;
 
     await runCheckoutAction('cash', async () => {
@@ -212,6 +280,8 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
             communityRewardId: selectedReward ? selectedReward._id : null,
             communityDiscountAmount: selectedReward && selectedReward.type === 'discount' ? communityDiscount : 0,
             fulfillment_type: fulfillmentMethod,
+            delivery_mode: fulfillmentMethod === 'delivery' ? deliveryMode : 'standard',
+            customerLocation,
             pickup_location: pickupLocation,
             pickup_instructions: pickupInstructions
           },
@@ -249,171 +319,6 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
     });
   }
 
-  const handleOnlinePayment = async() => {
-    if (!validateAddress()) return;
-
-    await runCheckoutAction('card', async () => {
-      const loadingToastId = toast.loading("Loading...");
-
-      try {
-          const stripePublicKey = import.meta.env.VITE_STRIPE_PUBLIC_KEY;
-          const stripe = await loadStripe(stripePublicKey);
-
-          if (!stripe) {
-            throw new Error('Stripe failed to initialize.');
-          }
-
-          try {
-            dispatch(clearCartItems());
-
-            await Axios({
-              ...SummaryApi.clearCart,
-              requestLockKey: `checkout:clear:${checkoutScope}`
-            });
-          } catch (clearError) {
-            console.error("Failed to clear cart before payment:", clearError);
-          }
-
-          const response = await Axios({
-              ...SummaryApi.payment_url,
-              data: {
-                list_items: cartItemsList,
-                addressId: fulfillmentMethod === 'delivery' ? addressList[selectAddress]._id : null,
-                subTotalAmt: totalPrice,
-                totalAmt: finalPrice,
-                royalDiscount: royalDiscount,
-                communityRewardId: selectedReward ? selectedReward._id : null,
-                communityDiscountAmount: selectedReward && selectedReward.type === 'discount' ? communityDiscount : 0,
-                fulfillment_type: fulfillmentMethod,
-                pickup_location: pickupLocation,
-                pickup_instructions: pickupInstructions
-              },
-              requestLockKey: `checkout:stripe:${checkoutScope}`
-          });
-
-          const { data: responseData } = response;
-          localStorage.setItem('cartClearedAt', new Date().toISOString());
-
-          if(fetchCartItem){
-            fetchCartItem();
-          }
-
-          if (isCutView && onClose) {
-            onClose();
-          }
-
-          toast.dismiss(loadingToastId);
-          const stripeRedirectResult = await stripe.redirectToCheckout({ sessionId: responseData.id });
-
-          if (stripeRedirectResult?.error) {
-            throw stripeRedirectResult.error;
-          }
-      } catch (error) {
-          toast.dismiss(loadingToastId);
-          AxiosToastError(error);
-      }
-    });
-  }
-
-  const handleShowMpesaForm = () => {
-    if (isCheckoutBusy) return;
-    if (!validateAddress()) return;
-    setShowMpesaForm(true);
-  };
-
-  const handleMpesaSuccess = () => {
-    // Clear cart state immediately after successful order
-    dispatch(clearCartItems());
-    
-    toast.success("M-Pesa payment initiated. Enter your PIN on your phone.");
-    setShowMpesaForm(false);
-    
-    // Close cut view if applicable before navigating
-    if (isCutView && onClose) {
-      onClose();
-    }
-    
-    // Navigate to payment status page
-    navigate('/mpesa-payment-status');
-    
-    // Clear cart after initiating payment
-    if(fetchCartItem) {
-      fetchCartItem();
-    }
-  }
-
-  const handleMpesaError = (errorMessage) => {
-    toast.error(errorMessage || "M-Pesa payment failed");
-    setShowMpesaForm(false);
-  }
-
-  const handlePesapalPayment = async () => {
-    if (!validateAddress()) return;
-
-    await runCheckoutAction('pesapal', async () => {
-      try {
-        const orderId = `ORD-${Date.now()}-${Math.floor(Math.random()*1000)}`;
-        const token = localStorage.getItem('accesstoken') || localStorage.getItem('token');
-
-        const res = await Axios({
-          url: buildApiUrl('/api/pesapal/initiate'),
-          method: 'POST',
-          headers: { Authorization: `Bearer ${token}` },
-          data: {
-            orderId,
-            amount: finalPrice,
-            currency: 'KES',
-            description: `Nawiri Hair checkout ${orderId}`,
-            customer: {
-              email: user?.email,
-              firstName: user?.name?.split(' ')[0] || 'Customer',
-              lastName: user?.name?.split(' ').slice(1).join(' ') || 'User',
-              phone: user?.mobile,
-              countryCode: 'KE'
-            }
-          },
-          requestLockKey: `checkout:pesapal:${checkoutScope}`
-        });
-
-        const { data } = res;
-
-        if (data?.success && data.redirect_url) {
-          const width = 480;
-          const height = 720;
-          const left = window.screenX + (window.innerWidth - width) / 2;
-          const top = window.screenY + (window.innerHeight - height) / 2;
-          const popup = window.open(data.redirect_url, 'pesapalPopup', `width=${width},height=${height},left=${left},top=${top}`);
-
-          if (!popup) {
-            throw new Error('Popup blocked. Please allow popups and try again.');
-          }
-
-          await new Promise((resolve) => {
-            const poll = setInterval(() => {
-              try {
-                if (popup.closed) {
-                  clearInterval(poll);
-                  navigate('/success', { state: { orderId, paymentMethod: 'PesaPal', amount: finalPrice } });
-                  resolve();
-                }
-              } catch (_) {
-                // Ignore cross-origin popup access while the gateway is open.
-              }
-            }, 800);
-          });
-        } else {
-          throw new Error('Failed to start Pesapal payment');
-        }
-      } catch (err) {
-        console.error('Pesapal init error:', err.response?.data || err.message);
-        const raw = err.response?.data;
-        const detail = raw?.details || raw?.message || err.message || 'Failed to initiate PesaPal';
-        const guidance = /invalid\s*ipn/i.test(detail) ? ' - Please register your IPN in the Pesapal dashboard and set PESAPAL_NOTIFICATION_ID.' : '';
-        toast.error(`PesaPal Payment Error: ${detail}${guidance}`);
-      }
-    });
-  };
-
   // Handle fulfillment method selection
   const handleFulfillmentSelect = (data) => {
     setFulfillmentMethod(data.fulfillment_type);
@@ -450,8 +355,9 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
   // Render cut view or full page based on prop
   if (isCutView) {
     return (
-      <div className="fixed inset-0 bg-plum-900/50 z-50 flex justify-end backdrop-blur-[2px]">
-        <div className="bg-ivory dark:bg-dm-surface w-full max-w-md h-full overflow-y-auto transition-colors duration-200 border-l border-brown-100 dark:border-dm-border">
+      <>
+        <div className="fixed inset-0 bg-plum-900/50 z-50 flex justify-end backdrop-blur-[2px]">
+          <div className="bg-ivory dark:bg-dm-surface w-full max-w-md h-full overflow-y-auto transition-colors duration-200 border-l border-brown-100 dark:border-dm-border">
           {/* Cut View Header */}
           <div className="sticky top-0 z-20 bg-white dark:bg-dm-card p-4 flex justify-between items-center border-b border-brown-100 dark:border-dm-border shadow-sm transition-colors duration-200">
             <h2 className="font-semibold text-lg dark:text-white">Checkout</h2>
@@ -533,22 +439,54 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
                   Add address
                 </div>
               </div>
+
+              <div className="mt-4 p-3 bg-white dark:bg-dm-card rounded shadow border border-brown-100 dark:border-dm-border">
+                <p className="text-sm font-semibold dark:text-white mb-2">Delivery Type</p>
+                <div className="grid grid-cols-2 gap-2 text-xs">
+                  <button
+                    type="button"
+                    onClick={() => setDeliveryMode('standard')}
+                    className={`px-2 py-2 rounded ${deliveryMode === 'standard' ? 'bg-plum-700 text-white' : 'bg-plum-100 dark:bg-plum-900/30 dark:text-white/80'}`}
+                  >
+                    Standard
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setDeliveryMode('foot')}
+                    className={`px-2 py-2 rounded ${deliveryMode === 'foot' ? 'bg-plum-700 text-white' : 'bg-plum-100 dark:bg-plum-900/30 dark:text-white/80'}`}
+                  >
+                    Foot (CBD)
+                  </button>
+                </div>
+
+                {deliveryMode === 'foot' && (
+                  <div className="mt-2 space-y-1">
+                    <button
+                      type="button"
+                      onClick={captureCustomerLocation}
+                      disabled={locationLoading}
+                      className="w-full text-xs px-2 py-2 rounded bg-gold-500 text-charcoal font-semibold disabled:opacity-60"
+                    >
+                      {locationLoading ? 'Checking location...' : 'Use My Current Location'}
+                    </button>
+                    <p className="text-[11px] text-brown-500 dark:text-white/55">
+                      {customerLocation
+                        ? `Distance: ${formatDistanceKm(footDeliveryEligibility.distanceKm)} (${footDeliveryEligibility.eligible ? 'eligible' : 'outside zone'})`
+                        : 'Location required for foot delivery in CBD.'}
+                    </p>
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* Summary Section */}
             <div className='bg-white dark:bg-dm-card p-4 rounded shadow mb-4 transition-colors duration-200'>
               <h3 className='font-semibold mb-4 dark:text-white'>Order Summary</h3>
               
-              {/* Royal Card Badge */}
-              {royalDiscount > 0 && (
-                <div className="mb-4 p-3 bg-amber-100 dark:bg-amber-900/30 rounded-lg text-amber-800 dark:text-amber-200 flex items-center">
-                  <FaCrown className="mr-2 text-xl" />
-                  <div>
-                    <p className="font-medium">Royal {royalCardData?.tier} Card</p>
-                    <p className="text-sm">You're getting an additional {royalDiscount}% discount on all products!</p>
-                  </div>
-                </div>
-              )}
+              {/* Premium Royal Membership Card */}
+              <div className="mb-4">
+                <CheckoutRoyalCard compact={false} showTeaser={true} />
+              </div>
               
               {/* Community Rewards */}
               <div className="mb-4">
@@ -573,7 +511,7 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
                 </div>
                 
                 {/* Product discounts line */}
-                <div className='flex gap-4 justify-between ml-1 text-green-600 dark:text-green-400'>
+                <div className='flex gap-4 justify-between ml-1 text-gold-600 dark:text-gold-400'>
                   <p>Product discounts</p>
                   <p>Applied</p>
                 </div>
@@ -590,7 +528,7 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
                 
                 {/* Community reward discount line */}
                 {selectedReward && selectedReward.type === 'discount' && (
-                  <div className='flex gap-4 justify-between ml-1 text-green-600 dark:text-green-400'>
+                  <div className='flex gap-4 justify-between ml-1 text-gold-600 dark:text-gold-400'>
                     <p className='flex items-center'>
                       Community reward discount
                     </p>
@@ -673,32 +611,10 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
               </div>
             </div>
 
-            {/* Payment Methods */}
+            {/* Payment Methods - Cash Only for Customers */}
             <div className='space-y-4'>
               <button 
-                className={`w-full py-2 px-4 rounded text-white font-semibold transition-colors duration-200 ${
-                  isPaymentEnabled && !isCheckoutBusy
-                    ? 'bg-gold-500 hover:bg-gold-400 text-charcoal dark:text-charcoal' 
-                    : 'bg-brown-200 dark:bg-dm-border text-brown-400 dark:text-white/35 cursor-not-allowed'
-                }`}
-                onClick={handleOnlinePayment}
-                disabled={!isPaymentEnabled || isCheckoutBusy}
-              >
-                {checkoutAction === 'card' ? 'Processing card payment...' : `Pay with Card ${!isPaymentEnabled ? '(Select Address First)' : ''}`}
-              </button>
-              <button 
-                className={`w-full py-2 px-4 rounded text-white font-semibold transition-colors duration-200 ${
-                  isPaymentEnabled && !isCheckoutBusy
-                    ? 'bg-plum-700 hover:bg-plum-600 dark:bg-plum-600 dark:hover:bg-plum-500' 
-                    : 'bg-brown-200 dark:bg-dm-border text-brown-400 dark:text-white/35 cursor-not-allowed'
-                }`}
-                onClick={handleShowMpesaForm}
-                disabled={!isPaymentEnabled || isCheckoutBusy}
-              >
-                Pay with M-Pesa {!isPaymentEnabled && '(Select Address First)'}
-              </button>
-              <button 
-                className={`w-full py-2 px-4 border-2 font-semibold transition-colors duration-200 ${
+                className={`w-full py-2 px-4 border-2 font-semibold transition-colors duration-200 rounded ${
                   isPaymentEnabled && !isCheckoutBusy
                     ? 'border-plum-600 text-plum-700 hover:bg-plum-50 hover:text-plum-900 dark:border-plum-500 dark:text-plum-200 dark:hover:bg-plum-900/40 dark:hover:text-white' 
                     : 'border-brown-200 text-brown-300 dark:border-dm-border dark:text-white/30 cursor-not-allowed'
@@ -708,21 +624,12 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
               >
                 {checkoutAction === 'cash' ? 'Placing order...' : `Cash on Delivery ${!isPaymentEnabled ? '(Select Address First)' : ''}`}
               </button>
-              <button 
-                className={`w-full py-2 px-4 rounded text-white font-semibold transition-colors duration-200 ${
-                  isPaymentEnabled && !isCheckoutBusy
-                    ? 'bg-charcoal hover:bg-plum-900 text-white dark:bg-plum-800 dark:hover:bg-plum-700' 
-                    : 'bg-brown-200 dark:bg-dm-border text-brown-400 dark:text-white/35 cursor-not-allowed'
-                }`}
-                onClick={handlePesapalPayment}
-                disabled={!isPaymentEnabled || isCheckoutBusy}
-              >
-                {checkoutAction === 'pesapal' ? 'Processing...' : `Pay with PesaPal ${!isPaymentEnabled ? '(Select Address First)' : ''}`}
-              </button>
             </div>
           </div>
+          </div>
         </div>
-      </div>
+        {gateModal}
+      </>
     );
   }
 
@@ -731,6 +638,11 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
     if (fulfillmentMethod === 'delivery') {
       return (
         <>
+          {/* Fulfillment method toggle */}
+          <div className="mb-4 grid grid-cols-2 rounded-card overflow-hidden border border-brown-100 dark:border-dm-border text-sm font-semibold">
+            <button type="button" onClick={() => setFulfillmentMethod('delivery')} className="py-2.5 bg-plum-700 text-white">🚚 Delivery</button>
+            <button type="button" onClick={() => { setFulfillmentMethod('pickup'); setPickupLocation(''); }} className="py-2.5 bg-white dark:bg-dm-card text-charcoal dark:text-white/70 hover:bg-plum-50 dark:hover:bg-plum-900/20 transition-colors">🏪 Pickup</button>
+          </div>
           <h3 className='text-lg font-semibold text-charcoal dark:text-white mb-3'>Delivery Address</h3>
           {!hasActiveAddresses && (
             <div className="bg-gold-100 dark:bg-gold-600/10 border border-gold-300 dark:border-gold-600/30 text-gold-700 dark:text-gold-300 px-4 py-2 rounded-card mb-4 text-sm">
@@ -793,34 +705,114 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
               + Add new address
             </div>
           </div>
+
+          <div className='bg-white dark:bg-dm-card p-4 rounded-card border border-brown-100 dark:border-dm-border mb-4 transition-colors duration-200'>
+            <p className='text-sm font-semibold text-charcoal dark:text-white mb-3'>Delivery Type</p>
+
+            <div className='grid sm:grid-cols-2 gap-3'>
+              <label className={`cursor-pointer rounded-card border-2 p-3 transition-all ${
+                deliveryMode === 'standard'
+                  ? 'border-plum-600 bg-plum-50 dark:border-plum-400 dark:bg-plum-900/20'
+                  : 'border-brown-100 dark:border-dm-border'
+              }`}>
+                <input
+                  type='radio'
+                  name='delivery_mode'
+                  value='standard'
+                  checked={deliveryMode === 'standard'}
+                  onChange={() => setDeliveryMode('standard')}
+                  className='hidden'
+                />
+                <p className='font-semibold text-charcoal dark:text-white'>Standard Delivery</p>
+                <p className='text-xs text-brown-500 dark:text-white/50 mt-1'>Regular rider delivery across Nairobi.</p>
+              </label>
+
+              <label className={`cursor-pointer rounded-card border-2 p-3 transition-all ${
+                deliveryMode === 'foot'
+                  ? 'border-plum-600 bg-plum-50 dark:border-plum-400 dark:bg-plum-900/20'
+                  : 'border-brown-100 dark:border-dm-border'
+              }`}>
+                <input
+                  type='radio'
+                  name='delivery_mode'
+                  value='foot'
+                  checked={deliveryMode === 'foot'}
+                  onChange={() => setDeliveryMode('foot')}
+                  className='hidden'
+                />
+                <p className='font-semibold text-charcoal dark:text-white'>Delivery by Foot</p>
+                <p className='text-xs text-brown-500 dark:text-white/50 mt-1'>Only within Nairobi CBD ({NAIROBI_CBD_RADIUS_KM}km radius).</p>
+              </label>
+            </div>
+
+            {deliveryMode === 'foot' && (
+              <div className='mt-3 space-y-2'>
+                <button
+                  type='button'
+                  onClick={captureCustomerLocation}
+                  className='px-3 py-2 rounded-pill text-sm font-semibold bg-plum-700 text-white hover:bg-plum-600 transition-colors disabled:opacity-60 disabled:cursor-not-allowed'
+                  disabled={locationLoading}
+                >
+                  {locationLoading ? 'Checking location...' : 'Use My Current Location'}
+                </button>
+
+                <p className='text-xs text-brown-500 dark:text-white/50'>
+                  {customerLocation
+                    ? `Distance to CBD center: ${formatDistanceKm(footDeliveryEligibility.distanceKm)} (${footDeliveryEligibility.eligible ? 'eligible' : 'outside allowed zone'})`
+                    : 'Location required to confirm CBD eligibility for foot delivery.'}
+                </p>
+              </div>
+            )}
+          </div>
         </>
       );
     } else {
       return (
         <>
-          <h3 className='text-lg font-semibold dark:text-white mb-2'>Pickup Information</h3>
-          <div className='bg-white dark:bg-dm-card p-4 rounded shadow transition-colors duration-200'>
-            <div className="flex items-center gap-2 mb-3">
-              <FaStore className="text-purple-500" />
-              <span className="font-medium dark:text-white">Pickup Location:</span>
+          {/* Fulfillment method toggle */}
+          <div className="mb-4 grid grid-cols-2 rounded-card overflow-hidden border border-brown-100 dark:border-dm-border text-sm font-semibold">
+            <button type="button" onClick={() => setFulfillmentMethod('delivery')} className="py-2.5 bg-white dark:bg-dm-card text-charcoal dark:text-white/70 hover:bg-plum-50 dark:hover:bg-plum-900/20 transition-colors">🚚 Delivery</button>
+            <button type="button" onClick={() => setFulfillmentMethod('pickup')} className="py-2.5 bg-plum-700 text-white">🏪 Pickup</button>
+          </div>
+          <h3 className='text-lg font-semibold text-charcoal dark:text-white mb-3'>Select Pickup Location</h3>
+          {!pickupLocation && (
+            <div className="bg-gold-100 dark:bg-gold-600/10 border border-gold-300 dark:border-gold-600/30 text-gold-700 dark:text-gold-300 px-4 py-2 rounded-card mb-4 text-sm">
+              Please select a pickup location to proceed with payment.
             </div>
-            <p className="mb-3 dark:text-white/85">{pickupLocation}</p>
-            
-            {pickupInstructions && (
-              <>
-                <div className="flex items-center gap-2 mb-2 mt-4">
-                  <span className="font-medium dark:text-white">Your Instructions:</span>
+          )}
+          <div className='grid gap-3 mb-4'>
+            {pickupLocations.map((loc) => (
+              <label key={loc.name} className="cursor-pointer">
+                <div className={`border-2 rounded-card p-4 flex gap-3 transition-all duration-200 ${
+                  pickupLocation === loc.name
+                    ? 'border-plum-700 bg-plum-50 dark:border-plum-400 dark:bg-plum-900/20'
+                    : 'border-brown-100 dark:border-dm-border bg-white dark:bg-dm-card hover:border-plum-200 dark:hover:border-plum-700/40'
+                }`}>
+                  <input
+                    type='radio'
+                    value={loc.name}
+                    checked={pickupLocation === loc.name}
+                    onChange={() => setPickupLocation(loc.name)}
+                    name='pickup_location'
+                    className="accent-plum-700 mt-1 flex-shrink-0"
+                  />
+                  <div className="text-sm text-charcoal dark:text-white/80 leading-relaxed">
+                    <p className="font-medium"><FaStore className="text-plum-500 inline mr-1 text-xs" />{loc.name}</p>
+                    <p className="text-brown-400 dark:text-white/50 text-xs mt-0.5">{loc.address}</p>
+                  </div>
                 </div>
-                <p className="text-brown-500 dark:text-white/55 italic">{pickupInstructions}</p>
-              </>
-            )}
-            
-            <button
-              onClick={() => navigate(-1)}
-              className="mt-4 px-4 py-2 rounded-pill text-sm font-medium bg-plum-100 text-plum-800 dark:bg-plum-900/40 dark:text-plum-200 hover:bg-plum-200 dark:hover:bg-plum-800/50 transition-colors"
-            >
-              Change Pickup Location
-            </button>
+              </label>
+            ))}
+          </div>
+          <div className='bg-white dark:bg-dm-card p-4 rounded-card border border-brown-100 dark:border-dm-border mb-4 transition-colors duration-200'>
+            <label className="block text-sm font-semibold text-charcoal dark:text-white mb-2">Pickup Instructions (optional)</label>
+            <textarea
+              value={pickupInstructions}
+              onChange={(e) => setPickupInstructions(e.target.value)}
+              placeholder="Any special instructions for pickup..."
+              rows={2}
+              className="w-full text-sm border border-brown-200 dark:border-dm-border rounded-card px-3 py-2 bg-ivory dark:bg-dm-surface text-charcoal dark:text-white/80 placeholder-brown-300 dark:placeholder-white/30 focus:outline-none focus:border-plum-500 dark:focus:border-plum-400 resize-none"
+            />
           </div>
         </>
       );
@@ -851,8 +843,9 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
 
   // Full page render (original implementation)
   return (
-    <section className={sectionShell}>
-      <div className={containerShell}>
+    <>
+      <section className={sectionShell}>
+        <div className={containerShell}>
         <div className='w-full'>
           {/* Address or Pickup Section */}
           {renderAddressOrPickupSection()}
@@ -862,16 +855,10 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
           {/**summary**/}
           <h3 className='text-lg font-semibold text-charcoal dark:text-white px-1 mb-3'>Order Summary</h3>
           
-          {/* Royal Card Badge */}
-          {royalDiscount > 0 && (
-            <div className="mb-4 p-3 bg-gradient-to-r from-gold-500/20 to-gold-100 dark:from-gold-600/20 dark:to-gold-900/10 border border-gold-300 dark:border-gold-600/40 rounded-card text-charcoal dark:text-white flex items-center gap-3">
-              <FaCrown className="text-gold-500 text-xl flex-shrink-0" />
-              <div>
-                <p className="font-semibold text-sm">Royal {royalCardData?.tier} Card</p>
-                <p className="text-xs text-brown-400 dark:text-white/50">+{royalDiscount}% discount applied on all products!</p>
-              </div>
-            </div>
-          )}
+          {/* Premium Royal Membership Card */}
+          <div className="mb-4">
+            <CheckoutRoyalCard compact={false} showTeaser={true} />
+          </div>
           
           {/* Community Rewards */}
           <div className="mx-4 mb-4">
@@ -946,6 +933,18 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
               <p>Delivery Charge</p>
               <p className='flex items-center gap-2'>Free</p>
             </div>
+
+            {usePoints && (
+              <div className='flex gap-4 justify-between ml-1 text-green-600 dark:text-green-400'>
+                <p>Points Discount</p>
+                <p>- KES {pointsValue.toLocaleString()}</p>
+              </div>
+            )}
+
+            <div className='flex gap-4 justify-between ml-1 mt-2 pt-2 border-t border-brown-100 dark:border-dm-border'>
+              <p className='font-bold text-charcoal dark:text-white'>Total</p>
+              <p className='font-bold text-gold-600 dark:text-gold-300 font-price'>{DisplayPriceInShillings(finalPrice)}</p>
+            </div>
           </div>
 
           {/* Loyalty Points Section */}
@@ -976,93 +975,23 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
             </div>
           )}
 
-          {/* Updated Price Display */}
-          <div className="mt-4 p-4 bg-white dark:bg-dm-card rounded-card border border-brown-100 dark:border-dm-border transition-colors duration-200">
-            <div className="flex justify-between items-center text-sm text-charcoal dark:text-white/80">
-              <span>Subtotal</span>
-              <span className="font-price font-semibold">KES {priceAfterCommunityDiscount.toLocaleString()}</span>
-            </div>
-
-            {usePoints && (
-              <div className="flex justify-between items-center text-sm text-green-600 dark:text-green-400 mt-1">
-                <span>Points Discount</span>
-                <span className="font-price font-semibold">- KES {pointsValue.toLocaleString()}</span>
-              </div>
-            )}
-
-            <div className="flex justify-between items-center mt-3 pt-3 border-t border-brown-100 dark:border-dm-border">
-              <span className="font-bold text-charcoal dark:text-white">Total</span>
-              <span className="font-price font-bold text-lg text-gold-600 dark:text-gold-300">KES {finalPrice?.toLocaleString()}</span>
-            </div>
-          </div>
-
           <div className='w-full flex flex-col gap-3 mt-5'>
-            <p className="text-xs font-semibold uppercase tracking-widest text-brown-300 dark:text-white/30 mb-1">Choose Payment Method</p>
-            <button
-              className={`flex items-center justify-between w-full py-3 px-4 rounded-card border-2 font-semibold text-sm transition-all duration-200 press ${
-                (((fulfillmentMethod === 'delivery' && isPaymentEnabled) || (fulfillmentMethod === 'pickup')) && !isCheckoutBusy)
-                  ? 'border-plum-700 text-plum-700 dark:border-plum-400 dark:text-plum-200 bg-plum-50 dark:bg-plum-900/20 hover:bg-plum-100 dark:hover:bg-plum-900/40'
-                  : 'border-brown-100 dark:border-dm-border text-brown-300 dark:text-white/20 cursor-not-allowed'
-              }`}
-              onClick={handleOnlinePayment}
-              disabled={(fulfillmentMethod === 'delivery' && !isPaymentEnabled) || isCheckoutBusy}
-            >
-              <span>{checkoutAction === 'card' ? 'Processing card payment...' : 'Pay with Card (Stripe)'}</span>
-              {fulfillmentMethod === 'delivery' && !isPaymentEnabled && <span className="text-xs font-normal opacity-60">Select address first</span>}
-            </button>
-
-            <button
-              className={`flex items-center justify-between w-full py-3 px-4 rounded-card border-2 font-semibold text-sm transition-all duration-200 press ${
-                (((fulfillmentMethod === 'delivery' && isPaymentEnabled) || (fulfillmentMethod === 'pickup')) && !isCheckoutBusy)
-                  ? 'border-plum-600 text-plum-800 dark:border-plum-400 dark:text-plum-200 bg-plum-50 dark:bg-plum-900/25 hover:bg-plum-100 dark:hover:bg-plum-900/40'
-                  : 'border-brown-100 dark:border-dm-border text-brown-300 dark:text-white/20 cursor-not-allowed'
-              }`}
-              onClick={handleShowMpesaForm}
-              disabled={(fulfillmentMethod === 'delivery' && !isPaymentEnabled) || isCheckoutBusy}
-            >
-              <span>Pay with M-Pesa</span>
-              {fulfillmentMethod === 'delivery' && !isPaymentEnabled && <span className="text-xs font-normal opacity-60">Select address first</span>}
-            </button>
-
-            <button
-              className={`flex items-center justify-between w-full py-3 px-4 rounded-card border-2 font-semibold text-sm transition-all duration-200 press ${
-                (((fulfillmentMethod === 'delivery' && isPaymentEnabled) || (fulfillmentMethod === 'pickup')) && !isCheckoutBusy)
-                  ? 'border-brown-400 text-brown-500 dark:border-brown-500 dark:text-brown-300 bg-brown-50 dark:bg-brown-900/10 hover:bg-brown-100 dark:hover:bg-brown-900/20'
-                  : 'border-brown-100 dark:border-dm-border text-brown-300 dark:text-white/20 cursor-not-allowed'
-              }`}
-              onClick={handleCashOnDelivery}
-              disabled={(fulfillmentMethod === 'delivery' && !isPaymentEnabled) || isCheckoutBusy}
-            >
-              <span>{checkoutAction === 'cash' ? 'Placing order...' : `Cash on ${fulfillmentMethod === 'delivery' ? 'Delivery' : 'Pickup'}`}</span>
-              {fulfillmentMethod === 'delivery' && !isPaymentEnabled && <span className="text-xs font-normal opacity-60">Select address first</span>}
-            </button>
-
+            <p className="text-xs font-semibold uppercase tracking-widest text-brown-300 dark:text-white/30 mb-1">Payment Method</p>
             <button
               className={`flex items-center justify-between w-full py-3 px-4 rounded-card border-2 font-semibold text-sm transition-all duration-200 press ${
                 isPaymentEnabled && !isCheckoutBusy
-                  ? 'border-plum-500 text-plum-700 dark:border-plum-400 dark:text-plum-200 bg-plum-50 dark:bg-plum-900/20 hover:bg-plum-100 dark:hover:bg-plum-900/40'
+                  ? 'border-plum-600 text-plum-700 dark:border-plum-500 dark:text-plum-200 bg-plum-50 dark:bg-plum-900/20 hover:bg-plum-100 dark:hover:bg-plum-900/40'
                   : 'border-brown-100 dark:border-dm-border text-brown-300 dark:text-white/20 cursor-not-allowed'
               }`}
-              onClick={handlePesapalPayment}
+              onClick={handleCashOnDelivery}
               disabled={!isPaymentEnabled || isCheckoutBusy}
             >
-              <span>{checkoutAction === 'pesapal' ? 'Processing...' : 'Pay with PesaPal'}</span>
-              {!isPaymentEnabled && <span className="text-xs font-normal opacity-60">Select address first</span>}
+              <span>{checkoutAction === 'cash' ? 'Placing order...' : `Cash on ${fulfillmentMethod === 'delivery' ? 'Delivery' : 'Pickup'}`}</span>
+              {!isPaymentEnabled && <span className="text-xs font-normal opacity-60">{fulfillmentMethod === 'delivery' ? 'Select address first' : 'Select pickup location'}</span>}
             </button>
 
-            <button
-              className={`w-full py-3.5 rounded-pill font-bold text-sm mt-1 transition-all duration-200 press shadow-sm ${
-                (((fulfillmentMethod === 'delivery' && isPaymentEnabled) || (fulfillmentMethod === 'pickup')) && !isCheckoutBusy)
-                  ? 'bg-gold-500 hover:bg-gold-400 text-charcoal hover:shadow-gold'
-                  : 'bg-brown-100 dark:bg-dm-card-2 text-brown-300 dark:text-white/20 cursor-not-allowed'
-              }`}
-              onClick={handleOnlinePayment}
-              disabled={(fulfillmentMethod === 'delivery' && !isPaymentEnabled) || isCheckoutBusy}
-            >
-              {checkoutAction === 'card' ? 'Processing card payment...' : `Confirm & Pay - KES ${finalPrice?.toLocaleString()}`}
-            </button>
-
-            {/* Guest Checkout CTA */}
+            {/* Guest Checkout CTA — only show for unauthenticated users */}
+            {!user?._id && (
             <div className="mt-6 pt-6 border-t border-brown-200 dark:border-brown-700">
               <p className="text-center text-sm text-brown-500 dark:text-brown-400 mb-3">
                 Don't want to create an account?
@@ -1074,52 +1003,28 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
                 Checkout as Guest →
               </Link>
             </div>
+            )}
           </div>
         </div>
-      </div>
-
-      {/* M-Pesa Payment Modal */}
-      {showMpesaForm && (
-        <div className="fixed inset-0 bg-plum-900/60 flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-dm-card p-6 rounded-card shadow-hover max-w-md w-full transition-colors duration-200 animate-scale-in">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-bold dark:text-white">M-Pesa Payment</h3>
-              <button 
-                onClick={() => setShowMpesaForm(false)}
-                className="text-brown-400 hover:text-charcoal dark:text-white/50 dark:hover:text-white"
-              ><FaXmark /></button>
-            </div>
-            <MpesaPayment
-              cartItems={cartItemsList}
-              totalAmount={totalPrice}
-              addressId={fulfillmentMethod === 'delivery' ? addressList[selectAddress]?._id : null}
-              onSuccess={handleMpesaSuccess}
-              onError={handleMpesaError}
-              communityRewardId={selectedReward?._id}
-              communityDiscountAmount={selectedReward?.type === 'discount' ? communityDiscount : 0}
-              fulfillment_type={fulfillmentMethod}
-              pickup_location={pickupLocation}
-              pickup_instructions={pickupInstructions}
-            />
-          </div>
         </div>
-      )}
 
-      {/* Fulfillment Method Modal */}
-      <FulfillmentModal 
-        isOpen={showFulfillmentModal}
-        onClose={() => setShowFulfillmentModal(false)}
-        onSelect={handleFulfillmentSelect}
-        pickupLocations={pickupLocations}
-      />
+        {/* Fulfillment Method Modal */}
+        <FulfillmentModal 
+          isOpen={showFulfillmentModal}
+          onClose={() => setShowFulfillmentModal(false)}
+          onSelect={handleFulfillmentSelect}
+          pickupLocations={pickupLocations}
+        />
 
-      {/* Address Modal */}
-      {
-        openAddress && (
-          <AddAddress close={() => setOpenAddress(false)} />
-        )
-      }
-    </section>
+        {/* Address Modal */}
+        {
+          openAddress && (
+            <AddAddress close={() => setOpenAddress(false)} />
+          )
+        }
+      </section>
+      {gateModal}
+    </>
   )
 }
 

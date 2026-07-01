@@ -51,10 +51,12 @@ export const getOrderTrackingDetails = async (req, res) => {
         }
         
         // Only allow the order owner or an admin to track the order
-        if (order.userId.toString() !== req.userId && req.userRole !== 'admin') {
+        // Guard against null userId (e.g. guest orders where userId was never set)
+        if (order.userId && order.userId.toString() !== req.userId && req.userRole !== 'admin') {
             return res.status(403).json({
                 success: false,
-                message: 'You are not authorized to track this order'
+                message: 'You are not authorized to track this order',
+                errorCode: 'UNAUTHORIZED_ACCESS'
             });
         }
         

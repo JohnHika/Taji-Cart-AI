@@ -1,10 +1,23 @@
 import mongoose from 'mongoose';
 
+const NOTIFICATION_TYPES = [
+    'low_stock',
+    'order_placed',
+    'payment_received',
+    'order_shipped',
+    'loyalty_points',
+    'order_update',
+    'new_delivery',
+    'community_reward',
+    'community_achievement',
+    'signup_bonus'
+];
+
 const notificationSchema = new mongoose.Schema({
     type: {
         type: String,
         required: true,
-        enum: ['low_stock', 'order_placed', 'payment_received', 'order_shipped', 'loyalty_points']
+        enum: NOTIFICATION_TYPES
     },
     title: {
         type: String,

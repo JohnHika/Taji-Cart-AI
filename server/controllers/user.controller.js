@@ -65,6 +65,125 @@ const buildDeliveryPersonnelProfile = (user = {}) => {
     }
 }
 
+const DELIVERY_PROFILE_SELECT = [
+    '_id',
+    'phoneNumber',
+    'verificationStatus',
+    'isActive',
+    'isAvailable',
+    'isOnline',
+    'activeOrdersCount',
+    'lastActive',
+    'vehicleDetails',
+    'licenseNumber',
+    'licenseExpiry',
+    'idNumber',
+    'kraPin',
+].join(' ')
+
+const resolveLoyaltyInfo = async (userId) => {
+    try {
+        const loyaltyCard = await LoyaltyCard.findOne({ userId })
+
+        if (loyaltyCard) {
+            return {
+                points: loyaltyCard.points,
+                tier: loyaltyCard.tier,
+            }
+        }
+    } catch (error) {
+        console.error('Error fetching loyalty card:', error)
+    }
+
+    return { points: 0, tier: 'Basic' }
+}
+
+const ensureDeliveryProfileForUser = async (user, { syncProfile = false } = {}) => {
+    if (!user?._id || !(user.isDelivery || user.role === 'delivery')) {
+        return null
+    }
+
+    try {
+        const syncedProfile = buildDeliveryPersonnelProfile(user)
+        const seedProfile = {
+            userId: user._id,
+            isActive: true,
+            isAvailable: true,
+            isOnline: false,
+            ...syncedProfile,
+        }
+
+        const update = syncProfile
+            ? {
+                $set: syncedProfile,
+                $setOnInsert: seedProfile,
+            }
+            : {
+                $setOnInsert: seedProfile,
+            }
+
+        return await DeliveryPersonnelModel.findOneAndUpdate(
+            { userId: user._id },
+            update,
+            {
+                new: true,
+                upsert: true,
+                runValidators: true,
+                setDefaultsOnInsert: true,
+            }
+        ).select(DELIVERY_PROFILE_SELECT)
+    } catch (error) {
+        console.error('Error ensuring delivery profile for user:', user._id, error.message)
+        return null
+    }
+}
+
+const serializeDeliveryProfile = (profile, user = {}) => {
+    if (!profile) {
+        return null
+    }
+
+    return {
+        _id: profile._id,
+        phoneNumber: normalizePhoneNumber(profile.phoneNumber || user.mobile || user.phone || ''),
+        verificationStatus: profile.verificationStatus || 'pending',
+        isActive: profile.isActive !== false,
+        isAvailable: profile.isAvailable !== false,
+        isOnline: profile.isOnline === true,
+        activeOrdersCount: profile.activeOrdersCount || 0,
+        lastActive: profile.lastActive || null,
+        hasVehicleDetails: Boolean(profile.vehicleDetails?.type || profile.vehicleDetails?.plateNumber || profile.vehicleDetails?.model),
+        hasLicenseNumber: Boolean(profile.licenseNumber),
+        hasIdNumber: Boolean(profile.idNumber),
+        hasKraPin: Boolean(profile.kraPin),
+    }
+}
+
+const buildUserDetailsPayload = async (user, {
+    loyaltyInfo = null,
+    syncDeliveryProfile = false,
+} = {}) => {
+    const plainUser = typeof user?.toObject === 'function'
+        ? user.toObject()
+        : { ...user }
+
+    const nextLoyaltyInfo = loyaltyInfo || await resolveLoyaltyInfo(plainUser._id)
+    const deliveryProfile = await ensureDeliveryProfileForUser(plainUser, { syncProfile: syncDeliveryProfile })
+
+    return {
+        ...plainUser,
+        loyaltyPoints: nextLoyaltyInfo.points,
+        loyaltyClass: nextLoyaltyInfo.tier,
+        isAdmin: Boolean(plainUser.isAdmin),
+        isDelivery: Boolean(plainUser.isDelivery || plainUser.role === 'delivery'),
+        isStaff: Boolean(plainUser.isStaff || plainUser.role === 'staff' || plainUser.isAdmin),
+        mobile_verified: Boolean(plainUser.mobile_verified),
+        verify_email: Boolean(plainUser.verify_email),
+        role: plainUser.role || 'user',
+        deliveryProfile: serializeDeliveryProfile(deliveryProfile, plainUser),
+    }
+}
+
 const sendPhoneVerificationCodeEmail = async ({ user, phoneNumber, otp }) =>
     sendEmail({
         sendTo: user.email,
@@ -196,6 +315,7 @@ export async function getAllUsersController(request, response) {
                 email: userData.email || 'No Email',
                 isAdmin: Boolean(userData.isAdmin),
                 isDelivery: Boolean(userData.isDelivery),
+                isStaff: Boolean(userData.isStaff || userData.role === 'staff'),
                 role: userData.role || 'user',
                 status: userData.status || 'Active'
             };
@@ -744,6 +864,14 @@ export async function updateUserDetails(request, response) {
             }
         }
 
+        const loyaltyInfo = await resolveLoyaltyInfo(userId)
+        const responseUser = updatedUser
+            ? await buildUserDetailsPayload(updatedUser, {
+                loyaltyInfo,
+                syncDeliveryProfile: true,
+            })
+            : updatedUser
+
         return response.json({
             message: emailChanged
                 ? verificationEmailFailed
@@ -754,7 +882,7 @@ export async function updateUserDetails(request, response) {
                     : "Updated successfully",
             error: false,
             success: true,
-            data: updatedUser
+                    data: responseUser
         });
 
     } catch (error) {
@@ -788,6 +916,14 @@ export async function requestPhoneVerificationOtpController(request, response) {
             })
         }
 
+        if (!isEmailConfigured()) {
+            return response.status(503).json({
+                message: verificationEmailUnavailableMessage,
+                error: true,
+                success: false
+            })
+        }
+
         const otp = String(generatedOtp())
         const expiry = new Date(Date.now() + 10 * 60 * 1000)
 
@@ -797,11 +933,20 @@ export async function requestPhoneVerificationOtpController(request, response) {
         user.mobile_verification_expiry = expiry
         await user.save()
 
-        await sendPhoneVerificationCodeEmail({
-            user,
-            phoneNumber: requestedMobile,
-            otp,
-        })
+        try {
+            await sendPhoneVerificationCodeEmail({
+                user,
+                phoneNumber: requestedMobile,
+                otp,
+            })
+        } catch (emailError) {
+            console.error('Error sending phone verification email:', emailError)
+            return response.status(503).json({
+                message: verificationEmailUnavailableMessage,
+                error: true,
+                success: false
+            })
+        }
 
         return response.json({
             message: `Verification code sent for ${maskPhoneNumber(requestedMobile)}. Check your email inbox.`,
@@ -1228,38 +1373,17 @@ export async function userDetails(request,response){
             });
         }
         
-        // Get the user's loyalty card if it exists
-        let loyaltyInfo = { points: 0, tier: 'Basic' };
-        
-        try {
-            const loyaltyCard = await LoyaltyCard.findOne({ userId });
-            if (loyaltyCard) {
-                loyaltyInfo = {
-                    points: loyaltyCard.points,
-                    tier: loyaltyCard.tier
-                };
-            }
-        } catch (error) {
-            console.error("Error fetching loyalty card:", error);
-        }
-
-        // Make sure admin status is correctly included in the response
-        // Explicitly include both isAdmin and role fields
-        const userWithLoyalty = {
-            ...user.toObject(),
-            loyaltyPoints: loyaltyInfo.points,
-            loyaltyClass: loyaltyInfo.tier,
-            isAdmin: Boolean(user.isAdmin),  // Ensure boolean type
-            isDelivery: Boolean(user.isDelivery),
-            isStaff: Boolean(user.isStaff),
-            mobile_verified: Boolean(user.mobile_verified),
-            role: user.role || 'user'        // Provide default if missing
-        };
+        const loyaltyInfo = await resolveLoyaltyInfo(userId)
+        const userWithLoyalty = await buildUserDetailsPayload(user, {
+            loyaltyInfo,
+            syncDeliveryProfile: true,
+        })
 
         console.log(`User details for ${userId}:`, {
             role: userWithLoyalty.role,
             isAdmin: userWithLoyalty.isAdmin,
-            isDelivery: userWithLoyalty.isDelivery
+            isDelivery: userWithLoyalty.isDelivery,
+            hasDeliveryProfile: Boolean(userWithLoyalty.deliveryProfile)
         });
 
         return response.json({
@@ -1289,33 +1413,11 @@ export const getUserDetails = async (req, res) => {
             });
         }
 
-        // Get loyalty information
-        let loyaltyInfo = { points: 0, tier: 'Basic' };
-        try {
-            const loyaltyCard = await LoyaltyCard.findOne({ userId: req.userId });
-            if (loyaltyCard) {
-                loyaltyInfo = {
-                    points: loyaltyCard.points,
-                    tier: loyaltyCard.tier
-                };
-            }
-        } catch (error) {
-            console.error("Error fetching loyalty card:", error);
-        }
-
-        // Ensure isAdmin is explicitly included
-        const userDetails = {
-            _id: user._id,
-            name: user.name,
-            email: user.email,
-            mobile: user.mobile,
-            mobile_verified: Boolean(user.mobile_verified),
-            isAdmin: Boolean(user.isAdmin), // Force boolean conversion
-            role: user.role,
-            avatar: user.avatar,
-            loyaltyPoints: loyaltyInfo.points,
-            loyaltyClass: loyaltyInfo.tier
-        };
+        const loyaltyInfo = await resolveLoyaltyInfo(req.userId)
+        const userDetails = await buildUserDetailsPayload(user, {
+            loyaltyInfo,
+            syncDeliveryProfile: true,
+        })
 
         return res.status(200).json({
             success: true,
@@ -1759,7 +1861,7 @@ export async function scanLoyaltyCard(req, res) {
  */
 export async function updateUserRoleController(req, res) {
     try {
-        const { userId, isAdmin } = req.body;
+        const { userId, isAdmin, role, isDelivery, isStaff } = req.body;
         
         if (!userId) {
             return res.status(400).json({
@@ -1769,13 +1871,33 @@ export async function updateUserRoleController(req, res) {
             });
         }
         
+        const requestedRole = String(role || '').trim().toLowerCase();
+        const normalizedRole = requestedRole === 'customer'
+            ? 'user'
+            : requestedRole === 'seller'
+                ? 'staff'
+                : requestedRole;
+
+        const allowedRoles = new Set(['user', 'admin', 'delivery', 'staff']);
+        const targetRole = allowedRoles.has(normalizedRole)
+            ? normalizedRole
+            : (Boolean(isAdmin) ? 'admin' : 'user');
+
         // Log the request for debugging
-        console.log(`Received role update request for user ${userId}:`, { isAdmin });
-        
-        // Use findByIdAndUpdate to ensure atomic update
+        console.log(`Received role update request for user ${userId}:`, {
+            role,
+            targetRole,
+            isAdmin,
+            isDelivery,
+            isStaff,
+        });
+
+        // Keep role flags mutually consistent with the selected role.
         const updateData = {
-            isAdmin: Boolean(isAdmin),
-            role: isAdmin ? 'admin' : 'user'
+            role: targetRole,
+            isAdmin: targetRole === 'admin',
+            isDelivery: targetRole === 'delivery',
+            isStaff: targetRole === 'staff',
         };
         
         console.log(`Applying updates:`, updateData);
@@ -1800,6 +1922,14 @@ export async function updateUserRoleController(req, res) {
             role: updatedUser.role
         });
         
+        const roleLabels = {
+            admin: 'Administrator',
+            staff: 'Seller',
+            delivery: 'Driver',
+            user: 'Customer',
+        };
+        const roleLabel = roleLabels[updatedUser.role] || 'Customer';
+
         // Send email notification asynchronously so SMTP latency does not block API response
         sendEmail({
             sendTo: updatedUser.email,
@@ -1807,7 +1937,7 @@ export async function updateUserRoleController(req, res) {
             html: renderAccountNoticeEmail({
                 name: updatedUser.name,
                 title: 'Your account role changed',
-                intro: `Your Nawiri Hair Kenya account role is now ${updatedUser.isAdmin ? 'Administrator' : 'Customer'}.`,
+                intro: `Your Nawiri Hair Kenya account role is now ${roleLabel}.`,
                 highlights: [
                     'This change controls the tools and dashboards available on your account.',
                     `If you were not expecting this update, contact ${nawiriBrand.supportEmail}.`,
@@ -1818,7 +1948,7 @@ export async function updateUserRoleController(req, res) {
         });
         
         return res.status(200).json({
-            message: `User role updated to ${updatedUser.isAdmin ? 'admin' : 'regular user'} successfully`,
+            message: `User role updated to ${updatedUser.role} successfully`,
             success: true,
             error: false,
             data: {
@@ -1826,6 +1956,8 @@ export async function updateUserRoleController(req, res) {
                 name: updatedUser.name,
                 email: updatedUser.email,
                 isAdmin: updatedUser.isAdmin,
+                isDelivery: updatedUser.isDelivery,
+                isStaff: updatedUser.isStaff,
                 role: updatedUser.role
             }
         });

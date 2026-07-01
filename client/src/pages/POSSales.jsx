@@ -74,39 +74,76 @@ const POSSales = () => {
   }
 
   return (
-    <div className="min-h-screen bg-brown-50 dark:bg-dm-surface p-4">
-      <div className="mb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        <h1 className="text-2xl font-bold text-charcoal dark:text-white">Sales History</h1>
-        <div className="flex gap-2 items-center">
-          <div className="relative">
-            <FaSearch className="absolute left-3 top-3 text-brown-400" />
-            <input
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search sale #, customer, cashier, barcode"
-              className="pl-9 pr-3 py-2 rounded-lg border dark:border-dm-border dark:bg-dm-card-2 dark:text-white"
-            />
-          </div>
-          <div className="flex items-center gap-2">
-            <FaCalendarAlt className="text-brown-400" />
-            <input
-              type="date"
-              value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
-              className="px-2 py-2 rounded-lg border dark:border-dm-border dark:bg-dm-card-2 dark:text-white"
-            />
-            <span className="text-brown-400 dark:text-white/40">to</span>
-            <input
-              type="date"
-              value={endDate}
-              onChange={(e) => setEndDate(e.target.value)}
-              className="px-2 py-2 rounded-lg border dark:border-dm-border dark:bg-dm-card-2 dark:text-white"
-            />
-          </div>
+    <div className="mobile-page-shell min-h-screen bg-brown-50 dark:bg-dm-surface">
+      <div className="mb-4 flex flex-col gap-3">
+        <h1 className="text-xl sm:text-2xl font-bold text-charcoal dark:text-white">Sales History</h1>
+        
+        {/* Search - full width on mobile */}
+        <div className="relative">
+          <FaSearch className="absolute left-3 top-3 text-brown-400" />
+          <input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search sale #, customer, cashier..."
+            className="w-full pl-9 pr-3 py-2 rounded-lg border dark:border-dm-border dark:bg-dm-card-2 dark:text-white text-sm"
+          />
+        </div>
+        
+        {/* Date filters - wrap on mobile */}
+        <div className="flex flex-wrap items-center gap-2">
+          <FaCalendarAlt className="text-brown-400 shrink-0" />
+          <input
+            type="date"
+            value={startDate}
+            onChange={(e) => setStartDate(e.target.value)}
+            className="flex-1 min-w-[120px] px-2 py-2 rounded-lg border dark:border-dm-border dark:bg-dm-card-2 dark:text-white text-sm"
+          />
+          <span className="text-brown-400 dark:text-white/40 text-sm">to</span>
+          <input
+            type="date"
+            value={endDate}
+            onChange={(e) => setEndDate(e.target.value)}
+            className="flex-1 min-w-[120px] px-2 py-2 rounded-lg border dark:border-dm-border dark:bg-dm-card-2 dark:text-white text-sm"
+          />
         </div>
       </div>
 
-      <div className="bg-white dark:bg-dm-card rounded-lg shadow-sm overflow-hidden">
+      {/* Mobile Card View */}
+      <div className="md:hidden space-y-3">
+        {filtered.map((sale) => (
+          <div 
+            key={sale._id} 
+            className="mobile-surface p-3 rounded-lg"
+            onClick={() => openSale(sale._id)}
+          >
+            <div className="flex justify-between items-start mb-2">
+              <div>
+                <p className="font-semibold text-charcoal dark:text-white">#{sale.saleNumber}</p>
+                <p className="text-xs text-brown-400 dark:text-white/40">
+                  {new Date(sale.saleDate).toLocaleDateString()}
+                </p>
+              </div>
+              <span className="text-lg font-bold text-primary-100">{DisplayPriceInShillings(sale.total)}</span>
+            </div>
+            <div className="flex justify-between items-center text-sm">
+              <span className="text-brown-500 dark:text-white/55 truncate max-w-[120px]">
+                {sale.customer?.name || sale.customerName || 'Walk-in'}
+              </span>
+              <span className="px-2 py-0.5 rounded-full text-xs bg-brown-50 dark:bg-dm-card-2 text-charcoal dark:text-white/70">
+                {sale.paymentMethod}
+              </span>
+            </div>
+          </div>
+        ))}
+        {filtered.length === 0 && (
+          <div className="mobile-surface p-6 text-center text-brown-400 dark:text-white/40 rounded-lg">
+            No sales found
+          </div>
+        )}
+      </div>
+
+      {/* Desktop Table View */}
+      <div className="hidden md:block bg-white dark:bg-dm-card rounded-lg shadow-sm overflow-hidden">
         <table className="min-w-full divide-y divide-brown-100 dark:divide-dm-border">
           <thead className="bg-ivory dark:bg-dm-card-2">
             <tr>
@@ -151,19 +188,19 @@ const POSSales = () => {
         </table>
       </div>
 
-      <div className="flex justify-end gap-2 mt-3">
+      <div className="flex justify-center sm:justify-end items-center gap-2 mt-3">
         <button
           disabled={page <= 1}
           onClick={() => setPage((current) => current - 1)}
-          className="px-3 py-1.5 rounded border dark:border-dm-border disabled:opacity-50"
+          className="px-3 py-1.5 rounded border dark:border-dm-border disabled:opacity-50 text-sm dark:text-white"
         >
           Prev
         </button>
-        <span className="px-2 py-1 text-brown-500 dark:text-white/40">Page {page} / {pages}</span>
+        <span className="px-2 py-1 text-brown-500 dark:text-white/40 text-sm">{page} / {pages}</span>
         <button
           disabled={page >= pages}
           onClick={() => setPage((current) => current + 1)}
-          className="px-3 py-1.5 rounded border dark:border-dm-border disabled:opacity-50"
+          className="px-3 py-1.5 rounded border dark:border-dm-border disabled:opacity-50 text-sm dark:text-white"
         >
           Next
         </button>
@@ -172,12 +209,12 @@ const POSSales = () => {
       {selected && (
         <div className="fixed inset-0 bg-black/40 z-50" onClick={() => setSelected(null)}>
           <div
-            className="absolute right-0 top-0 h-full w-[520px] bg-white dark:bg-dm-card p-5 overflow-y-auto"
+            className="absolute right-0 top-0 h-full w-full sm:w-[400px] md:w-[520px] bg-white dark:bg-dm-card p-4 sm:p-5 overflow-y-auto"
             onClick={(event) => event.stopPropagation()}
           >
             <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-semibold text-charcoal dark:text-white">Sale #{selected.saleNumber}</h3>
-              <button onClick={() => setSelected(null)} className="text-brown-400 hover:text-charcoal">x</button>
+              <h3 className="text-base sm:text-lg font-semibold text-charcoal dark:text-white">Sale #{selected.saleNumber}</h3>
+              <button onClick={() => setSelected(null)} className="text-brown-400 hover:text-charcoal dark:text-white/40 p-2">✕</button>
             </div>
 
             <div className="grid grid-cols-2 gap-2 text-sm mb-4">

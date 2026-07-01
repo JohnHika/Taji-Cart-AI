@@ -6,15 +6,17 @@ import CustomerDashboard from './CustomerDashboard';
 import StaffDashboard from './staff/Dashboard';
 import isadmin from '../utils/isAdmin';
 import isStaff from '../utils/isStaff';
+import { getEffectiveRole } from '../utils/userRole';
 
 const DashboardHome = () => {
   const user = useSelector((state) => state.user);
+  const effectiveRole = getEffectiveRole(user);
 
   if (isadmin(user)) {
     return <AdminDashboard />;
   }
 
-  if (user?.isDelivery || user?.role === 'delivery') {
+  if (effectiveRole === 'delivery') {
     return <Navigate to="/dashboard/delivery/dashboard" replace />;
   }
 

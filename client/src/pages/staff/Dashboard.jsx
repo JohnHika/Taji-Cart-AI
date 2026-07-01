@@ -112,26 +112,13 @@ const Dashboard = () => {
 
       setError(errorMessage);
 
-      // Use placeholder data for development if API fails
-      if (import.meta.env.DEV) {
+      // Mock fallback removed — showing fake stats alongside a real error state is misleading.
+      // The error message set above is sufficient; staff will see the error UI instead.
+      if (false) {
         setDashboardData({
-          counts: {
-            pendingOrders: 12,
-            dispatchedOrders: 5,
-            activeDeliveries: 8,
-            completedToday: 23,
-            availableDrivers: 4,
-            totalDrivers: 7
-          },
-          recentOrders: [
-            { _id: '1', orderId: '2351', status: 'dispatched', customerName: 'John Doe', total: 1200, createdAt: new Date().toISOString() },
-            { _id: '2', orderId: '2344', status: 'driver_assigned', customerName: 'Jane Smith', total: 850, createdAt: new Date().toISOString() },
-            { _id: '3', orderId: '2332', status: 'delivered', customerName: 'Robert Johnson', total: 2100, createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString() }
-          ],
-          activeDrivers: [
-            { _id: '1', name: 'David Driver', isAvailable: true, activeOrdersCount: 1, currentLocation: { lat: -1.2855, lng: 36.8126, lastUpdated: new Date() } },
-            { _id: '2', name: 'Sarah Speedy', isAvailable: false, activeOrdersCount: 3, currentLocation: { lat: -1.2755, lng: 36.8226, lastUpdated: new Date() } }
-          ],
+          counts: {},
+          recentOrders: [],
+          activeDrivers: [],
           deliveryPerformance: {
             avgDeliveryTime: 45,
             deliveriesLast7Days: 87,
@@ -220,31 +207,31 @@ const Dashboard = () => {
   };
 
   return (
-    <div className="container mx-auto px-4 py-6 dark:bg-dm-surface dark:text-white">
-      <div className="mb-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+    <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-6 pb-20 sm:pb-6 dark:bg-dm-surface dark:text-white">
+      <div className="mb-4 sm:mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
         {/* Header with welcome message */}
         <div>
-          <h1 className="text-2xl font-bold text-charcoal dark:text-white">Staff Dashboard</h1>
-          <p className="text-sm text-brown-400 dark:text-white/40">
-            Welcome, {user?.firstName || user?.name || 'Staff Member'} | Last updated: {formatDate(dashboardData.lastUpdated || new Date())}
+          <h1 className="text-xl sm:text-2xl font-bold text-charcoal dark:text-white">Staff Dashboard</h1>
+          <p className="text-xs sm:text-sm text-brown-400 dark:text-white/40">
+            Welcome, {user?.firstName || user?.name || 'Staff Member'} | Updated: {formatDate(dashboardData.lastUpdated || new Date())}
           </p>
         </div>
         
         {/* Action buttons */}
-        <div className="flex gap-3">
+        <div className="flex gap-2 sm:gap-3">
           <button
             onClick={fetchDashboardData}
-            className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-plum-700 hover:bg-plum-600 focus:outline-none"
+            className="inline-flex items-center px-3 sm:px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-plum-700 hover:bg-plum-600 focus:outline-none"
           >
-            <FaRedo className="mr-2 h-4 w-4" />
-            Refresh
+            <FaRedo className="sm:mr-2 h-4 w-4" />
+            <span className="hidden sm:inline">Refresh</span>
           </button>
           <Link
             to="/dashboard/staff/delivery"
-            className="inline-flex items-center px-4 py-2 border border-brown-200 dark:border-dm-border rounded-md shadow-sm text-sm font-medium text-charcoal dark:text-white/90 bg-white dark:bg-dm-card hover:bg-plum-50 dark:hover:bg-dm-card-2 focus:outline-none"
+            className="inline-flex items-center px-3 sm:px-4 py-2 border border-brown-200 dark:border-dm-border rounded-md shadow-sm text-sm font-medium text-charcoal dark:text-white/90 bg-white dark:bg-dm-card hover:bg-plum-50 dark:hover:bg-dm-card-2 focus:outline-none"
           >
-            <FaTruck className="mr-2 h-4 w-4" />
-            Delivery Management
+            <FaTruck className="sm:mr-2 h-4 w-4" />
+            <span className="hidden sm:inline">Delivery Management</span>
           </Link>
         </div>
       </div>
@@ -266,7 +253,7 @@ const Dashboard = () => {
         {/* Left column - stats and actions */}
         <div className="lg:col-span-8 space-y-6">
           {/* Stats cards */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4">
             {loading ? (
               Array(4).fill(0).map((_, i) => (
                 <div key={i} className="animate-pulse bg-white dark:bg-dm-card rounded-lg shadow border border-brown-100 dark:border-dm-border p-5 h-32">
@@ -276,94 +263,94 @@ const Dashboard = () => {
               ))
             ) : (
               <>
-                <Link to="/dashboard/staff/delivery/pending" className="bg-plum-50 dark:bg-plum-900/20 rounded-lg shadow hover:shadow-lg transition-shadow border border-plum-100 dark:border-plum-800 p-5">
+                <Link to="/dashboard/staff/delivery/pending" className="bg-plum-50 dark:bg-plum-900/20 rounded-lg shadow hover:shadow-lg transition-shadow border border-plum-100 dark:border-plum-800 p-3 sm:p-5">
                   <div className="flex justify-between items-start">
                     <div>
-                      <p className="text-sm font-medium text-plum-800 dark:text-plum-200">Pending Orders</p>
-                      <p className="text-3xl font-bold text-plum-900 dark:text-plum-100">{dashboardData.counts.pendingOrders}</p>
+                      <p className="text-xs sm:text-sm font-medium text-plum-800 dark:text-plum-200">Pending</p>
+                      <p className="text-2xl sm:text-3xl font-bold text-plum-900 dark:text-plum-100">{dashboardData.counts.pendingOrders}</p>
                     </div>
-                    <div className="bg-plum-100 dark:bg-plum-800 p-3 rounded-full">
-                      <FaClock className="text-plum-600 dark:text-plum-200 w-6 h-6" />
+                    <div className="bg-plum-100 dark:bg-plum-800 p-2 sm:p-3 rounded-full">
+                      <FaClock className="text-plum-600 dark:text-plum-200 w-4 h-4 sm:w-6 sm:h-6" />
                     </div>
                   </div>
-                  <div className="text-xs text-plum-700 dark:text-plum-200 mt-4">
+                  <div className="hidden sm:block text-xs text-plum-700 dark:text-plum-200 mt-4">
                     <span className="font-medium">Action:</span> Dispatch these orders
                   </div>
                 </Link>
                 
-                <Link to="/dashboard/staff/delivery/dispatched" className="bg-yellow-50 dark:bg-yellow-900/20 rounded-lg shadow hover:shadow-lg transition-shadow border border-yellow-100 dark:border-yellow-800 p-5">
+                <Link to="/dashboard/staff/delivery/dispatched" className="bg-yellow-50 dark:bg-yellow-900/20 rounded-lg shadow hover:shadow-lg transition-shadow border border-yellow-100 dark:border-yellow-800 p-3 sm:p-5">
                   <div className="flex justify-between items-start">
                     <div>
-                      <p className="text-sm font-medium text-yellow-800 dark:text-yellow-300">Dispatched</p>
-                      <p className="text-3xl font-bold text-yellow-900 dark:text-yellow-100">{dashboardData.counts.dispatchedOrders}</p>
+                      <p className="text-xs sm:text-sm font-medium text-yellow-800 dark:text-yellow-300">Dispatched</p>
+                      <p className="text-2xl sm:text-3xl font-bold text-yellow-900 dark:text-yellow-100">{dashboardData.counts.dispatchedOrders}</p>
                     </div>
-                    <div className="bg-yellow-100 dark:bg-yellow-800 p-3 rounded-full">
-                      <FaTruck className="text-yellow-500 dark:text-yellow-300 w-6 h-6" />
+                    <div className="bg-yellow-100 dark:bg-yellow-800 p-2 sm:p-3 rounded-full">
+                      <FaTruck className="text-yellow-500 dark:text-yellow-300 w-4 h-4 sm:w-6 sm:h-6" />
                     </div>
                   </div>
-                  <div className="text-xs text-yellow-700 dark:text-yellow-300 mt-4">
+                  <div className="hidden sm:block text-xs text-yellow-700 dark:text-yellow-300 mt-4">
                     <span className="font-medium">Action:</span> Assign drivers
                   </div>
                 </Link>
                 
-                <Link to="/dashboard/staff/delivery/active" className="bg-blush-50 dark:bg-plum-900/25 rounded-lg shadow hover:shadow-lg transition-shadow border border-blush-200 dark:border-plum-800 p-5">
+                <Link to="/dashboard/staff/delivery/active" className="bg-blush-50 dark:bg-plum-900/25 rounded-lg shadow hover:shadow-lg transition-shadow border border-blush-200 dark:border-plum-800 p-3 sm:p-5">
                   <div className="flex justify-between items-start">
                     <div>
-                      <p className="text-sm font-medium text-plum-800 dark:text-plum-200">Active Deliveries</p>
-                      <p className="text-3xl font-bold text-plum-900 dark:text-plum-100">{dashboardData.counts.activeDeliveries}</p>
+                      <p className="text-xs sm:text-sm font-medium text-plum-800 dark:text-plum-200">Active</p>
+                      <p className="text-2xl sm:text-3xl font-bold text-plum-900 dark:text-plum-100">{dashboardData.counts.activeDeliveries}</p>
                     </div>
-                    <div className="bg-blush-100 dark:bg-plum-800 p-3 rounded-full">
-                      <FaBoxOpen className="text-plum-600 dark:text-plum-200 w-6 h-6" />
+                    <div className="bg-blush-100 dark:bg-plum-800 p-2 sm:p-3 rounded-full">
+                      <FaBoxOpen className="text-plum-600 dark:text-plum-200 w-4 h-4 sm:w-6 sm:h-6" />
                     </div>
                   </div>
-                  <div className="text-xs text-plum-700 dark:text-plum-200 mt-4">
+                  <div className="hidden sm:block text-xs text-plum-700 dark:text-plum-200 mt-4">
                     <span className="font-medium">Status:</span> {dashboardData.counts.activeDeliveries} orders in transit
                   </div>
                 </Link>
                 
-                <Link to="/dashboard/staff/delivery/completed" className="bg-green-50 dark:bg-green-900/20 rounded-lg shadow hover:shadow-lg transition-shadow border border-green-100 dark:border-green-800 p-5">
+                <Link to="/dashboard/staff/delivery/completed" className="bg-green-50 dark:bg-green-900/20 rounded-lg shadow hover:shadow-lg transition-shadow border border-green-100 dark:border-green-800 p-3 sm:p-5">
                   <div className="flex justify-between items-start">
                     <div>
-                      <p className="text-sm font-medium text-green-800 dark:text-green-300">Completed Today</p>
-                      <p className="text-3xl font-bold text-green-900 dark:text-green-100">{dashboardData.counts.completedToday}</p>
+                      <p className="text-xs sm:text-sm font-medium text-green-800 dark:text-green-300">Done Today</p>
+                      <p className="text-2xl sm:text-3xl font-bold text-green-900 dark:text-green-100">{dashboardData.counts.completedToday}</p>
                     </div>
-                    <div className="bg-green-100 dark:bg-green-800 p-3 rounded-full">
-                      <FaCalendarCheck className="text-green-500 dark:text-green-300 w-6 h-6" />
+                    <div className="bg-green-100 dark:bg-green-800 p-2 sm:p-3 rounded-full">
+                      <FaCalendarCheck className="text-green-500 dark:text-green-300 w-4 h-4 sm:w-6 sm:h-6" />
                     </div>
                   </div>
-                  <div className="text-xs text-green-700 dark:text-green-300 mt-4">
+                  <div className="hidden sm:block text-xs text-green-700 dark:text-green-300 mt-4">
                     <span className="font-medium">Performance:</span> {dashboardData.deliveryPerformance.avgDeliveryTime} min avg delivery time
                   </div>
                 </Link>
 
                 {/* POS System Cards */}
-                <Link to="/dashboard/sales-counter" className="bg-gold-50 dark:bg-gold-600/15 rounded-lg shadow hover:shadow-lg transition-shadow border border-gold-200 dark:border-gold-600/40 p-5">
+                <Link to="/dashboard/sales-counter" className="bg-gold-50 dark:bg-gold-600/15 rounded-lg shadow hover:shadow-lg transition-shadow border border-gold-200 dark:border-gold-600/40 p-3 sm:p-5">
                   <div className="flex justify-between items-start">
                     <div>
-                      <p className="text-sm font-medium text-gold-800 dark:text-gold-200">Sales Counter</p>
-                      <p className="text-lg font-bold text-charcoal dark:text-gold-100">Open Counter</p>
+                      <p className="text-xs sm:text-sm font-medium text-gold-800 dark:text-gold-200">Counter</p>
+                      <p className="text-sm sm:text-lg font-bold text-charcoal dark:text-gold-100">Open</p>
                     </div>
-                    <div className="bg-gold-100 dark:bg-gold-700/40 p-3 rounded-full">
-                      <FaShoppingCart className="text-gold-600 dark:text-gold-300 w-6 h-6" />
+                    <div className="bg-gold-100 dark:bg-gold-700/40 p-2 sm:p-3 rounded-full">
+                      <FaShoppingCart className="text-gold-600 dark:text-gold-300 w-4 h-4 sm:w-6 sm:h-6" />
                     </div>
                   </div>
-                  <div className="text-xs text-gold-800 dark:text-gold-200 mt-4">
+                  <div className="hidden sm:block text-xs text-gold-800 dark:text-gold-200 mt-4">
                     <span className="font-medium">Action:</span> Process in-store sales
                   </div>
                 </Link>
 
-                <Link to="/dashboard/sales-hub" className="bg-orange-50 dark:bg-orange-900/20 rounded-lg shadow hover:shadow-lg transition-shadow border border-orange-100 dark:border-orange-800 p-5">
+                <Link to="/dashboard/sales-hub" className="bg-orange-50 dark:bg-orange-900/20 rounded-lg shadow hover:shadow-lg transition-shadow border border-orange-100 dark:border-orange-800 p-3 sm:p-5">
                   <div className="flex justify-between items-start">
                     <div>
-                      <p className="text-sm font-medium text-orange-800 dark:text-orange-300">Sales Hub</p>
-                      <p className="text-lg font-bold text-orange-900 dark:text-orange-100">View Activity</p>
+                      <p className="text-xs sm:text-sm font-medium text-orange-800 dark:text-orange-300">Sales Hub</p>
+                      <p className="text-sm sm:text-lg font-bold text-orange-900 dark:text-orange-100">Reports</p>
                     </div>
-                    <div className="bg-orange-100 dark:bg-orange-800 p-3 rounded-full">
-                      <FaCalculator className="text-orange-500 dark:text-orange-300 w-6 h-6" />
+                    <div className="bg-orange-100 dark:bg-orange-800 p-2 sm:p-3 rounded-full">
+                      <FaCalculator className="text-orange-500 dark:text-orange-300 w-4 h-4 sm:w-6 sm:h-6" />
                     </div>
                   </div>
-                  <div className="text-xs text-orange-700 dark:text-orange-300 mt-4">
-                    <span className="font-medium">View:</span> Sales reports & analytics
+                  <div className="hidden sm:block text-xs text-orange-700 dark:text-orange-300 mt-4">
+                    <span className="font-medium">View:</span> Sales reports &amp; analytics
                   </div>
                 </Link>
               </>
@@ -371,9 +358,9 @@ const Dashboard = () => {
           </div>
           
           {/* Delivery trend chart (simple version) */}
-          <div className="bg-white dark:bg-dm-card rounded-lg shadow border border-brown-100 dark:border-dm-border p-5">
-            <div className="flex justify-between items-center mb-5">
-              <h2 className="text-lg font-medium text-charcoal dark:text-white">Delivery Performance</h2>
+          <div className="bg-white dark:bg-dm-card rounded-lg shadow border border-brown-100 dark:border-dm-border p-3 sm:p-5">
+            <div className="flex justify-between items-center mb-3 sm:mb-5">
+              <h2 className="text-base sm:text-lg font-medium text-charcoal dark:text-white">Delivery Performance</h2>
             </div>
             {loading ? (
               <div className="animate-pulse h-64 bg-brown-100 dark:bg-dm-card-2 rounded"></div>
@@ -412,8 +399,8 @@ const Dashboard = () => {
           
           {/* Recent orders */}
           <div className="bg-white dark:bg-dm-card rounded-lg shadow border border-brown-100 dark:border-dm-border overflow-hidden">
-            <div className="px-5 py-4 border-b border-brown-100 dark:border-dm-border flex items-center justify-between">
-              <h2 className="text-lg font-medium text-charcoal dark:text-white">Recent Orders</h2>
+            <div className="px-4 sm:px-5 py-3 sm:py-4 border-b border-brown-100 dark:border-dm-border flex items-center justify-between">
+              <h2 className="text-base sm:text-lg font-medium text-charcoal dark:text-white">Recent Orders</h2>
               <Link to="/dashboard/staff/delivery" className="text-sm font-medium text-plum-700 dark:text-plum-300 hover:text-plum-600">
                 View all
               </Link>
@@ -421,7 +408,7 @@ const Dashboard = () => {
             {loading ? (
               <div className="divide-y divide-brown-100 dark:divide-dm-border">
                 {Array(3).fill(0).map((_, i) => (
-                  <div key={i} className="px-5 py-4 animate-pulse">
+                  <div key={i} className="px-4 sm:px-5 py-3 sm:py-4 animate-pulse">
                     <div className="flex items-center">
                       <div className="rounded-full bg-brown-100 dark:bg-dm-card-2 h-10 w-10"></div>
                       <div className="ml-4 flex-1">
@@ -438,7 +425,7 @@ const Dashboard = () => {
                 {dashboardData.recentOrders.map((order) => {
                   const statusInfo = getStatusInfo(order.status);
                   return (
-                    <div key={order._id} className="px-5 py-4 hover:bg-plum-50/50 dark:hover:bg-dm-card-2">
+                    <div key={order._id} className="px-4 sm:px-5 py-3 sm:py-4 hover:bg-plum-50/50 dark:hover:bg-dm-card-2">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center">
                           <div className="p-2 rounded-full bg-ivory dark:bg-dm-card-2">
@@ -477,9 +464,9 @@ const Dashboard = () => {
         {/* Right column - driver stats and distribution */}
         <div className="lg:col-span-4 space-y-6">
           {/* Driver availability */}
-          <div className="bg-white dark:bg-dm-card rounded-lg shadow border border-brown-100 dark:border-dm-border p-5">
-            <Link to="/dashboard/staff/delivery/drivers" className="flex justify-between items-center mb-5">
-              <h2 className="text-lg font-medium text-charcoal dark:text-white">Driver Availability</h2>
+          <div className="bg-white dark:bg-dm-card rounded-lg shadow border border-brown-100 dark:border-dm-border p-3 sm:p-5">
+            <Link to="/dashboard/staff/delivery/drivers" className="flex justify-between items-center mb-3 sm:mb-5">
+              <h2 className="text-base sm:text-lg font-medium text-charcoal dark:text-white">Driver Availability</h2>
               <span className="text-sm text-plum-700 dark:text-plum-300 hover:underline">Manage</span>
             </Link>
             {loading ? (
@@ -489,7 +476,7 @@ const Dashboard = () => {
               </div>
             ) : (
               <>
-                <div className="flex justify-center mb-5">
+                <div className="flex justify-center mb-3 sm:mb-5">
                   <div className="relative inline-flex items-center justify-center">
                     <svg className="w-32 h-32">
                       <circle
@@ -540,8 +527,8 @@ const Dashboard = () => {
           </div>
           
           {/* Delivery Status Distribution (simple version) */}
-          <div className="bg-white dark:bg-dm-card rounded-lg shadow border border-brown-100 dark:border-dm-border p-5">
-            <h2 className="text-lg font-medium text-charcoal dark:text-white mb-5">Delivery Status</h2>
+          <div className="bg-white dark:bg-dm-card rounded-lg shadow border border-brown-100 dark:border-dm-border p-3 sm:p-5">
+            <h2 className="text-base sm:text-lg font-medium text-charcoal dark:text-white mb-3 sm:mb-5">Delivery Status</h2>
             {loading ? (
               <div className="animate-pulse h-64 bg-brown-100 dark:bg-dm-card-2 rounded"></div>
             ) : (
@@ -572,9 +559,9 @@ const Dashboard = () => {
           </div>
           
           {/* Active Drivers */}
-          <div className="bg-white dark:bg-dm-card rounded-lg shadow border border-brown-100 dark:border-dm-border p-5">
-            <div className="flex justify-between items-center mb-5">
-              <h2 className="text-lg font-medium text-charcoal dark:text-white">Active Drivers</h2>
+          <div className="bg-white dark:bg-dm-card rounded-lg shadow border border-brown-100 dark:border-dm-border p-3 sm:p-5">
+            <div className="flex justify-between items-center mb-3 sm:mb-5">
+              <h2 className="text-base sm:text-lg font-medium text-charcoal dark:text-white">Active Drivers</h2>
               <button
                 onClick={() => setShowDriversMap(!showDriversMap)}
                 className="text-sm text-plum-700 dark:text-plum-300 hover:underline flex items-center"

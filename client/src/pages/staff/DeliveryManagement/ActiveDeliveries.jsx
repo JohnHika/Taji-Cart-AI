@@ -71,22 +71,22 @@ const ActiveDeliveriesManagement = () => {
 
   return (
     <section className="flex flex-col gap-4 lg:gap-5">
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <div className="mobile-surface p-4">
+      <div className="grid grid-cols-2 gap-2.5 xl:grid-cols-4">
+        <div className="mobile-surface p-3 sm:p-4">
           <p className="text-xs uppercase tracking-[0.16em] text-brown-400">Active now</p>
-          <p className="mt-2 text-3xl font-bold text-charcoal dark:text-white">{orders.length}</p>
+          <p className="mt-1.5 text-2xl font-bold text-charcoal sm:mt-2 sm:text-3xl dark:text-white">{orders.length}</p>
         </div>
-        <div className="mobile-surface p-4">
+        <div className="mobile-surface p-3 sm:p-4">
           <p className="text-xs uppercase tracking-[0.16em] text-brown-400">Assigned</p>
-          <p className="mt-2 text-3xl font-bold text-charcoal dark:text-white">{assignedCount}</p>
+          <p className="mt-1.5 text-2xl font-bold text-charcoal sm:mt-2 sm:text-3xl dark:text-white">{assignedCount}</p>
         </div>
-        <div className="mobile-surface p-4">
+        <div className="mobile-surface p-3 sm:p-4">
           <p className="text-xs uppercase tracking-[0.16em] text-brown-400">On the road</p>
-          <p className="mt-2 text-3xl font-bold text-charcoal dark:text-white">{inTransitCount}</p>
+          <p className="mt-1.5 text-2xl font-bold text-charcoal sm:mt-2 sm:text-3xl dark:text-white">{inTransitCount}</p>
         </div>
-        <div className="mobile-surface p-4">
+        <div className="mobile-surface p-3 sm:p-4">
           <p className="text-xs uppercase tracking-[0.16em] text-brown-400">Nearby</p>
-          <p className="mt-2 text-3xl font-bold text-charcoal dark:text-white">{nearbyCount}</p>
+          <p className="mt-1.5 text-2xl font-bold text-charcoal sm:mt-2 sm:text-3xl dark:text-white">{nearbyCount}</p>
         </div>
       </div>
 
@@ -98,8 +98,8 @@ const ActiveDeliveriesManagement = () => {
               Track orders already assigned to drivers and moving through delivery.
             </p>
           </div>
-          <div className="flex flex-col gap-2 sm:flex-row">
-            <div className="relative min-w-0 sm:min-w-[280px]">
+          <div className="flex gap-2">
+            <div className="relative flex-1">
               <FaSearch className="pointer-events-none absolute left-3 top-3.5 text-brown-400" />
               <input
                 type="text"
@@ -113,10 +113,10 @@ const ActiveDeliveriesManagement = () => {
               type="button"
               onClick={fetchOrders}
               disabled={loading}
-              className="inline-flex items-center justify-center gap-2 rounded-xl border border-brown-100 px-4 py-3 text-sm font-medium text-charcoal transition hover:bg-ivory disabled:opacity-60 dark:border-dm-border dark:text-white/70 dark:hover:bg-dm-surface"
+              className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl border border-brown-100 px-4 py-3 text-sm font-medium text-charcoal transition hover:bg-ivory disabled:opacity-60 dark:border-dm-border dark:text-white/70 dark:hover:bg-dm-surface"
             >
               {loading ? <FaSpinner className="animate-spin" /> : <FaRedo />}
-              Refresh
+              <span className="hidden sm:inline">Refresh</span>
             </button>
           </div>
         </div>

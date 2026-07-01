@@ -1,7 +1,8 @@
-import axios from 'axios';
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import Axios from '../../../utils/Axios';
 import { buildApiUrl } from '../../../common/apiBaseUrl';
+import toast from 'react-hot-toast';
 
 const Dispatched = () => {
   const [dispatchedOrders, setDispatchedOrders] = useState([]);
@@ -23,92 +24,19 @@ const Dispatched = () => {
   const fetchDispatchedOrders = async () => {
     try {
       setLoading(true);
-      const token = localStorage.getItem('token');
-      const response = await axios.get(
-        buildApiUrl(`/api/delivery/dispatched-orders?sort=${sortBy}&direction=${sortDirection}`),
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      
+      setError(null);
+      const response = await Axios({
+        url: buildApiUrl(`/api/delivery/dispatched-orders?sort=${sortBy}&direction=${sortDirection}`),
+        method: 'GET'
+      });
       if (response.data.success) {
         setDispatchedOrders(response.data.data);
       } else {
-        setError("Failed to fetch dispatched orders");
+        setError('Failed to fetch dispatched orders');
       }
-    } catch (error) {
-      console.error("Error fetching dispatched orders:", error);
-      setError("An error occurred while fetching dispatched orders");
-      
-      // Mock data for development
-      setDispatchedOrders([
-        {
-          _id: '1',
-          orderId: 'ORD-001230',
-          customer: {
-            name: 'Sarah Wilson',
-            phone: '+254712345678'
-          },
-          deliveryAddress: {
-            street: '123 Lenana Road',
-            city: 'Nairobi',
-            neighborhood: 'Kilimani',
-            landmark: 'Near Yaya Center'
-          },
-          items: [
-            { name: 'Cauliflower', quantity: 1 },
-            { name: 'Broccoli', quantity: 2 }
-          ],
-          total: 950,
-          createdAt: '2025-04-12T14:30:00Z',
-          dispatchedAt: '2025-04-13T08:15:00Z',
-          paymentStatus: 'paid'
-        },
-        {
-          _id: '2',
-          orderId: 'ORD-001231',
-          customer: {
-            name: 'David Mwangi',
-            phone: '+254723456789'
-          },
-          deliveryAddress: {
-            street: '456 Waiyaki Way',
-            city: 'Nairobi',
-            neighborhood: 'Westlands',
-            landmark: 'Near Sarit Center'
-          },
-          items: [
-            { name: 'Spinach', quantity: 3 },
-            { name: 'Kale', quantity: 2 },
-            { name: 'Carrots', quantity: 1 }
-          ],
-          total: 780,
-          createdAt: '2025-04-12T15:20:00Z',
-          dispatchedAt: '2025-04-13T08:30:00Z',
-          paymentStatus: 'paid'
-        },
-        {
-          _id: '3',
-          orderId: 'ORD-001232',
-          customer: {
-            name: 'Grace Kimani',
-            phone: '+254734567890'
-          },
-          deliveryAddress: {
-            street: '789 Thika Road',
-            city: 'Nairobi',
-            neighborhood: 'Kasarani',
-            landmark: 'Near Garden City Mall'
-          },
-          items: [
-            { name: 'Red Onions', quantity: 2 },
-            { name: 'Sweet Potatoes', quantity: 3 },
-            { name: 'Ginger', quantity: 1 }
-          ],
-          total: 650,
-          createdAt: '2025-04-12T16:45:00Z',
-          dispatchedAt: '2025-04-13T08:45:00Z',
-          paymentStatus: 'paid'
-        }
-      ]);
+    } catch (err) {
+      console.error('Error fetching dispatched orders:', err);
+      setError('An error occurred while fetching dispatched orders');
     } finally {
       setLoading(false);
     }
@@ -116,47 +44,18 @@ const Dispatched = () => {
 
   const fetchDeliveryPersonnel = async () => {
     try {
-      const token = localStorage.getItem('token');
-      const response = await axios.get(
-        buildApiUrl('/api/delivery/personnel/available'),
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      
+      // Active route: /api/delivery/available-drivers
+      const response = await Axios({
+        url: buildApiUrl('/api/delivery/available-drivers'),
+        method: 'GET'
+      });
       if (response.data.success) {
         setDeliveryPersonnel(response.data.data);
       } else {
-        console.error("Failed to fetch delivery personnel");
+        console.error('Failed to fetch delivery personnel');
       }
-    } catch (error) {
-      console.error("Error fetching delivery personnel:", error);
-      
-      // Mock data for development
-      setDeliveryPersonnel([
-        {
-          _id: 'dp1',
-          name: 'John Kamau',
-          phone: '+254712345111',
-          vehicleType: 'Motorcycle',
-          rating: 4.8,
-          currentOrders: 0
-        },
-        {
-          _id: 'dp2',
-          name: 'Alice Ochieng',
-          phone: '+254723456222',
-          vehicleType: 'Bicycle',
-          rating: 4.5,
-          currentOrders: 1
-        },
-        {
-          _id: 'dp3',
-          name: 'Peter Njoroge',
-          phone: '+254734567333',
-          vehicleType: 'Motorcycle',
-          rating: 4.9,
-          currentOrders: 0
-        }
-      ]);
+    } catch (err) {
+      console.error('Error fetching delivery personnel:', err);
     }
   };
 
@@ -187,55 +86,47 @@ const Dispatched = () => {
 
   const handleAssignOrders = async () => {
     if (selectedOrders.length === 0) {
-      alert('Please select at least one order to assign');
+      toast.error('Please select at least one order to assign');
       return;
     }
-
     if (!selectedDeliveryPerson) {
-      alert('Please select a delivery person');
+      toast.error('Please select a delivery person');
       return;
     }
-
     try {
-      const token = localStorage.getItem('token');
-      const response = await axios.post(
-        buildApiUrl('/api/delivery/assign-orders'),
-        { 
+      // Active route: /api/delivery/assign-driver
+      const response = await Axios({
+        url: buildApiUrl('/api/delivery/assign-driver'),
+        method: 'POST',
+        data: {
           orderIds: selectedOrders,
           deliveryPersonnelId: selectedDeliveryPerson
-        },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      
+        }
+      });
       if (response.data.success) {
-        // Show success message and refresh the list
-        alert(`Successfully assigned ${selectedOrders.length} orders to delivery personnel`);
+        toast.success(`Successfully assigned ${selectedOrders.length} order(s) to delivery personnel`);
         setSelectedOrders([]);
         setSelectedDeliveryPerson('');
         fetchDispatchedOrders();
-        
-        // Navigate to the assigned orders section
-        navigate('/staff/delivery/assigned');
+        navigate('/dashboard/staff/delivery/active');
       } else {
-        setError("Failed to assign orders");
+        setError('Failed to assign orders');
+        toast.error(response.data.message || 'Failed to assign orders');
       }
-    } catch (error) {
-      console.error("Error assigning orders:", error);
-      alert("An error occurred while assigning orders");
-      
-      // For development purposes, simulate success
-      alert(`Successfully assigned ${selectedOrders.length} orders to delivery personnel (simulated)`);
-      setSelectedOrders([]);
-      setSelectedDeliveryPerson('');
-      fetchDispatchedOrders();
+    } catch (err) {
+      console.error('Error assigning orders:', err);
+      toast.error(err?.response?.data?.message || 'An error occurred while assigning orders');
     }
   };
 
-  const filteredOrders = dispatchedOrders.filter(order => 
-    order.orderId.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    order.customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    order.customer.phone.includes(searchTerm)
-  );
+  const filteredOrders = dispatchedOrders.filter(order => {
+    const term = searchTerm.toLowerCase();
+    return (
+      (order.orderId || '').toLowerCase().includes(term) ||
+      (order.customer?.name || '').toLowerCase().includes(term) ||
+      (order.customer?.phone || '').includes(searchTerm)
+    );
+  });
 
   const getSortIcon = (field) => {
     if (sortBy !== field) return null;
@@ -243,6 +134,7 @@ const Dispatched = () => {
   };
 
   const formatDate = (dateString) => {
+    if (!dateString) return '—';
     const date = new Date(dateString);
     return new Intl.DateTimeFormat('en-GB', {
       day: '2-digit',
@@ -257,7 +149,7 @@ const Dispatched = () => {
     return new Intl.NumberFormat('en-KE', {
       style: 'currency',
       currency: 'KES'
-    }).format(amount);
+    }).format(amount || 0);
   };
 
   return (
@@ -274,8 +166,8 @@ const Dispatched = () => {
               className="pl-8 pr-4 py-2 border border-brown-200 rounded-md shadow-sm focus:ring-plum-500 focus:border-plum-500"
             />
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <svg className="h-4 w-4 text-brown-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+              <svg className="h-4 w-4 text-brown-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
               </svg>
             </div>
           </div>
@@ -301,13 +193,11 @@ const Dispatched = () => {
         </div>
       ) : filteredOrders.length === 0 ? (
         <div className="bg-white shadow rounded-lg p-6 text-center">
-          <svg className="mx-auto h-12 w-12 text-brown-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+          <svg className="mx-auto h-12 w-12 text-brown-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
           </svg>
           <h3 className="mt-2 text-sm font-medium text-charcoal">No dispatched orders</h3>
-          <p className="mt-1 text-sm text-brown-400">
-            There are no orders waiting for delivery assignment.
-          </p>
+          <p className="mt-1 text-sm text-brown-400">There are no orders waiting for delivery assignment.</p>
         </div>
       ) : (
         <div>
@@ -332,7 +222,7 @@ const Dispatched = () => {
                 <option value="">Select delivery personnel</option>
                 {deliveryPersonnel.map(person => (
                   <option key={person._id} value={person._id}>
-                    {person.name} - {person.vehicleType} - {person.currentOrders} orders
+                    {person.name} - {person.vehicleType || 'N/A'} - {person.currentOrders ?? 0} orders
                   </option>
                 ))}
               </select>
@@ -357,51 +247,19 @@ const Dispatched = () => {
                   <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-brown-400 uppercase tracking-wider w-6">
                     <span className="sr-only">Select</span>
                   </th>
-                  <th 
-                    scope="col" 
-                    className="px-4 py-3 text-left text-xs font-medium text-brown-400 uppercase tracking-wider cursor-pointer"
-                    onClick={() => handleSort('orderId')}
-                  >
-                    <div className="flex items-center">
-                      Order ID
-                      <span className="ml-1">{getSortIcon('orderId')}</span>
-                    </div>
+                  <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-brown-400 uppercase tracking-wider cursor-pointer" onClick={() => handleSort('orderId')}>
+                    <div className="flex items-center">Order ID<span className="ml-1">{getSortIcon('orderId')}</span></div>
                   </th>
-                  <th 
-                    scope="col" 
-                    className="px-4 py-3 text-left text-xs font-medium text-brown-400 uppercase tracking-wider cursor-pointer"
-                    onClick={() => handleSort('customer.name')}
-                  >
-                    <div className="flex items-center">
-                      Customer
-                      <span className="ml-1">{getSortIcon('customer.name')}</span>
-                    </div>
+                  <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-brown-400 uppercase tracking-wider cursor-pointer" onClick={() => handleSort('customer.name')}>
+                    <div className="flex items-center">Customer<span className="ml-1">{getSortIcon('customer.name')}</span></div>
                   </th>
-                  <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-brown-400 uppercase tracking-wider">
-                    Address
+                  <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-brown-400 uppercase tracking-wider">Address</th>
+                  <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-brown-400 uppercase tracking-wider">Items</th>
+                  <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-brown-400 uppercase tracking-wider cursor-pointer" onClick={() => handleSort('total')}>
+                    <div className="flex items-center">Total<span className="ml-1">{getSortIcon('total')}</span></div>
                   </th>
-                  <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-brown-400 uppercase tracking-wider">
-                    Items
-                  </th>
-                  <th 
-                    scope="col" 
-                    className="px-4 py-3 text-left text-xs font-medium text-brown-400 uppercase tracking-wider cursor-pointer"
-                    onClick={() => handleSort('total')}
-                  >
-                    <div className="flex items-center">
-                      Total
-                      <span className="ml-1">{getSortIcon('total')}</span>
-                    </div>
-                  </th>
-                  <th 
-                    scope="col" 
-                    className="px-4 py-3 text-left text-xs font-medium text-brown-400 uppercase tracking-wider cursor-pointer"
-                    onClick={() => handleSort('dispatchedAt')}
-                  >
-                    <div className="flex items-center">
-                      Dispatched
-                      <span className="ml-1">{getSortIcon('dispatchedAt')}</span>
-                    </div>
+                  <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-brown-400 uppercase tracking-wider cursor-pointer" onClick={() => handleSort('dispatchedAt')}>
+                    <div className="flex items-center">Dispatched<span className="ml-1">{getSortIcon('dispatchedAt')}</span></div>
                   </th>
                 </tr>
               </thead>
@@ -421,30 +279,30 @@ const Dispatched = () => {
                       <div className="text-xs text-brown-400">{order.paymentStatus}</div>
                     </td>
                     <td className="px-4 py-4 whitespace-nowrap">
-                      <div className="text-sm text-charcoal">{order.customer.name}</div>
-                      <div className="text-sm text-brown-400">{order.customer.phone}</div>
+                      <div className="text-sm text-charcoal">{order.customer?.name || '—'}</div>
+                      <div className="text-sm text-brown-400">{order.customer?.phone || '—'}</div>
                     </td>
                     <td className="px-4 py-4">
-                      <div className="text-sm text-charcoal">{order.deliveryAddress.street}</div>
-                      <div className="text-sm text-brown-400">{order.deliveryAddress.city}, {order.deliveryAddress.neighborhood}</div>
-                      {order.deliveryAddress.landmark && (
+                      <div className="text-sm text-charcoal">{order.deliveryAddress?.street || order.deliveryAddress?.address_line || '—'}</div>
+                      <div className="text-sm text-brown-400">{order.deliveryAddress?.city}{order.deliveryAddress?.neighborhood ? `, ${order.deliveryAddress.neighborhood}` : ''}</div>
+                      {order.deliveryAddress?.landmark && (
                         <div className="text-xs text-brown-400 italic">Near {order.deliveryAddress.landmark}</div>
                       )}
                     </td>
                     <td className="px-4 py-4">
-                      <div className="text-sm text-charcoal">{order.items.length} items</div>
+                      <div className="text-sm text-charcoal">{(order.items || []).length} items</div>
                       <div className="text-xs text-brown-400">
-                        {order.items.slice(0, 2).map((item, index) => (
+                        {(order.items || []).slice(0, 2).map((item, index) => (
                           <div key={index}>{item.quantity}x {item.name}</div>
                         ))}
-                        {order.items.length > 2 && <div>+{order.items.length - 2} more</div>}
+                        {(order.items || []).length > 2 && <div>+{order.items.length - 2} more</div>}
                       </div>
                     </td>
                     <td className="px-4 py-4 whitespace-nowrap text-sm text-charcoal">
-                      {formatCurrency(order.total)}
+                      {formatCurrency(order.total || order.totalAmt)}
                     </td>
                     <td className="px-4 py-4 whitespace-nowrap text-sm text-brown-400">
-                      {formatDate(order.dispatchedAt)}
+                      {formatDate(order.dispatchedAt || order.dispatchInfo?.dispatchedAt)}
                     </td>
                   </tr>
                 ))}

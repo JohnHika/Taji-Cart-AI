@@ -74,9 +74,12 @@ module.exports = {
         },
       },
       fontFamily: {
-        display: ['"Cormorant Garamond"', 'Georgia', 'serif'],
-        sans:    ['"DM Sans"', 'system-ui', 'sans-serif'],
-        price:   ['"Montserrat"', 'system-ui', 'sans-serif'],
+        display:   ['"Cormorant Garamond"', 'Georgia', 'serif'],
+        sans:      ['"DM Sans"', 'system-ui', 'sans-serif'],
+        price:     ['"Montserrat"', 'system-ui', 'sans-serif'],
+        // Royal Card luxury fonts
+        playfair:  ['"Playfair Display"', 'Georgia', 'serif'],
+        mono:      ['"Space Mono"', 'ui-monospace', 'monospace'],
       },
       fontSize: {
         '3xl': ['2rem',    { lineHeight: '1.2' }],
@@ -130,6 +133,10 @@ module.exports = {
           '0%':   { backgroundPosition: '-200% 0' },
           '100%': { backgroundPosition: '200% 0' },
         },
+        'gold-shimmer': {
+          '0%':   { backgroundPosition: '200% 0' },
+          '100%': { backgroundPosition: '-200% 0' },
+        },
         float: {
           '0%, 100%': { transform: 'translateY(0)' },
           '50%':      { transform: 'translateY(-6px)' },
@@ -150,6 +157,7 @@ module.exports = {
         'slide-in-left':  'slideInLeft 0.4s ease both',
         'slide-in-right': 'slideInRight 0.4s ease both',
         'shimmer':        'shimmer 1.6s linear infinite',
+        'gold-shimmer':   'gold-shimmer 3s linear infinite',
         'float':          'float 3s ease-in-out infinite',
         'scale-in':       'scaleIn 0.3s ease both',
       },

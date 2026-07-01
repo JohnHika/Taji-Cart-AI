@@ -70,7 +70,6 @@ import CartMobile from '../pages/CartMobile';
 import DashboardCart from '../pages/DashboardCart';
 import DashboardCheckout from '../pages/DashboardCheckout';
 import VerifyEmailPage from '../pages/VerifyEmailPage';
-import UserSettings from '../pages/UserSettings';
 
 function LegacyCheckoutRedirect() {
   const location = useLocation();
@@ -339,7 +338,11 @@ const router = createBrowserRouter([
       // Delivery routes with specialized layout
       {
         path: 'delivery',
-        element: <DeliveryLayout />,
+        element: (
+          <PrivateRoute requireDelivery={true}>
+            <DeliveryLayout />
+          </PrivateRoute>
+        ),
         children: [
           {
             path: 'dashboard',
@@ -387,10 +390,6 @@ const router = createBrowserRouter([
           {
             path: 'checkout',
             element: <DashboardCheckout />
-          },
-          {
-            path: 'settings',
-            element: <UserSettings />
           },
 
           // Admin routes
@@ -501,27 +500,13 @@ const router = createBrowserRouter([
             )
           },
           
-          // Delivery specific routes
-          {
-            path: 'delivery/dashboard',
-            element: <DeliveryDashboard />
-          },
-          {
-            path: 'delivery/active',
-            element: <ActiveDeliveries />
-          },
-          {
-            path: 'delivery/completed',
-            element: <CompletedDeliveries />
-          },
-          {
-            path: 'delivery/history',
-            element: <DeliveryHistory />
-          },
-          {
-            path: 'delivery/map',
-            element: <DeliveryMap />
-          },
+          // Delivery driver routes — redirect to the canonical /delivery/* tree
+          // which uses DeliveryLayout with delivery-specific navigation.
+          { path: 'delivery/dashboard', element: <Navigate to="/delivery/dashboard" replace /> },
+          { path: 'delivery/active',    element: <Navigate to="/delivery/active"    replace /> },
+          { path: 'delivery/completed', element: <Navigate to="/delivery/completed" replace /> },
+          { path: 'delivery/history',   element: <Navigate to="/delivery/history"   replace /> },
+          { path: 'delivery/map',       element: <Navigate to="/delivery/map"       replace /> },
           
           // Staff specific routes - redirects for backward compatibility
           {

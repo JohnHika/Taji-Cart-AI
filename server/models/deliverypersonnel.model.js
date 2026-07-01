@@ -117,68 +117,9 @@ const deliveryPersonnelSchema = new mongoose.Schema({
         type: Boolean,
         default: true
     },
-
-    // Verification System
-    verificationStatus: {
-        type: String,
-        enum: ['pending', 'verified', 'rejected'],
-        default: 'pending'
-    },
-    idNumber: {
-        type: String,
-        trim: true
-    },
-    idFrontImage: {
-        type: String,
-        trim: true
-    },
-    idBackImage: {
-        type: String,
-        trim: true
-    },
-    kraPin: {
-        type: String,
-        trim: true
-    },
-    vehicleDetails: {
-        type: {
-            type: String,
-            enum: ['motorcycle', 'bicycle', 'car', 'van'],
-            default: 'motorcycle'
-        },
-        registrationNumber: {
-            type: String,
-            trim: true
-        },
-        insuranceValidUntil: {
-            type: Date
-        },
-        insuranceProvider: {
-            type: String,
-            trim: true
-        }
-    },
-    licenseNumber: {
-        type: String,
-        trim: true
-    },
-    licenseExpiry: {
-        type: Date
-    },
-    licenseFrontImage: {
-        type: String,
-        trim: true
-    },
-    verificationNotes: {
-        type: String,
-        trim: true
-    },
-    verifiedBy: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'User'
-    },
-    verifiedAt: {
-        type: Date
+    isOnline: {
+        type: Boolean,
+        default: false
     },
     activeOrdersCount: {
         type: Number,

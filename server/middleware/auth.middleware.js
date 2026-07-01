@@ -43,9 +43,10 @@ export const isAuth = async (req, res, next) => {
 
 /**
  * Check if authenticated user is an admin
+ * Checks both role string AND isAdmin boolean for dual role system compatibility
  */
 export const isAdmin = (req, res, next) => {
-  if (req.user && req.user.role === 'admin') {
+  if (req.user && (req.user.role === 'admin' || req.user.isAdmin === true)) {
     next();
   } else {
     return res.status(403).json({

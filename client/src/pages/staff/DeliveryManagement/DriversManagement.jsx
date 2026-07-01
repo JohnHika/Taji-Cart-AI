@@ -108,22 +108,22 @@ const DriversManagement = () => {
 
   return (
     <section className="flex flex-col gap-4 lg:gap-5">
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <div className="mobile-surface p-4">
+      <div className="grid grid-cols-2 gap-2.5 xl:grid-cols-4">
+        <div className="mobile-surface p-3 sm:p-4">
           <p className="text-xs uppercase tracking-[0.16em] text-brown-400">Drivers</p>
-          <p className="mt-2 text-3xl font-bold text-charcoal dark:text-white">{drivers.length}</p>
+          <p className="mt-1.5 text-2xl font-bold text-charcoal sm:mt-2 sm:text-3xl dark:text-white">{drivers.length}</p>
         </div>
-        <div className="mobile-surface p-4">
+        <div className="mobile-surface p-3 sm:p-4">
           <p className="text-xs uppercase tracking-[0.16em] text-brown-400">Active</p>
-          <p className="mt-2 text-3xl font-bold text-charcoal dark:text-white">{activeDrivers}</p>
+          <p className="mt-1.5 text-2xl font-bold text-charcoal sm:mt-2 sm:text-3xl dark:text-white">{activeDrivers}</p>
         </div>
-        <div className="mobile-surface p-4">
+        <div className="mobile-surface p-3 sm:p-4">
           <p className="text-xs uppercase tracking-[0.16em] text-brown-400">Available</p>
-          <p className="mt-2 text-3xl font-bold text-charcoal dark:text-white">{availableDrivers}</p>
+          <p className="mt-1.5 text-2xl font-bold text-charcoal sm:mt-2 sm:text-3xl dark:text-white">{availableDrivers}</p>
         </div>
-        <div className="mobile-surface p-4">
+        <div className="mobile-surface p-3 sm:p-4">
           <p className="text-xs uppercase tracking-[0.16em] text-brown-400">Assigned load</p>
-          <p className="mt-2 text-xl font-bold text-charcoal dark:text-white">
+          <p className="mt-1.5 text-2xl font-bold text-charcoal sm:mt-2 sm:text-3xl dark:text-white">
             {drivers.reduce((sum, driver) => sum + Number(driver.activeOrdersCount || 0), 0)}
           </p>
         </div>
@@ -137,8 +137,8 @@ const DriversManagement = () => {
               Review delivery capacity and activate or deactivate drivers when needed.
             </p>
           </div>
-          <div className="flex flex-col gap-2 sm:flex-row">
-            <div className="relative min-w-0 sm:min-w-[280px]">
+          <div className="flex flex-col gap-2">
+            <div className="relative">
               <FaSearch className="pointer-events-none absolute left-3 top-3.5 text-brown-400" />
               <input
                 type="text"
@@ -148,25 +148,27 @@ const DriversManagement = () => {
                 className="w-full rounded-xl border border-brown-100 bg-white py-3 pl-10 pr-4 text-sm outline-none transition focus:border-cyan-500 focus:ring-2 focus:ring-cyan-100 dark:border-dm-border dark:bg-dm-surface dark:text-white"
               />
             </div>
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="rounded-xl border border-brown-100 bg-white px-4 py-3 text-sm outline-none transition focus:border-cyan-500 focus:ring-2 focus:ring-cyan-100 dark:border-dm-border dark:bg-dm-surface dark:text-white"
-            >
-              <option value="all">All statuses</option>
-              <option value="available">Available</option>
-              <option value="busy">Busy</option>
-              <option value="inactive">Inactive</option>
-            </select>
-            <button
-              type="button"
-              onClick={fetchDrivers}
-              disabled={loading}
-              className="inline-flex items-center justify-center gap-2 rounded-xl border border-brown-100 px-4 py-3 text-sm font-medium text-charcoal transition hover:bg-ivory disabled:opacity-60 dark:border-dm-border dark:text-white/70 dark:hover:bg-dm-surface"
-            >
-              {loading ? <FaSpinner className="animate-spin" /> : <FaRedo />}
-              Refresh
-            </button>
+            <div className="flex gap-2">
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+                className="flex-1 rounded-xl border border-brown-100 bg-white px-4 py-3 text-sm outline-none transition focus:border-cyan-500 focus:ring-2 focus:ring-cyan-100 dark:border-dm-border dark:bg-dm-surface dark:text-white"
+              >
+                <option value="all">All statuses</option>
+                <option value="available">Available</option>
+                <option value="busy">Busy</option>
+                <option value="inactive">Inactive</option>
+              </select>
+              <button
+                type="button"
+                onClick={fetchDrivers}
+                disabled={loading}
+                className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl border border-brown-100 px-4 py-3 text-sm font-medium text-charcoal transition hover:bg-ivory disabled:opacity-60 dark:border-dm-border dark:text-white/70 dark:hover:bg-dm-surface"
+              >
+                {loading ? <FaSpinner className="animate-spin" /> : <FaRedo />}
+                <span className="hidden sm:inline">Refresh</span>
+              </button>
+            </div>
           </div>
         </div>
       </div>

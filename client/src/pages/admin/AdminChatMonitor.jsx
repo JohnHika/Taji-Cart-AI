@@ -121,7 +121,7 @@ const AdminChatMonitor = () => {
             onClick={() => setShowActiveOnly(!showActiveOnly)}
             className={`mr-4 px-4 py-2 rounded-md ${
               showActiveOnly 
-                ? 'bg-green-500 text-white' 
+                ? 'bg-brown-600 text-white' 
                 : 'bg-brown-100 dark:bg-dm-card-2 text-charcoal dark:text-white'
             }`}
           >
@@ -151,7 +151,7 @@ const AdminChatMonitor = () => {
 
       {/* Error Message */}
       {error && (
-        <div className="bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-200 p-3 rounded-md mb-4">
+        <div className="bg-blush-100 dark:bg-blush-500/20 text-blush-600 dark:text-blush-300 p-3 rounded-md mb-4">
           {error}
         </div>
       )}
@@ -235,7 +235,7 @@ const AdminChatMonitor = () => {
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
                         session.isActive 
-                          ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' 
+                          ? 'bg-brown-100 text-brown-800 dark:bg-brown-600/20 dark:text-brown-200' 
                           : 'bg-brown-50 text-charcoal dark:bg-dm-card-2 dark:text-white/55'
                       }`}>
                         {session.isActive ? 'Active' : 'Closed'}

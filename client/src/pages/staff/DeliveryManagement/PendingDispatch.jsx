@@ -125,6 +125,13 @@ const PendingDispatch = () => {
       toast.error(response.data?.message || 'Failed to dispatch order');
       return false;
     } catch (error) {
+      if (error?.response?.data?.currentStatus) {
+        toast.error(error.response.data.message || 'This order is no longer pending dispatch');
+        await fetchPendingOrders();
+        setSelectedOrders((prev) => prev.filter((id) => id !== orderId));
+        return false;
+      }
+
       AxiosToastError(error);
       return false;
     } finally {
@@ -161,24 +168,24 @@ const PendingDispatch = () => {
 
   return (
     <section className="flex flex-col gap-4 lg:gap-5">
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <div className="mobile-surface p-4">
+      <div className="grid grid-cols-2 gap-2.5 xl:grid-cols-4">
+        <div className="mobile-surface p-3 sm:p-4">
           <p className="text-xs uppercase tracking-[0.16em] text-brown-400">Pending orders</p>
-          <p className="mt-2 text-3xl font-bold text-charcoal dark:text-white">{pendingOrders.length}</p>
+          <p className="mt-1.5 text-2xl font-bold text-charcoal sm:mt-2 sm:text-3xl dark:text-white">{pendingOrders.length}</p>
         </div>
-        <div className="mobile-surface p-4">
+        <div className="mobile-surface p-3 sm:p-4">
           <p className="text-xs uppercase tracking-[0.16em] text-brown-400">Selected</p>
-          <p className="mt-2 text-3xl font-bold text-charcoal dark:text-white">{selectedOrders.length}</p>
+          <p className="mt-1.5 text-2xl font-bold text-charcoal sm:mt-2 sm:text-3xl dark:text-white">{selectedOrders.length}</p>
         </div>
-        <div className="mobile-surface p-4">
+        <div className="mobile-surface p-3 sm:p-4">
           <p className="text-xs uppercase tracking-[0.16em] text-brown-400">Selected value</p>
-          <p className="mt-2 text-xl font-bold text-charcoal dark:text-white">{formatCurrency(selectedValue)}</p>
+          <p className="mt-1.5 text-lg font-bold text-charcoal sm:mt-2 sm:text-xl dark:text-white">{formatCurrency(selectedValue)}</p>
         </div>
-        <div className="mobile-surface p-4">
+        <div className="mobile-surface p-3 sm:p-4">
           <p className="text-xs uppercase tracking-[0.16em] text-brown-400">Ready now</p>
-          <p className="mt-2 flex items-center gap-2 text-sm font-medium text-emerald-700 dark:text-emerald-300">
-            <FaTruck />
-            Dispatch to driver queue
+          <p className="mt-1.5 flex items-center gap-1.5 text-sm font-medium text-emerald-700 dark:text-emerald-300">
+            <FaTruck className="shrink-0" />
+            Dispatch queue
           </p>
         </div>
       </div>
@@ -202,15 +209,6 @@ const PendingDispatch = () => {
                 className="w-full rounded-xl border border-brown-100 bg-white py-3 pl-10 pr-4 text-sm outline-none transition focus:border-plum-500 focus:ring-2 focus:ring-plum-100 dark:border-dm-border dark:bg-dm-surface dark:text-white"
               />
             </div>
-            <button
-              type="button"
-              onClick={fetchPendingOrders}
-              disabled={loading}
-              className="inline-flex items-center justify-center gap-2 rounded-xl border border-brown-100 px-4 py-3 text-sm font-medium text-charcoal transition hover:bg-ivory disabled:opacity-60 dark:border-dm-border dark:text-white/70 dark:hover:bg-dm-surface"
-            >
-              {loading ? <FaSpinner className="animate-spin" /> : <FaRedo />}
-              Refresh
-            </button>
             <button
               type="button"
               onClick={handleDispatchSelected}

@@ -15,6 +15,7 @@ const DisplayCartItem = ({ close, variant = 'drawer' }) => {
     const isEmbedded = variant === 'embedded'
     const { notDiscountTotalPrice, totalPrice, totalQty, royalCardData, royalDiscount, clearCartItems } = useGlobalContext()
     const cartItem = useSelector(state => state.cartItem.cart)
+    const cartLoading = useSelector(state => state.cartItem.loading)
     const user = useSelector(state => state.user)
     const navigate = useNavigate()
     const [showClearConfirm, setShowClearConfirm] = useState(false)
@@ -22,9 +23,7 @@ const DisplayCartItem = ({ close, variant = 'drawer' }) => {
     
     // Pickup locations data
     const pickupLocations = [
-        { name: 'Main Store', address: nawiriBrand.location },
-        { name: 'Westlands Branch', address: '456 Westlands Road, Westlands, Nairobi' },
-        { name: 'Mombasa Road Store', address: '789 Mombasa Road, Nairobi' }
+        { name: 'Main Store', address: nawiriBrand.location }
     ];
 
     const redirectToCheckoutPage = () => {
@@ -34,15 +33,16 @@ const DisplayCartItem = ({ close, variant = 'drawer' }) => {
             return
         }
         // Guest users - redirect to guest checkout
+        // Note: do NOT call close() here — on CartMobile, close = navigate(-1)
+        // which would immediately undo the navigation to guest checkout.
         navigate('/guest-checkout')
-        if(close){
-            close()
-        }
     }
     
     // Handle fulfillment selection and continue to checkout
     const handleFulfillmentSelect = (fulfillmentData) => {
         // Navigate to checkout with fulfillment data
+        // Note: do NOT call close() here — on CartMobile, close = navigate(-1)
+        // which would immediately undo the navigation to checkout.
         navigate("/dashboard/checkout", { 
             state: {
                 fulfillmentMethod: fulfillmentData.fulfillment_type,
@@ -50,11 +50,6 @@ const DisplayCartItem = ({ close, variant = 'drawer' }) => {
                 pickupInstructions: fulfillmentData.pickup_instructions
             }
         });
-        
-        // Close the cart drawer if needed
-        if(close){
-            close()
-        }
     }
 
     const handleClearCart = async () => {
@@ -108,7 +103,7 @@ const DisplayCartItem = ({ close, variant = 'drawer' }) => {
                                     </div>
                                 )}
                                 
-                                <div className='bg-white dark:bg-dm-card rounded-lg p-4 grid gap-5 overflow-auto transition-colors duration-200 flex-1 min-h-0 pb-28 border border-brown-100/80 dark:border-dm-border'>
+                                <div className='bg-white dark:bg-dm-card rounded-lg p-4 grid gap-5 overflow-auto transition-colors duration-200 flex-1 min-h-0 pb-4 border border-brown-100/80 dark:border-dm-border'>
                                     {
                                         cartItem?.length > 0 && (
                                             cartItem.map((item,index)=>{
@@ -163,7 +158,9 @@ const DisplayCartItem = ({ close, variant = 'drawer' }) => {
                                                                 </div>
                                                             )}
                                                             
-                                                            <AddToCartButton product={item.productId} id={item?.id} cartData={item} />
+                                                            <div className="mt-2 max-w-[120px]">
+                                                                <AddToCartButton product={item.productId} id={item?.id} cartData={item} />
+                                                            </div>
                                                         </div>
                                                     </div>
                                                 )
@@ -216,6 +213,14 @@ const DisplayCartItem = ({ close, variant = 'drawer' }) => {
                                     </div>
                                 </div>
                             </>
+                        )
+                        :
+                        cartLoading ?
+                        (
+                            <div className="flex flex-col items-center justify-center py-12 px-4 flex-1">
+                                <div className="w-10 h-10 border-4 border-gold-500 border-t-transparent rounded-full animate-spin mb-4"></div>
+                                <p className="text-sm text-brown-400 dark:text-white/50">Loading cart...</p>
+                            </div>
                         )
                         :
                         (

@@ -8,7 +8,7 @@ import './App.css';
 import SummaryApi from './common/SummaryApi';
 import BottomNavigation from './components/BottomNavigation';
 import CartMobileLink from './components/CartMobile';
-// import ChatbotAI from './components/ChatbotAI'; // Hidden: AI feature not yet complete
+import DashboardMobileHeader from './components/DashboardMobileHeader';
 import Footer from './components/Footer';
 import Header from './components/Header';
 import GlobalProvider from './provider/GlobalProvider';
@@ -16,6 +16,7 @@ import { fetchCartItems } from './store/cartProduct';
 import { setAllCategory, setAllSubCategory, setLoadingCategory, setLoyaltyDetails } from './store/productSlice';
 import { setUserDetails } from './store/userSlice';
 import Axios from './utils/Axios';
+import { getStoredAccessToken } from './utils/authStorage';
 import fetchUserDetails from './utils/fetchUserDetails';
 
 // Error fallback component
@@ -61,6 +62,7 @@ function App() {
   const [isLoading, setIsLoading] = useState(true);
   const categories = useSelector(state => state.product.allCategory);
   const isFetchingProductsRef = useRef(false);
+  const lastVisibilityFetchRef = useRef(0);
 
   // Product/category fetching function
   const fetchProductData = async () => {
@@ -145,29 +147,28 @@ function App() {
   useEffect(() => {
     console.log("App initialization started");
     let isMounted = true;
-    
-    // Set a loading flag
+
     setIsLoading(true);
-    
+
+    // Safety net: never show spinner longer than 15 seconds
+    const safetyTimer = setTimeout(() => {
+      if (isMounted) setIsLoading(false);
+    }, 15000);
+
     const initializeApp = async () => {
+      lastVisibilityFetchRef.current = Date.now(); // stamp so visibility cooldown applies immediately
       try {
-        // Always fetch product data on app init
         const productDataResult = await fetchProductData();
         console.log("Product data fetch result:", productDataResult);
-        
-        // Check authentication - Using sessionStorage instead of localStorage
-        const token = sessionStorage.getItem('accesstoken');
+
+        const token = getStoredAccessToken();
         if (token) {
           const userDetails = await fetchUserDetails();
-          
+
           if (userDetails?.data && isMounted) {
-            // Update user state
             dispatch(setUserDetails(userDetails.data));
-            
-            // Fetch cart items
             dispatch(fetchCartItems());
-            
-            // Fetch loyalty details if we have a user ID
+
             if (userDetails.data._id) {
               await fetchLoyaltyDetails(userDetails.data._id);
             }
@@ -175,46 +176,41 @@ function App() {
         }
       } catch (error) {
         console.error("App initialization error:", error);
-        toast.error("Error initializing app");
-        // Clear tokens on auth error - Using sessionStorage instead of localStorage
         sessionStorage.removeItem('accesstoken');
         sessionStorage.removeItem('refreshToken');
+        localStorage.removeItem('accesstoken');
+        localStorage.removeItem('refreshToken');
       } finally {
+        clearTimeout(safetyTimer);
         if (isMounted) {
           setIsLoading(false);
         }
       }
     };
-    
+
     initializeApp();
-    
-    // Cleanup function
+
     return () => {
       isMounted = false;
+      clearTimeout(safetyTimer);
     };
   }, [dispatch]);
 
-  // Ensure categories and products are fetched on initial load
+  // Refresh categories when tab becomes visible, with a 5-minute cooldown
   useEffect(() => {
-    // Refresh product data when the page becomes visible again
     const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible') {
-        console.log("Page is visible again, refreshing product data");
-        fetchProductData();
-      }
+      if (document.visibilityState !== 'visible') return;
+      const now = Date.now();
+      if (now - lastVisibilityFetchRef.current < 5 * 60 * 1000) return;
+      lastVisibilityFetchRef.current = now;
+      console.log("Page is visible again, refreshing product data");
+      fetchProductData();
     };
-    
+
     document.addEventListener('visibilitychange', handleVisibilityChange);
-    
-    return () => {
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-    };
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
   }, []);
 
-  // Monitor category state for debugging
-  useEffect(() => {
-    console.log("Categories updated:", categories.length);
-  }, [categories]);
 
   // Add a specific effect to handle dynamic routes
   useEffect(() => {
@@ -268,15 +264,28 @@ function App() {
 
   const isAuthPage = ['/login', '/register', '/forgot-password', '/verification-otp', '/reset-password', '/verify-email'].includes(location.pathname);
   const isDashboardShell = location.pathname.startsWith('/dashboard');
+  const isPOSPage = location.pathname.includes('/dashboard/sales-counter') || location.pathname.includes('/dashboard/staff-pos');
 
   const showStoreChrome = !isAuthPage && !isDashboardShell;
+
+  // Show loading screen while app is initializing to prevent flash of empty state
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-ivory dark:bg-dm-surface flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-12 h-12 border-4 border-gold-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-charcoal dark:text-white/70 text-sm">Loading...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <ErrorBoundary FallbackComponent={ErrorFallback}>
       <GlobalProvider>
         <ScrollRestoration />
+        {isDashboardShell && !isPOSPage && <DashboardMobileHeader />}
         {showStoreChrome && <Header />}
-        <CartSynchronizer />
         <main className='min-h-[78vh] max-w-full overflow-x-hidden'>
           {/* Add suspense to catch lazy-loaded component errors */}
           <Suspense fallback={<div className="p-5 text-center">Loading...</div>}>

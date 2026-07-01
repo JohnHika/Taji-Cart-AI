@@ -8,7 +8,10 @@ const orderSchema = new mongoose.Schema({
     orderId: {
         type: String,
         required: [true, "Provide orderId"],
-        unique: true
+        // NOT unique — multiple line-item docs from one checkout share the same orderId.
+        // Uniqueness is enforced at the (orderId, productId) combination level via the
+        // compound index below. unique: true removed to allow multi-item orders.
+        index: true
     },
     productId: {
         type: mongoose.Schema.ObjectId,
@@ -55,9 +58,18 @@ const orderSchema = new mongoose.Schema({
         type: String,
         default: ""
     },
+    delivery_mode: {
+        type: String,
+        enum: ['standard', 'foot', 'walking', 'walker', ''],
+        default: 'standard'
+    },
+    customer_location: {
+        lat: Number,
+        lng: Number
+    },
     status: {
         type: String,
-        enum: ['pending', 'processing', 'dispatched', 'driver_assigned', 'out_for_delivery', 'nearby', 'delivered', 'ready_for_pickup', 'picked_up', 'cancelled'],
+        enum: ['pending', 'processing', 'shipped', 'dispatched', 'driver_assigned', 'out_for_delivery', 'nearby', 'delivered', 'ready_for_pickup', 'picked_up', 'cancelled'],
         default: 'pending'
     },
     statusHistory: {
@@ -151,6 +163,11 @@ const orderSchema = new mongoose.Schema({
 }, {
     timestamps: true
 })
+
+// Compound index for efficient per-order queries.
+// Not unique — the same product can appear multiple times in one order
+// (e.g. different variants), and guest orders have no productId (null).
+orderSchema.index({ orderId: 1, productId: 1 });
 
 const OrderModel = mongoose.model('order', orderSchema)
 

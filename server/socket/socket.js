@@ -5,6 +5,28 @@ import UserModel from '../models/user.model.js';
 
 let io;
 
+const getSocketUserRoles = (user) => {
+    const roles = new Set();
+
+    if (typeof user?.role === 'string' && user.role) {
+        roles.add(user.role);
+    }
+
+    if (user?.isAdmin === true) {
+        roles.add('admin');
+    }
+
+    if (user?.isDelivery === true) {
+        roles.add('delivery');
+    }
+
+    if (user?.isStaff === true) {
+        roles.add('staff');
+    }
+
+    return [...roles];
+};
+
 const isPrivateNetworkOrigin = (origin) => {
     try {
         const { protocol, hostname } = new URL(origin);
@@ -52,10 +74,22 @@ export const initializeSocket = (server) => {
             if (!token) {
                 return next(new Error('Authentication token required'));
             }
-            
-            // Verify token
-            const decoded = jwt.verify(token, process.env.JWT_SECRET);
-            const user = await UserModel.findById(decoded.id).select('-password');
+
+            const accessTokenSecret = process.env.SECRET_KEY_ACCESS_TOKEN || process.env.JWT_SECRET;
+            if (!accessTokenSecret) {
+                console.error('Socket authentication error: no access token secret configured');
+                return next(new Error('Authentication failed'));
+            }
+
+            // Verify token using the same secret and payload shape as HTTP auth.
+            const decoded = jwt.verify(token, accessTokenSecret);
+            const userId = decoded?._id || decoded?.id;
+
+            if (!userId) {
+                return next(new Error('Authentication failed'));
+            }
+
+            const user = await UserModel.findById(userId).select('-password');
             
             if (!user) {
                 return next(new Error('User not found'));
@@ -63,6 +97,7 @@ export const initializeSocket = (server) => {
             
             // Attach user to socket
             socket.user = user;
+            socket.userRoles = getSocketUserRoles(user);
             next();
         } catch (error) {
             console.error('Socket authentication error:', error);
@@ -79,11 +114,11 @@ export const initializeSocket = (server) => {
             socket.join(`user_${socket.user._id}`);
             
             // Join role-based rooms
-            if (socket.user.roles.includes('staff')) {
+            if (socket.userRoles?.includes('staff')) {
                 socket.join('staff-room');
             }
             
-            if (socket.user.roles.includes('delivery')) {
+            if (socket.userRoles?.includes('delivery')) {
                 socket.join('delivery-room');
                 // If they have active deliveries, join those rooms
                 if (socket.user.activeDeliveries && socket.user.activeDeliveries.length > 0) {
@@ -96,10 +131,10 @@ export const initializeSocket = (server) => {
         
         // Join specific rooms on request
         socket.on('join', (room) => {
-            if (room === 'staff-pickups' && socket.user?.roles.includes('staff')) {
+            if (room === 'staff-pickups' && socket.userRoles?.includes('staff')) {
                 socket.join('staff-pickups');
                 console.log(`Staff ${socket.user._id} joined staff-pickups room`);
-            } else if (room === 'delivery-updates' && socket.user?.roles.includes('delivery')) {
+            } else if (room === 'delivery-updates' && socket.userRoles?.includes('delivery')) {
                 socket.join('delivery-updates');
                 console.log(`Delivery personnel ${socket.user._id} joined delivery-updates room`);
             } else if (room.startsWith('order_')) {

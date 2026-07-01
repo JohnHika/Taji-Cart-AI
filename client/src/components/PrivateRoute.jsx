@@ -1,6 +1,9 @@
-import React from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useSelector } from 'react-redux';
 import { Navigate, useLocation } from 'react-router-dom';
+import CriteriaGateModal from './CriteriaGateModal';
+import { evaluateCriteria, getRouteGateTaskKey } from '../utils/criteriaGates';
+import fetchUserDetails from '../utils/fetchUserDetails';
 
 /**
  * A wrapper component that redirects to login if user is not authenticated
@@ -9,11 +12,17 @@ import { Navigate, useLocation } from 'react-router-dom';
  * @param {React.ReactNode} props.children - The component or elements to render when authenticated
  * @param {boolean} [props.requireAdmin=false] - Whether the route requires admin privileges
  * @param {boolean} [props.requireStaff=false] - Whether the route requires staff privileges
+ * @param {boolean} [props.requireDelivery=false] - Whether the route requires delivery privileges
  * @returns {React.ReactNode}
  */
-const PrivateRoute = ({ children, requireAdmin = false, requireStaff = false }) => {
+const SESSION_RESTORE_TIMEOUT_MS = 5000;
+
+const PrivateRoute = ({ children, requireAdmin = false, requireStaff = false, requireDelivery = false }) => {
   const user = useSelector(state => state.user);
   const location = useLocation();
+  const [sessionTimedOut, setSessionTimedOut] = useState(false);
+  const timerRef = useRef(null);
+
   const hasStoredSession = Boolean(
     sessionStorage.getItem('accesstoken') ||
     sessionStorage.getItem('refreshToken') ||
@@ -38,17 +47,30 @@ const PrivateRoute = ({ children, requireAdmin = false, requireStaff = false }) 
     user?.role === 'staff' || 
     user?.isStaff === true || 
     isAdmin; // Admins can do everything staff can do
+
+  const isDelivery =
+    user?.role === 'delivery' ||
+    user?.isDelivery === true;
   
+  // Start a timeout when waiting for session restore so the spinner can't get stuck
+  useEffect(() => {
+    if (!isAuthenticated && hasStoredSession && !sessionTimedOut) {
+      timerRef.current = setTimeout(() => setSessionTimedOut(true), SESSION_RESTORE_TIMEOUT_MS);
+    } else {
+      clearTimeout(timerRef.current);
+    }
+    return () => clearTimeout(timerRef.current);
+  }, [isAuthenticated, hasStoredSession, sessionTimedOut]);
+
   // Check if logged in
   if (!isAuthenticated) {
-    if (hasStoredSession) {
+    if (hasStoredSession && !sessionTimedOut) {
       return (
         <div className="min-h-[50vh] flex items-center justify-center text-sm text-brown-400 dark:text-white/40">
           Restoring your session...
         </div>
       );
     }
-    console.log('User not authenticated, redirecting to login');
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
   
@@ -62,6 +84,38 @@ const PrivateRoute = ({ children, requireAdmin = false, requireStaff = false }) 
   if (requireStaff && !isStaff) {
     console.log('Staff required but user is not staff, redirecting');
     return <Navigate to="/dashboard/profile" replace />;
+  }
+
+  // Check if delivery role is required but user is not a delivery driver
+  if (requireDelivery && !isDelivery) {
+    console.log('Delivery role required but user is not delivery, redirecting');
+    if (isStaff) {
+      return <Navigate to="/dashboard/staff/delivery" replace />;
+    }
+    return <Navigate to="/dashboard/profile" replace />;
+  }
+
+  const routeGateTaskKey = getRouteGateTaskKey({ requireAdmin, requireStaff, requireDelivery });
+  const routeGateEvaluation = routeGateTaskKey ? evaluateCriteria(user, routeGateTaskKey) : null;
+
+  if (routeGateEvaluation && !routeGateEvaluation.allowed) {
+    return (
+      <>
+        <div className="min-h-[50vh] flex flex-col items-center justify-center px-4 py-10 text-center">
+          <h2 className="text-xl font-semibold text-charcoal dark:text-white">A few details still need attention</h2>
+          <p className="mt-2 max-w-lg text-sm text-brown-500 dark:text-white/50">
+            Complete the required account details to continue to this workspace.
+          </p>
+        </div>
+        <CriteriaGateModal
+          isOpen
+          evaluation={routeGateEvaluation}
+          onClose={() => {}}
+          onRefreshUser={fetchUserDetails}
+          blocking
+        />
+      </>
+    );
   }
 
   // User is authenticated and authorized, render the protected component

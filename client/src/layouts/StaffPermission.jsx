@@ -7,7 +7,8 @@ const StaffPermission = ({ children }) => {
   const user = useSelector(state => state.user);
   
   // Allow both staff and admin to access staff functionality
-  const hasPermission = isStaff(user) || isAdmin(user.role);
+  // Pass full user object to both utilities for proper dual role system check
+  const hasPermission = isStaff(user) || isAdmin(user);
 
   if (!hasPermission) {
     return (

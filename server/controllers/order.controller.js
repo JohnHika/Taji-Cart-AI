@@ -1,7 +1,6 @@
 import mongoose from "mongoose";
 import util from 'util';
 import sendEmail from "../config/sendEmail.js";
-import Stripe from "../config/stripe.js";
 import CartProductModel from "../models/cartproduct.model.js";
 import DeliveryPersonnelModel from "../models/deliverypersonnel.model.js"; // Add this import
 import DriverPerformanceModel from "../models/driverperformance.model.js";
@@ -10,9 +9,16 @@ import LoyaltyCardModel from "../models/loyaltycard.model.js"; // Add this impor
 import NotificationModel from "../models/notification.model.js"; // Add this import
 import OrderModel from "../models/order.model.js";
 import ProductModel from "../models/product.model.js"; // Add this import
+import UserRewardModel from "../models/userreward.model.js";
 import UserModel from "../models/user.model.js";
 import { getIO } from '../socket/socket.js'; // Add this import
-import { processOrderContribution } from './communitycampaign.controller.js'; // Add this import
+import {
+  extractCoordinatesFromPayload,
+  getCbdFootDeliveryStatus,
+  getDeliveryModeFromPayload,
+  isFootDeliveryMode,
+} from '../utils/cbdDelivery.js';
+import { markRewardAsUsed, processOrderContribution } from './communitycampaign.controller.js'; // Add this import
 import { nawiriBrand } from "../utils/brand.js";
 import { renderOrderNoticeEmail } from "../utils/emailTemplates.js";
 
@@ -20,6 +26,214 @@ import { renderOrderNoticeEmail } from "../utils/emailTemplates.js";
 const inspectObject = (obj) => util.inspect(obj, {depth: 3, colors: true});
 
 const formatCurrency = (amount = 0) => `KES ${Number(amount || 0).toLocaleString()}`;
+const LOYALTY_TIER_DISCOUNTS = {
+  Basic: 0,
+  Bronze: 2,
+  Silver: 3.5,
+  Gold: 5,
+  Platinum: 7.5,
+};
+
+const roundMoney = (amount = 0) => Number(Number(amount || 0).toFixed(2));
+
+const createOrderValidationError = (message, statusCode = 400) => {
+  const error = new Error(message);
+  error.statusCode = statusCode;
+  return error;
+};
+
+const getRoyalDiscountRate = (tier = 'Basic') => Number(LOYALTY_TIER_DISCOUNTS[tier] || 0);
+
+const getOrderProductId = (item) => item?.productId?._id || item?.productId || item?._id;
+
+const getValidatedQuantity = (quantity) => {
+  const parsedQuantity = Number(quantity);
+
+  if (!Number.isFinite(parsedQuantity) || parsedQuantity <= 0) {
+    return 0;
+  }
+
+  return Math.floor(parsedQuantity);
+};
+
+export const pricewithDiscount = (price, dis = 0, royalDiscount = 0) => {
+  const basePrice = Number(price || 0);
+  const productDiscount = Math.max(0, Number(dis || 0));
+  const loyaltyDiscount = Math.max(0, Number(royalDiscount || 0));
+
+  const discountAmount = Math.round((basePrice * productDiscount) / 100);
+  const priceAfterProductDiscount = basePrice - discountAmount;
+  const royalDiscountAmount = Math.round((priceAfterProductDiscount * loyaltyDiscount) / 100);
+
+  return Math.max(0, priceAfterProductDiscount - royalDiscountAmount);
+};
+
+const getValidatedCommunityReward = async ({ userId, communityRewardId, communityDiscountAmount }) => {
+  if (!userId || !communityRewardId || !mongoose.Types.ObjectId.isValid(String(communityRewardId))) {
+    return {
+      reward: null,
+      discountPercent: 0,
+    };
+  }
+
+  const reward = await UserRewardModel.findOne({
+    _id: communityRewardId,
+    userId,
+    type: 'discount',
+    isActive: true,
+    isUsed: false,
+    expiryDate: { $gt: new Date() },
+  });
+
+  if (!reward) {
+    return {
+      reward: null,
+      discountPercent: 0,
+    };
+  }
+
+  const rewardDiscount = Math.max(0, Number(reward.value || 0));
+  const requestedDiscount = Math.max(0, Number(communityDiscountAmount || 0));
+
+  return {
+    reward,
+    discountPercent: requestedDiscount > 0 ? Math.min(rewardDiscount, requestedDiscount) : rewardDiscount,
+  };
+};
+
+const buildValidatedOrderPricing = async ({
+  items,
+  userId = null,
+  usePoints = false,
+  pointsUsed = 0,
+  communityRewardId = null,
+  communityDiscountAmount = 0,
+}) => {
+  const orderItems = Array.isArray(items) ? items : [];
+
+  if (orderItems.length === 0) {
+    throw createOrderValidationError('Your cart is empty. Add items before checking out.');
+  }
+
+  let loyaltyCard = null;
+  let royalDiscount = 0;
+
+  if (userId && mongoose.Types.ObjectId.isValid(String(userId))) {
+    loyaltyCard = await LoyaltyCardModel.findOne({ userId });
+    royalDiscount = getRoyalDiscountRate(loyaltyCard?.tier);
+  }
+
+  const uniqueProductIds = [...new Set(
+    orderItems
+      .map((item) => getOrderProductId(item))
+      .filter((productId) => mongoose.Types.ObjectId.isValid(String(productId)))
+      .map(String)
+  )];
+
+  const products = await ProductModel.find({
+    _id: { $in: uniqueProductIds },
+  }).select('_id name image price discount stock').lean();
+
+  const productsById = new Map(products.map((product) => [String(product._id), product]));
+  let subTotalAmt = 0;
+
+  const normalizedItems = orderItems.map((item) => {
+    const productId = getOrderProductId(item);
+
+    if (!mongoose.Types.ObjectId.isValid(String(productId))) {
+      throw createOrderValidationError('Your cart contains an invalid product reference. Please refresh and try again.');
+    }
+
+    const product = productsById.get(String(productId));
+
+    if (!product) {
+      throw createOrderValidationError(`Product ${item?.productId?.name || item?.name || 'in your cart'} not found`, 404);
+    }
+
+    const quantity = getValidatedQuantity(item?.quantity);
+
+    if (!quantity) {
+      throw createOrderValidationError(`Invalid quantity for ${product.name}`);
+    }
+
+    if (Number(product.stock || 0) < quantity) {
+      throw createOrderValidationError(`Insufficient stock for ${product.name}. Available: ${product.stock}, Requested: ${quantity}`);
+    }
+
+    const unitPrice = pricewithDiscount(product.price, product.discount, royalDiscount);
+    subTotalAmt += unitPrice * quantity;
+
+    return {
+      ...item,
+      quantity,
+      productId: {
+        ...(typeof item?.productId === 'object' && item.productId ? item.productId : {}),
+        _id: product._id,
+        name: product.name,
+        image: product.image,
+        price: product.price,
+        discount: product.discount,
+      },
+    };
+  });
+
+  subTotalAmt = roundMoney(subTotalAmt);
+
+  const { reward: communityReward, discountPercent: communityDiscountPercent } = await getValidatedCommunityReward({
+    userId,
+    communityRewardId,
+    communityDiscountAmount,
+  });
+
+  const priceAfterCommunityDiscount = communityDiscountPercent > 0
+    ? roundMoney(subTotalAmt * (1 - communityDiscountPercent / 100))
+    : subTotalAmt;
+
+  let appliedPoints = 0;
+
+  if ((usePoints === true || usePoints === 'true') && loyaltyCard) {
+    const availablePoints = Math.max(0, Number(loyaltyCard.points || 0));
+    const requestedPoints = Math.max(0, Number(pointsUsed || 0));
+    appliedPoints = Math.min(availablePoints, requestedPoints, priceAfterCommunityDiscount);
+  }
+
+  return {
+    normalizedItems,
+    subTotalAmt,
+    totalAmt: roundMoney(Math.max(0, priceAfterCommunityDiscount - appliedPoints)),
+    loyaltyCard,
+    appliedPoints,
+    communityReward,
+    communityDiscountPercent,
+  };
+};
+
+const redeemLoyaltyPoints = async ({ loyaltyCard, pointsToRedeem, orderId }) => {
+  if (!loyaltyCard || pointsToRedeem <= 0) {
+    return;
+  }
+
+  loyaltyCard.points = Math.max(0, Number(loyaltyCard.points || 0) - Number(pointsToRedeem || 0));
+  loyaltyCard.pointsHistory.push({
+    points: -Number(pointsToRedeem || 0),
+    reason: `Order #${orderId} redemption`,
+    date: new Date(),
+  });
+
+  await loyaltyCard.save();
+
+  try {
+    await NotificationModel.create({
+      type: 'loyalty_points',
+      title: 'Loyalty Points Redeemed',
+      message: `You redeemed ${pointsToRedeem} Royal Points on order ${orderId}.`,
+      isRead: false,
+      userId: loyaltyCard.userId,
+    });
+  } catch (notificationError) {
+    console.error('Error creating loyalty redemption notification:', notificationError);
+  }
+};
 
 const sendOrderLifecycleEmail = async ({
     user,
@@ -53,11 +267,225 @@ const sendOrderLifecycleEmail = async ({
     });
 }
 
+// Checkout controller - creates orders and redirects to payment
+export async function checkoutController(request, response) {
+    try {
+        const userId = request.userId;
+        const {
+            list_items,
+            addressId,
+            fulfillment_type = 'delivery',
+            pickup_location,
+            pickup_instructions,
+            usePoints = false,
+            pointsUsed = 0,
+            communityRewardId = null,
+            communityDiscountAmount = 0,
+        } = request.body;
+        
+        const deliveryMode = getDeliveryModeFromPayload(request.body);
+        const customerLocation = extractCoordinatesFromPayload(request.body);
+        
+        // Validate fulfillment type
+        if (fulfillment_type === 'delivery' && !addressId) {
+            return response.status(400).json({
+                message: "Delivery address is required for delivery orders",
+                error: true,
+                success: false
+            });
+        }
+        
+        if (fulfillment_type === 'pickup' && !pickup_location) {
+            return response.status(400).json({
+                message: "Pickup location is required for pickup orders",
+                error: true,
+                success: false
+            });
+        }
+        
+        // Validate foot delivery for CBD
+        if (fulfillment_type === 'delivery' && isFootDeliveryMode(deliveryMode)) {
+            const cbdStatus = getCbdFootDeliveryStatus(customerLocation);
+            
+            if (!cbdStatus.allowed) {
+                const outsideZoneMessage = cbdStatus.reason === 'outside_cbd'
+                    ? `Foot delivery is available only within Nairobi CBD (${cbdStatus.radiusKm}km radius). Your selected location is ${Number(cbdStatus.distanceKm || 0).toFixed(2)}km away.`
+                    : 'Please enable location and pin your delivery point to use foot delivery in Nairobi CBD.';
+                
+                return response.status(400).json({
+                    message: outsideZoneMessage,
+                    error: true,
+                    success: false,
+                    code: 'FOOT_DELIVERY_OUTSIDE_CBD',
+                    details: {
+                        radiusKm: cbdStatus.radiusKm,
+                        distanceKm: cbdStatus.distanceKm,
+                        center: cbdStatus.center,
+                    },
+                });
+            }
+        }
+        
+        const {
+            normalizedItems,
+            subTotalAmt,
+            totalAmt,
+            loyaltyCard,
+            appliedPoints,
+            communityReward,
+        } = await buildValidatedOrderPricing({
+            items: list_items,
+            userId,
+            usePoints,
+            pointsUsed,
+            communityRewardId,
+            communityDiscountAmount,
+        });
+        
+        // All items in one checkout share the same orderId so reports can
+        // deduplicate by orderId and avoid counting the total multiple times.
+        const sharedOrderId = `ORD-${new mongoose.Types.ObjectId()}`;
+
+        const payload = normalizedItems.map((item) => ({
+            userId: userId,
+            orderId: sharedOrderId,
+            productId: item.productId._id,
+            product_details: {
+                name: item.productId.name,
+                image: item.productId.image,
+            },
+            paymentId: "",
+            payment_status: "PENDING",
+            delivery_address: fulfillment_type === 'delivery' ? addressId : null,
+            fulfillment_type: fulfillment_type || 'delivery',
+            pickup_location: pickup_location || '',
+            pickup_instructions: pickup_instructions || '',
+            delivery_mode: deliveryMode || 'standard',
+            customer_location: customerLocation || undefined,
+            subTotalAmt: subTotalAmt,
+            totalAmt: totalAmt,
+        }));
+        
+        const generatedOrder = await OrderModel.insertMany(payload);
+
+        // Atomically reduce stock for each item, then flag low-stock items
+        await Promise.all(normalizedItems.map(async (item) => {
+            const updated = await ProductModel.findByIdAndUpdate(
+                item.productId._id,
+                { $inc: { stock: -item.quantity } },
+                { new: true }
+            );
+            if (updated && updated.stock < 5) {
+                await NotificationModel.create({
+                    type: 'low_stock',
+                    title: 'Low Stock Alert',
+                    message: `Product "${updated.name}" is running low (${updated.stock} remaining)`,
+                    isRead: false,
+                    forAdmin: true,
+                });
+            }
+        }));
+
+        // Remove from cart
+        await CartProductModel.deleteMany({ userId: userId });
+        await UserModel.updateOne({ _id: userId }, { shopping_cart: [] });
+        
+        // Update loyalty points
+        await updateLoyaltyPoints(userId, totalAmt, payload[0].orderId);
+        
+        // Contribute to community campaigns
+        try {
+            const contributedCampaigns = await processOrderContribution(userId, totalAmt, payload[0].orderId);
+            if (contributedCampaigns && contributedCampaigns.length > 0) {
+                console.log(`User ${userId} contributed to ${contributedCampaigns.length} community campaigns`);
+                const achievedCampaign = contributedCampaigns.find(campaign => campaign.isAchieved);
+                if (achievedCampaign) {
+                    console.log(`Community campaign "${achievedCampaign.title}" was achieved!`);
+                }
+            }
+        } catch (error) {
+            console.error("Error processing community campaign contribution:", error);
+        }
+        
+        // Update loyalty points
+        if (appliedPoints > 0 && loyaltyCard) {
+            await redeemLoyaltyPoints({
+                loyaltyCard,
+                pointsToRedeem: appliedPoints,
+                orderId: payload[0].orderId,
+            });
+        }
+        
+        // Mark community reward as used
+        if (communityReward?._id) {
+            await markRewardAsUsed(userId, communityReward._id, payload[0].orderId);
+        }
+        
+        // Create notification
+        const orderNotification = {
+            type: 'order_placed',
+            title: 'Order Placed Successfully',
+            message: fulfillment_type === 'delivery'
+                ? 'Your order has been placed and will be delivered soon.'
+                : `Your order has been placed. You can pick it up at ${pickup_location}.`,
+            isRead: false,
+            userId: userId,
+        };
+        await NotificationModel.create(orderNotification);
+        
+        // Send order confirmation email
+        const customer = await UserModel.findById(userId).select('name email');
+        if (customer) {
+            try {
+                await sendOrderLifecycleEmail({
+                    user: customer,
+                    title: 'Your order has been placed',
+                    intro: 'Thank you for shopping with Nawiri Hair Kenya. Your order is confirmed and our team is preparing it now.',
+                    orderId: payload[0].orderId,
+                    totalAmt,
+                    fulfillmentType: fulfillment_type || 'delivery',
+                    pickupLocation: pickup_location,
+                    verificationCode: '',
+                });
+            } catch (emailError) {
+                console.error('Error sending order confirmation email:', emailError);
+            }
+        }
+        
+        return response.json({
+            message: "Order created successfully. Redirecting to payment...",
+            error: false,
+            success: true,
+            data: generatedOrder,
+            redirect: 'payment',
+        });
+    } catch (error) {
+        console.error("Checkout error:", error);
+        return response.status(error.statusCode || 500).json({
+            message: error.message || error,
+            error: true,
+            success: false,
+        });
+    }
+}
+
 export async function CashOnDeliveryOrderController(request, response) {
     try {
-        const userId = request.userId // auth middleware 
-        const { list_items, totalAmt, addressId, subTotalAmt, fulfillment_type, pickup_location, pickup_instructions } = request.body 
-        const customer = await UserModel.findById(userId).select('name email')
+        const userId = request.userId; // auth middleware
+        const {
+            list_items,
+            addressId,
+            fulfillment_type = 'delivery',
+            pickup_location,
+            pickup_instructions,
+            usePoints = false,
+            pointsUsed = 0,
+            communityRewardId = null,
+            communityDiscountAmount = 0,
+        } = request.body;
+        const deliveryMode = getDeliveryModeFromPayload(request.body);
+        const customerLocation = extractCoordinatesFromPayload(request.body);
+        const customer = await UserModel.findById(userId).select('name email');
 
         // Validate inputs based on fulfillment type
         if (fulfillment_type === 'delivery' && !addressId) {
@@ -76,25 +504,43 @@ export async function CashOnDeliveryOrderController(request, response) {
             });
         }
 
-        // Check stock availability first
-        for (const item of list_items) {
-            const product = await ProductModel.findById(item.productId._id);
-            if (!product) {
-                return response.status(404).json({
-                    message: `Product ${item.productId.name} not found`,
-                    error: true,
-                    success: false
-                });
-            }
-            
-            if (product.stock < item.quantity) {
-                return response.status(400).json({
-                    message: `Insufficient stock for ${product.name}. Available: ${product.stock}, Requested: ${item.quantity}`,
-                    error: true,
-                    success: false
-                });
-            }
+        if (fulfillment_type === 'delivery' && isFootDeliveryMode(deliveryMode)) {
+          const cbdStatus = getCbdFootDeliveryStatus(customerLocation)
+
+          if (!cbdStatus.allowed) {
+            const outsideZoneMessage = cbdStatus.reason === 'outside_cbd'
+              ? `Foot delivery is available only within Nairobi CBD (${cbdStatus.radiusKm}km radius). Your selected location is ${Number(cbdStatus.distanceKm || 0).toFixed(2)}km away.`
+              : 'Please enable location and pin your delivery point to use foot delivery in Nairobi CBD.'
+
+            return response.status(400).json({
+              message: outsideZoneMessage,
+              error: true,
+              success: false,
+              code: 'FOOT_DELIVERY_OUTSIDE_CBD',
+              details: {
+                radiusKm: cbdStatus.radiusKm,
+                distanceKm: cbdStatus.distanceKm,
+                center: cbdStatus.center,
+              },
+            })
+          }
         }
+
+        const {
+            normalizedItems,
+            subTotalAmt,
+            totalAmt,
+            loyaltyCard,
+            appliedPoints,
+            communityReward,
+        } = await buildValidatedOrderPricing({
+            items: list_items,
+            userId,
+            usePoints,
+            pointsUsed,
+            communityRewardId,
+            communityDiscountAmount,
+        });
 
         // Generate verification code for pickup orders
         const generateVerificationCode = () => {
@@ -105,55 +551,66 @@ export async function CashOnDeliveryOrderController(request, response) {
             ? generateVerificationCode() 
             : "";
 
-        const payload = list_items.map(el => {
-            return({
-                userId: userId,
-                orderId: `ORD-${new mongoose.Types.ObjectId()}`,
-                productId: el.productId._id, 
-                product_details: {
-                    name: el.productId.name,
-                    image: el.productId.image
-                },
-                paymentId: "",
-                payment_status: "CASH ON DELIVERY",
-                delivery_address: fulfillment_type === 'delivery' ? addressId : null,
-                fulfillment_type: fulfillment_type || 'delivery',
-                pickup_location: pickup_location || '',
-                pickup_instructions: pickup_instructions || '',
-                pickupVerificationCode: pickupVerificationCode,
-                subTotalAmt: subTotalAmt,
-                totalAmt: totalAmt,
-            })
-        })
+        // All items in one checkout share the same orderId so reports can
+        // deduplicate by orderId and avoid counting the total multiple times.
+        const sharedOrderId = `ORD-${new mongoose.Types.ObjectId()}`;
+
+        const payload = normalizedItems.map(el => ({
+            userId: userId,
+            orderId: sharedOrderId,
+            productId: el.productId._id,
+            product_details: {
+                name: el.productId.name,
+                image: el.productId.image
+            },
+            paymentId: "",
+            payment_status: "CASH ON DELIVERY",
+            delivery_address: fulfillment_type === 'delivery' ? addressId : null,
+            fulfillment_type: fulfillment_type || 'delivery',
+            pickup_location: pickup_location || '',
+            pickup_instructions: pickup_instructions || '',
+            delivery_mode: deliveryMode || 'standard',
+            customer_location: customerLocation || undefined,
+            pickupVerificationCode: pickupVerificationCode,
+            subTotalAmt: subTotalAmt,
+            totalAmt: totalAmt,
+        }))
 
         const generatedOrder = await OrderModel.insertMany(payload)
 
-        // Update product stock after order creation
-        const stockUpdatePromises = list_items.map(async (item) => {
-            const product = await ProductModel.findById(item.productId._id);
-            
-            // Reduce stock
-            product.stock -= item.quantity;
-            
-            // Create low stock notification if needed
-            if (product.stock < 5) {
+        // Atomically reduce stock for each item, then flag low-stock items
+        await Promise.all(normalizedItems.map(async (item) => {
+            const updated = await ProductModel.findByIdAndUpdate(
+                item.productId._id,
+                { $inc: { stock: -item.quantity } },
+                { new: true }
+            );
+            if (updated && updated.stock < 5) {
                 await NotificationModel.create({
                     type: 'low_stock',
                     title: 'Low Stock Alert',
-                    message: `Product "${product.name}" is running low (${product.stock} remaining)`,
+                    message: `Product "${updated.name}" is running low (${updated.stock} remaining)`,
                     isRead: false,
                     forAdmin: true
                 });
             }
-            
-            return product.save();
-        });
-        
-        await Promise.all(stockUpdatePromises);
+        }));
 
         // Remove from the cart
         const removeCartItems = await CartProductModel.deleteMany({ userId: userId })
         const updateInUser = await UserModel.updateOne({ _id: userId }, { shopping_cart: [] })
+
+        if (appliedPoints > 0) {
+            await redeemLoyaltyPoints({
+                loyaltyCard,
+                pointsToRedeem: appliedPoints,
+                orderId: payload[0].orderId,
+            });
+        }
+
+        if (communityReward?._id) {
+            await markRewardAsUsed(userId, communityReward._id, payload[0].orderId);
+        }
 
         // Update loyalty points
         await updateLoyaltyPoints(userId, totalAmt, payload[0].orderId);
@@ -217,18 +674,12 @@ export async function CashOnDeliveryOrderController(request, response) {
 
     } catch (error) {
         console.error("Order creation error:", error);
-        return response.status(500).json({
+    return response.status(error.statusCode || 500).json({
             message: error.message || error,
             error: true,
             success: false
         })
     }
-}
-
-export const pricewithDiscount = (price,dis = 1)=>{
-    const discountAmout = Math.ceil((Number(price) * Number(dis)) / 100)
-    const actualPrice = Number(price) - Number(discountAmout)
-    return actualPrice
 }
 
 // Guest Order Tracking Controller - allows guests to track their orders
@@ -291,12 +742,14 @@ export async function trackGuestOrderController(request, response) {
 // Guest Checkout Controller - allows users to purchase without logging in
 export async function guestCheckoutController(request, response) {
     try {
-        const { items, totalAmt, subTotalAmt, guestEmail, guestPhone, guestShipping, fulfillment_type = 'delivery', pickup_location = '' } = request.body
+  const { items, guestEmail, guestPhone, guestShipping, fulfillment_type = 'delivery', pickup_location = '' } = request.body
+    const deliveryMode = getDeliveryModeFromPayload(request.body)
+    const customerLocation = extractCoordinatesFromPayload(request.body)
 
         // Validate required fields
-        if (!guestEmail || !items || !totalAmt) {
+    if (!guestEmail || !items) {
             return response.status(400).json({
-                message: "Email, items, and total amount are required",
+        message: "Email and items are required",
                 error: true,
                 success: false
             })
@@ -312,24 +765,32 @@ export async function guestCheckoutController(request, response) {
             })
         }
 
-        // Check stock availability first
-        for (const item of items) {
-            const product = await ProductModel.findById(item.productId || item.productId?._id)
-            if (!product) {
-                return response.status(404).json({
-                    message: `Product ${item.productId?.name || 'unknown'} not found`,
-                    error: true,
-                    success: false
-                })
-            }
+        const {
+            normalizedItems,
+            subTotalAmt,
+            totalAmt,
+        } = await buildValidatedOrderPricing({ items })
 
-            if (product.stock < item.quantity) {
-                return response.status(400).json({
-                    message: `Insufficient stock for ${product.name}. Available: ${product.stock}, Requested: ${item.quantity}`,
-                    error: true,
-                    success: false
-                })
-            }
+        if (fulfillment_type === 'delivery' && isFootDeliveryMode(deliveryMode)) {
+          const cbdStatus = getCbdFootDeliveryStatus(customerLocation)
+
+          if (!cbdStatus.allowed) {
+            const outsideZoneMessage = cbdStatus.reason === 'outside_cbd'
+              ? `Foot delivery is available only within Nairobi CBD (${cbdStatus.radiusKm}km radius). Your selected location is ${Number(cbdStatus.distanceKm || 0).toFixed(2)}km away.`
+              : 'Please enable location and pin your delivery point to use foot delivery in Nairobi CBD.'
+
+            return response.status(400).json({
+              message: outsideZoneMessage,
+              error: true,
+              success: false,
+              code: 'FOOT_DELIVERY_OUTSIDE_CBD',
+              details: {
+                radiusKm: cbdStatus.radiusKm,
+                distanceKm: cbdStatus.distanceKm,
+                center: cbdStatus.center,
+              },
+            })
+          }
         }
 
         // Generate verification code for pickup orders
@@ -343,19 +804,23 @@ export async function guestCheckoutController(request, response) {
         const orderId = `ORD-${Date.now()}-${Math.random().toString(36).substring(2, 5).toUpperCase()}`
 
         // Create the order
+        const normalizedGuestEmail = guestEmail.toLowerCase().trim()
+
         const generatedOrder = await OrderModel.create({
             orderId,
             isGuest: true,
-            guestEmail,
+            guestEmail: normalizedGuestEmail,
             guestPhone: guestPhone || '',
             guestShipping: guestShipping || {},
             fulfillment_type,
+            delivery_mode: deliveryMode || 'standard',
             pickup_location,
+            customer_location: customerLocation || undefined,
             product_details: {
-                name: items.map(item => item.productId?.name || item.name || 'Product').join(', '),
-                image: items[0]?.productId?.image || []
+                name: normalizedItems.map(item => item.productId?.name || item.name || 'Product').join(', '),
+                image: normalizedItems[0]?.productId?.image || []
             },
-            subTotalAmt: subTotalAmt || totalAmt,
+            subTotalAmt,
             totalAmt,
             status: 'pending',
             statusHistory: [{
@@ -369,8 +834,8 @@ export async function guestCheckoutController(request, response) {
         })
 
         // Deduct stock
-        for (const item of items) {
-            const productId = item.productId || item.productId?._id
+        for (const item of normalizedItems) {
+            const productId = getOrderProductId(item)
             await ProductModel.findByIdAndUpdate(productId, {
                 $inc: { stock: -item.quantity }
             })
@@ -443,7 +908,7 @@ export async function guestCheckoutController(request, response) {
 
     } catch (error) {
         console.error("Guest checkout error:", error)
-        return response.status(500).json({
+    return response.status(error.statusCode || 500).json({
             message: error.message || error,
             error: true,
             success: false
@@ -451,281 +916,67 @@ export async function guestCheckoutController(request, response) {
     }
 }
 
-export async function paymentController(request,response){
+export async function getOrderDetailsController(request, response) {
     try {
-        const userId = request.userId // auth middleware 
-        const { list_items, totalAmt, addressId, subTotalAmt, royalDiscount = 0 } = request.body 
+        const userId = request.userId;
 
-        const user = await UserModel.findById(userId)
-        
-        // Get user's loyalty card to apply Royal card discount
-        let userRoyalDiscount = 0
-        if (royalDiscount) {
-            // If frontend provided the royalDiscount, use it directly
-            userRoyalDiscount = Number(royalDiscount)
-            console.log(`Using provided Royal discount: ${userRoyalDiscount}%`)
-        } else {
-            // Otherwise fetch it from the database
-            try {
-                const loyaltyCard = await LoyaltyCardModel.findOne({ userId })
-                if (loyaltyCard) {
-                    // Get discount percentage based on tier
-                    switch(loyaltyCard.tier) {
-                        case 'Bronze':
-                            userRoyalDiscount = 2
-                            break
-                        case 'Silver':
-                            userRoyalDiscount = 3
-                            break
-                        case 'Gold':
-                            userRoyalDiscount = 5
-                            break
-                        case 'Platinum':
-                            userRoyalDiscount = 7
-                            break
-                        default:
-                            userRoyalDiscount = 0
-                    }
-                    console.log(`Applied Royal card discount: ${userRoyalDiscount}% (${loyaltyCard.tier} tier)`)
-                }
-            } catch (error) {
-                console.error("Error fetching loyalty card:", error)
-                // Continue without Royal discount if there's an error
-            }
-        }
-
-        const line_items = list_items.map(item => {
-            // Calculate the combined discount (product discount + royal card discount)
-            const productDiscount = Number(item.productId.discount || 0)
-            const combinedDiscount = productDiscount + userRoyalDiscount
-            
-            // Calculate the discounted price using the combined discount
-            const originalPrice = Number(item.productId.price)
-            const discountAmount = Math.ceil((originalPrice * combinedDiscount) / 100)
-            const discountedPrice = originalPrice - discountAmount
-            
-            // Log the price calculations for debugging
-            console.log(`Product: ${item.productId.name}`)
-            console.log(`Original price: ${originalPrice}`)
-            console.log(`Product discount: ${productDiscount}%`)
-            console.log(`Royal discount: ${userRoyalDiscount}%`)
-            console.log(`Combined discount: ${combinedDiscount}%`)
-            console.log(`Final price: ${discountedPrice}`)
-            
-            return {
-               price_data: {
-                    currency: 'kes',
-                    product_data: {
-                        name: item.productId.name,
-                        images: item.productId.image,
-                        metadata: {
-                            productId: item.productId._id,
-                            originalPrice: originalPrice,
-                            productDiscount: productDiscount,
-                            royalDiscount: userRoyalDiscount
-                        },
-                        description: combinedDiscount > 0 ? 
-                            `Discount: ${productDiscount}% + ${userRoyalDiscount}% Royal Card` : 
-                            undefined
-                    },
-                    unit_amount: discountedPrice * 100
-               },
-               adjustable_quantity: {
-                    enabled: true,
-                    minimum: 1
-               },
-               quantity: item.quantity 
-            }
-        })
-
-        const params = {
-            submit_type: 'pay',
-            mode: 'payment',
-            payment_method_types: ['card'],
-            customer_email: user.email,
-            metadata: {
-                userId: userId,
-                addressId: addressId,
-                royalDiscount: userRoyalDiscount // Store the Royal discount in metadata
-            },
-            line_items: line_items,
-            success_url: `${process.env.FRONTEND_URL}/success`,
-            cancel_url: `${process.env.FRONTEND_URL}/cancel`
-        }
-
-        const session = await Stripe.checkout.sessions.create(params)
-
-        return response.status(200).json(session)
-
-    } catch (error) {
-        console.error("Stripe checkout error:", error);
-        return response.status(500).json({
-            message: error.message || error,
-            error: true,
-            success: false
-        })
-    }
-}
-
-const getOrderProductItems = async({
-    lineItems,
-    userId,
-    addressId,
-    paymentId,
-    payment_status,
- })=>{
-    const productList = []
-
-    if(lineItems?.data?.length){
-        for(const item of lineItems.data){
-            const product = await Stripe.products.retrieve(item.price.product)
-
-            const paylod = {
-                userId : userId,
-                orderId : `ORD-${new mongoose.Types.ObjectId()}`,
-                productId : product.metadata.productId, 
-                product_details : {
-                    name : product.name,
-                    image : product.images
-                } ,
-                paymentId : paymentId,
-                payment_status : payment_status,
-                delivery_address : addressId,
-                subTotalAmt  : Number(item.amount_total / 100),
-                totalAmt  :  Number(item.amount_total / 100),
-            }
-
-            productList.push(paylod)
-        }
-    }
-
-    return productList
-}
-
-//http://localhost:8080/api/order/webhook
-export async function webhookStripe(request, response) {
-    const event = request.body;
-    const endPointSecret = process.env.STRIPE_ENPOINT_WEBHOOK_SECRET_KEY
-
-    console.log("event", event)
-
-    // Handle the event
-    switch (event.type) {
-        case 'checkout.session.completed':
-            const session = event.data.object;
-            const lineItems = await Stripe.checkout.sessions.listLineItems(session.id)
-            const userId = session.metadata.userId
-            const orderProduct = await getOrderProductItems({
-                lineItems: lineItems,
-                userId: userId,
-                addressId: session.metadata.addressId,
-                paymentId: session.payment_intent,
-                payment_status: session.payment_status,
-            })
-        
-            const order = await OrderModel.insertMany(orderProduct)
-
-            console.log(order)
-            if (Boolean(order[0])) {
-                // Update product stock for all ordered items
-                try {
-                    for (const item of lineItems.data) {
-                        const stripeProduct = await Stripe.products.retrieve(item.price.product);
-                        const productId = stripeProduct.metadata.productId;
-                        
-                        if (productId) {
-                            const product = await ProductModel.findById(productId);
-                            
-                            if (product) {
-                                // Reduce stock
-                                product.stock -= item.quantity;
-                                
-                                // Create low stock notification if needed
-                                if (product.stock < 5) {
-                                    await NotificationModel.create({
-                                        type: 'low_stock',
-                                        title: 'Low Stock Alert',
-                                        message: `Product "${product.name}" is running low (${product.stock} remaining)`,
-                                        isRead: false,
-                                        forAdmin: true
-                                    });
-                                }
-                                
-                                await product.save();
-                            }
+        // Group by orderId so each order appears once regardless of item count.
+        // totalAmt and subTotalAmt are taken from the first doc (they're identical
+        // across all line-item docs for the same orderId).
+        const orderlist = await OrderModel.aggregate([
+            { $match: { userId: new mongoose.Types.ObjectId(String(userId)) } },
+            { $sort: { createdAt: -1 } },
+            {
+                $group: {
+                    _id: '$orderId',
+                    orderId: { $first: '$orderId' },
+                    userId: { $first: '$userId' },
+                    delivery_address: { $first: '$delivery_address' },
+                    payment_status: { $first: '$payment_status' },
+                    paymentId: { $first: '$paymentId' },
+                    invoice_receipt: { $first: '$invoice_receipt' },
+                    fulfillment_type: { $first: '$fulfillment_type' },
+                    pickup_location: { $first: '$pickup_location' },
+                    pickup_instructions: { $first: '$pickup_instructions' },
+                    status: { $first: '$status' },
+                    subTotalAmt: { $first: '$subTotalAmt' },
+                    totalAmt: { $first: '$totalAmt' },
+                    deliveryPersonnel: { $first: '$deliveryPersonnel' },
+                    estimatedDeliveryTime: { $first: '$estimatedDeliveryTime' },
+                    createdAt: { $first: '$createdAt' },
+                    updatedAt: { $max: '$updatedAt' },
+                    items: {
+                        $push: {
+                            productId: '$productId',
+                            product_details: '$product_details',
                         }
                     }
-                } catch (stockError) {
-                    console.error("Error updating stock:", stockError);
-                    // We don't want to fail the webhook response, 
-                    // so just log the error but continue
                 }
-                
-                // Clean up the cart
-                try {
-                    // Ensure both user shopping_cart array and CartProductModel are cleared
-                    const removeCartItems = await UserModel.findByIdAndUpdate(userId, {
-                        shopping_cart: []
-                    });
-                    
-                    // Add debug logs
-                    console.log(`Clearing cart for user ${userId}`);
-                    
-                    // Use deleteMany instead of findAndDelete for better reliability
-                    const cartDeleteResult = await CartProductModel.deleteMany({ userId: userId });
-                    console.log(`Deleted ${cartDeleteResult.deletedCount} cart items for user ${userId}`);
-                } catch (cartError) {
-                    console.error("Error clearing cart:", cartError);
+            },
+            { $sort: { createdAt: -1 } },
+            {
+                $lookup: {
+                    from: 'addresses',
+                    localField: 'delivery_address',
+                    foreignField: '_id',
+                    as: 'delivery_address'
                 }
-
-                // Update loyalty points
-                await updateLoyaltyPoints(userId, Number(lineItems.data.reduce((acc, item) => acc + item.amount_total, 0) / 100), orderProduct[0].orderId);
-
-                // Process community campaign contributions
-                await processOrderContribution(userId, Number(lineItems.data.reduce((acc, item) => acc + item.amount_total, 0) / 100), orderProduct[0].orderId);
-
-                try {
-                    const customer = await UserModel.findById(userId).select('name email');
-                    await sendOrderLifecycleEmail({
-                        user: customer,
-                        title: 'Your order has been placed',
-                        intro: 'Thank you for shopping with Nawiri Hair Kenya. Your payment was received successfully and we are preparing your order.',
-                        orderId: orderProduct[0].orderId,
-                        totalAmt: Number(lineItems.data.reduce((acc, item) => acc + item.amount_total, 0) / 100),
-                        fulfillmentType: 'delivery',
-                    });
-                } catch (emailError) {
-                    console.error('Error sending paid order confirmation email:', emailError);
-                }
-            }
-            break;
-        default:
-            console.log(`Unhandled event type ${event.type}`);
-    }
-
-    // Return a response to acknowledge receipt of the event
-    response.json({ received: true });
-}
-
-
-export async function getOrderDetailsController(request,response){
-    try {
-        const userId = request.userId // order id
-
-        const orderlist = await OrderModel.find({ userId : userId }).sort({ createdAt : -1 }).populate('delivery_address')
+            },
+            { $unwind: { path: '$delivery_address', preserveNullAndEmptyArrays: true } }
+        ]);
 
         return response.json({
-            message : "order list",
-            data : orderlist,
-            error : false,
-            success : true
-        })
+            message: "order list",
+            data: orderlist,
+            error: false,
+            success: true
+        });
     } catch (error) {
         return response.status(500).json({
-            message : error.message || error,
-            error : true,
-            success : false
-        })
+            message: error.message || error,
+            error: true,
+            success: false
+        });
     }
 }
 
@@ -966,22 +1217,64 @@ export async function getAllOrdersAdmin(request, response) {
       query.status = status;
     }
 
-    // Improve the populate to include more user information
-    const orders = await OrderModel.find(query)
-      .sort({ createdAt: -1 })
-      .populate({
-        path: 'userId',
-        select: 'name email mobile profile_pic'
-      })
-      .populate('delivery_address')
-      .lean(); // Use lean for better performance
-    
-    // Add debug info to help diagnose user data issues
-    console.log(`Successfully retrieved ${orders.length} orders for admin`);
-    if (orders.length > 0) {
-      console.log(`Sample order user info: ${JSON.stringify(orders[0].userId || 'No user data')}`);
-    }
-    
+    // Aggregate by orderId so each order appears once regardless of item count.
+    // Each document in the order collection represents one line item; grouping
+    // them avoids inflated row counts and double-counted totals in the UI.
+    const aggregatePipeline = [
+      { $match: query },
+      { $sort: { createdAt: -1 } },
+      {
+        $group: {
+          _id: '$orderId',
+          orderId: { $first: '$orderId' },
+          userId: { $first: '$userId' },
+          delivery_address: { $first: '$delivery_address' },
+          payment_status: { $first: '$payment_status' },
+          paymentId: { $first: '$paymentId' },
+          fulfillment_type: { $first: '$fulfillment_type' },
+          pickup_location: { $first: '$pickup_location' },
+          status: { $first: '$status' },
+          subTotalAmt: { $first: '$subTotalAmt' },
+          totalAmt: { $first: '$totalAmt' },
+          isGuest: { $first: '$isGuest' },
+          guestEmail: { $first: '$guestEmail' },
+          guestShipping: { $first: '$guestShipping' },
+          deliveryPersonnel: { $first: '$deliveryPersonnel' },
+          createdAt: { $first: '$createdAt' },
+          updatedAt: { $max: '$updatedAt' },
+          // Collect all line items into an array
+          items: {
+            $push: {
+              productId: '$productId',
+              product_details: '$product_details',
+            }
+          }
+        }
+      },
+      { $sort: { createdAt: -1 } },
+      {
+        $lookup: {
+          from: 'users',
+          localField: 'userId',
+          foreignField: '_id',
+          as: 'userId',
+          pipeline: [{ $project: { name: 1, email: 1, mobile: 1, profile_pic: 1 } }]
+        }
+      },
+      { $unwind: { path: '$userId', preserveNullAndEmpty: true } },
+      {
+        $lookup: {
+          from: 'addresses',
+          localField: 'delivery_address',
+          foreignField: '_id',
+          as: 'delivery_address'
+        }
+      },
+      { $unwind: { path: '$delivery_address', preserveNullAndEmpty: true } }
+    ];
+
+    const orders = await OrderModel.aggregate(aggregatePipeline);
+
     return response.json({
       message: "All orders retrieved successfully",
       data: orders,
@@ -1005,7 +1298,7 @@ export async function updateOrderStatus(request, response) {
     const { status } = request.body;
     
     // Validate status
-    const validStatuses = ['pending', 'processing', 'shipped', 'delivered', 'cancelled'];
+    const validStatuses = ['pending', 'processing', 'shipped', 'dispatched', 'driver_assigned', 'out_for_delivery', 'nearby', 'delivered', 'ready_for_pickup', 'picked_up', 'cancelled'];
     
     if (!validStatuses.includes(status)) {
       return response.status(400).json({
@@ -1023,29 +1316,61 @@ export async function updateOrderStatus(request, response) {
       });
     }
     
-    // Update the status
-    order.status = status;
-    
-    // If order is cancelled, consider restoring stock
-    if (status === 'cancelled' && order.status !== 'cancelled') {
-      // Implement product stock restoration logic here if needed
-    }
-    
-    // If order is delivered, mark delivery date and update driver performance
-    if (status === 'delivered') {
-      order.deliveredAt = new Date();
+    const previousStatus = order.status;
 
-      // Update driver performance if this order has a delivery personnel assigned
-      if (order.deliveryPersonnel) {
-        try {
-          await updateDriverPerformanceOnDelivery(order, order.deliveryPersonnel);
-        } catch (performanceError) {
-          console.error("Error updating driver performance:", performanceError);
-        }
+    // Restore stock for ALL line-item docs in this order when cancelling
+    if (status === 'cancelled' && previousStatus !== 'cancelled') {
+      try {
+        const allDocs = await OrderModel.find(
+          { orderId: order.orderId },
+          { productId: 1 }
+        ).lean();
+        await Promise.all(
+          allDocs
+            .filter(doc => doc.productId)
+            .map(doc =>
+              ProductModel.findByIdAndUpdate(doc.productId, { $inc: { stock: 1 } })
+            )
+        );
+      } catch (stockError) {
+        console.error('Error restoring stock on cancellation:', stockError);
       }
     }
     
-    await order.save();
+    // Propagate status change to ALL line-item docs sharing the same orderId
+    const updateFields = { status };
+    if (status === 'delivered') {
+      updateFields.deliveredAt = new Date();
+    }
+
+    await OrderModel.updateMany(
+      { orderId: order.orderId },
+      {
+        $set: updateFields,
+        $push: {
+          statusHistory: {
+            status,
+            timestamp: new Date(),
+            updatedBy: request.userId
+          }
+        }
+      }
+    );
+
+    // Driver performance update (once, not per line item)
+    if (status === 'delivered' && order.deliveryPersonnel) {
+      try {
+        await updateDriverPerformanceOnDelivery(
+          { ...order.toObject(), deliveredAt: updateFields.deliveredAt },
+          order.deliveryPersonnel
+        );
+      } catch (performanceError) {
+        console.error("Error updating driver performance:", performanceError);
+      }
+    }
+
+    // Re-fetch updated doc for response
+    const updatedOrder = await OrderModel.findById(order._id);
     
     // Create notification for the user
     try {
@@ -1083,7 +1408,7 @@ export async function updateOrderStatus(request, response) {
     return response.json({
       message: "Order status updated successfully",
       success: true,
-      data: order
+      data: updatedOrder
     });
   } catch (error) {
     console.error("Error updating order status:", error);
@@ -1111,10 +1436,7 @@ export async function getOrderTrackingDetails(request, response) {
         // Fetch order with populated delivery personnel and status history
         const order = await OrderModel.findById(id)
             .populate('deliveryPersonnel')
-            .populate({
-                path: 'items.productId',
-                select: 'name price image'
-            })
+          .populate('productId', 'name price image')
             .populate('delivery_address');
         
         if (!order) {
@@ -1126,9 +1448,18 @@ export async function getOrderTrackingDetails(request, response) {
             });
         }
         
+        const isAdmin = request.isAdmin === true || request.userRole === 'admin';
+        const isOwner = Boolean(
+          order.userId &&
+          request.userId &&
+          order.userId.toString() === request.userId.toString()
+        );
+
         // Check if user is authorized to view this order
-        if (order.userId.toString() !== request.userId.toString() && request.userRole !== 'admin') {
-            console.log(`Unauthorized access attempt: User ${request.userId} tried to access order ${id} belonging to ${order.userId}`);
+        if (!isAdmin && !isOwner) {
+          console.log(
+            `Unauthorized access attempt: User ${request.userId} tried to access order ${id} belonging to ${order.userId || 'guest-order'}`
+          );
             return response.status(403).json({
                 message: "You are not authorized to view this order",
                 success: false,
@@ -1182,42 +1513,51 @@ export async function assignDeliveryPersonnel(request, response) {
         }
         
         // Update order with delivery personnel and status
-        order.deliveryPersonnel = personnelId;
-        order.status = 'driver_assigned';
-        order.statusHistory.push({
-            status: 'driver_assigned',
-            timestamp: new Date(),
-            note: `Assigned to ${personnel.name}`
-        });
-        
         // Calculate estimated delivery time (e.g., 45 minutes from now)
         const estimatedDelivery = new Date();
         estimatedDelivery.setMinutes(estimatedDelivery.getMinutes() + 45);
-        order.estimatedDeliveryTime = estimatedDelivery;
-        
-        await order.save();
-        
+
+        // Propagate assignment to ALL line-item docs that share the same orderId
+        // so the full order (not just one product doc) is updated.
+        await OrderModel.updateMany(
+            { orderId: order.orderId },
+            {
+                $set: {
+                    deliveryPersonnel: personnelId,
+                    status: 'driver_assigned',
+                    estimatedDeliveryTime: estimatedDelivery
+                },
+                $push: {
+                    statusHistory: {
+                        status: 'driver_assigned',
+                        timestamp: new Date(),
+                        note: `Assigned to ${personnel.name}`
+                    }
+                }
+            }
+        );
+
+        // Re-fetch for response
+        const updatedOrder = await OrderModel.findById(order._id);
+
         // Update delivery personnel status
         personnel.isAvailable = false;
-        personnel.activeOrders.push(orderId);
+        personnel.activeOrders.push(order._id);
         await personnel.save();
         
         // Send real-time notification
         const io = getIO();
-        io.to(`order_${orderId}`).emit('statusUpdated', {
-            orderId,
+        io.to(`order_${order.orderId}`).emit('statusUpdated', {
+            orderId: order.orderId,
             status: 'driver_assigned',
             personnelName: personnel.name,
             estimatedDelivery: estimatedDelivery
         });
-        
-        // If you have a notification model, create a notification for the user
-        // await NotificationModel.create({...})
-        
+
         return response.json({
             message: "Delivery personnel assigned successfully",
             success: true,
-            data: order
+            data: updatedOrder
         });
     } catch (error) {
         console.error("Error assigning delivery personnel:", error);
@@ -1248,61 +1588,62 @@ export async function updateOrderLocation(request, response) {
             });
         }
         
-        // Update order location
-        order.currentLocation = {
+        const locationUpdate = {
             lat: location.lat,
             lng: location.lng,
             lastUpdated: new Date()
         };
-        
-        // Update status if provided
+
+        // Build the update payload for all sibling docs
+        const setFields = { currentLocation: locationUpdate };
+        const pushFields = {};
+
         if (status && status !== order.status) {
-            order.status = status;
-            order.statusHistory.push({
+            setFields.status = status;
+            pushFields.statusHistory = {
                 status,
                 timestamp: new Date(),
-                location: {
-                    lat: location.lat,
-                    lng: location.lng
-                }
-            });
-            
-            // If delivered, update necessary fields
+                location: { lat: location.lat, lng: location.lng }
+            };
+
             if (status === 'delivered') {
-                order.deliveredAt = new Date();
-                
-                // Update delivery personnel status
+                setFields.deliveredAt = new Date();
+
                 if (order.deliveryPersonnel) {
                     const personnel = await DeliveryPersonnelModel.findById(order.deliveryPersonnel);
                     if (personnel) {
                         personnel.isAvailable = true;
                         personnel.activeOrders = personnel.activeOrders.filter(
-                            id => id.toString() !== orderId.toString()
+                            id => id.toString() !== order._id.toString()
                         );
                         await personnel.save();
                     }
                 }
             }
         }
-        
-        await order.save();
-        
+
+        const updateOp = { $set: setFields };
+        if (Object.keys(pushFields).length) updateOp.$push = pushFields;
+
+        // Propagate to all line-item docs sharing the same orderId
+        await OrderModel.updateMany({ orderId: order.orderId }, updateOp);
+
         // Send real-time update
         const io = getIO();
-        io.to(`order_${orderId}`).emit('locationUpdated', {
-            orderId,
+        io.to(`order_${order.orderId}`).emit('locationUpdated', {
+            orderId: order.orderId,
             location,
-            status: order.status,
+            status: setFields.status || order.status,
             timestamp: new Date()
         });
-        
+
         return response.json({
             message: "Order location updated successfully",
             success: true,
             data: {
-                orderId,
-                location: order.currentLocation,
-                status: order.status
+                orderId: order.orderId,
+                location: locationUpdate,
+                status: setFields.status || order.status
             }
         });
     } catch (error) {
@@ -1495,33 +1836,57 @@ export async function getMostRecentOrder(request, response) {
       });
     }
     
-    console.log(`Fetching most recent order for user ${userId}`);
-    
-    // Find most recent order for this user
-    const recentOrder = await OrderModel.findOne({ 
-      userId: userId 
-    })
-    .sort({ createdAt: -1 })
-    .populate({
-      path: 'items.productId',
-      select: 'name image price'
-    })
-    .populate('delivery_address');
-    
-    if (!recentOrder) {
-      console.log(`No orders found for user ${userId}`);
+    // Group by orderId so we get a single order with all its line items,
+    // not just the first doc (which would be one product from a multi-item cart).
+    const results = await OrderModel.aggregate([
+      { $match: { userId: new mongoose.Types.ObjectId(String(userId)) } },
+      { $sort: { createdAt: -1 } },
+      {
+        $group: {
+          _id: '$orderId',
+          orderId: { $first: '$orderId' },
+          userId: { $first: '$userId' },
+          delivery_address: { $first: '$delivery_address' },
+          payment_status: { $first: '$payment_status' },
+          paymentId: { $first: '$paymentId' },
+          fulfillment_type: { $first: '$fulfillment_type' },
+          pickup_location: { $first: '$pickup_location' },
+          status: { $first: '$status' },
+          subTotalAmt: { $first: '$subTotalAmt' },
+          totalAmt: { $first: '$totalAmt' },
+          createdAt: { $first: '$createdAt' },
+          items: {
+            $push: {
+              productId: '$productId',
+              product_details: '$product_details',
+            }
+          }
+        }
+      },
+      { $sort: { createdAt: -1 } },
+      { $limit: 1 },
+      {
+        $lookup: {
+          from: 'addresses',
+          localField: 'delivery_address',
+          foreignField: '_id',
+          as: 'delivery_address'
+        }
+      },
+      { $unwind: { path: '$delivery_address', preserveNullAndEmpty: true } }
+    ]);
+
+    if (!results.length) {
       return response.status(404).json({
         message: "No orders found",
         success: false
       });
     }
-    
-    console.log(`Successfully found recent order ${recentOrder._id} for user ${userId}`);
-    
+
     return response.json({
       message: "Recent order retrieved successfully",
       success: true,
-      order: recentOrder
+      order: results[0]
     });
     
   } catch (error) {
@@ -1553,7 +1918,7 @@ export const verifyPickupController = async (req, res) => {
     const order = await OrderModel.findOne({ 
       pickupCode, 
       deliveryMethod: 'store-pickup', 
-      status: { $nin: ['Cancelled', 'Picked Up'] }
+      status: { $nin: ['cancelled', 'picked_up'] }
     }).populate('userId', 'name email mobile');
     
     if (!order) {
@@ -1771,15 +2136,11 @@ export const getVerificationHistoryController = async (req, res) => {
     // Find all orders that have been picked up and have verification records
     // Using $or to handle different status formats and field names
     const verifiedPickups = await OrderModel.find({
-      $or: [
-        { fulfillment_type: 'pickup' },
-        { deliveryMethod: 'store-pickup' }
-      ],
-      $or: [
+      $and: [
+        { $or: [{ fulfillment_type: 'pickup' }, { deliveryMethod: 'store-pickup' }] },
         { status: 'picked_up' },
-        { status: 'Picked Up' }
-      ],
-      'pickupVerification.verifiedAt': { $exists: true }
+        { 'pickupVerification.verifiedAt': { $exists: true } }
+      ]
     }).populate('userId', 'name email mobile')
       .populate('pickupVerification.verifiedById', 'name email')
       .sort({ 'pickupVerification.verifiedAt': -1 });

@@ -216,9 +216,9 @@ const DeliveryHistory = () => {
                 <div className="flex items-start justify-between gap-3">
                   <div>
                     <p className="text-base font-semibold text-charcoal dark:text-white">#{order.orderId}</p>
-                    <p className="mt-1 text-sm text-brown-500 dark:text-white/55">{order.customer.name}</p>
+                    <p className="mt-1 text-sm text-brown-500 dark:text-white/55">{order.customer?.name ?? 'Unknown'}</p>
                   </div>
-                  <p className="text-sm font-semibold text-charcoal dark:text-white">KSh {order.total.toFixed(2)}</p>
+                  <p className="text-sm font-semibold text-charcoal dark:text-white">KSh {(order.total ?? 0).toFixed(2)}</p>
                 </div>
                 <p className="mt-3 text-sm text-brown-500 dark:text-white/55">{order.deliveryAddress}</p>
                 <div className="mt-3 flex items-center justify-between gap-3 text-xs text-brown-400 dark:text-white/40">
@@ -271,7 +271,7 @@ const DeliveryHistory = () => {
                     {order.orderId}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-brown-400 dark:text-white/40">
-                    {order.customer.name}
+                    {order.customer?.name ?? 'Unknown'}
                   </td>
                   <td className="px-6 py-4 text-sm text-brown-400 dark:text-white/40 max-w-xs truncate">
                     {order.deliveryAddress}
@@ -280,7 +280,7 @@ const DeliveryHistory = () => {
                     {formatDate(order.deliveredAt)}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-brown-400 dark:text-white/40">
-                    KSh {order.total.toFixed(2)}
+                    KSh {(order.total ?? 0).toFixed(2)}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex">

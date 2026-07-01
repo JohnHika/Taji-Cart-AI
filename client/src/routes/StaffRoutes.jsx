@@ -11,18 +11,10 @@ import PendingDispatch from '../pages/staff/DeliveryManagement/PendingDispatch';
 
 // Staff Auth Guard component
 const StaffRoute = ({ children }) => {
-  const { user, loading } = useSelector((state) => state.auth);
-  
-  // If authentication is still loading, show a spinner
-  if (loading) {
-    return (
-      <div className="flex justify-center items-center h-screen">
-        <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-charcoal"></div>
-      </div>
-    );
-  }
+  const user = useSelector((state) => state.user);
   
   // If user is not logged in or doesn't have staff/admin privileges, redirect to login
+  // Check BOTH boolean flags AND role string for dual role system compatibility
   if (!user || (!user.isStaff && !user.isAdmin && user.role !== 'staff' && user.role !== 'admin')) {
     return <Navigate to="/login" replace />;
   }

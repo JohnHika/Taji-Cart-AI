@@ -65,14 +65,16 @@ export const getUserLoyaltyCard = async (req, res) => {
       
       try {
         // Get all completed orders for this user
-        const orders = await OrderModel.find({
-          user: userId,
-          status: 'Delivered' // Only count completed orders
-        });
-        
-        if (orders && orders.length > 0) {
-          orderCount = orders.length;
-          totalSpent = orders.reduce((sum, order) => sum + (order.totalPrice || 0), 0);
+        // Deduplicate by orderId before counting/summing to avoid inflating
+        // totals when one checkout creates multiple line-item documents.
+        const orderAgg = await OrderModel.aggregate([
+          { $match: { userId: new mongoose.Types.ObjectId(String(userId)), status: 'delivered' } },
+          { $group: { _id: '$orderId', totalAmt: { $first: '$totalAmt' } } }
+        ]);
+
+        if (orderAgg.length > 0) {
+          orderCount = orderAgg.length;
+          totalSpent = orderAgg.reduce((sum, o) => sum + (o.totalAmt || 0), 0);
         }
         
         console.log(`User has ${orderCount} orders totaling KES ${totalSpent}`);
@@ -125,13 +127,12 @@ export const getUserLoyaltyCard = async (req, res) => {
       
       // For admins and regular users, let's check and update their points based on actual orders
       try {
-        // Get total spent from completed orders
-        const orders = await OrderModel.find({
-          user: userId,
-          status: 'Delivered'
-        });
-        
-        const totalSpent = orders.reduce((sum, order) => sum + (order.totalPrice || 0), 0);
+        // Get total spent from completed orders, deduplicating by orderId
+        const orderAgg2 = await OrderModel.aggregate([
+          { $match: { userId: new mongoose.Types.ObjectId(String(userId)), status: 'delivered' } },
+          { $group: { _id: '$orderId', totalAmt: { $first: '$totalAmt' } } }
+        ]);
+        const totalSpent = orderAgg2.reduce((sum, o) => sum + (o.totalAmt || 0), 0);
         const calculatedPoints = Math.floor(totalSpent / 100);
         
         console.log(`User has spent KES ${totalSpent} which equals ${calculatedPoints} points`);
@@ -1549,10 +1550,13 @@ export const refreshUserPoints = async (req, res) => {
       
       console.log(`Admin refreshing points based on spending for user ${userId}`);
       
-      // Calculate points based on order history
+      // Calculate points based on order history.
+      // First group by orderId to get one totalAmt per order (multiple docs share
+      // the same orderId when a cart has multiple items), then sum those.
       const spentResult = await OrderModel.aggregate([
         { $match: { userId: new mongoose.Types.ObjectId(userId) } },
-        { $group: { _id: null, total: { $sum: "$totalAmt" } } }
+        { $group: { _id: '$orderId', totalAmt: { $first: '$totalAmt' } } },
+        { $group: { _id: null, total: { $sum: '$totalAmt' } } }
       ]);
       
       const totalSpent = spentResult.length > 0 ? spentResult[0].total : 0;

@@ -180,7 +180,7 @@ const ChatSessionView = () => {
             className={isInteractive ? 'cursor-pointer' : ''}
           >
             {star <= currentRating ? (
-              <FaStar className="text-yellow-400" size={isInteractive ? 24 : 18} />
+              <FaStar className="text-gold-400" size={isInteractive ? 24 : 18} />
             ) : (
               <FaRegStar className="text-brown-400 dark:text-white/40" size={isInteractive ? 24 : 18} />
             )}
@@ -204,7 +204,7 @@ const ChatSessionView = () => {
   if (error) {
     return (
       <div className="container mx-auto px-4 py-8">
-        <div className="bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-200 p-4 rounded-md mb-4">
+        <div className="bg-blush-100 dark:bg-blush-500/20 text-blush-600 dark:text-blush-300 p-4 rounded-md mb-4">
           <p>{error}</p>
         </div>
         <Link to="/admin/chats" className="inline-flex items-center text-primary-500 hover:text-primary-700">
@@ -217,7 +217,7 @@ const ChatSessionView = () => {
   if (!session) {
     return (
       <div className="container mx-auto px-4 py-8">
-        <div className="bg-yellow-100 dark:bg-yellow-900 text-yellow-700 dark:text-yellow-200 p-4 rounded-md mb-4">
+        <div className="bg-gold-100 dark:bg-gold-600/20 text-gold-700 dark:text-gold-300 p-4 rounded-md mb-4">
           <p>No chat session found with ID: {id}</p>
         </div>
         <Link to="/admin/chats" className="inline-flex items-center text-primary-500 hover:text-primary-700">
@@ -290,7 +290,7 @@ const ChatSessionView = () => {
         {session.isActive && (
           <button
             onClick={handleCloseSession}
-            className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-md inline-flex items-center"
+            className="px-4 py-2 bg-blush-500 hover:bg-blush-600 text-white rounded-md inline-flex items-center"
           >
             <FaTimes className="mr-2" /> Close Chat Session
           </button>
@@ -318,7 +318,7 @@ const ChatSessionView = () => {
               <span
                 className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
                   session.isActive
-                    ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
+                    ? 'bg-brown-100 text-brown-800 dark:bg-brown-600/20 dark:text-brown-200'
                     : 'bg-brown-100 text-charcoal dark:bg-dm-card-2 dark:text-white/70'
                 }`}
               >

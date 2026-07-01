@@ -1,4 +1,5 @@
 import UserModel from "../models/user.model.js";
+import DeliveryPersonnelModel from "../models/deliverypersonnel.model.js";
 
 export const delivery = async(request, response, next) => {
     try {
@@ -31,11 +32,24 @@ export const delivery = async(request, response, next) => {
         }
         
         if (user.isDelivery !== true && user.role !== 'delivery') {
-            console.log(`Delivery auth failed: User ${userId} is not delivery personnel (isDelivery=${user.isDelivery}, role=${user.role})`);
-            return response.status(403).json({
-                message: "Delivery personnel access required",
-                error: true,
-                success: false
+            // Fallback: check if this user has an active DeliveryPersonnel record.
+            // This handles drivers whose User document was never updated with the
+            // delivery role (e.g. created before the sync fix was deployed).
+            const personnel = await DeliveryPersonnelModel.findOne({ userId });
+            if (!personnel) {
+                console.log(`Delivery auth failed: User ${userId} is not delivery personnel (isDelivery=${user.isDelivery}, role=${user.role}) and has no DeliveryPersonnel record`);
+                return response.status(403).json({
+                    message: "Delivery personnel access required",
+                    error: true,
+                    success: false
+                });
+            }
+
+            // Driver record exists — backfill the User flags so the fast path fires
+            // on subsequent requests (avoids the extra DB lookup every time).
+            console.log(`Delivery check: User ${userId} has DeliveryPersonnel record — backfilling User flags`);
+            await UserModel.findByIdAndUpdate(userId, {
+                $set: { isDelivery: true, role: 'delivery' }
             });
         }
         

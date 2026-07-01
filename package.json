@@ -10,12 +10,18 @@
     "dev": "concurrently -n client,server -c cyan,green \"npm run dev -w client\" \"npm run dev -w server\"",
     "build": "npm run build -w client",
     "start:server": "npm run start -w server",
-    "install:all": "npm install"
+    "install:all": "npm install",
+    "cleanup-render": "node cleanup-render-env.js",
+    "cleanup-render-dry-run": "node cleanup-render-env.js --dry-run",
+    "remove-render-vars": "node remove-render-vars.js",
+    "remove-render-vars-dry-run": "node remove-render-vars.js --dry-run"
   },
   "devDependencies": {
     "concurrently": "^9.1.2"
   },
   "dependencies": {
+    "axios": "^1.16.0",
+    "commander": "^11.1.0",
     "leaflet": "^1.9.4",
     "react-leaflet": "^4.2.1",
     "xlsx": "^0.18.5"
