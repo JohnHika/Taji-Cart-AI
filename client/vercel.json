@@ -11,12 +11,6 @@
       ]
     },
     {
-      "source": "/(.*\\.(js|css|woff2|woff|ttf|otf|ico|png|jpg|jpeg|svg|webp|gif))",
-      "headers": [
-        { "key": "Cache-Control", "value": "public, max-age=86400, stale-while-revalidate=604800" }
-      ]
-    },
-    {
       "source": "/(.*)",
       "headers": [
         { "key": "X-Content-Type-Options", "value": "nosniff" },
@@ -28,22 +22,12 @@
   "rewrites": [
     {
       "source": "/api/(.*)",
-      "has": [
-        {
-          "type": "host",
-          "value": "api.nawirihairke.com"
-        }
-      ],
+      "has": [{ "type": "host", "value": "api.nawirihairke.com" }],
       "destination": "https://taji-cart-api.onrender.com/api/$1"
     },
     {
       "source": "/auth/(.*)",
-      "has": [
-        {
-          "type": "host",
-          "value": "api.nawirihairke.com"
-        }
-      ],
+      "has": [{ "type": "host", "value": "api.nawirihairke.com" }],
       "destination": "https://taji-cart-api.onrender.com/auth/$1"
     },
     { "source": "/(.*)", "destination": "/index.html" }
