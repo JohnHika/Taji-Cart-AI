@@ -8,79 +8,79 @@ import CategoryFallbackErrorPage from '../components/CategoryFallbackErrorPage';
 import CategorySmartFallback from '../components/CategorySmartFallback';
 
 // Lazy-loaded page chunks
-const Home                         = React.lazy(() => import('../pages/Home'));
-const Login                        = React.lazy(() => import('../pages/Login'));
-const Register                     = React.lazy(() => import('../pages/Register'));
-const VerifyEmailPage              = React.lazy(() => import('../pages/VerifyEmailPage'));
-const ForgotPassword               = React.lazy(() => import('../pages/ForgotPassword'));
-const OtpVerification              = React.lazy(() => import('../pages/OtpVerification'));
-const ResetPassword                = React.lazy(() => import('../pages/ResetPassword'));
-const SocialAuthSuccess            = React.lazy(() => import('../pages/SocialAuthSuccess'));
-const SearchPage                   = React.lazy(() => import('../pages/SearchPage'));
-const OrderTracking                = React.lazy(() => import('../pages/OrderTracking'));
-const ProductDisplayPage           = React.lazy(() => import('../pages/ProductDisplayPage'));
-const CollectionsPage              = React.lazy(() => import('../pages/CollectionsPage'));
-const ShopTheLookGallery           = React.lazy(() => import('../components/ShopTheLookGallery'));
-const GuestCheckout                = React.lazy(() => import('../pages/GuestCheckout'));
-const GuestOrderTracking           = React.lazy(() => import('../pages/GuestOrderTracking'));
-const StaffPOS                     = React.lazy(() => import('../pages/StaffPOS'));
-const ProductListPage              = React.lazy(() => import('../pages/ProductListPage'));
-const CartMobile                   = React.lazy(() => import('../pages/CartMobile'));
-const UserMenuMobile               = React.lazy(() => import('../pages/UserMenuMobile'));
-const ProductPage                  = React.lazy(() => import('../pages/Product'));
-const SubCategoryPage              = React.lazy(() => import('../pages/SubCategoryPage'));
-const ActiveCampaigns              = React.lazy(() => import('../pages/ActiveCampaigns'));
-const Success                      = React.lazy(() => import('../pages/Success'));
-const MpesaPaymentStatus           = React.lazy(() => import('../components/MpesaPaymentStatus'));
-const DeliverySimulator            = React.lazy(() => import('../pages/DeliverySimulator'));
-const LoyaltyProgramPage           = React.lazy(() => import('../pages/LoyaltyProgramPage'));
-const Address                      = React.lazy(() => import('../pages/Address'));
-const MyOrders                     = React.lazy(() => import('../pages/MyOrders'));
-const UserProfile                  = React.lazy(() => import('../pages/UserProfile'));
-const DashboardHome                = React.lazy(() => import('../pages/DashboardHome'));
-const DashboardCart                = React.lazy(() => import('../pages/DashboardCart'));
-const DashboardCheckout            = React.lazy(() => import('../pages/DashboardCheckout'));
-const UploadProduct                = React.lazy(() => import('../pages/UploadProduct'));
-const CategoryPage                 = React.lazy(() => import('../pages/CategoryPage'));
-const AllOrdersAdmin               = React.lazy(() => import('../pages/admin/AllOrdersAdmin'));
-const LoyaltyProgramAdmin          = React.lazy(() => import('../pages/admin/LoyaltyProgramAdmin'));
-const UsersAdmin                   = React.lazy(() => import('../pages/admin/UsersAdmin'));
-const CommunityPerksAdmin          = React.lazy(() => import('../pages/admin/CommunityPerksAdmin'));
-const CommunityPerks               = React.lazy(() => import('../pages/CommunityPerks'));
-const POSDashboard                 = React.lazy(() => import('../pages/POSDashboard'));
-const POSSales                     = React.lazy(() => import('../pages/POSSales'));
-
-// Delivery pages
-const Dashboard                    = React.lazy(() => import('../layouts/Dashboard'));
-const DeliveryLayout               = React.lazy(() => import('../layouts/DeliveryLayout'));
-const DeliveryDashboard            = React.lazy(() => import('../pages/delivery/Dashboard'));
-const ActiveDeliveries             = React.lazy(() => import('../pages/delivery/ActiveDeliveries'));
-const CompletedDeliveries          = React.lazy(() => import('../pages/delivery/CompletedDeliveries'));
-const DeliveryHistory              = React.lazy(() => import('../pages/delivery/DeliveryHistory'));
-const DeliveryMap                  = React.lazy(() => import('../pages/delivery/DeliveryMap'));
-
-// Staff pages
-const StaffDashboard               = React.lazy(() => import('../pages/staff/Dashboard'));
-const DeliveryManagement           = React.lazy(() => import('../pages/staff/DeliveryManagement'));
-const PendingDispatch              = React.lazy(() => import('../pages/staff/DeliveryManagement/PendingDispatch'));
-const DispatchedOrders             = React.lazy(() => import('../pages/staff/DeliveryManagement/DispatchedOrders'));
-const ActiveDeliveriesManagement   = React.lazy(() => import('../pages/staff/DeliveryManagement/ActiveDeliveries'));
+const Home                          = React.lazy(() => import('../pages/Home'));
+const Login                         = React.lazy(() => import('../pages/Login'));
+const Register                      = React.lazy(() => import('../pages/Register'));
+const VerifyEmailPage               = React.lazy(() => import('../pages/VerifyEmailPage'));
+const ForgotPassword                = React.lazy(() => import('../pages/ForgotPassword'));
+const OtpVerification               = React.lazy(() => import('../pages/OtpVerification'));
+const ResetPassword                 = React.lazy(() => import('../pages/ResetPassword'));
+const SocialAuthSuccess             = React.lazy(() => import('../pages/SocialAuthSuccess'));
+const SearchPage                    = React.lazy(() => import('../pages/SearchPage'));
+const OrderTracking                 = React.lazy(() => import('../pages/OrderTracking'));
+const ProductDisplayPage            = React.lazy(() => import('../pages/ProductDisplayPage'));
+const CollectionsPage               = React.lazy(() => import('../pages/CollectionsPage'));
+const ShopTheLookGallery            = React.lazy(() => import('../components/ShopTheLookGallery'));
+const GuestCheckout                 = React.lazy(() => import('../pages/GuestCheckout'));
+const GuestOrderTracking            = React.lazy(() => import('../pages/GuestOrderTracking'));
+const StaffPOS                      = React.lazy(() => import('../pages/StaffPOS'));
+const ProductListPage               = React.lazy(() => import('../pages/ProductListPage'));
+const CartMobile                    = React.lazy(() => import('../pages/CartMobile'));
+const UserMenuMobile                = React.lazy(() => import('../pages/UserMenuMobile'));
+const ProductPage                   = React.lazy(() => import('../pages/Product'));
+const SubCategoryPage               = React.lazy(() => import('../pages/SubCategoryPage'));
+const ActiveCampaigns               = React.lazy(() => import('../pages/ActiveCampaigns'));
+const Success                       = React.lazy(() => import('../pages/Success'));
+const MpesaPaymentStatus            = React.lazy(() => import('../components/MpesaPaymentStatus'));
+const DeliverySimulator             = React.lazy(() => import('../pages/DeliverySimulator'));
+const LoyaltyProgramPage            = React.lazy(() => import('../pages/LoyaltyProgramPage'));
+const Address                       = React.lazy(() => import('../pages/Address'));
+const MyOrders                      = React.lazy(() => import('../pages/MyOrders'));
+const UserProfile                   = React.lazy(() => import('../pages/UserProfile'));
+const DashboardHome                 = React.lazy(() => import('../pages/DashboardHome'));
+const DashboardCart                 = React.lazy(() => import('../pages/DashboardCart'));
+const DashboardCheckout             = React.lazy(() => import('../pages/DashboardCheckout'));
+const UploadProduct                 = React.lazy(() => import('../pages/UploadProduct'));
+const CategoryPage                  = React.lazy(() => import('../pages/CategoryPage'));
+const AllOrdersAdmin                = React.lazy(() => import('../pages/admin/AllOrdersAdmin'));
+const LoyaltyProgramAdmin           = React.lazy(() => import('../pages/admin/LoyaltyProgramAdmin'));
+const UsersAdmin                    = React.lazy(() => import('../pages/admin/UsersAdmin'));
+const CommunityPerksAdmin           = React.lazy(() => import('../pages/admin/CommunityPerksAdmin'));
+const CommunityPerks                = React.lazy(() => import('../pages/CommunityPerks'));
+const POSDashboard                  = React.lazy(() => import('../pages/POSDashboard'));
+const POSSales                      = React.lazy(() => import('../pages/POSSales'));
+const DashboardLayout               = React.lazy(() => import('../layouts/Dashboard'));
+const DeliveryLayout                = React.lazy(() => import('../layouts/DeliveryLayout'));
+const DeliveryDashboard             = React.lazy(() => import('../pages/delivery/Dashboard'));
+const ActiveDeliveries              = React.lazy(() => import('../pages/delivery/ActiveDeliveries'));
+const CompletedDeliveries           = React.lazy(() => import('../pages/delivery/CompletedDeliveries'));
+const DeliveryHistory               = React.lazy(() => import('../pages/delivery/DeliveryHistory'));
+const DeliveryMap                   = React.lazy(() => import('../pages/delivery/DeliveryMap'));
+const StaffDashboard                = React.lazy(() => import('../pages/staff/Dashboard'));
+const DeliveryManagement            = React.lazy(() => import('../pages/staff/DeliveryManagement'));
+const PendingDispatch               = React.lazy(() => import('../pages/staff/DeliveryManagement/PendingDispatch'));
+const DispatchedOrders              = React.lazy(() => import('../pages/staff/DeliveryManagement/DispatchedOrders'));
+const ActiveDeliveriesManagement    = React.lazy(() => import('../pages/staff/DeliveryManagement/ActiveDeliveries'));
 const CompletedDeliveriesManagement = React.lazy(() => import('../pages/staff/DeliveryManagement/CompletedDeliveries'));
-const DriversManagement            = React.lazy(() => import('../pages/staff/DeliveryManagement/DriversManagement'));
-const PendingPickups               = React.lazy(() => import('../pages/staff/PendingPickups'));
-const VerificationHistory          = React.lazy(() => import('../pages/staff/VerificationHistory'));
-const VerificationSuccess          = React.lazy(() => import('../pages/staff/VerificationSuccess'));
-const VerifyPickup                 = React.lazy(() => import('../pages/staff/VerifyPickup'));
+const DriversManagement             = React.lazy(() => import('../pages/staff/DeliveryManagement/DriversManagement'));
+const PendingPickups                = React.lazy(() => import('../pages/staff/PendingPickups'));
+const VerificationHistory           = React.lazy(() => import('../pages/staff/VerificationHistory'));
+const VerificationSuccess           = React.lazy(() => import('../pages/staff/VerificationSuccess'));
+const VerifyPickup                  = React.lazy(() => import('../pages/staff/VerifyPickup'));
 
+// Suspense spinner shown while a lazy chunk is loading
 const PageLoader = () => (
   <div className="min-h-[60vh] flex items-center justify-center">
     <div className="w-8 h-8 border-4 border-gold-500 border-t-transparent rounded-full animate-spin" />
   </div>
 );
 
-function lazy(element) {
-  return <Suspense fallback={<PageLoader />}>{element}</Suspense>;
-}
+// Wrap a lazy element — must only be called inside render, not at module level
+const S = (Component) => (
+  <Suspense fallback={<PageLoader />}>
+    <Component />
+  </Suspense>
+);
 
 function LegacyCheckoutRedirect() {
   const location = useLocation();
@@ -95,36 +95,32 @@ const router = createBrowserRouter([
     element: <App />,
     errorElement: <CategoryFallbackErrorPage />,
     children: [
-      { index: true,                      element: lazy(<Home />) },
-      { path: 'login',                    element: lazy(<Login />) },
-      { path: 'register',                 element: lazy(<Register />) },
-      { path: 'verify-email',             element: lazy(<VerifyEmailPage />) },
-      { path: 'forgot-password',          element: lazy(<ForgotPassword />) },
-      { path: 'verification-otp',         element: lazy(<OtpVerification />) },
-      { path: 'reset-password',           element: lazy(<ResetPassword />) },
-      { path: 'social-auth-success',      element: lazy(<SocialAuthSuccess />) },
-      { path: 'search',                   element: lazy(<SearchPage />) },
-      { path: 'order-tracking/:orderId',  element: lazy(<OrderTracking />) },
-      { path: 'product/:productId',       element: lazy(<ProductDisplayPage />) },
+      { index: true,                     element: S(Home) },
+      { path: 'login',                   element: S(Login) },
+      { path: 'register',                element: S(Register) },
+      { path: 'verify-email',            element: S(VerifyEmailPage) },
+      { path: 'forgot-password',         element: S(ForgotPassword) },
+      { path: 'verification-otp',        element: S(OtpVerification) },
+      { path: 'reset-password',          element: S(ResetPassword) },
+      { path: 'social-auth-success',     element: S(SocialAuthSuccess) },
+      { path: 'search',                  element: S(SearchPage) },
+      { path: 'order-tracking/:orderId', element: S(OrderTracking) },
+      { path: 'product/:productId',      element: S(ProductDisplayPage) },
       { path: 'categories',              element: <Navigate to="/" replace /> },
-      { path: 'collections',             element: lazy(<CollectionsPage />) },
-      { path: 'shop-the-look',           element: lazy(<ShopTheLookGallery />) },
-      { path: 'guest-checkout',          element: lazy(<GuestCheckout />) },
-      { path: 'order/track-guest',       element: lazy(<GuestOrderTracking />) },
-      { path: 'mobile/cart',             element: lazy(<CartMobile />) },
-      { path: 'mobile/profile',          element: lazy(<UserMenuMobile />) },
-      { path: 'product',                 element: lazy(<ProductPage />) },
-      { path: 'subcategory',             element: lazy(<SubCategoryPage />) },
-      { path: 'campaigns',               element: lazy(<ActiveCampaigns />) },
-      { path: 'success',                 element: lazy(<Success />) },
-      { path: 'mpesa-payment-status',    element: lazy(<MpesaPaymentStatus />) },
+      { path: 'collections',             element: S(CollectionsPage) },
+      { path: 'shop-the-look',           element: S(ShopTheLookGallery) },
+      { path: 'guest-checkout',          element: S(GuestCheckout) },
+      { path: 'order/track-guest',       element: S(GuestOrderTracking) },
+      { path: 'mobile/cart',             element: S(CartMobile) },
+      { path: 'mobile/profile',          element: <PrivateRoute>{S(UserMenuMobile)}</PrivateRoute> },
+      { path: 'product',                 element: S(ProductPage) },
+      { path: 'subcategory',             element: S(SubCategoryPage) },
+      { path: 'campaigns',              element: S(ActiveCampaigns) },
+      { path: 'success',                element: S(Success) },
+      { path: 'mpesa-payment-status',   element: S(MpesaPaymentStatus) },
       {
         path: 'checkout',
-        element: (
-          <PrivateRoute>
-            <LegacyCheckoutRedirect />
-          </PrivateRoute>
-        )
+        element: <PrivateRoute><LegacyCheckoutRedirect /></PrivateRoute>,
       },
       {
         path: 'wishlist',
@@ -138,58 +134,47 @@ const router = createBrowserRouter([
               <p className="text-sm text-brown-400 dark:text-white/50">Your wishlist is coming soon!</p>
             </div>
           </PrivateRoute>
-        )
+        ),
       },
       {
         path: 'delivery-simulator',
-        element: (
-          <PrivateRoute>
-            {lazy(<DeliverySimulator />)}
-          </PrivateRoute>
-        )
+        element: <PrivateRoute>{S(DeliverySimulator)}</PrivateRoute>,
       },
       {
         path: 'staff-pos',
-        element: (
-          <PrivateRoute requireStaff={true}>
-            {lazy(<StaffPOS />)}
-          </PrivateRoute>
-        )
+        element: <PrivateRoute requireStaff={true}>{S(StaffPOS)}</PrivateRoute>,
       },
       {
         path: 'sales-counter',
-        element: (
-          <PrivateRoute requireStaff={true}>
-            {lazy(<StaffPOS />)}
-          </PrivateRoute>
-        )
+        element: <PrivateRoute requireStaff={true}>{S(StaffPOS)}</PrivateRoute>,
       },
+
       // Category routes
       {
         path: 'product-category/:categoryId',
-        element: lazy(<ProductListPage />)
+        element: S(ProductListPage),
       },
       {
         path: ':categoryName-:categoryId',
-        element: lazy(<ProductListPage />),
+        element: S(ProductListPage),
         loader: ({ params }) => {
           if (!isMongoObjectId(params.categoryId)) throw new Response('Not Found', { status: 404 });
           return null;
-        }
+        },
       },
       {
         path: ':categoryName-:categoryId/:subcategoryName-:subcategoryId',
-        element: lazy(<ProductListPage />),
+        element: S(ProductListPage),
         loader: ({ params }) => {
           if (!isMongoObjectId(params.categoryId) || !isMongoObjectId(params.subcategoryId)) {
             throw new Response('Not Found', { status: 404 });
           }
           return null;
-        }
+        },
       },
       {
         path: ':slug-:id',
-        element: lazy(<ProductListPage />),
+        element: S(ProductListPage),
         loader: ({ params }) => {
           const reservedWords = ['staff', 'admin', 'dashboard', 'pos', 'api', 'auth', 'login', 'register'];
           const containsReserved = reservedWords.some(word => params.slug?.toLowerCase().includes(word));
@@ -197,89 +182,44 @@ const router = createBrowserRouter([
             throw new Response('Not Found', { status: 404 });
           }
           return null;
-        }
+        },
       },
+
       // Delivery routes
       {
         path: 'delivery',
-        element: (
-          <PrivateRoute requireDelivery={true}>
-            {lazy(<DeliveryLayout />)}
-          </PrivateRoute>
-        ),
+        element: <PrivateRoute requireDelivery={true}>{S(DeliveryLayout)}</PrivateRoute>,
         children: [
-          { path: 'dashboard', element: lazy(<DeliveryDashboard />) },
-          { path: 'active',    element: lazy(<ActiveDeliveries />) },
-          { path: 'completed', element: lazy(<CompletedDeliveries />) },
-          { path: 'history',   element: lazy(<DeliveryHistory />) },
-          { path: 'map',       element: lazy(<DeliveryMap />) },
-        ]
+          { path: 'dashboard', element: S(DeliveryDashboard) },
+          { path: 'active',    element: S(ActiveDeliveries) },
+          { path: 'completed', element: S(CompletedDeliveries) },
+          { path: 'history',   element: S(DeliveryHistory) },
+          { path: 'map',       element: S(DeliveryMap) },
+        ],
       },
+
       // Dashboard routes
       {
         path: 'dashboard',
-        element: (
-          <PrivateRoute>
-            {lazy(<Dashboard />)}
-          </PrivateRoute>
-        ),
+        element: <PrivateRoute>{S(DashboardLayout)}</PrivateRoute>,
         children: [
-          { index: true,          element: lazy(<DashboardHome />) },
-          { path: 'profile',      element: lazy(<UserProfile />) },
-          { path: 'cart',         element: lazy(<DashboardCart />) },
-          { path: 'checkout',     element: lazy(<DashboardCheckout />) },
-          {
-            path: 'upload-product',
-            element: <PrivateRoute requireAdmin={true}>{lazy(<UploadProduct />)}</PrivateRoute>
-          },
-          {
-            path: 'product',
-            element: <PrivateRoute requireAdmin={true}>{lazy(<ProductPage />)}</PrivateRoute>
-          },
-          {
-            path: 'category',
-            element: <PrivateRoute requireAdmin={true}>{lazy(<CategoryPage />)}</PrivateRoute>
-          },
-          {
-            path: 'subcategory',
-            element: <PrivateRoute requireAdmin={true}>{lazy(<SubCategoryPage />)}</PrivateRoute>
-          },
-          {
-            path: 'allorders',
-            element: <PrivateRoute requireAdmin={true}>{lazy(<AllOrdersAdmin />)}</PrivateRoute>
-          },
-          {
-            path: 'loyalty-program-admin',
-            element: <PrivateRoute requireAdmin={true}>{lazy(<LoyaltyProgramAdmin />)}</PrivateRoute>
-          },
-          {
-            path: 'users-admin',
-            element: <PrivateRoute requireAdmin={true}>{lazy(<UsersAdmin />)}</PrivateRoute>
-          },
-          {
-            path: 'admin-community-perks',
-            element: <PrivateRoute requireAdmin={true}>{lazy(<CommunityPerksAdmin />)}</PrivateRoute>
-          },
-          {
-            path: 'myorders',
-            element: <PrivateRoute>{lazy(<MyOrders />)}</PrivateRoute>
-          },
-          {
-            path: 'address',
-            element: <PrivateRoute>{lazy(<Address />)}</PrivateRoute>
-          },
-          {
-            path: 'community-perks',
-            element: <PrivateRoute>{lazy(<CommunityPerks />)}</PrivateRoute>
-          },
-          {
-            path: 'loyalty-program',
-            element: <PrivateRoute>{lazy(<LoyaltyProgramPage />)}</PrivateRoute>
-          },
-          {
-            path: 'active-campaigns',
-            element: <PrivateRoute>{lazy(<ActiveCampaigns />)}</PrivateRoute>
-          },
+          { index: true,      element: S(DashboardHome) },
+          { path: 'profile',  element: S(UserProfile) },
+          { path: 'cart',     element: S(DashboardCart) },
+          { path: 'checkout', element: S(DashboardCheckout) },
+          { path: 'upload-product',         element: <PrivateRoute requireAdmin={true}>{S(UploadProduct)}</PrivateRoute> },
+          { path: 'product',                element: <PrivateRoute requireAdmin={true}>{S(ProductPage)}</PrivateRoute> },
+          { path: 'category',               element: <PrivateRoute requireAdmin={true}>{S(CategoryPage)}</PrivateRoute> },
+          { path: 'subcategory',            element: <PrivateRoute requireAdmin={true}>{S(SubCategoryPage)}</PrivateRoute> },
+          { path: 'allorders',              element: <PrivateRoute requireAdmin={true}>{S(AllOrdersAdmin)}</PrivateRoute> },
+          { path: 'loyalty-program-admin',  element: <PrivateRoute requireAdmin={true}>{S(LoyaltyProgramAdmin)}</PrivateRoute> },
+          { path: 'users-admin',            element: <PrivateRoute requireAdmin={true}>{S(UsersAdmin)}</PrivateRoute> },
+          { path: 'admin-community-perks',  element: <PrivateRoute requireAdmin={true}>{S(CommunityPerksAdmin)}</PrivateRoute> },
+          { path: 'myorders',               element: <PrivateRoute>{S(MyOrders)}</PrivateRoute> },
+          { path: 'address',                element: <PrivateRoute>{S(Address)}</PrivateRoute> },
+          { path: 'community-perks',        element: <PrivateRoute>{S(CommunityPerks)}</PrivateRoute> },
+          { path: 'loyalty-program',        element: <PrivateRoute>{S(LoyaltyProgramPage)}</PrivateRoute> },
+          { path: 'active-campaigns',       element: <PrivateRoute>{S(ActiveCampaigns)}</PrivateRoute> },
           // Delivery redirects
           { path: 'delivery/dashboard', element: <Navigate to="/delivery/dashboard" replace /> },
           { path: 'delivery/active',    element: <Navigate to="/delivery/active"    replace /> },
@@ -287,71 +227,36 @@ const router = createBrowserRouter([
           { path: 'delivery/history',   element: <Navigate to="/delivery/history"   replace /> },
           { path: 'delivery/map',       element: <Navigate to="/delivery/map"       replace /> },
           // Staff routes
-          {
-            path: 'staff',
-            element: <PrivateRoute requireStaff={true}>{lazy(<StaffDashboard />)}</PrivateRoute>
-          },
-          {
-            path: 'staff/dashboard',
-            element: <PrivateRoute requireStaff={true}>{lazy(<StaffDashboard />)}</PrivateRoute>
-          },
-          {
-            path: 'staff/pending-pickups',
-            element: <PrivateRoute requireStaff={true}>{lazy(<PendingPickups />)}</PrivateRoute>
-          },
-          {
-            path: 'staff/verify-pickup',
-            element: <PrivateRoute requireStaff={true}>{lazy(<VerifyPickup />)}</PrivateRoute>
-          },
-          {
-            path: 'staff/completed-verifications',
-            element: <PrivateRoute requireStaff={true}>{lazy(<VerificationHistory />)}</PrivateRoute>
-          },
-          {
-            path: 'staff/verification-success',
-            element: <PrivateRoute requireStaff={true}>{lazy(<VerificationSuccess />)}</PrivateRoute>
-          },
-          {
-            path: 'staff-pos',
-            element: <PrivateRoute requireStaff={true}>{lazy(<StaffPOS />)}</PrivateRoute>
-          },
-          {
-            path: 'sales-counter',
-            element: <PrivateRoute requireStaff={true}>{lazy(<StaffPOS />)}</PrivateRoute>
-          },
-          {
-            path: 'pos-dashboard',
-            element: <PrivateRoute requireStaff={true}>{lazy(<POSDashboard />)}</PrivateRoute>
-          },
-          {
-            path: 'sales-hub',
-            element: <PrivateRoute requireStaff={true}>{lazy(<POSDashboard />)}</PrivateRoute>
-          },
-          {
-            path: 'pos-sales',
-            element: <PrivateRoute requireStaff={true}>{lazy(<POSSales />)}</PrivateRoute>
-          },
-          {
-            path: 'sales-history',
-            element: <PrivateRoute requireStaff={true}>{lazy(<POSSales />)}</PrivateRoute>
-          },
+          { path: 'staff',                       element: <PrivateRoute requireStaff={true}>{S(StaffDashboard)}</PrivateRoute> },
+          { path: 'staff/dashboard',             element: <PrivateRoute requireStaff={true}>{S(StaffDashboard)}</PrivateRoute> },
+          { path: 'staff/pending-pickups',       element: <PrivateRoute requireStaff={true}>{S(PendingPickups)}</PrivateRoute> },
+          { path: 'staff/verify-pickup',         element: <PrivateRoute requireStaff={true}>{S(VerifyPickup)}</PrivateRoute> },
+          { path: 'staff/completed-verifications', element: <PrivateRoute requireStaff={true}>{S(VerificationHistory)}</PrivateRoute> },
+          { path: 'staff/verification-success',  element: <PrivateRoute requireStaff={true}>{S(VerificationSuccess)}</PrivateRoute> },
+          { path: 'staff-pos',                   element: <PrivateRoute requireStaff={true}>{S(StaffPOS)}</PrivateRoute> },
+          { path: 'sales-counter',               element: <PrivateRoute requireStaff={true}>{S(StaffPOS)}</PrivateRoute> },
+          { path: 'pos-dashboard',               element: <PrivateRoute requireStaff={true}>{S(POSDashboard)}</PrivateRoute> },
+          { path: 'sales-hub',                   element: <PrivateRoute requireStaff={true}>{S(POSDashboard)}</PrivateRoute> },
+          { path: 'pos-sales',                   element: <PrivateRoute requireStaff={true}>{S(POSSales)}</PrivateRoute> },
+          { path: 'sales-history',               element: <PrivateRoute requireStaff={true}>{S(POSSales)}</PrivateRoute> },
           {
             path: 'staff/delivery',
-            element: <PrivateRoute requireStaff={true}>{lazy(<DeliveryManagement />)}</PrivateRoute>,
+            element: <PrivateRoute requireStaff={true}>{S(DeliveryManagement)}</PrivateRoute>,
             children: [
               { index: true,         element: <Navigate to="pending" replace /> },
-              { path: 'pending',     element: lazy(<PendingDispatch />) },
-              { path: 'dispatched',  element: lazy(<DispatchedOrders />) },
-              { path: 'active',      element: lazy(<ActiveDeliveriesManagement />) },
-              { path: 'completed',   element: lazy(<CompletedDeliveriesManagement />) },
-              { path: 'drivers',     element: lazy(<DriversManagement />) },
-            ]
-          }
-        ]
+              { path: 'pending',     element: S(PendingDispatch) },
+              { path: 'dispatched',  element: S(DispatchedOrders) },
+              { path: 'active',      element: S(ActiveDeliveriesManagement) },
+              { path: 'completed',   element: S(CompletedDeliveriesManagement) },
+              { path: 'drivers',     element: S(DriversManagement) },
+            ],
+          },
+        ],
       },
-      { path: '*', element: <CategorySmartFallback /> }
-    ]
-  }
+
+      { path: '*', element: <CategorySmartFallback /> },
+    ],
+  },
 ]);
 
 export default router;
