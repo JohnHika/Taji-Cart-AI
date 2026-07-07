@@ -4,6 +4,7 @@ import { DisplayPriceInShillings } from '../utils/DisplayPriceInShillings';
 import { pricewithDiscount } from '../utils/PriceWithDiscount';
 import { valideURLConvert } from '../utils/valideURLConvert';
 import AddToCartButton from './AddToCartButton';
+import WatermarkedImage from './WatermarkedImage';
 
 const CardProduct = ({ data }) => {
   const hasValidPrice = Number.isFinite(Number(data.price));
@@ -20,17 +21,12 @@ const CardProduct = ({ data }) => {
       to={`/product/${encodeURIComponent(valideURLConvert(data.name))}-${data._id}`}
       className="group grid h-full min-h-0 w-[140px] max-w-full grid-rows-[auto_auto_auto_1fr_auto] gap-1.5 overflow-hidden rounded-xl border border-brown-200 bg-white p-2 transition-all duration-300 hover:-translate-y-1 hover:border-plum-300 hover:shadow-xl dark:border-dm-border dark:bg-dm-card dark:hover:border-plum-600 xs:w-[156px] sm:w-[172px] sm:gap-2 sm:p-3 md:w-[192px] lg:w-[212px] lg:p-4 xl:w-[232px]"
     >
-      <div className="relative aspect-[4/3] w-full overflow-hidden rounded-xl bg-blush-50 dark:bg-dm-card-2 shadow-sm sm:aspect-square">
-        <img
-          src={data.image?.[0]}
-          alt={data.name}
-          className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
-          onError={(e) => {
-            e.currentTarget.onerror = null;
-            e.currentTarget.src = 'https://via.placeholder.com/150?text=Hair+Product';
-          }}
-        />
-      </div>
+      <WatermarkedImage
+        src={data.image?.[0]}
+        alt={data.name}
+        className="aspect-[4/3] w-full overflow-hidden rounded-xl bg-blush-50 dark:bg-dm-card-2 shadow-sm sm:aspect-square"
+        imgClassName="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+      />
 
       <div className="mt-0.5 flex flex-wrap items-center gap-1 sm:mt-1">
         {categoryName && (

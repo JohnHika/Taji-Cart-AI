@@ -5,6 +5,7 @@ import SummaryApi from '../common/SummaryApi'
 import Axios from '../utils/Axios'
 import AxiosToastError from '../utils/AxiosToastError'
 import EditProductAdmin from './EditProductAdmin'
+import WatermarkedImage from './WatermarkedImage'
 
 const ProductCardAdmin = ({ data, fetchProductData }) => {
   const [editOpen, setEditOpen] = useState(false)
@@ -39,14 +40,13 @@ const ProductCardAdmin = ({ data, fetchProductData }) => {
 
   return (
     <div className='w-full p-4 bg-white dark:bg-dm-card rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105'>
-      <div className='h-40 overflow-hidden bg-brown-50 dark:bg-dm-card-2 rounded-lg mb-3'>
-        <img
-          src={data?.image[0]}
-          alt={data?.name}
-          className='w-full h-full object-cover object-center'
-          onError={(e) => { e.target.src = 'https://via.placeholder.com/150?text=No+Image' }}
-        />
-      </div>
+      <WatermarkedImage
+        src={data?.image[0]}
+        alt={data?.name}
+        fallback="https://via.placeholder.com/150?text=No+Image"
+        className="h-40 overflow-hidden bg-brown-50 dark:bg-dm-card-2 rounded-lg mb-3"
+        imgClassName="w-full h-full object-cover object-center"
+      />
       <h3 className='truncate font-medium text-charcoal dark:text-white mb-1'>{data?.name || 'Product Name'}</h3>
       <p className='text-sm capitalize truncate text-slate-500 dark:text-white/55 mb-3'>{data?.unit || 'Unit'}</p>
       <div className='flex gap-2 py-2'>

@@ -5,6 +5,7 @@ import SummaryApi from '../common/SummaryApi';
 import ExportButton from '../components/ExportButton';
 import LoadingSpinner from '../components/LoadingSpinner';
 import Pagination from '../components/Pagination';
+import WatermarkedImage from '../components/WatermarkedImage';
 import Axios from '../utils/Axios';
 import AxiosToastError from '../utils/AxiosToastError';
 import { DisplayPriceInShillings } from '../utils/DisplayPriceInShillings';
@@ -386,14 +387,12 @@ const DashboardProduct = () => {
                     className="bg-white dark:bg-dm-card rounded-lg shadow overflow-hidden border border-brown-100 dark:border-dm-border hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1"
                   >
                     <div className="relative h-48 bg-brown-50 dark:bg-dm-card-2">
-                      <img
+                      <WatermarkedImage
                         src={product.image && product.image[0] ? product.image[0] : 'https://via.placeholder.com/300'}
                         alt={product.name}
-                        className="h-full w-full object-cover"
-                        onError={(e) => {
-                          e.target.onerror = null;
-                          e.target.src = 'https://via.placeholder.com/300?text=No+Image';
-                        }}
+                        fallback="https://via.placeholder.com/300?text=No+Image"
+                        className="h-full w-full"
+                        imgClassName="h-full w-full object-cover"
                       />
                       <div className="absolute top-2 right-2">
                         <input
@@ -553,17 +552,14 @@ const DashboardProduct = () => {
                             />
                           </td>
                           <td className="px-4 py-4">
-                            <div className="h-12 w-12 bg-brown-50 dark:bg-dm-card-2 rounded overflow-hidden">
-                              <img
-                                src={product.image && product.image[0] ? product.image[0] : 'https://via.placeholder.com/150'}
-                                alt={product.name}
-                                className="h-full w-full object-cover"
-                                onError={(e) => {
-                                  e.target.onerror = null;
-                                  e.target.src = 'https://via.placeholder.com/150?text=No+Image';
-                                }}
-                              />
-                            </div>
+                            <WatermarkedImage
+                              src={product.image && product.image[0] ? product.image[0] : 'https://via.placeholder.com/150'}
+                              alt={product.name}
+                              fallback="https://via.placeholder.com/150?text=No+Image"
+                              className="h-12 w-12 bg-brown-50 dark:bg-dm-card-2 rounded overflow-hidden"
+                              imgClassName="h-full w-full object-cover"
+                              watermarkClassName="w-1/3 max-w-[16px] opacity-70 bottom-0.5 right-0.5"
+                            />
                           </td>
                           <td className="px-4 py-4">
                             <div className="max-w-xs">
