@@ -1,5 +1,6 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
+import { HelmetProvider } from 'react-helmet-async';
 import { Provider } from 'react-redux';
 import { RouterProvider } from 'react-router-dom';
 import 'react-toastify/dist/ReactToastify.css';
@@ -70,11 +71,13 @@ window.addEventListener('error', (event) => {
 // Basic render without any providers to test if React works
 try {
   ReactDOM.createRoot(document.getElementById('root')).render(
-    <Provider store={store}>
-      <ThemeProvider>
-        <RouterProvider router={router} />
-      </ThemeProvider>
-    </Provider>
+    <HelmetProvider>
+      <Provider store={store}>
+        <ThemeProvider>
+          <RouterProvider router={router} />
+        </ThemeProvider>
+      </Provider>
+    </HelmetProvider>
   );
   console.log('React rendered successfully');
 } catch (error) {

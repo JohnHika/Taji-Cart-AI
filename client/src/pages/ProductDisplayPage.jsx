@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react'
+import { Helmet } from 'react-helmet-async'
 import { FaAngleLeft, FaAngleRight, FaStar, FaShieldAlt, FaTruck, FaTags, FaRuler } from "react-icons/fa"
 import { FiHeart } from 'react-icons/fi'
 import { useSelector } from 'react-redux'
@@ -15,6 +16,7 @@ import AxiosToastError from '../utils/AxiosToastError'
 import { DisplayPriceInShillings } from '../utils/DisplayPriceInShillings'
 import { pricewithDiscount } from '../utils/PriceWithDiscount'
 import { valideURLConvert } from '../utils/valideURLConvert'
+import WatermarkedImage from '../components/WatermarkedImage'
 
 const TABS = ['Description', 'Details', 'Reviews'];
 
@@ -219,8 +221,60 @@ const ProductDisplayPage = () => {
   const hasDiscount = hasValidPrice && data.discount > 0;
   const canPurchase = data.stock > 0 && hasValidPrice;
 
+  const pageTitle = data.name
+    ? `${data.name} — Nawiri Hair`
+    : 'Nawiri Hair — Premium Hair Products';
+  const pageDesc = data.description
+    ? String(data.description).replace(/<[^>]+>/g, '').slice(0, 155)
+    : `Buy ${data.name || 'premium hair products'} at Nawiri Hair. Fast delivery across Kenya.`;
+  const pageImage = data.image?.[0] || 'https://nawirihairke.com/images/nawiri_logo.jpeg';
+  const pageUrl = `https://nawirihairke.com/product/${params.productId}`;
+  const jsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'Product',
+    name: data.name,
+    image: data.image,
+    description: pageDesc,
+    sku: data.sku || undefined,
+    brand: { '@type': 'Brand', name: 'Nawiri Hair' },
+    offers: {
+      '@type': 'Offer',
+      url: pageUrl,
+      priceCurrency: 'KES',
+      price: discountedPrice ?? data.price ?? 0,
+      availability: data.stock > 0
+        ? 'https://schema.org/InStock'
+        : 'https://schema.org/OutOfStock',
+      seller: { '@type': 'Organization', name: 'Nawiri Hair' },
+    },
+    ...(averageRating > 0 && ratingCount > 0 && {
+      aggregateRating: {
+        '@type': 'AggregateRating',
+        ratingValue: averageRating.toFixed(1),
+        reviewCount: ratingCount,
+        bestRating: 5,
+        worstRating: 1,
+      },
+    }),
+  };
+
   return (
     <div className="bg-ivory dark:bg-dm-surface min-h-screen">
+      <Helmet>
+        <title>{pageTitle}</title>
+        <meta name="description" content={pageDesc} />
+        <link rel="canonical" href={pageUrl} />
+        <meta property="og:type" content="product" />
+        <meta property="og:title" content={pageTitle} />
+        <meta property="og:description" content={pageDesc} />
+        <meta property="og:image" content={pageImage} />
+        <meta property="og:url" content={pageUrl} />
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content={pageTitle} />
+        <meta name="twitter:description" content={pageDesc} />
+        <meta name="twitter:image" content={pageImage} />
+        <script type="application/ld+json">{JSON.stringify(jsonLd)}</script>
+      </Helmet>
       <div className="max-w-7xl mx-auto px-3 sm:px-5 lg:px-8 py-6 sm:py-8">
 
         {/* Breadcrumb */}
@@ -245,14 +299,14 @@ const ProductDisplayPage = () => {
           <div className="flex flex-col gap-3">
             {/* Main image */}
             <div className="relative bg-white dark:bg-dm-card rounded-card border border-brown-100 dark:border-dm-border shadow-card overflow-hidden">
-              <div className="aspect-square">
-                <img
-                  src={data.image[image]}
-                  alt={data.name}
-                  className="w-full h-full object-contain p-4 transition-opacity duration-300"
-                  onError={(e) => { e.target.src = 'https://via.placeholder.com/400?text=No+Image'; }}
-                />
-              </div>
+              <WatermarkedImage
+                src={data.image[image]}
+                alt={data.name}
+                fallback="https://via.placeholder.com/400?text=No+Image"
+                className="aspect-square"
+                imgClassName="w-full h-full object-contain p-4 transition-opacity duration-300"
+                watermarkClassName="w-[18%] max-w-[80px] opacity-70 bottom-3 right-3"
+              />
               {hasDiscount && (
                 <div className="absolute top-3 left-3 bg-gold-500 text-charcoal text-xs font-bold font-price px-2.5 py-1 rounded-pill shadow-sm">
                   {data.discount}% OFF
@@ -289,7 +343,14 @@ const ProductDisplayPage = () => {
                       onClick={() => setImage(i)}
                       className={`flex-shrink-0 w-16 h-16 rounded-lg border-2 overflow-hidden transition-all duration-200 ${i === image ? 'border-plum-700 shadow-plum' : 'border-brown-100 dark:border-dm-border hover:border-plum-300'}`}
                     >
-                      <img src={img} alt={`thumb ${i + 1}`} className="w-full h-full object-contain" onError={(e) => { e.target.src = 'https://via.placeholder.com/100'; }} />
+                      <WatermarkedImage
+                        src={img}
+                        alt={`thumb ${i + 1}`}
+                        fallback="https://via.placeholder.com/100"
+                        className="h-full w-full"
+                        imgClassName="w-full h-full object-contain"
+                        watermarkClassName="w-1/3 max-w-[18px] opacity-70 bottom-0.5 right-0.5"
+                      />
                     </button>
                   ))}
                 </div>

@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { Helmet } from 'react-helmet-async';
 import { FaUsers } from 'react-icons/fa';
 import { Link, useNavigate } from 'react-router-dom';
 import SummaryApi from '../common/SummaryApi';
@@ -190,6 +191,27 @@ const Home = () => {
 
   return (
     <section className="bg-ivory transition-colors dark:bg-dm-surface">
+      <Helmet>
+        <title>Nawiri Hair — Premium Hair Products in Kenya</title>
+        <meta name="description" content="Shop wigs, extensions, weaves and natural hair products at Nawiri Hair. Wide selection, best prices, fast delivery across Kenya." />
+        <link rel="canonical" href="https://nawirihairke.com/" />
+        <meta property="og:type" content="website" />
+        <meta property="og:title" content="Nawiri Hair — Premium Hair Products in Kenya" />
+        <meta property="og:description" content="Shop wigs, extensions, weaves and natural hair products at Nawiri Hair. Wide selection, best prices, fast delivery across Kenya." />
+        <meta property="og:image" content="https://nawirihairke.com/images/nawiri_logo.jpeg" />
+        <meta property="og:url" content="https://nawirihairke.com/" />
+        <script type="application/ld+json">{JSON.stringify({
+          '@context': 'https://schema.org',
+          '@type': 'Store',
+          name: 'Nawiri Hair',
+          url: 'https://nawirihairke.com',
+          logo: 'https://nawirihairke.com/images/nawiri_logo.jpeg',
+          description: 'Premium hair products, wigs, extensions and accessories delivered across Kenya.',
+          address: { '@type': 'PostalAddress', addressCountry: 'KE' },
+          currenciesAccepted: 'KES',
+          paymentAccepted: 'M-Pesa, Card',
+        })}</script>
+      </Helmet>
       <div className="container mx-auto px-2 pt-4 sm:px-4 sm:pt-6">
         {loadingCatalog ? (
           <div className="h-[280px] animate-pulse rounded-3xl bg-plum-100 dark:bg-plum-900/40 sm:h-[340px]" />
