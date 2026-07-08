@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="800" viewBox="0 0 800 800">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#FAF0F6"/>
+      <stop offset="100%" stop-color="#F0D6E8"/>
+    </linearGradient>
+    <clipPath id="logoClip">
+      <circle cx="400" cy="380" r="200"/>
+    </clipPath>
+  </defs>
+
+  <rect width="800" height="800" fill="url(#bg)"/>
+
+  <circle cx="400" cy="380" r="204" fill="#FFFFFF"/>
+  <g clip-path="url(#logoClip)">
+    <image href="/images/nawiri_logo.jpeg" x="215" y="195" width="370" height="370"/>
+  </g>
+  <circle cx="400" cy="380" r="204" fill="none" stroke="#F0D6E8" stroke-width="2"/>
+
+  <text x="400" y="670" font-family="Arial, sans-serif" font-size="17" fill="#A87A6C" text-anchor="middle" letter-spacing="2">IMAGE ARRIVING SOON</text>
+</svg>

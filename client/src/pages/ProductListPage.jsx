@@ -233,6 +233,7 @@ const ProductListPage = () => {
       <Helmet>
         <title>{catTitle}</title>
         <meta name="description" content={catDesc} />
+        <link rel="canonical" href={`https://nawirihairke.com${location.pathname}`} />
         <meta property="og:title" content={catTitle} />
         <meta property="og:description" content={catDesc} />
         <meta property="og:type" content="website" />

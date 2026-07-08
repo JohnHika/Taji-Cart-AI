@@ -57,7 +57,7 @@ const __dirname  = path.dirname(__filename);
 // ── Constants ─────────────────────────────────────────────────────────────────
 
 const PLACEHOLDER_IMAGE =
-  'https://res.cloudinary.com/demo/image/upload/v1/samples/ecommerce/leather-bag-gray';
+  'https://nawirihairke.com/images/product-photo-pending.svg';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 

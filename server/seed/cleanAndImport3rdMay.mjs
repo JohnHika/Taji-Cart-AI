@@ -33,7 +33,7 @@ const require     = createRequire(import.meta.url);
 const XLSX        = require('xlsx');
 const __dirname   = path.dirname(fileURLToPath(import.meta.url));
 const XLSX_PATH   = path.resolve(__dirname, '../../NAWIRI STOCK 2026.xlsx');
-const PLACEHOLDER = 'https://res.cloudinary.com/demo/image/upload/v1/samples/ecommerce/leather-bag-gray';
+const PLACEHOLDER = 'https://nawirihairke.com/images/product-photo-pending.svg';
 const SHEET_NAME  = '3RDMAY';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────

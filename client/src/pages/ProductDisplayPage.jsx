@@ -237,16 +237,18 @@ const ProductDisplayPage = () => {
     description: pageDesc,
     sku: data.sku || undefined,
     brand: { '@type': 'Brand', name: 'Nawiri Hair' },
-    offers: {
-      '@type': 'Offer',
-      url: pageUrl,
-      priceCurrency: 'KES',
-      price: discountedPrice ?? data.price ?? 0,
-      availability: data.stock > 0
-        ? 'https://schema.org/InStock'
-        : 'https://schema.org/OutOfStock',
-      seller: { '@type': 'Organization', name: 'Nawiri Hair' },
-    },
+    ...(hasValidPrice && {
+      offers: {
+        '@type': 'Offer',
+        url: pageUrl,
+        priceCurrency: 'KES',
+        price: discountedPrice ?? data.price,
+        availability: data.stock > 0
+          ? 'https://schema.org/InStock'
+          : 'https://schema.org/OutOfStock',
+        seller: { '@type': 'Organization', name: 'Nawiri Hair' },
+      },
+    }),
     ...(averageRating > 0 && ratingCount > 0 && {
       aggregateRating: {
         '@type': 'AggregateRating',
