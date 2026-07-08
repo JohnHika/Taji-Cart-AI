@@ -56,8 +56,10 @@ const DashboardProduct = () => {
     total: 0,
     inStock: 0,
     lowStock: 0,
-    outOfStock: 0
+    outOfStock: 0,
+    unpriced: 0
   });
+  const [showUnpricedOnly, setShowUnpricedOnly] = useState(false);
   const [isMobileView, setIsMobileView] = useState(false);
   const [viewMode, setViewMode] = useState('table'); // 'table' or 'grid'
   
@@ -84,7 +86,8 @@ const DashboardProduct = () => {
           total: productData.length,
           inStock: productData.filter(p => p.stock > 10).length,
           lowStock: productData.filter(p => p.stock > 0 && p.stock <= 10).length,
-          outOfStock: productData.filter(p => p.stock === 0).length
+          outOfStock: productData.filter(p => p.stock === 0).length,
+          unpriced: productData.filter(p => !p.price || Number(p.price) === 0).length
         });
       } else {
         setProducts([]);
@@ -142,7 +145,7 @@ const DashboardProduct = () => {
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm, filterCategory]);
+  }, [searchTerm, filterCategory, showUnpricedOnly]);
 
   const handleDeleteProduct = async (productId) => {
     if (!window.confirm("Are you sure you want to delete this product?")) {
@@ -202,13 +205,15 @@ const DashboardProduct = () => {
       const searchableText = normalizeSearchValue(buildProductSearchText(product));
       const matchesSearch = !normalizedSearchTerm || searchableText.includes(normalizedSearchTerm);
       
-      const matchesCategory = !filterCategory || 
-                             (product.category && 
-                              product.category.some(cat => 
+      const matchesCategory = !filterCategory ||
+                             (product.category &&
+                              product.category.some(cat =>
                                 cat._id === filterCategory || cat.name === filterCategory
                               ));
-      
-      return matchesSearch && matchesCategory;
+
+      const matchesUnpriced = !showUnpricedOnly || !product.price || Number(product.price) === 0;
+
+      return matchesSearch && matchesCategory && matchesUnpriced;
     })
     .sort((a, b) => {
       const getValue = (obj, path) => {
@@ -308,7 +313,7 @@ const DashboardProduct = () => {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4 mb-4 sm:mb-6">
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-2 sm:gap-4 mb-4 sm:mb-6">
         <div className="bg-white dark:bg-dm-card p-3 sm:p-4 rounded-lg shadow border-l-4 border-plum-600 dark:border-plum-400 transition-colors duration-200">
           <p className="text-brown-400 dark:text-white/40 text-xs sm:text-sm">Total Products</p>
           <p className="text-xl sm:text-2xl font-bold dark:text-white">{stats.total}</p>
@@ -325,7 +330,35 @@ const DashboardProduct = () => {
           <p className="text-brown-400 dark:text-white/40 text-xs sm:text-sm">Out of Stock</p>
           <p className="text-xl sm:text-2xl font-bold dark:text-white">{stats.outOfStock}</p>
         </div>
+        <button
+          type="button"
+          onClick={() => setShowUnpricedOnly(prev => !prev)}
+          className={`text-left bg-white dark:bg-dm-card p-3 sm:p-4 rounded-lg shadow border-l-4 transition-colors duration-200 ${
+            showUnpricedOnly
+              ? 'border-gold-500 ring-2 ring-gold-400/50'
+              : 'border-gold-500 dark:border-gold-400'
+          }`}
+          title="Click to filter products with no selling price set"
+        >
+          <p className="text-brown-400 dark:text-white/40 text-xs sm:text-sm">Needs Pricing</p>
+          <p className="text-xl sm:text-2xl font-bold dark:text-white">{stats.unpriced}</p>
+        </button>
       </div>
+
+      {showUnpricedOnly && (
+        <div className="mb-4 flex items-center justify-between gap-3 rounded-lg bg-gold-100 dark:bg-gold-600/10 border border-gold-300 dark:border-gold-600/30 px-3 py-2 sm:px-4">
+          <p className="text-xs sm:text-sm text-gold-700 dark:text-gold-300">
+            Showing only products with no selling price set.
+          </p>
+          <button
+            type="button"
+            onClick={() => setShowUnpricedOnly(false)}
+            className="text-xs sm:text-sm font-semibold text-gold-700 dark:text-gold-300 underline underline-offset-2 shrink-0"
+          >
+            Clear filter
+          </button>
+        </div>
+      )}
 
       <div className="bg-white dark:bg-dm-card p-3 sm:p-4 rounded-lg shadow mb-4 sm:mb-6 grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-4 transition-colors duration-200">
         <div className="relative">
