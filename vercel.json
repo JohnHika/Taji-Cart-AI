@@ -6,6 +6,10 @@
   "outputDirectory": "client/dist",
   "rewrites": [
     {
+      "source": "/sitemap.xml",
+      "destination": "https://taji-cart-api.onrender.com/sitemap.xml"
+    },
+    {
       "source": "/api/(.*)",
       "has": [
         {
