@@ -73,6 +73,53 @@ router.get('/product/:productId', async (req, res) => {
   }
 });
 
+// Bot-only route: mirrors the real /product/:slug-:id URL shape so a Vercel
+// user-agent rewrite can point bots here without changing the visible path.
+// Serves meta tags with no redirect — bots don't run the meta-refresh/JS
+// redirect anyway, so redirecting would just make them index the wrong page.
+router.get('/bot/product/:slugId', async (req, res) => {
+  try {
+    const id = req.params.slugId.split('-').pop();
+    const product = await ProductModel.findById(id).lean();
+    if (!product) {
+      return res.status(404).send('Not found');
+    }
+
+    const rawDesc = stripHtml(product.description || '').slice(0, 155);
+    const description = rawDesc || `Buy ${product.name} at Nawiri Hair. Fast delivery across Kenya.`;
+    const image = product.image?.[0] || DEFAULT_IMAGE;
+    const canonicalUrl = `${SITE_URL}/product/${slug(product.name)}-${product._id}`;
+
+    res.setHeader('Content-Type', 'text/html');
+    res.setHeader('Cache-Control', 'public, max-age=3600, stale-while-revalidate=86400');
+    res.send(`<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>${escapeHtml(`${product.name} — Nawiri Hair`)}</title>
+    <meta name="description" content="${escapeHtml(description)}" />
+    <link rel="canonical" href="${escapeHtml(canonicalUrl)}" />
+    <meta property="og:type" content="product" />
+    <meta property="og:title" content="${escapeHtml(`${product.name} — Nawiri Hair`)}" />
+    <meta property="og:description" content="${escapeHtml(description)}" />
+    <meta property="og:image" content="${escapeHtml(image)}" />
+    <meta property="og:url" content="${escapeHtml(canonicalUrl)}" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="${escapeHtml(`${product.name} — Nawiri Hair`)}" />
+    <meta name="twitter:description" content="${escapeHtml(description)}" />
+    <meta name="twitter:image" content="${escapeHtml(image)}" />
+  </head>
+  <body>
+    <h1>${escapeHtml(product.name)}</h1>
+    <p>${escapeHtml(description)}</p>
+  </body>
+</html>`);
+  } catch (err) {
+    console.error('Bot product page error:', err);
+    res.status(500).send('Error');
+  }
+});
+
 router.get('/category/:categoryId', async (req, res) => {
   try {
     const category = await CategoryModel.findById(req.params.categoryId).lean();
