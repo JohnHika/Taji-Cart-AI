@@ -10,6 +10,10 @@
       "destination": "https://taji-cart-api.onrender.com/sitemap.xml"
     },
     {
+      "source": "/share/(.*)",
+      "destination": "https://taji-cart-api.onrender.com/share/$1"
+    },
+    {
       "source": "/api/(.*)",
       "has": [
         {

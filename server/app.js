@@ -31,6 +31,7 @@ import authRoutes from './routes/auth.routes.js';
 import posRouter from './routes/pos.js';
 import mpesaRouter from './route/mpesa.route.js';
 import sitemapRouter from './route/sitemap.route.js';
+import shareRouter from './route/share.route.js';
 
 // ── Controllers used directly on admin routes ───────────────────────────────
 import {
@@ -124,6 +125,7 @@ app.use(session({
 // ── Routes ───────────────────────────────────────────────────────────────────
 
 app.use('/sitemap.xml', sitemapRouter);
+app.use('/share', shareRouter);
 app.use('/api/user', userRouter);
 app.use('/api/auth', authRoutes);
 app.use('/auth', authRoutes);
