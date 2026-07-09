@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { Helmet } from 'react-helmet-async'
 import { FaAngleLeft, FaAngleRight, FaStar, FaShieldAlt, FaTruck, FaTags, FaRuler } from "react-icons/fa"
-import { FiHeart } from 'react-icons/fi'
+import { FiHeart, FiShare2 } from 'react-icons/fi'
 import { useSelector } from 'react-redux'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { toast } from 'react-toastify'
@@ -117,6 +117,27 @@ const ProductDisplayPage = () => {
     }
     setWishlisted(prev => !prev);
     toast.success(wishlisted ? 'Removed from wishlist' : 'Added to wishlist ❤️');
+  };
+
+  const handleShare = async () => {
+    const shareUrl = `https://nawirihairke.com/share/product/${productId}`;
+    const shareText = `${data.name} — Nawiri Hair`;
+
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: shareText, url: shareUrl });
+      } catch (err) {
+        // User cancelled the native share sheet — no error toast needed
+      }
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      toast.success('Product link copied!');
+    } catch (err) {
+      toast.info(shareUrl);
+    }
   };
 
   const fetchProductDetails = async () => {
@@ -454,11 +475,29 @@ const ProductDisplayPage = () => {
                     <FiHeart size={16} className={wishlisted ? 'fill-current' : ''} />
                     {wishlisted ? 'Saved' : 'Wishlist'}
                   </button>
+                  <button
+                    onClick={handleShare}
+                    className="flex items-center justify-center gap-2 border border-plum-200 dark:border-plum-700 text-plum-700 dark:text-plum-200 hover:bg-plum-50 dark:hover:bg-plum-900/30 rounded-pill py-2.5 px-5 text-sm font-semibold transition-colors flex-shrink-0"
+                    aria-label="Share this product"
+                  >
+                    <FiShare2 size={16} />
+                    Share
+                  </button>
                 </>
               ) : (
-                <div className="w-full text-center py-3 bg-brown-100 dark:bg-dm-card-2 text-brown-400 dark:text-white/30 rounded-pill text-sm font-semibold">
-                  {data.stock > 0 ? 'Price update in progress' : 'Out of Stock'}
-                </div>
+                <>
+                  <div className="flex-1 text-center py-3 bg-brown-100 dark:bg-dm-card-2 text-brown-400 dark:text-white/30 rounded-pill text-sm font-semibold">
+                    {data.stock > 0 ? 'Price update in progress' : 'Out of Stock'}
+                  </div>
+                  <button
+                    onClick={handleShare}
+                    className="flex items-center justify-center gap-2 border border-plum-200 dark:border-plum-700 text-plum-700 dark:text-plum-200 hover:bg-plum-50 dark:hover:bg-plum-900/30 rounded-pill py-2.5 px-5 text-sm font-semibold transition-colors flex-shrink-0"
+                    aria-label="Share this product"
+                  >
+                    <FiShare2 size={16} />
+                    Share
+                  </button>
+                </>
               )}
             </div>
 
