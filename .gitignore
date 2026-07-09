@@ -49,3 +49,4 @@ __pycache__/
 
 # Uploads (optional - only if you don't want to track uploaded files)
 server/uploads/
+.vercel
