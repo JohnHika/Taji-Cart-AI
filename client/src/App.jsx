@@ -155,37 +155,47 @@ function App() {
       if (isMounted) setIsLoading(false);
     }, 15000);
 
+    // Loads the logged-in user's data in the background; never blocks first paint
+    const hydrateUserSession = async () => {
+      const token = getStoredAccessToken();
+      if (!token) return;
+
+      try {
+        const userDetails = await fetchUserDetails();
+
+        if (userDetails?.data && isMounted) {
+          dispatch(setUserDetails(userDetails.data));
+          dispatch(fetchCartItems());
+
+          if (userDetails.data._id) {
+            fetchLoyaltyDetails(userDetails.data._id);
+          }
+        }
+      } catch (error) {
+        console.error("Session hydration error:", error);
+        sessionStorage.removeItem('accesstoken');
+        sessionStorage.removeItem('refreshToken');
+        localStorage.removeItem('accesstoken');
+        localStorage.removeItem('refreshToken');
+      }
+    };
+
     const initializeApp = async () => {
       lastVisibilityFetchRef.current = Date.now(); // stamp so visibility cooldown applies immediately
       try {
         const productDataResult = await fetchProductData();
         console.log("Product data fetch result:", productDataResult);
-
-        const token = getStoredAccessToken();
-        if (token) {
-          const userDetails = await fetchUserDetails();
-
-          if (userDetails?.data && isMounted) {
-            dispatch(setUserDetails(userDetails.data));
-            dispatch(fetchCartItems());
-
-            if (userDetails.data._id) {
-              await fetchLoyaltyDetails(userDetails.data._id);
-            }
-          }
-        }
       } catch (error) {
         console.error("App initialization error:", error);
-        sessionStorage.removeItem('accesstoken');
-        sessionStorage.removeItem('refreshToken');
-        localStorage.removeItem('accesstoken');
-        localStorage.removeItem('refreshToken');
       } finally {
         clearTimeout(safetyTimer);
         if (isMounted) {
           setIsLoading(false);
         }
       }
+
+      // Fire and forget: user/cart/loyalty hydrate after the shell is visible
+      hydrateUserSession();
     };
 
     initializeApp();
