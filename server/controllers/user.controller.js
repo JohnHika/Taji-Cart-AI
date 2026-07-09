@@ -1311,10 +1311,16 @@ export async function refreshToken(request, response) {
             }
 
             const userId = verifyToken?._id;
-            
+
             // Generate new tokens
             const newAccessToken = await generatedAccessToken(userId);
             const newRefreshToken = await genertedRefreshToken(userId);
+
+            // Keep last-active timestamp current for sessions kept alive via refresh
+            await UserModel.findByIdAndUpdate(userId, {
+                last_login_date: new Date(),
+                lastLogin: new Date()
+            });
 
             // Set cookies for security
             const cookiesOption = {
