@@ -16,6 +16,7 @@ import SummaryApi from '../common/SummaryApi';
 import { logout } from '../store/userSlice';
 import Axios from '../utils/Axios';
 import AxiosToastError from '../utils/AxiosToastError';
+import { clearAuthStorage } from '../utils/authStorage';
 import Divider from './Divider';
 
 const DeliveryMenu = ({ close }) => {
@@ -42,8 +43,7 @@ const DeliveryMenu = ({ close }) => {
           close();
         }
         dispatch(logout());
-        localStorage.clear();
-        sessionStorage.clear();
+        clearAuthStorage();
         toast.success(response.data.message);
         navigate("/");
       }

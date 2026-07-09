@@ -18,6 +18,7 @@ import { useTheme } from '../context/ThemeContext';
 import { logout } from '../store/userSlice';
 import Axios from '../utils/Axios';
 import AxiosToastError from '../utils/AxiosToastError';
+import { clearAuthStorage } from '../utils/authStorage';
 
 const DeliveryNavigation = () => {
   const location = useLocation();
@@ -41,8 +42,7 @@ const DeliveryNavigation = () => {
       
       if(response.data.success) {
         dispatch(logout());
-        localStorage.clear();
-        sessionStorage.clear();
+        clearAuthStorage();
         toast.success(response.data.message);
         navigate("/");
       }

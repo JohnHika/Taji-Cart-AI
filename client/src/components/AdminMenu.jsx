@@ -32,6 +32,7 @@ import { nawiriBrand } from '../config/brand';
 import { logout } from '../store/userSlice';
 import Axios from '../utils/Axios';
 import AxiosToastError from '../utils/AxiosToastError';
+import { clearAuthStorage } from '../utils/authStorage';
 
 const AdminMenu = ({ close, forLightPanel = false }) => {
   const user = useSelector((state) => state.user);
@@ -97,7 +98,7 @@ const AdminMenu = ({ close, forLightPanel = false }) => {
       if (response.data.success) {
         close?.();
         dispatch(logout());
-        localStorage.clear();
+        clearAuthStorage();
         toast.success(response.data.message);
         navigate('/');
       }

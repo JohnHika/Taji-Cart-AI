@@ -29,6 +29,7 @@ import { nawiriBrand } from '../config/brand';
 import { logout } from '../store/userSlice';
 import Axios from '../utils/Axios';
 import AxiosToastError from '../utils/AxiosToastError';
+import { clearAuthStorage } from '../utils/authStorage';
 import isadmin from '../utils/isAdmin';
 import isStaff from '../utils/isStaff';
 
@@ -97,7 +98,7 @@ const UserMenu = ({ close, variant = 'dropdown' }) => {
       if (response.data.success) {
         close?.();
         dispatch(logout());
-        localStorage.clear();
+        clearAuthStorage();
         toast.success(response.data.message);
         navigate('/');
       }

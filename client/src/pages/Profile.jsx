@@ -10,6 +10,7 @@ import UserProfileAvatarEdit from '../components/UserProfileAvatarEdit';
 import { logout, setUserDetails, updatedAvatar } from '../store/userSlice';
 import Axios from '../utils/Axios';
 import AxiosToastError from '../utils/AxiosToastError';
+import { clearAuthStorage } from '../utils/authStorage';
 import fetchUserDetails from '../utils/fetchUserDetails';
 import { getAccountTypeMeta, getEffectiveRole } from '../utils/userRole';
 
@@ -60,6 +61,7 @@ const Profile = () => {
     const handleLogout = () => {
         toast.success("Password changed successfully. Please login with your new password.")
         dispatch(logout())
+        clearAuthStorage()
         navigate('/login')
     }
 

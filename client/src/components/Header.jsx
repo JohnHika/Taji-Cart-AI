@@ -9,6 +9,7 @@ import SummaryApi from '../common/SummaryApi';
 import Axios from '../utils/Axios';
 import AxiosToastError from '../utils/AxiosToastError';
 import { logout } from '../store/userSlice';
+import { clearAuthStorage } from '../utils/authStorage';
 import { nawiriBrand } from '../config/brand';
 import useMobile from '../hooks/useMobile';
 import { useGlobalContext } from '../provider/GlobalProvider';
@@ -55,7 +56,7 @@ const Header = () => {
       if (response.data.success) {
         setMobileMenuOpen(false);
         dispatch(logout());
-        localStorage.clear();
+        clearAuthStorage();
         toast.success(response.data.message);
         navigate('/');
       }
