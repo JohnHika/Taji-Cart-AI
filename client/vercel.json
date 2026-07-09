@@ -25,6 +25,10 @@
       "destination": "https://taji-cart-api.onrender.com/sitemap.xml"
     },
     {
+      "source": "/share/(.*)",
+      "destination": "https://taji-cart-api.onrender.com/share/$1"
+    },
+    {
       "source": "/api/(.*)",
       "has": [{ "type": "host", "value": "api.nawirihairke.com" }],
       "destination": "https://taji-cart-api.onrender.com/api/$1"
