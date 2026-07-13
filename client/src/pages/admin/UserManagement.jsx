@@ -25,69 +25,6 @@ const UserProfile = ({ user, currentUser, handleRoleChange, selectedRole }) => {
         return { type: 'Customer', color: 'text-brown-600 dark:text-brown-400', icon: <FaUser className="mr-1" /> };
     };
 
-    const handleRoleChange = async (userId, newRole) => {
-        try {
-            setUpdating(true);
-            
-            console.log(`Changing user ${userId} role to: ${newRole}`);
-            
-            const response = await Axios({
-                url: '/api/admin/users/update-role',
-                method: 'PUT',
-                data: {
-                    userId,
-                    role: newRole
-                }
-            });
-            
-            if (response.data.success) {
-                toast.success('User role updated successfully');
-                
-                // Update local user data with new role information
-                setUsers(prevUsers => 
-                    prevUsers.map(user => {
-                        if (user._id === userId) {
-                            console.log(`Updating local user ${userId} with new role:`, newRole);
-                            
-                            // Create a new user object with updated role
-                            const updatedUser = {
-                                ...user,
-                                role: newRole,
-                                // Set boolean flags based on role
-                                isAdmin: newRole === 'admin',
-                                isStaff: newRole === 'staff',
-                                isDelivery: newRole === 'delivery',
-                                // Set accountType to match role
-                                accountType: newRole
-                            };
-                            
-                            console.log("Updated user object:", updatedUser);
-                            return updatedUser;
-                        }
-                        return user;
-                    })
-                );
-                
-                // Force refresh user data if changing the current user
-                if (currentUser._id === userId) {
-                    console.log("Changed role for current user - forcing refresh");
-                    fetchUserDetails().then(userDetails => {
-                        if (userDetails.success) {
-                            dispatch(setUserDetails(userDetails.data));
-                        }
-                    });
-                }
-            } else {
-                toast.error(response.data.message || 'Failed to update user role');
-            }
-        } catch (error) {
-            console.error('Error updating user role:', error);
-            toast.error('Error updating user role');
-        } finally {
-            setUpdating(false);
-        }
-    };
-
     return (
         <div className="user-info-container">
             {/* Existing user info */}

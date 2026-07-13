@@ -32,7 +32,6 @@ const ProductPage                   = lazyWithRetry(() => import('../pages/Produ
 const SubCategoryPage               = lazyWithRetry(() => import('../pages/SubCategoryPage'));
 const ActiveCampaigns               = lazyWithRetry(() => import('../pages/ActiveCampaigns'));
 const Success                       = lazyWithRetry(() => import('../pages/Success'));
-const MpesaPaymentStatus            = lazyWithRetry(() => import('../components/MpesaPaymentStatus'));
 const DeliverySimulator             = lazyWithRetry(() => import('../pages/DeliverySimulator'));
 const LoyaltyProgramPage            = lazyWithRetry(() => import('../pages/LoyaltyProgramPage'));
 const Address                       = lazyWithRetry(() => import('../pages/Address'));
@@ -118,7 +117,6 @@ const router = createBrowserRouter([
       { path: 'subcategory',             element: S(SubCategoryPage) },
       { path: 'campaigns',              element: S(ActiveCampaigns) },
       { path: 'success',                element: S(Success) },
-      { path: 'mpesa-payment-status',   element: S(MpesaPaymentStatus) },
       {
         path: 'checkout',
         element: <PrivateRoute><LegacyCheckoutRedirect /></PrivateRoute>,

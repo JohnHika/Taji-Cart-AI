@@ -185,7 +185,7 @@ const UsersAdmin = () => {
     setIsRoleModalOpen(true);
   };
 
-  const handleSaveRole = async (userId, isAdmin, isDelivery, isStaff) => {
+  const handleSaveRole = async (userId, isAdmin, isDelivery, isStaff, staffPermissions = []) => {
     try {
       setLoading(true);
       
@@ -214,8 +214,15 @@ const UsersAdmin = () => {
         method: 'PUT',
         data: { userId, isStaff }
       });
-
-      if (adminResponse.data.success && deliveryResponse.data.success && staffResponse.data.success) {
+      const permissionsResponse = isStaff
+        ? await Axios({
+            url: '/api/user/admin/staff-permissions',
+            method: 'PUT',
+            data: { userId, permissions: staffPermissions }
+          })
+        : { data: { success: true } };
+      
+      if (adminResponse.data.success && deliveryResponse.data.success && staffResponse.data.success && permissionsResponse.data.success) {
         // Fetch updated user list to ensure correct data
         fetchUsersWithCacheBusting();
         toast.success('User role updated successfully');

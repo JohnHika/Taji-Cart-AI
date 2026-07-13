@@ -67,9 +67,6 @@ const Dashboard = () => {
   const [error, setError] = useState(null);
   const [showDriversMap, setShowDriversMap] = useState(false);
   
-  // Colors for visual elements
-  const COLORS = ['#4B1E3E', '#7B3D6E', '#C9943A', '#BD7EAF', '#5F2B50', '#9C5A8E'];
-  
   // Fetch dashboard data from API
   const fetchDashboardData = useCallback(async () => {
     try {

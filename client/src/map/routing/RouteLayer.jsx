@@ -4,6 +4,7 @@
  */
 
 import { useEffect, useCallback, useState } from 'react';
+import maplibregl from 'maplibre-gl';
 import { useMap } from '../core/MapContainer';
 import { PROFILES } from './useRouting';
 

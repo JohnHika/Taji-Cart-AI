@@ -8,6 +8,8 @@ import DispatchedOrders from '../pages/staff/DeliveryManagement/DispatchedOrders
 import DriversManagement from '../pages/staff/DeliveryManagement/DriversManagement';
 import DeliveryManagement from '../pages/staff/DeliveryManagement/index';
 import PendingDispatch from '../pages/staff/DeliveryManagement/PendingDispatch';
+import ActiveDeliveries from '../pages/staff/DeliveryManagement/ActiveDeliveries';
+import CompletedDeliveries from '../pages/staff/DeliveryManagement/CompletedDeliveries';
 
 // Staff Auth Guard component
 const StaffRoute = ({ children }) => {
@@ -46,8 +48,8 @@ const StaffRoutes = () => {
         <Route path="" element={<Navigate to="pending" replace />} />
         <Route path="pending" element={<PendingDispatch />} />
         <Route path="dispatched" element={<DispatchedOrders />} />
-        <Route path="active" element={<div>Active Deliveries</div>} /> {/* Placeholder - we'll implement this later */}
-        <Route path="completed" element={<div>Completed Deliveries</div>} /> {/* Placeholder - we'll implement this later */}
+        <Route path="active" element={<ActiveDeliveries />} />
+        <Route path="completed" element={<CompletedDeliveries />} />
         <Route path="drivers" element={<DriversManagement />} />
       </Route>
       

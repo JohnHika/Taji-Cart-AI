@@ -189,25 +189,13 @@ const SummaryApi = {
         url: `${baseURL}/api/mpesa/stk-push`,
         method: 'post'
     },
-    mpesaDirectPayment: {
-        url: `${baseURL}/api/mpesa-direct/pay`,
+    jengaPayment: {
+        url: `${baseURL}/api/jenga/pay`,
         method: 'post'
     },
-    checkMpesaDirectStatus: {
-        url: `${baseURL}/api/mpesa-direct/status/:checkoutRequestId`,
+    checkJengaStatus: {
+        url: `${baseURL}/api/jenga/status/:orderReference`,
         method: 'get'
-    },
-    equityPayment: {
-        url: `${baseURL}/api/equity/pay`,
-        method: 'post'
-    },
-    payheroPayment: {
-        url: `${baseURL}/api/payhero/pay`,
-        method: 'post'
-    },
-    payheroCOD: {
-        url: `${baseURL}/api/payhero/cod`,
-        method: 'post'
     },
     getAllProducts: {
         url: `${baseURL}/api/product/get`,

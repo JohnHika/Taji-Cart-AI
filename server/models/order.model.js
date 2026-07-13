@@ -21,6 +21,10 @@ const orderSchema = new mongoose.Schema({
         name: String,
         image: Array,
     },
+    quantity: {
+        type: Number,
+        default: 1
+    },
     paymentId: {
         type: String,
         default: ""
@@ -71,6 +75,10 @@ const orderSchema = new mongoose.Schema({
         type: String,
         enum: ['pending', 'processing', 'shipped', 'dispatched', 'driver_assigned', 'out_for_delivery', 'nearby', 'delivered', 'ready_for_pickup', 'picked_up', 'cancelled'],
         default: 'pending'
+    },
+    // Persisted lifecycle timestamp used by delivery history, reporting, and payouts.
+    deliveredAt: {
+        type: Date
     },
     statusHistory: {
         type: [{

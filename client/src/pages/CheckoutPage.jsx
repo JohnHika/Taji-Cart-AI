@@ -12,6 +12,7 @@ import AddAddress from '../components/AddAddress';
 import CheckoutRoyalCard from '../components/CheckoutRoyalCard'; // Premium Royal Card for Order Summary
 import CommunityCampaignProgress from '../components/CommunityCampaignProgress'; // Import the CommunityCampaignProgress component
 import FulfillmentModal from '../components/FulfillmentModal';
+import JengaPayment from '../components/JengaPayment';
 import { useTheme } from '../context/ThemeContext';
 import useCriteriaGate from '../hooks/useCriteriaGate';
 import { useGlobalContext } from '../provider/GlobalProvider';
@@ -78,6 +79,7 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
     (fulfillmentMethod === 'pickup' && pickupLocation);
   const checkoutLockRef = useRef(false);
   const [checkoutAction, setCheckoutAction] = useState('');
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState('cash'); // 'cash' | 'jenga'
 
   useEffect(() => {
     // Clear address error when address is selected
@@ -318,6 +320,28 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
       }
     });
   }
+
+  const handleJengaPaymentSuccess = () => {
+    dispatch(clearCartItems());
+
+    if (fetchCartItem) {
+      fetchCartItem();
+    }
+
+    if (fetchOrder) {
+      fetchOrder();
+    }
+
+    if (isCutView && onClose) {
+      onClose();
+    }
+
+    navigate('/success', { state: { text: 'Order' } });
+  };
+
+  const handleJengaPaymentError = (message) => {
+    toast.error(message || 'Payment failed. Please try again.');
+  };
 
   // Handle fulfillment method selection
   const handleFulfillmentSelect = (data) => {
@@ -611,19 +635,61 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
               </div>
             </div>
 
-            {/* Payment Methods - Cash Only for Customers */}
+            {/* Payment Methods */}
             <div className='space-y-4'>
-              <button 
-                className={`w-full py-2 px-4 border-2 font-semibold transition-colors duration-200 rounded ${
-                  isPaymentEnabled && !isCheckoutBusy
-                    ? 'border-plum-600 text-plum-700 hover:bg-plum-50 hover:text-plum-900 dark:border-plum-500 dark:text-plum-200 dark:hover:bg-plum-900/40 dark:hover:text-white' 
-                    : 'border-brown-200 text-brown-300 dark:border-dm-border dark:text-white/30 cursor-not-allowed'
-                }`}
-                onClick={handleCashOnDelivery}
-                disabled={!isPaymentEnabled || isCheckoutBusy}
-              >
-                {checkoutAction === 'cash' ? 'Placing order...' : `Cash on Delivery ${!isPaymentEnabled ? '(Select Address First)' : ''}`}
-              </button>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setSelectedPaymentMethod('cash')}
+                  className={`flex-1 py-2 px-3 rounded text-sm font-semibold border-2 transition-colors ${
+                    selectedPaymentMethod === 'cash'
+                      ? 'border-plum-600 text-plum-700 bg-plum-50 dark:border-plum-500 dark:text-plum-200 dark:bg-plum-900/20'
+                      : 'border-brown-200 text-brown-400 dark:border-dm-border dark:text-white/40'
+                  }`}
+                >
+                  Cash on Delivery
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSelectedPaymentMethod('jenga')}
+                  className={`flex-1 py-2 px-3 rounded text-sm font-semibold border-2 transition-colors ${
+                    selectedPaymentMethod === 'jenga'
+                      ? 'border-plum-600 text-plum-700 bg-plum-50 dark:border-plum-500 dark:text-plum-200 dark:bg-plum-900/20'
+                      : 'border-brown-200 text-brown-400 dark:border-dm-border dark:text-white/40'
+                  }`}
+                >
+                  M-Pesa
+                </button>
+              </div>
+
+              {selectedPaymentMethod === 'cash' && (
+                <button
+                  className={`w-full py-2 px-4 border-2 font-semibold transition-colors duration-200 rounded ${
+                    isPaymentEnabled && !isCheckoutBusy
+                      ? 'border-plum-600 text-plum-700 hover:bg-plum-50 hover:text-plum-900 dark:border-plum-500 dark:text-plum-200 dark:hover:bg-plum-900/40 dark:hover:text-white'
+                      : 'border-brown-200 text-brown-300 dark:border-dm-border dark:text-white/30 cursor-not-allowed'
+                  }`}
+                  onClick={handleCashOnDelivery}
+                  disabled={!isPaymentEnabled || isCheckoutBusy}
+                >
+                  {checkoutAction === 'cash' ? 'Placing order...' : `Cash on Delivery ${!isPaymentEnabled ? '(Select Address First)' : ''}`}
+                </button>
+              )}
+
+              {selectedPaymentMethod === 'jenga' && isPaymentEnabled && (
+                <JengaPayment
+                  cartItems={cartItemsList}
+                  totalAmount={finalPrice}
+                  addressId={fulfillmentMethod === 'delivery' ? addressList[selectAddress]?._id : null}
+                  communityRewardId={selectedReward ? selectedReward._id : null}
+                  communityDiscountAmount={selectedReward && selectedReward.type === 'discount' ? communityDiscount : 0}
+                  fulfillment_type={fulfillmentMethod}
+                  pickup_location={pickupLocation}
+                  pickup_instructions={pickupInstructions}
+                  onSuccess={handleJengaPaymentSuccess}
+                  onError={handleJengaPaymentError}
+                />
+              )}
             </div>
           </div>
           </div>
@@ -977,18 +1043,61 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
 
           <div className='w-full flex flex-col gap-3 mt-5'>
             <p className="text-xs font-semibold uppercase tracking-widest text-brown-300 dark:text-white/30 mb-1">Payment Method</p>
-            <button
-              className={`flex items-center justify-between w-full py-3 px-4 rounded-card border-2 font-semibold text-sm transition-all duration-200 press ${
-                isPaymentEnabled && !isCheckoutBusy
-                  ? 'border-plum-600 text-plum-700 dark:border-plum-500 dark:text-plum-200 bg-plum-50 dark:bg-plum-900/20 hover:bg-plum-100 dark:hover:bg-plum-900/40'
-                  : 'border-brown-100 dark:border-dm-border text-brown-300 dark:text-white/20 cursor-not-allowed'
-              }`}
-              onClick={handleCashOnDelivery}
-              disabled={!isPaymentEnabled || isCheckoutBusy}
-            >
-              <span>{checkoutAction === 'cash' ? 'Placing order...' : `Cash on ${fulfillmentMethod === 'delivery' ? 'Delivery' : 'Pickup'}`}</span>
-              {!isPaymentEnabled && <span className="text-xs font-normal opacity-60">{fulfillmentMethod === 'delivery' ? 'Select address first' : 'Select pickup location'}</span>}
-            </button>
+
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setSelectedPaymentMethod('cash')}
+                className={`flex-1 py-2 px-3 rounded-card text-sm font-semibold border-2 transition-colors ${
+                  selectedPaymentMethod === 'cash'
+                    ? 'border-plum-600 text-plum-700 bg-plum-50 dark:border-plum-500 dark:text-plum-200 dark:bg-plum-900/20'
+                    : 'border-brown-100 dark:border-dm-border text-brown-300 dark:text-white/40'
+                }`}
+              >
+                Cash
+              </button>
+              <button
+                type="button"
+                onClick={() => setSelectedPaymentMethod('jenga')}
+                className={`flex-1 py-2 px-3 rounded-card text-sm font-semibold border-2 transition-colors ${
+                  selectedPaymentMethod === 'jenga'
+                    ? 'border-plum-600 text-plum-700 bg-plum-50 dark:border-plum-500 dark:text-plum-200 dark:bg-plum-900/20'
+                    : 'border-brown-100 dark:border-dm-border text-brown-300 dark:text-white/40'
+                }`}
+              >
+                M-Pesa
+              </button>
+            </div>
+
+            {selectedPaymentMethod === 'cash' && (
+              <button
+                className={`flex items-center justify-between w-full py-3 px-4 rounded-card border-2 font-semibold text-sm transition-all duration-200 press ${
+                  isPaymentEnabled && !isCheckoutBusy
+                    ? 'border-plum-600 text-plum-700 dark:border-plum-500 dark:text-plum-200 bg-plum-50 dark:bg-plum-900/20 hover:bg-plum-100 dark:hover:bg-plum-900/40'
+                    : 'border-brown-100 dark:border-dm-border text-brown-300 dark:text-white/20 cursor-not-allowed'
+                }`}
+                onClick={handleCashOnDelivery}
+                disabled={!isPaymentEnabled || isCheckoutBusy}
+              >
+                <span>{checkoutAction === 'cash' ? 'Placing order...' : `Cash on ${fulfillmentMethod === 'delivery' ? 'Delivery' : 'Pickup'}`}</span>
+                {!isPaymentEnabled && <span className="text-xs font-normal opacity-60">{fulfillmentMethod === 'delivery' ? 'Select address first' : 'Select pickup location'}</span>}
+              </button>
+            )}
+
+            {selectedPaymentMethod === 'jenga' && isPaymentEnabled && (
+              <JengaPayment
+                cartItems={cartItemsList}
+                totalAmount={finalPrice}
+                addressId={fulfillmentMethod === 'delivery' ? addressList[selectAddress]?._id : null}
+                communityRewardId={selectedReward ? selectedReward._id : null}
+                communityDiscountAmount={selectedReward && selectedReward.type === 'discount' ? communityDiscount : 0}
+                fulfillment_type={fulfillmentMethod}
+                pickup_location={pickupLocation}
+                pickup_instructions={pickupInstructions}
+                onSuccess={handleJengaPaymentSuccess}
+                onError={handleJengaPaymentError}
+              />
+            )}
 
             {/* Guest Checkout CTA — only show for unauthenticated users */}
             {!user?._id && (

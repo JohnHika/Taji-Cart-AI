@@ -101,6 +101,17 @@ const userSchema = new mongoose.Schema({
         type: Boolean,
         default: false
     },
+    // Extra capabilities granted to this individual by an administrator.
+    // Every staff member retains the baseline staff permissions in staffPermissions.js.
+    staffPermissions: {
+        type: [String],
+        default: []
+    },
+    staffPermissionAudit: [{
+        permissions: [String],
+        changedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+        changedAt: { type: Date, default: Date.now }
+    }],
     googleId: {
         type: String,
         sparse: true,  // Allow null values but enforce uniqueness when present

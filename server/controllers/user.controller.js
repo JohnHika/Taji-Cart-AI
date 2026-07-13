@@ -6,6 +6,7 @@ import LoyaltyCard from '../models/loyaltycard.model.js'
 import UserModel from '../models/user.model.js'
 import { nawiriBrand } from '../utils/brand.js'
 import { renderAccountNoticeEmail } from '../utils/emailTemplates.js'
+import { STAFF_GRANTABLE_PERMISSIONS, getEffectiveStaffPermissions } from '../utils/staffPermissions.js'
 import { normalizeEmail, validateEmailAddress } from '../utils/emailValidation.js'
 import forgotPasswordTemplate from '../utils/forgotPasswordTemplate.js'
 import generatedAccessToken from '../utils/generatedAccessToken.js'
@@ -2363,6 +2364,55 @@ export async function setStaffRoleController(req, res) {
 }
 
 // ── Wishlist ────────────────────────────────────────────────────────────────
+
+export const getStaffPermissionCatalog = async (_req, res) => {
+    return res.json({
+        success: true,
+        data: { grantablePermissions: STAFF_GRANTABLE_PERMISSIONS }
+    });
+};
+
+export const updateStaffPermissionsController = async (req, res) => {
+    try {
+        const { userId, permissions } = req.body;
+        if (!userId || !Array.isArray(permissions)) {
+            return res.status(400).json({ success: false, message: 'userId and permissions array are required' });
+        }
+
+        const allowed = new Set(STAFF_GRANTABLE_PERMISSIONS.map((permission) => permission.id));
+        const normalized = [...new Set(permissions.filter((permission) => typeof permission === 'string'))];
+        if (normalized.some((permission) => !allowed.has(permission))) {
+            return res.status(400).json({ success: false, message: 'One or more permissions are not grantable' });
+        }
+
+        const staffUser = await UserModel.findById(userId);
+        if (!staffUser) return res.status(404).json({ success: false, message: 'Staff user not found' });
+        if (!(staffUser.isStaff || staffUser.role === 'staff')) {
+            return res.status(400).json({ success: false, message: 'Extra permissions can only be assigned to staff members' });
+        }
+
+        staffUser.staffPermissions = normalized;
+        staffUser.staffPermissionAudit.push({
+            permissions: normalized,
+            changedBy: req.userId,
+            changedAt: new Date()
+        });
+        await staffUser.save();
+
+        return res.json({
+            success: true,
+            message: 'Staff permissions updated',
+            data: {
+                userId: staffUser._id,
+                staffPermissions: staffUser.staffPermissions,
+                effectivePermissions: getEffectiveStaffPermissions(staffUser)
+            }
+        });
+    } catch (error) {
+        console.error('Error updating staff permissions:', error);
+        return res.status(500).json({ success: false, message: 'Unable to update staff permissions' });
+    }
+};
 
 export const getWishlist = async (req, res) => {
     try {

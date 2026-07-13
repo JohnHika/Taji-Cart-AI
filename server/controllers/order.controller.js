@@ -1357,6 +1357,20 @@ export async function updateOrderStatus(request, response) {
       }
     );
 
+    // An admin completion must release the same driver capacity as a driver
+    // completion; otherwise a driver can remain permanently at capacity.
+    if (status === 'delivered' && previousStatus !== 'delivered' && order.deliveryPersonnel) {
+      const driver = await DeliveryPersonnelModel.findById(order.deliveryPersonnel);
+      const wasActive = Boolean(driver?.activeOrders?.some((activeOrderId) => activeOrderId?.toString() === order._id.toString()));
+      if (driver && wasActive) {
+        driver.activeOrders = driver.activeOrders.filter((activeOrderId) => activeOrderId?.toString() !== order._id.toString());
+        driver.activeOrdersCount = Math.max(0, (driver.activeOrdersCount || 0) - 1);
+        driver.isAvailable = driver.isActive !== false && driver.isOnline === true && driver.activeOrdersCount < 5;
+        driver.lastActive = new Date();
+        await driver.save();
+      }
+    }
+
     // Driver performance update (once, not per line item)
     if (status === 'delivered' && order.deliveryPersonnel) {
       try {
@@ -1573,7 +1587,7 @@ export async function updateOrderLocation(request, response) {
     try {
         const { orderId, location, status } = request.body;
         
-        if (!orderId || !location || !location.lat || !location.lng) {
+        if (!orderId || !location || location.lat == null || location.lng == null) {
             return response.status(400).json({
                 message: "Order ID and location coordinates are required",
                 success: false
@@ -1586,6 +1600,20 @@ export async function updateOrderLocation(request, response) {
                 message: "Order not found",
                 success: false
             });
+        }
+
+        const personnel = await DeliveryPersonnelModel.findOne({ userId: request.userId }).select('_id');
+        if (!personnel || !order.deliveryPersonnel || order.deliveryPersonnel.toString() !== personnel._id.toString()) {
+            return response.status(403).json({ message: 'You are not assigned to this delivery', success: false });
+        }
+        if (!Number.isFinite(Number(location.lat)) || !Number.isFinite(Number(location.lng)) ||
+            Number(location.lat) < -90 || Number(location.lat) > 90 ||
+            Number(location.lng) < -180 || Number(location.lng) > 180) {
+            return response.status(400).json({ message: 'Invalid location coordinates', success: false });
+        }
+        const transitions = { driver_assigned: ['out_for_delivery'], out_for_delivery: ['nearby', 'delivered'], nearby: ['delivered'] };
+        if (status && !(transitions[order.status] || []).includes(status)) {
+            return response.status(409).json({ message: `Cannot change ${order.status} directly to ${status}`, success: false });
         }
         
         const locationUpdate = {
@@ -1603,7 +1631,8 @@ export async function updateOrderLocation(request, response) {
             pushFields.statusHistory = {
                 status,
                 timestamp: new Date(),
-                location: { lat: location.lat, lng: location.lng }
+                location: { lat: location.lat, lng: location.lng },
+                updatedBy: request.userId
             };
 
             if (status === 'delivered') {

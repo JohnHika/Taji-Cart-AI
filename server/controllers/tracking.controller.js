@@ -142,6 +142,24 @@ export const assignDeliveryPersonnel = async (req, res) => {
         order.statusHistory.push(statusEntry);
         
         await order.save();
+
+        // Keep legacy line-item orders synchronized with the logical checkout.
+        await OrderModel.updateMany(
+            { orderId: order.orderId, _id: { $ne: order._id } },
+            {
+                $set: {
+                    deliveryPersonnel: personnelId,
+                    status: 'driver_assigned',
+                    estimatedDeliveryTime: order.estimatedDeliveryTime
+                },
+                $push: {
+                    statusHistory: {
+                        ...statusEntry,
+                        updatedBy: req.userId
+                    }
+                }
+            }
+        );
         
         // Update delivery personnel status
         personnel.isAvailable = false;
@@ -186,7 +204,7 @@ export const updateOrderLocation = async (req, res) => {
     try {
         const { orderId, location, status } = req.body;
         
-        if (!orderId || !location || !location.lat || !location.lng) {
+        if (!orderId || !location || location.lat == null || location.lng == null) {
             return res.status(400).json({
                 success: false,
                 message: 'Order ID and location coordinates are required'
@@ -199,6 +217,20 @@ export const updateOrderLocation = async (req, res) => {
                 success: false,
                 message: 'Order not found'
             });
+        }
+
+        const personnel = await DeliveryPersonnelModel.findOne({ userId: req.userId }).select('_id');
+        if (!personnel || !order.deliveryPersonnel || order.deliveryPersonnel.toString() !== personnel._id.toString()) {
+            return res.status(403).json({ success: false, message: 'You are not assigned to this delivery' });
+        }
+        if (!Number.isFinite(Number(location.lat)) || !Number.isFinite(Number(location.lng)) ||
+            Number(location.lat) < -90 || Number(location.lat) > 90 ||
+            Number(location.lng) < -180 || Number(location.lng) > 180) {
+            return res.status(400).json({ success: false, message: 'Invalid location coordinates' });
+        }
+        const transitions = { driver_assigned: ['out_for_delivery'], out_for_delivery: ['nearby', 'delivered'], nearby: ['delivered'] };
+        if (status && !(transitions[order.status] || []).includes(status)) {
+            return res.status(409).json({ success: false, message: `Cannot change ${order.status} directly to ${status}` });
         }
         
         // Update order location
@@ -225,7 +257,7 @@ export const updateOrderLocation = async (req, res) => {
             order.estimatedDeliveryTime = etaInfo.eta;
             
             // If within 500 meters, mark as nearby
-            if (etaInfo.distance < 500 && order.status !== 'delivered' && order.status !== 'nearby') {
+            if (etaInfo.distance < 500 && order.status === 'out_for_delivery') {
                 isNearby = true;
                 order.status = 'nearby';
                 order.statusHistory.push({
@@ -235,7 +267,8 @@ export const updateOrderLocation = async (req, res) => {
                         lat: location.lat,
                         lng: location.lng
                     },
-                    note: 'Driver is nearby your location'
+                    note: 'Driver is nearby your location',
+                    updatedBy: req.userId
                 });
                 
                 // Create notification
@@ -258,7 +291,8 @@ export const updateOrderLocation = async (req, res) => {
                 location: {
                     lat: location.lat,
                     lng: location.lng
-                }
+                },
+                updatedBy: req.userId
             });
             
             // If delivered, update necessary fields
@@ -289,6 +323,28 @@ export const updateOrderLocation = async (req, res) => {
         }
         
         await order.save();
+
+        // Mirror this lifecycle event to all line-item documents for the same checkout.
+        const siblingUpdate = {
+            $set: {
+                currentLocation: order.currentLocation,
+                status: order.status,
+                estimatedDeliveryTime: order.estimatedDeliveryTime,
+                deliveredAt: order.deliveredAt
+            }
+        };
+        if (isNearby || status) {
+            siblingUpdate.$push = {
+                statusHistory: {
+                    status: order.status,
+                    timestamp: new Date(),
+                    location: { lat: location.lat, lng: location.lng },
+                    updatedBy: req.userId,
+                    note: isNearby ? 'Driver is nearby your location' : undefined
+                }
+            };
+        }
+        await OrderModel.updateMany({ orderId: order.orderId, _id: { $ne: order._id } }, siblingUpdate);
         
         // Send real-time update with enhanced information
         const io = getIO();

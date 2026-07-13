@@ -4,6 +4,7 @@ import User from '../models/user.model.js';
 import Product from '../models/product.model.js';
 import auth from '../middleware/auth.js';
 import Staff from '../middleware/Staff.js';
+import { requireStaffPermission } from '../middleware/requireStaffPermission.js';
 import axios from 'axios';
 import { getAuthToken, MPESA_STK_URL } from '../config/mpesa.js';
 import MpesaPayment from '../models/mpesaPayment.model.js';
@@ -12,7 +13,7 @@ const router = express.Router();
 
 const escapeRegex = (value = '') => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
-router.get('/products/lookup', auth, Staff, async (req, res) => {
+router.get('/products/lookup', auth, Staff, requireStaffPermission('pos.open_counter'), async (req, res) => {
   try {
     const rawCode = String(req.query.code || '').trim();
 
@@ -59,7 +60,7 @@ router.get('/products/lookup', auth, Staff, async (req, res) => {
 });
 
 // ─── M-Pesa STK Push (POS split-payment) ────────────────────────────────────
-router.post('/mpesa/stk-push', auth, Staff, async (req, res) => {
+router.post('/mpesa/stk-push', auth, Staff, requireStaffPermission('pos.open_counter'), async (req, res) => {
   try {
     const { phoneNumber, amount } = req.body;
     if (!phoneNumber || !amount) {
@@ -130,7 +131,7 @@ router.post('/mpesa/stk-push', auth, Staff, async (req, res) => {
 });
 
 // Get all sales for staff
-router.get('/sales', auth, Staff, async (req, res) => {
+router.get('/sales', auth, Staff, requireStaffPermission('pos.view_all_sales'), async (req, res) => {
   try {
     const { startDate, endDate, cashier } = req.query;
     const page = Math.max(1, parseInt(req.query.page || 1, 10));
@@ -239,7 +240,7 @@ router.get('/admin/sales', auth, async (req, res) => {
 });
 
 // Create a new sale
-router.post('/sale', auth, Staff, async (req, res) => {
+router.post('/sale', auth, Staff, requireStaffPermission('pos.open_counter'), async (req, res) => {
   try {
     const {
       items,
@@ -434,7 +435,7 @@ router.post('/sale', auth, Staff, async (req, res) => {
 });
 
 // Get sale by ID
-router.get('/sale/:id', auth, Staff, async (req, res) => {
+router.get('/sale/:id', auth, Staff, requireStaffPermission('receipt.reprint'), async (req, res) => {
   try {
     const sale = await Sale.findById(req.params.id)
       .populate('customer', 'name email phone')
@@ -486,7 +487,7 @@ router.get('/admin/sale/:id', auth, async (req, res) => {
 });
 
 // Get daily sales summary
-router.get('/summary/daily', auth, Staff, async (req, res) => {
+router.get('/summary/daily', auth, Staff, requireStaffPermission('pos.view_analytics'), async (req, res) => {
   try {
     const { date } = req.query;
     const targetDate = date ? new Date(date) : new Date();
@@ -652,7 +653,7 @@ router.put('/sale/:id/void', auth, async (req, res) => {
 });
 
 // Get sales analytics
-router.get('/analytics', auth, Staff, async (req, res) => {
+router.get('/analytics', auth, Staff, requireStaffPermission('pos.view_analytics'), async (req, res) => {
   try {
     const { period = '7d' } = req.query;
     

@@ -1,6 +1,8 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 
 function Checkout({ items }) {
+    const navigate = useNavigate();
     // After successful payment/checkout
     const handleSuccessfulPayment = (data) => {
         // Format receipt data

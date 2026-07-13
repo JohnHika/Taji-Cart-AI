@@ -7,6 +7,7 @@ import {
     forgotPasswordController,
     getAllCustomers,
     getAllUsersController,
+    getStaffPermissionCatalog,
     loginController,
     logoutController,
     refreshToken,
@@ -23,6 +24,7 @@ import {
     unblockUserController,
     updateUserDetails,
     updateUserRoleController,
+    updateStaffPermissionsController,
     uploadAvatar,
     userDetails,
     verifyEmailController,
@@ -33,6 +35,7 @@ import { admin } from '../middleware/Admin.js';
 import auth from '../middleware/auth.js';
 import { delivery } from '../middleware/Delivery.js';
 import staff from '../middleware/Staff.js';
+import { requireStaffPermission } from '../middleware/requireStaffPermission.js';
 import upload from '../middleware/multer.js';
 
 const userRouter = Router()
@@ -62,6 +65,8 @@ userRouter.get('/admin/users', auth, admin, getAllUsersController)
 userRouter.put('/admin/update-role', auth, admin, updateUserRoleController)
 userRouter.put('/admin/set-delivery', auth, admin, setDeliveryRoleController)
 userRouter.put('/admin/set-staff', auth, admin, setStaffRoleController)
+userRouter.get('/admin/staff-permissions', auth, admin, getStaffPermissionCatalog)
+userRouter.put('/admin/staff-permissions', auth, admin, updateStaffPermissionsController)
 userRouter.put('/admin/block-user', auth, admin, blockUserController)
 userRouter.put('/admin/unblock-user', auth, admin, unblockUserController)
 userRouter.delete('/admin/delete-user/:userId', auth, admin, deleteUserController)
@@ -72,9 +77,9 @@ userRouter.post('/admin/bulk-send-verification', auth, admin, adminBulkSendVerif
 userRouter.get('/delivery/profile', auth, delivery, userDetails)
 
 // Staff routes
-userRouter.post('/staff/verify-pickup', auth, staff, verifyPickupController);
-userRouter.get('/search', auth, staff, searchUsers); // General search route for staff
-userRouter.get('/customers', auth, staff, getAllCustomers); // Get all customers for POS
-userRouter.post('/scan-loyalty-card', auth, staff, scanLoyaltyCard); // Scan loyalty card for POS
+userRouter.post('/staff/verify-pickup', auth, staff, requireStaffPermission('pickup.verify_code'), verifyPickupController);
+userRouter.get('/search', auth, staff, requireStaffPermission('customer.search'), searchUsers);
+userRouter.get('/customers', auth, staff, requireStaffPermission('customer.view_contact'), getAllCustomers);
+userRouter.post('/scan-loyalty-card', auth, staff, requireStaffPermission('loyalty.scan'), scanLoyaltyCard);
 
 export default userRouter

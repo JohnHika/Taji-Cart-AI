@@ -452,7 +452,12 @@ const findAssignmentFailure = async (orderId) => {
 
 const updateDriverAssignmentState = async (driverId, orderId) => {
   const updatedDriver = await DeliveryPersonnelModel.findByIdAndUpdate(
-    driverId,
+    {
+      _id: driverId,
+      isActive: { $ne: false },
+      isAvailable: { $ne: false },
+      activeOrdersCount: { $lt: DELIVERY_DRIVER_CAPACITY }
+    },
     {
       $inc: { activeOrdersCount: 1 },
       $addToSet: { activeOrders: orderId },
@@ -477,9 +482,12 @@ const updateDriverAssignmentState = async (driverId, orderId) => {
 };
 
 const rollbackOrderAssignment = async (orderId, driverId, updatedBy, note) => {
-  await Order.findOneAndUpdate(
+  const assignedOrder = await Order.findById(orderId).select('orderId');
+  if (!assignedOrder) return;
+
+  await Order.updateMany(
     {
-      _id: orderId,
+      orderId: assignedOrder.orderId,
       deliveryPersonnel: driverId,
       status: 'driver_assigned'
     },
@@ -575,6 +583,32 @@ const assignOrderToDriver = async ({
     };
   }
 
+  // A checkout can contain multiple line-item documents. Keep all lines in the
+  // same lifecycle state so staff, drivers, and customers see one coherent order.
+  await Order.updateMany(
+    {
+      orderId: order.orderId,
+      _id: { $ne: order._id },
+      status: 'dispatched',
+      $and: [DELIVERY_ORDER_FILTER, isUnassignedDeliveryOrderFilter]
+    },
+    {
+      $set: {
+        deliveryPersonnel: driver._id,
+        status: 'driver_assigned',
+        estimatedDeliveryTime: estimatedDelivery
+      },
+      $push: {
+        statusHistory: {
+          status: 'driver_assigned',
+          timestamp: new Date(),
+          updatedBy,
+          note
+        }
+      }
+    }
+  );
+
   let updatedDriver;
   try {
     updatedDriver = await updateDriverAssignmentState(driver._id, order._id);
@@ -617,6 +651,66 @@ const formatAvailableDeliveryOrder = (order) => ({
   dispatchedAt: order.dispatchInfo?.dispatchedAt || null
 });
 
+// Driver-only order detail view used by the delivery map. It deliberately
+// verifies assignment before returning customer contact/address information.
+export const getDeliveryOrderDetails = async (req, res) => {
+  try {
+    const personnelFilter = await getDriverPersonnelFilter(req.userId);
+    const order = await OrderModel.findOne({
+      _id: req.params.orderId,
+      deliveryPersonnel: personnelFilter
+    })
+      .populate('userId', 'name email mobile phone')
+      .populate('delivery_address')
+      .populate('productId', 'name image');
+
+    if (!order) {
+      return res.status(404).json({ success: false, message: 'Order not found or not assigned to you' });
+    }
+
+    return res.json({
+      success: true,
+      data: {
+        _id: order._id,
+        orderId: order.orderId,
+        status: order.status,
+        customer: formatDeliveryCustomer(order),
+        deliveryAddress: formatDeliveryAddress(order).fullAddress,
+        deliveryNotes: order.delivery_address?.deliveryInstructions || '',
+        items: formatDeliveryItems(order),
+        total: order.totalAmt || 0,
+        currentLocation: order.currentLocation || null,
+        estimatedDeliveryTime: order.estimatedDeliveryTime || null,
+        statusHistory: order.statusHistory || []
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching delivery order details:', error);
+    return res.status(500).json({ success: false, message: 'Error retrieving delivery order details' });
+  }
+};
+
+// Older checkouts persist one document per cart line. The delivery workflow is
+// order-level, so API responses must expose one logical delivery per orderId.
+const collapseOrderLines = (orders = []) => {
+  const grouped = new Map();
+  for (const order of orders) {
+    const plain = typeof order.toObject === 'function' ? order.toObject() : { ...order };
+    const key = plain.orderId || String(plain._id);
+    const existing = grouped.get(key);
+    if (!existing) {
+      plain.items = formatDeliveryItems(plain);
+      grouped.set(key, plain);
+      continue;
+    }
+    existing.totalAmt = Number(existing.totalAmt || 0) + Number(plain.totalAmt || 0);
+    existing.subTotalAmt = Number(existing.subTotalAmt || 0) + Number(plain.subTotalAmt || 0);
+    existing.items.push(...formatDeliveryItems(plain));
+    if (!existing.deliveredAt && plain.deliveredAt) existing.deliveredAt = plain.deliveredAt;
+  }
+  return [...grouped.values()];
+};
+
 // Get delivery driver statistics
 export const getDeliveryStats = async (req, res) => {
   try {
@@ -632,23 +726,23 @@ export const getDeliveryStats = async (req, res) => {
     todayStart.setHours(0, 0, 0, 0);
     
     // Active orders count
-    const activeOrders = await OrderModel.countDocuments({
+    const activeOrders = (await OrderModel.distinct('orderId', {
         deliveryPersonnel: personnelFilter,
         status: { $in: ['driver_assigned', 'out_for_delivery', 'nearby'] }
-    });
+    })).length;
     
     // Completed today count
-    const completedToday = await OrderModel.countDocuments({
+    const completedToday = (await OrderModel.distinct('orderId', {
         deliveryPersonnel: personnelFilter,
         status: 'delivered',
         deliveredAt: { $gte: todayStart }
-    });
+    })).length;
     
     // Total completed all time
-    const totalCompleted = await OrderModel.countDocuments({
+    const totalCompleted = (await OrderModel.distinct('orderId', {
         deliveryPersonnel: personnelFilter,
         status: 'delivered'
-    });
+    })).length;
 
     const visibilityEligibility = getDriverEligibility(driverProfile, {
       requireVerified: false,
@@ -659,10 +753,10 @@ export const getDeliveryStats = async (req, res) => {
     });
 
     const pendingOrders = visibilityEligibility.ok
-      ? await OrderModel.countDocuments({
+      ? (await OrderModel.distinct('orderId', {
           status: 'dispatched',
           $and: [DELIVERY_ORDER_FILTER, isUnassignedDeliveryOrderFilter]
-        })
+        })).length
       : 0;
     
     // Get driver info including current location and availability status
@@ -715,7 +809,7 @@ export const getActiveOrders = async (req, res) => {
     .sort({ updatedAt: -1 });
     
     // Format the customer information and delivery address for each order
-    const formattedOrders = orders.map(order => {
+    const formattedOrders = collapseOrderLines(orders).map(order => {
       const customer = formatDeliveryCustomer(order);
       const deliveryAddress = formatDeliveryAddress(order);
 
@@ -784,7 +878,7 @@ export const getCompletedOrders = async (req, res) => {
     
     return res.json({
         success: true,
-        data: orders
+        data: collapseOrderLines(orders)
     });
   } catch (error) {
     console.error('Error fetching completed orders:', error);
@@ -827,10 +921,10 @@ export const getDeliveryHistory = async (req, res) => {
     .limit(parseInt(limit));
     
     // Get total count for pagination
-    const totalOrders = await OrderModel.countDocuments(query);
+    const totalOrders = (await OrderModel.distinct('orderId', query)).length;
     
     // Transform to the shape the client expects
-    const data = orders.map(order => {
+    const data = collapseOrderLines(orders).map(order => {
         const addr = order.delivery_address;
         const addrStr = addr
             ? [addr.address_line, addr.city].filter(Boolean).join(', ')
@@ -918,7 +1012,7 @@ export const exportDeliveryHistory = async (req, res) => {
             .join(', ') || 'N/A';
     };
 
-    const exportData = orders.map(order => ({
+    const exportData = collapseOrderLines(orders).map(order => ({
         orderId: order.orderId,
         createdAt: order.createdAt,
         deliveredAt: order.deliveredAt || 'Not delivered',
@@ -929,10 +1023,27 @@ export const exportDeliveryHistory = async (req, res) => {
         amount: order.totalAmt
     }));
     
-    return res.json({
-        success: true,
-        data: exportData
-    });
+    const csvEscape = (value) => {
+      const text = value == null ? '' : String(value);
+      return /[",\r\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
+    };
+    const headers = ['Order ID', 'Created At', 'Delivered At', 'Customer Name', 'Customer Phone', 'Delivery Address', 'Status', 'Amount'];
+    const csv = [headers, ...exportData.map((row) => [
+      row.orderId,
+      row.createdAt instanceof Date ? row.createdAt.toISOString() : row.createdAt,
+      row.deliveredAt instanceof Date ? row.deliveredAt.toISOString() : row.deliveredAt,
+      row.customerName,
+      row.customerPhone,
+      row.deliveryAddress,
+      row.status,
+      row.amount
+    ])]
+      .map((row) => row.map(csvEscape).join(','))
+      .join('\r\n');
+
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', 'attachment; filename="delivery-history.csv"');
+    return res.status(200).send(`\uFEFF${csv}`);
   } catch (error) {
     console.error('Error exporting delivery history:', error);
     return res.status(500).json({
@@ -980,20 +1091,42 @@ export const updateOrderStatus = async (req, res) => {
             message: 'Order not found or not assigned to you'
         });
     }
+
+    const transitions = {
+      driver_assigned: ['out_for_delivery'],
+      out_for_delivery: ['nearby', 'delivered'],
+      nearby: ['delivered']
+    };
+    if (!(transitions[order.status] || []).includes(status)) {
+      return res.status(409).json({
+        success: false,
+        message: `Cannot change ${order.status} directly to ${status}`
+      });
+    }
     
-    // Update the order status
+    const changedAt = new Date();
+    const updateFields = { status };
+    if (status === 'delivered') updateFields.deliveredAt = changedAt;
+
+    await OrderModel.updateMany(
+      { orderId: order.orderId, deliveryPersonnel: personnelFilter },
+      {
+        $set: updateFields,
+        $push: {
+          statusHistory: {
+            status,
+            timestamp: changedAt,
+            updatedBy: driverId,
+            note: `Updated by assigned driver`
+          }
+        }
+      }
+    );
+
     order.status = status;
+    if (status === 'delivered') order.deliveredAt = changedAt;
     
-    // Add to status history
-    order.statusHistory.push({
-        status,
-        timestamp: new Date()
-    });
-    
-    // If delivered, update delivered time
     if (status === 'delivered') {
-        order.deliveredAt = new Date();
-        
       // Release driver capacity now that this delivery is complete
       const driverProfile = await DeliveryPersonnelModel.findOne({ userId: driverId });
 
@@ -1009,8 +1142,6 @@ export const updateOrderStatus = async (req, res) => {
         await driverProfile.save();
       }
     }
-    
-    await order.save();
     
     // Send real-time update via socket
     // This will emit to both the customer and any staff watching this order
@@ -1044,6 +1175,11 @@ export const updateDriverLocation = async (req, res) => {
         message: 'Latitude and longitude are required'
       });
     }
+    if (!Number.isFinite(Number(latitude)) || !Number.isFinite(Number(longitude)) ||
+        Number(latitude) < -90 || Number(latitude) > 90 ||
+        Number(longitude) < -180 || Number(longitude) > 180) {
+      return res.status(400).json({ success: false, message: 'Invalid location coordinates' });
+    }
 
     const driverUser = await User.findById(driverId).select('name email mobile phone profile_pic');
 
@@ -1067,8 +1203,7 @@ export const updateDriverLocation = async (req, res) => {
       { userId: driverId },
       {
         $set: {
-          currentLocation: locationPayload,
-          isActive: true
+          currentLocation: locationPayload
         },
         $setOnInsert: insertOnlyFields
       },
@@ -1090,8 +1225,12 @@ export const updateDriverLocation = async (req, res) => {
       });
 
       if (order) {
+        // Propagate the live location to every line item in this checkout order.
+        await OrderModel.updateMany(
+          { orderId: order.orderId, deliveryPersonnel: { $in: driverIdentifiers } },
+          { $set: { currentLocation: locationPayload } }
+        );
         order.currentLocation = locationPayload;
-        await order.save();
 
         // Emit real-time location update — guard against socket not yet initialised
         try {
@@ -1207,7 +1346,7 @@ export const getAvailableDeliveryOrders = async (req, res) => {
 
     return res.status(200).json({
       success: true,
-      data: availableOrders.map(formatAvailableDeliveryOrder)
+      data: collapseOrderLines(availableOrders).map(formatAvailableDeliveryOrder)
     });
   } catch (error) {
     console.error('Error fetching available delivery orders:', error);
@@ -1681,7 +1820,7 @@ export const manuallyAssignDriver = async (req, res) => {
     }
     
     const eligibility = getDriverEligibility(selectedDriver, {
-      requireVerified: false,
+      requireVerified: true,
       requireOnline: false,
       allowLegacyOffline: false,
       context: 'assignment'
@@ -1933,7 +2072,7 @@ export const getPendingOrders = async (req, res) => {
     
     return res.status(200).json({
       success: true,
-      data: pendingOrders.map(formatStaffDeliveryOrder)
+      data: collapseOrderLines(pendingOrders).map(formatStaffDeliveryOrder)
     });
   } catch (error) {
     console.error('Error fetching pending orders:', error);
@@ -1957,7 +2096,7 @@ export const getDispatchedOrders = async (req, res) => {
 
     return res.status(200).json({
       success: true,
-      data: orders.map(formatStaffDeliveryOrder)
+      data: collapseOrderLines(orders).map(formatStaffDeliveryOrder)
     });
   } catch (error) {
     console.error('Error fetching dispatched orders:', error);
@@ -1988,7 +2127,7 @@ export const getActiveDeliveriesForStaff = async (req, res) => {
 
     return res.status(200).json({
       success: true,
-      data: orders.map(formatStaffDeliveryOrder)
+      data: collapseOrderLines(orders).map(formatStaffDeliveryOrder)
     });
   } catch (error) {
     console.error('Error fetching active deliveries for staff:', error);
@@ -2028,7 +2167,7 @@ export const getCompletedDeliveriesForStaff = async (req, res) => {
 
     return res.status(200).json({
       success: true,
-      data: orders.map(formatStaffDeliveryOrder)
+      data: collapseOrderLines(orders).map(formatStaffDeliveryOrder)
     });
   } catch (error) {
     console.error('Error fetching completed deliveries for staff:', error);
