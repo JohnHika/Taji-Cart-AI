@@ -31,6 +31,7 @@ const POSDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [dailySummary, setDailySummary] = useState(null);
   const [analytics, setAnalytics] = useState(null);
+  const [analyticsAccessDenied, setAnalyticsAccessDenied] = useState(false);
   const [recentSales, setRecentSales] = useState([]);
   const [showReceiptModal, setShowReceiptModal] = useState(false);
   const [selectedSale, setSelectedSale] = useState(null);
@@ -93,12 +94,17 @@ const POSDashboard = () => {
         url: `/api/pos/analytics?period=${analyticsPeriod}`,
         method: 'GET'
       });
-      
+
       if (response.data.success) {
         setAnalytics(response.data.data);
+        setAnalyticsAccessDenied(false);
       }
     } catch (error) {
-      console.error('Error loading analytics:', error);
+      if (error?.response?.status === 403) {
+        setAnalyticsAccessDenied(true);
+      } else {
+        console.error('Error loading analytics:', error);
+      }
     }
   };
 
@@ -382,7 +388,11 @@ const POSDashboard = () => {
             <span className="text-xs text-brown-500 dark:text-white/45">{analyticsPeriodLabel}</span>
           </div>
 
-          {(analytics?.salesOverTime || []).length > 0 ? (
+          {analyticsAccessDenied ? (
+            <div className="rounded-2xl border border-dashed border-amber-300 bg-amber-50 px-4 py-10 text-center text-sm text-amber-700 dark:border-amber-700/50 dark:bg-amber-900/20 dark:text-amber-300">
+              You don't have permission to view sales analytics. Ask an admin to grant "View sales analytics" under Manage Role.
+            </div>
+          ) : (analytics?.salesOverTime || []).length > 0 ? (
             <div className="space-y-3">
               {analytics.salesOverTime.map((entry) => (
                 <div key={entry._id} className="rounded-2xl border border-brown-100 bg-ivory p-4 dark:border-dm-border dark:bg-dm-card-2">

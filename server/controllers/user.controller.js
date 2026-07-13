@@ -1455,8 +1455,16 @@ export async function changePassword(request, response) {
         }
 
         // Password complexity validation - only apply to new password, not current password
-        const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
-        if (!passwordRegex.test(newPassword)) {
+        // Allow any non-alphanumeric character as the "special character" rather than a
+        // fixed short list, since the error message doesn't tell the user which symbols
+        // are accepted and rejecting valid-looking passwords (e.g. containing '#') is
+        // confusing when the strength meter already reports them as strong.
+        const hasMinLength = newPassword.length >= 8;
+        const hasUppercase = /[A-Z]/.test(newPassword);
+        const hasLowercase = /[a-z]/.test(newPassword);
+        const hasNumber = /\d/.test(newPassword);
+        const hasSpecialChar = /[^A-Za-z0-9]/.test(newPassword);
+        if (!hasMinLength || !hasUppercase || !hasLowercase || !hasNumber || !hasSpecialChar) {
             return response.status(400).json({
                 message: "New password must be at least 8 characters and include uppercase, lowercase, number, and special character",
                 error: true,
