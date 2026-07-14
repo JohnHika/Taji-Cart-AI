@@ -156,23 +156,29 @@ const MyOrders = () => {
                   {/* Product information — always row on mobile (image + text side by side) */}
                   <div className="flex gap-3 mb-4 pb-4 border-b border-brown-100 dark:border-dm-border">
                     <div className="shrink-0">
-                      <img
-                        src={order.product_details.image[0]}
-                        className="w-16 h-16 sm:w-20 sm:h-20 object-cover rounded-lg border border-brown-100 dark:border-dm-border"
-                        alt={order.product_details.name}
-                      />
+                      {order.product_details?.image?.[0] ? (
+                        <img
+                          src={order.product_details.image[0]}
+                          className="w-16 h-16 sm:w-20 sm:h-20 object-cover rounded-lg border border-brown-100 dark:border-dm-border"
+                          alt={order.product_details?.name || 'Product'}
+                        />
+                      ) : (
+                        <div className="w-16 h-16 sm:w-20 sm:h-20 flex items-center justify-center rounded-lg border border-brown-100 dark:border-dm-border bg-brown-50 dark:bg-dm-card-2 text-brown-300 dark:text-white/30">
+                          <FaBox size={20} />
+                        </div>
+                      )}
                     </div>
                     <div className="flex-grow min-w-0">
-                      <h3 className="font-medium text-sm sm:text-base text-charcoal dark:text-white mb-1 line-clamp-2">{order.product_details.name}</h3>
+                      <h3 className="font-medium text-sm sm:text-base text-charcoal dark:text-white mb-1 line-clamp-2">{order.product_details?.name || 'Product unavailable'}</h3>
                       <p className="text-xs text-brown-600 dark:text-white/55 mb-1 line-clamp-2 hidden sm:block">
-                        {order.product_details.description
+                        {order.product_details?.description
                           ? order.product_details.description.substring(0, 100) + '...'
                           : 'No description available'}
                       </p>
                       <div className="flex items-center justify-between gap-2">
                         <span className="text-xs text-brown-600 dark:text-white/50">Qty: <span className="text-charcoal dark:text-white/80 font-medium">{order.quantity || 1}</span></span>
                         <span className="text-sm font-semibold text-charcoal dark:text-white">
-                          KSh {order.product_details.price?.toLocaleString() || 'N/A'}
+                          KSh {order.product_details?.price?.toLocaleString() || 'N/A'}
                         </span>
                       </div>
                     </div>
