@@ -296,6 +296,8 @@ const RoyalCard = () => {
 
   return (
     <div className="w-full max-w-md mx-auto">
+      {/* Everything inside #loyalty-card-print is what actually prints — see .print-card-only in index.css */}
+      <div id="loyalty-card-print">
       {/* Main Card */}
       <div className={`relative aspect-[1.586/1] rounded-2xl overflow-hidden bg-gradient-to-br ${tierColors.bg} shadow-2xl`}>
         {/* Gold shimmer effect for Gold/Platinum tiers */}
@@ -449,6 +451,7 @@ const RoyalCard = () => {
             />
           )}
         </div>
+      </div>
       </div>
 
       {/* Progress to next tier (if not max tier) */}

@@ -211,6 +211,28 @@
   to   { transform: scaleX(1); }
 }
 
+/* Scopes window.print() to a single element. Any component that wants an
+   isolated print target wraps it in `<div id="loyalty-card-print">`. */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+
+  #loyalty-card-print,
+  #loyalty-card-print * {
+    visibility: visible;
+  }
+
+  #loyalty-card-print {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+  }
+}
+
 @layer utilities {
   .animate-fade-up {
     animation: fadeUp 0.5s ease both;

@@ -241,6 +241,16 @@ const ProductListPage = () => {
       </Helmet>
       <div className="mx-auto max-w-7xl p-2 sm:p-4">
         <div className="mb-6 sm:mb-8">
+          <button
+            type="button"
+            onClick={() => navigate(-1)}
+            className="mb-3 inline-flex items-center gap-1.5 text-sm font-semibold text-brown-600 transition-colors hover:text-plum-700 dark:text-white/60 dark:hover:text-white"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+            </svg>
+            Back
+          </button>
           <h1 className="mb-2 text-3xl font-bold text-charcoal dark:text-white sm:text-4xl">
             {currentCategoryLabel}
           </h1>
