@@ -407,7 +407,7 @@ const LocationPicker = ({
       <div className="relative mb-3" ref={dropdownRef}>
         <div className="flex flex-col sm:flex-row gap-2">
           {/* Search input */}
-          <div className="relative flex-1">
+          <div className="relative flex-1 min-w-0 w-full">
             <svg className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" width="14" height="14"
               viewBox="0 0 24 24" fill="none" stroke={BRAND} strokeWidth="2.2">
               <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
@@ -438,7 +438,8 @@ const LocationPicker = ({
                 position: 'absolute', zIndex: 1000, top: '100%', left: 0, right: 0,
                 marginTop: 4, background: 'white', border: '1px solid #e2d5c8',
                 borderRadius: 10, boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
-                maxHeight: 280, overflowY: 'auto',
+                maxHeight: 280, overflowY: 'auto', overflowX: 'hidden',
+                width: '100%', minWidth: '100%', boxSizing: 'border-box',
               }}>
                 {/* Recent searches header */}
                 {showingRecent && (
@@ -456,12 +457,12 @@ const LocationPicker = ({
                   </div>
                 )}
                 {!searchLoading && searchError && !showingRecent && (
-                  <div style={{ padding: '13px 16px', color: '#6b5c5c', fontSize: 13, textAlign: 'center' }}>
+                  <div style={{ padding: '13px 16px', color: '#6b5c5c', fontSize: 13, textAlign: 'center', wordBreak: 'break-word' }}>
                     Search unavailable. Please try again.
                   </div>
                 )}
                 {!searchLoading && !searchError && displayItems.length === 0 && !showingRecent && (
-                  <div style={{ padding: '13px 16px', color: '#6b5c5c', fontSize: 13, textAlign: 'center' }}>
+                  <div style={{ padding: '13px 16px', color: '#6b5c5c', fontSize: 13, textAlign: 'center', wordBreak: 'break-word' }}>
                     {searchQuery.trim()
                       ? `No results for "${searchQuery}" — try a shorter word`
                       : 'Start typing to search…'}
@@ -492,11 +493,11 @@ const LocationPicker = ({
                         <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
                       )}
                     </svg>
-                    <div>
-                      <div style={{ fontWeight: 600, fontSize: 13, color: '#1A0A0A', lineHeight: '1.3' }}>
+                    <div style={{ minWidth: 0, flex: 1 }}>
+                      <div style={{ fontWeight: 600, fontSize: 13, color: '#1A0A0A', lineHeight: '1.3', wordBreak: 'break-word' }}>
                         {showingRecent ? item.name : <HighlightedText text={getResultName(item)} query={searchQuery} />}
                       </div>
-                      <div style={{ fontSize: 11, color: '#6b5c5c', marginTop: 2, lineHeight: '1.3' }}>
+                      <div style={{ fontSize: 11, color: '#6b5c5c', marginTop: 2, lineHeight: '1.3', wordBreak: 'break-word' }}>
                         {showingRecent ? (item.displayName?.split(',').slice(1, 3).join(',') || 'Nairobi, Kenya') : getResultSub(item)}
                       </div>
                     </div>
@@ -506,12 +507,12 @@ const LocationPicker = ({
             )}
           </div>
 
-          {/* GPS button - full width on mobile with visible label */}
+          {/* GPS button - full width on mobile (stacked), auto width on sm+ (row) */}
           <button
             type="button"
             onClick={handleGPS}
             disabled={gpsLoading || reverseLoading}
-            className="gps-location-button"
+            className="gps-location-button w-full sm:w-auto"
             style={{
               background: 'linear-gradient(135deg, #6B0F1A, #9B1428)',
               color: 'white', border: 'none', borderRadius: 10,
@@ -521,7 +522,6 @@ const LocationPicker = ({
               fontSize: 14, fontWeight: 600, whiteSpace: 'nowrap',
               opacity: (gpsLoading || reverseLoading) ? 0.72 : 1,
               transition: 'opacity 0.15s, transform 0.1s, background 0.15s',
-              width: '100%',  // Full width on mobile (stacked)
             }}
           >
             {gpsLoading ? (
