@@ -175,7 +175,57 @@ const Home = () => {
 
       <HeroBanner bestSellers={homeCatalog.bestSellers} bannerProducts={homeCatalog.bannerProducts} />
 
-      <TrustStrip />
+      {/* Featured styles strip - shows variety immediately after the banner */}
+      <div className="border-y border-brown-200 bg-white dark:border-dm-border dark:bg-dm-card">
+        <div className="container mx-auto px-3 py-4 sm:px-4">
+          <div className="mb-3 flex items-center justify-between">
+            <span className="text-xs font-bold uppercase tracking-[0.2em] text-brown-500 dark:text-white/55">
+              Trending styles
+            </span>
+            <Link
+              to="/collections"
+              className="text-xs font-semibold text-gold-600 underline underline-offset-2 hover:text-gold-500 dark:text-gold-300"
+            >
+              View all
+            </Link>
+          </div>
+          {homeCatalog.bestSellers.length > 0 || homeCatalog.bannerProducts.length > 0 ? (
+            <div className="flex gap-3 overflow-x-auto pb-1 scrollbar-hide">
+              {[...homeCatalog.bestSellers, ...homeCatalog.bannerProducts]
+                .filter((p) => p.image?.[0] && !p.image[0].includes('product-photo-pending'))
+                .slice(0, 8)
+                .map((product) => {
+                  const productUrl = product._id
+                    ? `/product/${encodeURIComponent(valideURLConvert(product.name))}-${product._id}`
+                    : '/collections';
+                  return (
+                    <Link
+                      key={`trending-${product._id || product.name}`}
+                      to={productUrl}
+                      className="group relative shrink-0 overflow-hidden rounded-lg bg-ivory shadow-sm dark:bg-dm-card-2"
+                      style={{ width: '110px', height: '130px' }}
+                    >
+                      <img
+                        src={product.image[0]}
+                        alt={product.name}
+                        className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                        loading="lazy"
+                        onError={(e) => {
+                          e.currentTarget.style.display = 'none';
+                        }}
+                      />
+                      <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-charcoal/70 to-transparent px-2 py-1.5">
+                        <p className="line-clamp-2 text-[10px] font-semibold leading-tight text-white">{product.name}</p>
+                      </div>
+                    </Link>
+                  );
+                })}
+            </div>
+          ) : (
+            <div className="h-24 animate-pulse rounded-lg bg-brown-100 dark:bg-dm-card" />
+          )}
+        </div>
+      </div>
 
       <div className="container mx-auto px-3 pt-8 sm:px-4 sm:pt-10">
         <div className="mb-5 flex flex-col gap-3 sm:mb-6 sm:flex-row sm:items-end sm:justify-between">
@@ -255,6 +305,8 @@ const Home = () => {
           </div>
         )}
       </div>
+
+      <TrustStrip />
 
       <div className="container mx-auto mb-8 mt-2 px-4 sm:mb-10">
         <div className="section-divider" />
