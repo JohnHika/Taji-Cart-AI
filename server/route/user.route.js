@@ -8,6 +8,7 @@ import {
     getAllCustomers,
     getAllUsersController,
     getStaffPermissionCatalog,
+    getWishlist,
     loginController,
     logoutController,
     refreshToken,
@@ -21,6 +22,7 @@ import {
     adminBulkSendVerificationController,
     setDeliveryRoleController,
     setStaffRoleController,
+    toggleWishlist,
     unblockUserController,
     updateUserDetails,
     updateUserRoleController,
@@ -58,6 +60,8 @@ userRouter.put('/update-user', auth, updateUserDetails)
 userRouter.post('/change-password', auth, changePassword)
 userRouter.post('/request-phone-verification-otp', auth, requestPhoneVerificationOtpController)
 userRouter.post('/verify-phone-otp', auth, verifyPhoneOtpController)
+userRouter.get('/wishlist', auth, getWishlist)
+userRouter.post('/wishlist/toggle', auth, toggleWishlist)
 
 // Admin routes
 userRouter.get('/admin/users/search', auth, admin, searchUsers)

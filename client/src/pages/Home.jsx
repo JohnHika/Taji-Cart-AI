@@ -1,41 +1,17 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { FaUsers } from 'react-icons/fa';
 import { Link, useNavigate } from 'react-router-dom';
 import SummaryApi from '../common/SummaryApi';
 import CategoryBannerGrid from '../components/CategoryBannerGrid';
 import CommunityCampaignProgress from '../components/CommunityCampaignProgress';
+import HeroBanner from '../components/HeroBanner';
 import HomeProductShelf from '../components/HomeProductShelf';
-import PromoBanner from '../components/PromoBanner';
 import PWAInstallBanner from '../components/PWAInstallBanner';
+import TrustStrip from '../components/TrustStrip';
 import UserActiveCampaigns from '../components/UserActiveCampaigns';
 import Axios from '../utils/Axios';
 import { valideURLConvert } from '../utils/valideURLConvert';
-
-function useScrollReveal(threshold = 0.15) {
-  const ref = useRef(null);
-  const [visible, setVisible] = useState(false);
-
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          setVisible(true);
-          observer.disconnect();
-        }
-      },
-      { threshold }
-    );
-
-    if (ref.current) {
-      observer.observe(ref.current);
-    }
-
-    return () => observer.disconnect();
-  }, [threshold]);
-
-  return [ref, visible];
-}
 
 const emptyHomeCatalog = {
   bannerProducts: [],
@@ -44,38 +20,17 @@ const emptyHomeCatalog = {
   subcategoryShelves: [],
 };
 
-const buildGroupedShelfLabel = (shelf) => {
-  const styleCount = shelf?.productCount || shelf?.products?.length || 0;
-  const lengthCount = shelf?.subcategories?.length || 0;
-  const categoryName = shelf?.category?.name || 'Nawiri Hair';
-
-  if (shelf?.isGrouped && lengthCount > 1) {
-    return `${styleCount} styles across ${lengthCount} lengths in ${categoryName}`;
-  }
-
-  return `${styleCount} styles from ${categoryName}`;
-};
-
 const Home = () => {
   const navigate = useNavigate();
   const [featuredCampaign, setFeaturedCampaign] = useState(null);
   const [loadingCampaign, setLoadingCampaign] = useState(true);
   const [homeCatalog, setHomeCatalog] = useState(emptyHomeCatalog);
   const [loadingCatalog, setLoadingCatalog] = useState(true);
-  const [communityRef, communityVisible] = useScrollReveal();
 
   useEffect(() => {
     fetchHomeCatalog();
     fetchFeaturedCampaign();
   }, []);
-
-  const heroProducts = useMemo(() => {
-    if (homeCatalog.bannerProducts.length > 0) {
-      return homeCatalog.bannerProducts;
-    }
-
-    return homeCatalog.bestSellers;
-  }, [homeCatalog.bannerProducts, homeCatalog.bestSellers]);
 
   const hasHomeContent =
     homeCatalog.categoryBanners.length > 0 ||
@@ -133,7 +88,6 @@ const Home = () => {
     if (!category?._id || !category?.name) {
       return '/collections';
     }
-
     return `/${valideURLConvert(category.name)}-${category._id}`;
   };
 
@@ -141,11 +95,9 @@ const Home = () => {
     if (!shelf?._id || !shelf?.name) {
       return '/collections';
     }
-
     if (!shelf.category?._id || !shelf.category?.name) {
       return '/collections';
     }
-
     return `/${valideURLConvert(shelf.category.name)}-${shelf.category._id}/${valideURLConvert(shelf.name)}-${shelf._id}`;
   };
 
@@ -193,49 +145,49 @@ const Home = () => {
     <section className="bg-ivory transition-colors dark:bg-dm-surface">
       <Helmet>
         <title>Nawiri Hair — Premium Hair Products in Kenya</title>
-        <meta name="description" content="Shop wigs, extensions, weaves and natural hair products at Nawiri Hair. Wide selection, best prices, fast delivery across Kenya." />
+        <meta
+          name="description"
+          content="Shop wigs, extensions, weaves and natural hair products at Nawiri Hair. Wide selection, best prices, fast delivery across Kenya."
+        />
         <link rel="canonical" href="https://nawirihairke.com/" />
         <meta property="og:type" content="website" />
         <meta property="og:title" content="Nawiri Hair — Premium Hair Products in Kenya" />
-        <meta property="og:description" content="Shop wigs, extensions, weaves and natural hair products at Nawiri Hair. Wide selection, best prices, fast delivery across Kenya." />
+        <meta
+          property="og:description"
+          content="Shop wigs, extensions, weaves and natural hair products at Nawiri Hair. Wide selection, best prices, fast delivery across Kenya."
+        />
         <meta property="og:image" content="https://nawirihairke.com/images/nawiri_logo.jpeg" />
         <meta property="og:url" content="https://nawirihairke.com/" />
-        <script type="application/ld+json">{JSON.stringify({
-          '@context': 'https://schema.org',
-          '@type': 'Store',
-          name: 'Nawiri Hair',
-          url: 'https://nawirihairke.com',
-          logo: 'https://nawirihairke.com/images/nawiri_logo.jpeg',
-          description: 'Premium hair products, wigs, extensions and accessories delivered across Kenya.',
-          address: { '@type': 'PostalAddress', addressCountry: 'KE' },
-          currenciesAccepted: 'KES',
-          paymentAccepted: 'M-Pesa, Card',
-        })}</script>
+        <script type="application/ld+json">
+          {JSON.stringify({
+            '@context': 'https://schema.org',
+            '@type': 'Store',
+            name: 'Nawiri Hair',
+            url: 'https://nawirihairke.com',
+            logo: 'https://nawirihairke.com/images/nawiri_logo.jpeg',
+            description: 'Premium hair products, wigs, extensions and accessories delivered across Kenya.',
+            address: { '@type': 'PostalAddress', addressCountry: 'KE' },
+            currenciesAccepted: 'KES',
+            paymentAccepted: 'M-Pesa, Card',
+          })}
+        </script>
       </Helmet>
-      <div className="container mx-auto px-2 pt-4 sm:px-4 sm:pt-6">
-        {loadingCatalog ? (
-          <div className="h-[280px] animate-pulse rounded-3xl bg-plum-100 dark:bg-plum-900/40 sm:h-[340px]" />
-        ) : (
-          <PromoBanner products={heroProducts} />
-        )}
-      </div>
 
-      {/* PWA install prompt — mobile / md only, below the hero banner */}
-      <div className="container mx-auto">
-        <PWAInstallBanner />
-      </div>
+      <HeroBanner bestSellers={homeCatalog.bestSellers} />
 
-      <div className="container mx-auto px-3 pt-6 sm:px-4 sm:pt-8">
+      <TrustStrip />
+
+      <div className="container mx-auto px-3 pt-8 sm:px-4 sm:pt-10">
         <div className="mb-5 flex flex-col gap-3 sm:mb-6 sm:flex-row sm:items-end sm:justify-between">
           <div className="max-w-2xl">
             <p className="text-xs font-semibold uppercase tracking-[0.24em] text-gold-600 dark:text-gold-300">
-              Curated category banners
+              Shop by style
             </p>
             <h2 className="mt-2 text-2xl font-bold text-charcoal dark:text-white sm:text-3xl">
-              Shop by collection first
+              Find your look
             </h2>
             <p className="mt-2 text-sm text-brown-600 dark:text-white/60 sm:text-base">
-              Start with the main hair families, then move into the exact shelf you want. This keeps the storefront cleaner on mobile, tablet, and desktop.
+              Explore wigs, weaves, braids and extensions for every look.
             </p>
           </div>
 
@@ -248,21 +200,21 @@ const Home = () => {
         </div>
 
         {loadingCatalog ? (
-          <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-3">
+          <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3 xl:grid-cols-4">
             {Array.from({ length: 4 }).map((_, index) => (
               <div
                 key={`category-banner-skeleton-${index}`}
-                className="min-h-[150px] animate-pulse rounded-2xl bg-gradient-to-br from-plum-100 to-gold-100 dark:from-plum-900/30 dark:to-gold-900/10 sm:min-h-[220px] sm:rounded-3xl"
+                className="aspect-[4/5] animate-pulse rounded-lg bg-brown-100 dark:bg-dm-card"
               />
             ))}
           </div>
         ) : homeCatalog.categoryBanners.length > 0 ? (
           <CategoryBannerGrid items={homeCatalog.categoryBanners} onSelect={handleCategorySelect} />
         ) : (
-          <div className="rounded-3xl border border-brown-200 bg-white/80 px-6 py-10 text-center shadow-sm dark:border-dm-border dark:bg-dm-card">
-            <h3 className="text-lg font-semibold text-charcoal dark:text-white">Collections are coming together</h3>
+          <div className="rounded-lg border border-dashed border-brown-300 bg-white/80 px-6 py-10 text-center dark:border-dm-border dark:bg-dm-card">
+            <h3 className="text-lg font-semibold text-charcoal dark:text-white">New styles arriving soon</h3>
             <p className="mt-2 text-sm text-brown-500 dark:text-white/55">
-              Add categories and published products to turn this section into shoppable banner cards.
+              Check back shortly to shop our curated wigs, weaves, braids and extensions.
             </p>
           </div>
         )}
@@ -270,8 +222,8 @@ const Home = () => {
 
       <div className="container mx-auto px-3 py-8 sm:px-4 sm:py-10">
         <HomeProductShelf
-          title="Most selling now"
-          subtitle="Best-performing products show up first, so customers and sellers reach the strongest movers faster."
+          title="Best sellers"
+          subtitle="Customer favourites worth adding to your collection."
           products={homeCatalog.bestSellers}
           loading={loadingCatalog}
           viewAllTo="/collections"
@@ -280,12 +232,11 @@ const Home = () => {
 
         {homeCatalog.subcategoryShelves.map((shelf) => {
           const shelfDestination = buildShelfDestination(shelf);
-
           return (
             <HomeProductShelf
               key={shelf.isGrouped ? `${shelf.category?._id}-${shelf.name}` : shelf._id}
               title={shelf.name}
-              subtitle={buildGroupedShelfLabel(shelf)}
+              subtitle=""
               products={shelf.products || []}
               loading={loadingCatalog}
               viewAllTo={shelfDestination.to}
@@ -296,7 +247,7 @@ const Home = () => {
         })}
 
         {!loadingCatalog && !hasHomeContent && (
-          <div className="rounded-3xl border border-dashed border-brown-300 bg-white/80 px-6 py-12 text-center dark:border-dm-border dark:bg-dm-card">
+          <div className="rounded-lg border border-dashed border-brown-300 bg-white/80 px-6 py-12 text-center dark:border-dm-border dark:bg-dm-card">
             <h3 className="text-lg font-semibold text-charcoal dark:text-white">No published products yet</h3>
             <p className="mt-2 text-sm text-brown-500 dark:text-white/55">
               Once products are published and stocked, this home view will automatically sort them into banners, best sellers, and subcategory shelves.
@@ -309,33 +260,28 @@ const Home = () => {
         <div className="section-divider" />
       </div>
 
-      <div
-        ref={communityRef}
-        className={`container mx-auto px-3 pb-8 transition-all duration-600 sm:px-4 sm:pb-10 ${
-          communityVisible ? 'translate-y-0 opacity-100' : 'translate-y-6 opacity-0'
-        }`}
-      >
-        <div className="rounded-card border border-plum-200 bg-plum-100 p-5 dark:border-plum-800 dark:bg-plum-900/30 sm:p-6">
+      <div className="container mx-auto px-3 pb-8 sm:px-4 sm:pb-10">
+        <div className="rounded-lg border border-brown-100 bg-white p-5 dark:border-dm-border dark:bg-dm-card sm:p-6">
           <div className="mb-4 flex items-center gap-3">
-            <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-pill bg-plum-700 text-white">
-              <FaUsers size={18} />
+            <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-plum-700 text-white">
+              <FaUsers size={16} />
             </div>
             <div>
-              <h2 className="text-lg font-semibold text-charcoal dark:text-white">Community Challenges</h2>
-              <p className="text-xs text-brown-400 dark:text-white/50">Join shoppers and unlock rewards together.</p>
+              <h2 className="text-lg font-semibold text-charcoal dark:text-white">Community rewards</h2>
+              <p className="text-xs text-brown-500 dark:text-white/50">Join shoppers and unlock rewards together.</p>
             </div>
             <Link
               to="/campaigns"
               className="ml-auto flex-shrink-0 text-sm font-semibold text-gold-600 hover:underline dark:text-gold-300"
             >
-              View All
+              View all
             </Link>
           </div>
 
           <UserActiveCampaigns />
 
           {loadingCampaign ? (
-            <div className="mt-3 h-24 rounded-card bg-shimmer" />
+            <div className="mt-3 h-24 rounded-lg bg-shimmer" />
           ) : featuredCampaign ? (
             <CommunityCampaignProgress campaign={featuredCampaign} />
           ) : (
@@ -345,6 +291,8 @@ const Home = () => {
           )}
         </div>
       </div>
+
+      <PWAInstallBanner context="footer" />
     </section>
   );
 };

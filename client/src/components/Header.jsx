@@ -1,19 +1,20 @@
-import React, { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { BsCart4 } from 'react-icons/bs';
 import { FaChevronDown, FaChevronUp } from 'react-icons/fa6';
-import { FiMenu, FiX, FiSearch, FiLogOut } from 'react-icons/fi';
+import { FiHeart, FiLogOut, FiMenu, FiSearch, FiX } from 'react-icons/fi';
 import { useDispatch, useSelector } from 'react-redux';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
 import SummaryApi from '../common/SummaryApi';
-import Axios from '../utils/Axios';
-import AxiosToastError from '../utils/AxiosToastError';
-import { logout } from '../store/userSlice';
-import { clearAuthStorage } from '../utils/authStorage';
 import { nawiriBrand } from '../config/brand';
 import useMobile from '../hooks/useMobile';
 import { useGlobalContext } from '../provider/GlobalProvider';
+import Axios from '../utils/Axios';
+import AxiosToastError from '../utils/AxiosToastError';
+import { clearAuthStorage } from '../utils/authStorage';
 import { DisplayPriceInShillings } from '../utils/DisplayPriceInShillings';
+import { logout } from '../store/userSlice';
+import { clearWishlist } from '../store/wishlistSlice';
 import DisplayCartItem from './DisplayCartItem';
 import Search from './Search';
 import ThemeToggle from './ThemeToggle';
@@ -21,7 +22,8 @@ import UserMenu from './UserMenu';
 
 const navLinks = [
   { label: 'Shop', path: '/' },
-  { label: 'My Orders', path: '/dashboard/myorders' },
+  { label: 'Collections', path: '/collections' },
+  { label: 'Best Sellers', path: '/search?q=' },
 ];
 
 const Header = () => {
@@ -31,6 +33,7 @@ const Header = () => {
   const dispatch = useDispatch();
   const user = useSelector((state) => state?.user);
   const cart = useSelector((state) => state.cartItem?.cart || []);
+  const wishlistCount = useSelector((state) => state.wishlist?.items?.length || 0);
   const { totalPrice, totalQty } = useGlobalContext();
   const [openUserMenu, setOpenUserMenu] = useState(false);
   const [openCartSection, setOpenCartSection] = useState(false);
@@ -39,16 +42,12 @@ const Header = () => {
   const isSearchPage = location.pathname === '/search';
   const redirectToLoginPage = () => navigate('/login');
 
-  const handleMobileUser = () => {
-    if (!user?._id) {
-      navigate('/login');
-      return;
+  const isActive = (path) => {
+    if (path === '/search?q=') {
+      return location.pathname === '/search';
     }
-
-    navigate('/dashboard/profile');
+    return location.pathname === path || location.pathname.startsWith(`${path}/`);
   };
-
-  const isActive = (path) => location.pathname === path || location.pathname.startsWith(`${path}/`);
 
   const handleLogout = async () => {
     try {
@@ -56,6 +55,7 @@ const Header = () => {
       if (response.data.success) {
         setMobileMenuOpen(false);
         dispatch(logout());
+        dispatch(clearWishlist());
         clearAuthStorage();
         toast.success(response.data.message);
         navigate('/');
@@ -71,7 +71,6 @@ const Header = () => {
         setOpenUserMenu(false);
       }
     };
-
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
@@ -83,7 +82,7 @@ const Header = () => {
 
   return (
     <>
-      <header className="sticky top-0 z-40 border-b border-brown-100/80 bg-white dark:border-dm-border dark:bg-dm-card dark:text-white shadow-sm transition-colors duration-200">
+      <header className="sticky top-0 z-40 border-b border-brown-100/80 bg-white shadow-sm transition-colors duration-200 dark:border-dm-border dark:bg-dm-card dark:text-white">
         {isSearchPage && isMobile ? (
           <div className="container mx-auto flex justify-center px-2 py-2 md:px-4">
             <div className="w-full max-w-md">
@@ -91,29 +90,48 @@ const Header = () => {
             </div>
           </div>
         ) : (
-          <div className="container mx-auto flex min-w-0 items-center gap-2 sm:gap-3 px-2 sm:px-3 md:gap-4 md:px-4 h-14">
-            <Link to="/" className="flex shrink-0 items-center gap-1.5 sm:gap-2 py-1" aria-label={nawiriBrand.shortName}>
+          <div className="container mx-auto flex h-14 min-w-0 items-center gap-2 px-2 sm:gap-3 sm:px-3 md:gap-4 md:px-4">
+            <Link
+              to="/"
+              className="flex shrink-0 items-center gap-1.5 py-1 sm:gap-2"
+              aria-label={nawiriBrand.shortName}
+            >
               <img
                 src={nawiriBrand.logo}
                 alt=""
                 className="h-8 w-auto max-h-9 max-w-[38px] object-contain sm:max-w-[42px] md:h-10 md:max-w-[46px]"
               />
-              <span className="font-display font-bold text-plum-800 dark:text-white leading-none tracking-tight whitespace-nowrap text-sm sm:text-[0.95rem] md:text-lg">
+              <span className="whitespace-nowrap font-display text-sm font-bold leading-none tracking-tight text-plum-800 dark:text-white sm:text-[0.95rem] md:text-lg">
                 Nawiri Hair
               </span>
             </Link>
 
-            {/* Flex spacer on mobile; search bar on sm+ */}
+            {/* Public navigation — hidden on small mobile, visible sm+ */}
+            <nav className="hidden items-center gap-1 sm:flex md:gap-2">
+              {navLinks.map((link) => (
+                <Link
+                  key={link.path}
+                  to={link.path}
+                  className={`rounded-lg px-2 py-1.5 text-xs font-medium transition-colors md:px-3 md:text-sm ${
+                    isActive(link.path)
+                      ? 'text-plum-700 dark:text-plum-200'
+                      : 'text-brown-500 hover:bg-plum-50 hover:text-plum-700 dark:text-white/60 dark:hover:bg-plum-900/20 dark:hover:text-plum-200'
+                  }`}
+                >
+                  {link.label}
+                </Link>
+              ))}
+            </nav>
+
             <div className="flex min-w-0 flex-1 items-center justify-center sm:px-1">
-              <div className="hidden sm:block w-full max-w-xs md:max-w-sm lg:max-w-md xl:max-w-lg">
+              <div className="hidden w-full max-w-xs sm:block md:max-w-sm lg:max-w-md xl:max-w-lg">
                 <Search />
               </div>
             </div>
 
             <div className="flex shrink-0 items-center gap-1.5 sm:gap-2 md:gap-3">
-              {/* Search icon — mobile only, grouped with other icons */}
               <button
-                className="sm:hidden text-neutral-600 dark:text-white/80 p-1"
+                className="p-1 text-neutral-600 dark:text-white/80 sm:hidden"
                 onClick={() => navigate('/search')}
                 aria-label="Search"
               >
@@ -123,31 +141,45 @@ const Header = () => {
               <ThemeToggle />
 
               <button
-                className="relative text-neutral-600 dark:text-white/80 lg:hidden p-1"
+                className="relative p-1 text-neutral-600 dark:text-white/80 lg:hidden"
                 onClick={() => navigate('/mobile/cart')}
                 aria-label="Cart"
               >
                 <BsCart4 size={22} />
                 {totalQty > 0 && (
-                  <span className="absolute -top-2 -right-2 flex h-5 min-w-[20px] items-center justify-center rounded-full bg-red-500 px-1 text-xs text-white">
+                  <span className="absolute -right-2 -top-2 flex h-5 min-w-[20px] items-center justify-center rounded-full bg-red-500 px-1 text-xs text-white">
                     {totalQty > 99 ? '99+' : totalQty}
                   </span>
                 )}
               </button>
 
+              <div className="hidden items-center gap-3 lg:flex">
+                {user?._id && (
+                  <button
+                    onClick={() => navigate('/wishlist')}
+                    className="relative rounded-lg p-2 text-charcoal transition-colors hover:bg-plum-50 hover:text-plum-700 dark:text-white/80 dark:hover:bg-plum-900/30 dark:hover:text-plum-200"
+                    aria-label="Wishlist"
+                  >
+                    <FiHeart size={20} />
+                    {wishlistCount > 0 && (
+                      <span className="absolute -right-1 -top-1 flex h-5 min-w-[20px] items-center justify-center rounded-full bg-blush-500 px-1 text-xs text-white">
+                        {wishlistCount > 99 ? '99+' : wishlistCount}
+                      </span>
+                    )}
+                  </button>
+                )}
 
-              <div className="hidden lg:flex items-center gap-4">
                 <div className="relative" ref={userMenuRef}>
                   {user?._id ? (
                     <>
                       <button
                         onClick={() => setOpenUserMenu((prev) => !prev)}
-                        className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-charcoal transition-colors hover:bg-plum-50 hover:text-plum-700 dark:text-white/80 dark:hover:bg-plum-900/30 dark:hover:text-plum-200"
+                        className="flex items-center gap-2 rounded-lg px-2 py-2 text-sm font-medium text-charcoal transition-colors hover:bg-plum-50 hover:text-plum-700 dark:text-white/80 dark:hover:bg-plum-900/30 dark:hover:text-plum-200"
                       >
                         <div className="flex h-8 w-8 items-center justify-center rounded-full bg-plum-700 text-xs font-semibold text-white">
                           {(user?.name || 'U')[0].toUpperCase()}
                         </div>
-                        <span>Account</span>
+                        <span className="hidden xl:inline">Account</span>
                         {openUserMenu ? <FaChevronUp size={12} /> : <FaChevronDown size={12} />}
                       </button>
 
@@ -169,12 +201,10 @@ const Header = () => {
 
                 <button
                   onClick={() => setOpenCartSection(true)}
-                  className="flex items-center gap-2 rounded-full bg-gold-500 px-4 py-2 text-sm font-semibold text-charcoal transition-colors hover:bg-gold-400"
+                  className="flex items-center gap-2 rounded-full bg-gold-500 px-4 py-2 text-sm font-semibold text-charcoal transition-colors hover:bg-gold-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-plum-600"
                 >
                   <BsCart4 size={18} />
-                  <span>
-                    {cart.length > 0 ? `${totalQty} · ${DisplayPriceInShillings(totalPrice)}` : 'Cart'}
-                  </span>
+                  <span>{cart.length > 0 ? `${totalQty} · ${DisplayPriceInShillings(totalPrice)}` : 'Cart'}</span>
                 </button>
               </div>
 
@@ -187,29 +217,6 @@ const Header = () => {
               </button>
             </div>
           </div>
-        )}
-
-        {!user?._id && (
-          <nav className="hidden border-t border-brown-100 bg-ivory dark:border-dm-border dark:bg-dm-surface lg:block">
-            <div className="container mx-auto px-6">
-              <ul className="flex h-10 items-center gap-1">
-                {navLinks.map((link) => (
-                  <li key={link.path}>
-                    <Link
-                      to={link.path}
-                      className={`relative rounded-lg px-4 py-2 text-sm font-medium transition-colors duration-150 ${
-                        isActive(link.path)
-                          ? 'text-plum-700 dark:text-plum-200'
-                          : 'text-brown-500 hover:bg-plum-50 hover:text-plum-700 dark:text-white/60 dark:hover:bg-plum-900/20 dark:hover:text-plum-200'
-                      }`}
-                    >
-                      {link.label}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </nav>
         )}
       </header>
 
@@ -227,7 +234,7 @@ const Header = () => {
                   alt=""
                   className="h-9 max-w-[40px] object-contain object-left drop-shadow-sm"
                 />
-                <span className="font-display text-base font-bold text-white leading-none tracking-tight">
+                <span className="font-display text-base font-bold leading-none tracking-tight text-white">
                   Nawiri Hair
                 </span>
               </div>
@@ -254,31 +261,27 @@ const Header = () => {
                 </Link>
               ))}
 
+              {user?._id && (
+                <>
+                  <div className="my-3 section-divider" />
+                  <Link
+                    to="/dashboard/profile"
+                    className="flex items-center gap-3 rounded-lg px-4 py-3 text-sm font-medium text-charcoal transition-colors hover:bg-plum-50 dark:text-white/80 dark:hover:bg-plum-900/30"
+                  >
+                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-plum-700 text-xs font-semibold text-white">
+                      {(user?.name || 'U')[0].toUpperCase()}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="truncate font-semibold">{user?.name}</p>
+                      <p className="truncate text-xs text-brown-400 dark:text-white/50">{user?.email}</p>
+                    </div>
+                  </Link>
+                </>
+              )}
+
               <div className="my-3 section-divider" />
 
               {user?._id ? (
-                <Link
-                  to="/dashboard/profile"
-                  className="flex items-center gap-3 rounded-lg px-4 py-3 text-sm font-medium text-charcoal transition-colors hover:bg-plum-50 dark:text-white/80 dark:hover:bg-plum-900/30"
-                >
-                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-plum-700 text-xs font-semibold text-white">
-                    {(user?.name || 'U')[0].toUpperCase()}
-                  </div>
-                  <div className="min-w-0">
-                    <p className="truncate font-semibold">{user?.name}</p>
-                    <p className="truncate text-xs text-brown-400 dark:text-white/50">{user?.email}</p>
-                  </div>
-                </Link>
-              ) : (
-                <Link
-                  to="/login"
-                  className="mt-2 block w-full rounded-card bg-plum-700 py-3 text-center font-semibold text-white transition-colors hover:bg-plum-600"
-                >
-                  Sign in
-                </Link>
-              )}
-
-              {user?._id && (
                 <button
                   onClick={handleLogout}
                   className="mt-2 flex w-full items-center gap-3 rounded-lg px-4 py-3 text-sm font-medium text-red-500 transition-colors hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20"
@@ -286,6 +289,13 @@ const Header = () => {
                   <FiLogOut size={18} />
                   Log out
                 </button>
+              ) : (
+                <Link
+                  to="/login"
+                  className="mt-2 block w-full rounded-lg bg-plum-700 py-3 text-center font-semibold text-white transition-colors hover:bg-plum-600"
+                >
+                  Sign in
+                </Link>
               )}
             </nav>
 

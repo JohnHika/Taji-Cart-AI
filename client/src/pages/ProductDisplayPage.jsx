@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { Helmet } from 'react-helmet-async'
 import { FaAngleLeft, FaAngleRight, FaStar, FaShieldAlt, FaTruck, FaTags, FaRuler } from "react-icons/fa"
-import { FiHeart, FiShare2 } from 'react-icons/fi'
+import { FiShare2 } from 'react-icons/fi'
 import { useSelector } from 'react-redux'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { toast } from 'react-toastify'
@@ -11,6 +11,7 @@ import image3 from '../assets/Wide_Assortment.png'
 import SummaryApi from '../common/SummaryApi'
 import AddToCartButton from '../components/AddToCartButton'
 import StarRating from '../components/StarRating'
+import WishlistButton from '../components/WishlistButton'
 import Axios from '../utils/Axios'
 import AxiosToastError from '../utils/AxiosToastError'
 import { DisplayPriceInShillings } from '../utils/DisplayPriceInShillings'
@@ -73,7 +74,6 @@ const ProductDisplayPage = () => {
   const userIsAdmin = user?.role === 'admin';
   // Works for email/password AND Google OAuth — either _id or email indicates a logged-in user
   const isLoggedIn = !!(user?._id || user?.email);
-  const [wishlisted, setWishlisted] = useState(false);
 
   const [ratingData, setRatingData] = useState([]);
   const [userRating, setUserRating] = useState(0);
@@ -107,16 +107,6 @@ const ProductDisplayPage = () => {
     } finally {
       setRatingSubmitting(false);
     }
-  };
-
-  const handleWishlist = () => {
-    if (!isLoggedIn) {
-      toast.info('Please sign in to save to wishlist');
-      navigate('/login');
-      return;
-    }
-    setWishlisted(prev => !prev);
-    toast.success(wishlisted ? 'Removed from wishlist' : 'Added to wishlist ❤️');
   };
 
   const handleShare = async () => {
@@ -463,18 +453,7 @@ const ProductDisplayPage = () => {
                   <div className="flex-1">
                     <AddToCartButton data={data} />
                   </div>
-                  <button
-                    onClick={handleWishlist}
-                    className={`flex items-center justify-center gap-2 border rounded-pill py-2.5 px-5 text-sm font-semibold transition-colors flex-shrink-0 ${
-                      wishlisted
-                        ? 'border-blush-500 bg-blush-50 text-blush-500 dark:bg-blush-500/10 dark:border-blush-400 dark:text-blush-300'
-                        : 'border-plum-200 dark:border-plum-700 text-plum-700 dark:text-plum-200 hover:bg-plum-50 dark:hover:bg-plum-900/30'
-                    }`}
-                    aria-label={wishlisted ? 'Remove from wishlist' : 'Add to wishlist'}
-                  >
-                    <FiHeart size={16} className={wishlisted ? 'fill-current' : ''} />
-                    {wishlisted ? 'Saved' : 'Wishlist'}
-                  </button>
+                  <WishlistButton productId={productId} variant="pill" />
                   <button
                     onClick={handleShare}
                     className="flex items-center justify-center gap-2 border border-plum-200 dark:border-plum-700 text-plum-700 dark:text-plum-200 hover:bg-plum-50 dark:hover:bg-plum-900/30 rounded-pill py-2.5 px-5 text-sm font-semibold transition-colors flex-shrink-0"

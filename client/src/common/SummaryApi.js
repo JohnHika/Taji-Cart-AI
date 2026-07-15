@@ -61,6 +61,14 @@ const SummaryApi = {
         url: `${baseURL}/api/user/verify-phone-otp`,
         method: 'POST'
     },
+    getWishlist: {
+        url: `${baseURL}/api/user/wishlist`,
+        method: 'GET'
+    },
+    toggleWishlist: {
+        url: `${baseURL}/api/user/wishlist/toggle`,
+        method: 'POST'
+    },
     addCategory: {
         url: `${baseURL}/api/category/add-category`,
         method: 'post'

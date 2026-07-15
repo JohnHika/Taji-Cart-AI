@@ -15,6 +15,7 @@ import GlobalProvider from './provider/GlobalProvider';
 import { fetchCartItems } from './store/cartProduct';
 import { setAllCategory, setAllSubCategory, setLoadingCategory, setLoyaltyDetails } from './store/productSlice';
 import { setUserDetails } from './store/userSlice';
+import { fetchWishlist } from './store/wishlistSlice';
 import Axios from './utils/Axios';
 import { getStoredAccessToken } from './utils/authStorage';
 import fetchUserDetails from './utils/fetchUserDetails';
@@ -169,6 +170,7 @@ function App() {
         if (userDetails?.data && isMounted) {
           dispatch(setUserDetails(userDetails.data));
           dispatch(fetchCartItems());
+          dispatch(fetchWishlist());
 
           if (userDetails.data._id) {
             fetchLoyaltyDetails(userDetails.data._id);
