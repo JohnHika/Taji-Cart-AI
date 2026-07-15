@@ -22,77 +22,54 @@ const HeroBanner = ({ bestSellers = [], bannerProducts = [] }) => {
         <div className="absolute inset-0 bg-gradient-to-r from-plum-50 via-ivory to-gold-50 dark:from-plum-900/20 dark:via-dm-surface dark:to-plum-800/10" />
       </div>
 
-      <div className="container relative z-10 mx-auto px-3 py-5 sm:px-4 sm:py-6 lg:px-8 lg:py-10">
-        {/* Mobile: compact horizontal layout */}
-        <div className="flex flex-col gap-4 md:hidden">
-          <div className="flex items-start justify-between gap-3">
+      <div className="container relative z-10 mx-auto px-3 py-4 sm:px-4 lg:px-8 lg:py-10">
+        {/* Mobile: product-first compact banner */}
+        <div className="flex flex-col gap-3 md:hidden">
+          <div className="flex items-center justify-between gap-3">
             <div className="min-w-0">
-              <span className="mb-1 inline-block text-[10px] font-semibold uppercase tracking-[0.2em] text-gold-600 dark:text-gold-300">
-                Premium hair
-              </span>
-              <h1 className="font-display text-2xl font-semibold leading-[1.12] text-charcoal dark:text-white">
-                Hair that feels like you.
+              <h1 className="font-display text-xl font-semibold leading-[1.15] text-charcoal dark:text-white">
+                Find hair that feels like you.
               </h1>
+              <p className="mt-1 text-xs text-brown-600 dark:text-white/60">
+                Premium hair delivered across Kenya.
+              </p>
             </div>
-
-            {visibleProducts.length > 0 && (
-              <Link
-                to={shopNowTo}
-                className="relative h-20 w-16 shrink-0 overflow-hidden rounded-lg border border-brown-200 bg-white shadow-sm dark:border-dm-border dark:bg-dm-card"
-              >
-                <img
-                  src={visibleProducts[0].image[0]}
-                  alt={visibleProducts[0].name}
-                  className="h-full w-full object-cover"
-                  loading="eager"
-                  onError={(e) => {
-                    e.currentTarget.style.display = 'none';
-                  }}
-                />
-              </Link>
-            )}
+            <Link
+              to={shopNowTo}
+              className="inline-flex shrink-0 items-center justify-center rounded-full bg-plum-700 px-4 py-2 text-xs font-semibold text-white transition-colors hover:bg-plum-600 active:scale-[0.98] dark:bg-plum-600 dark:hover:bg-plum-500"
+            >
+              Shop now
+            </Link>
           </div>
 
-          {visibleProducts.length > 1 && (
-            <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
-              {visibleProducts.slice(1).map((product) => {
+          {visibleProducts.length > 0 && (
+            <div className="-mx-3 flex gap-2 overflow-x-auto px-3 pb-1 scrollbar-hide sm:-mx-4 sm:px-4">
+              {visibleProducts.map((product, idx) => {
                 const productUrl = `/product/${encodeURIComponent(valideURLConvert(product.name))}-${product._id}`;
                 return (
                   <Link
                     key={product._id}
                     to={productUrl}
                     className="relative shrink-0 overflow-hidden rounded-lg border border-brown-200 bg-white shadow-sm dark:border-dm-border dark:bg-dm-card"
-                    style={{ width: '72px', height: '72px' }}
+                    style={{ width: '120px', height: idx === 0 ? '150px' : '120px' }}
                   >
                     <img
                       src={product.image[0]}
                       alt={product.name}
                       className="h-full w-full object-cover"
-                      loading="lazy"
+                      loading={idx === 0 ? 'eager' : 'lazy'}
                       onError={(e) => {
                         e.currentTarget.style.display = 'none';
                       }}
                     />
+                    <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-charcoal/60 to-transparent px-2 py-1.5">
+                      <p className="line-clamp-1 text-[10px] font-semibold text-white">{product.name}</p>
+                    </div>
                   </Link>
                 );
               })}
             </div>
           )}
-
-          <div className="flex items-center gap-2">
-            <Link
-              to={shopNowTo}
-              className="inline-flex min-h-[40px] items-center justify-center rounded-full bg-plum-700 px-5 py-2 text-sm font-semibold text-white transition-colors hover:bg-plum-600 active:scale-[0.98] dark:bg-plum-600 dark:hover:bg-plum-500"
-            >
-              Shop best sellers
-            </Link>
-            <Link
-              to="/collections"
-              className="inline-flex min-h-[40px] items-center justify-center rounded-full border border-charcoal/20 bg-white px-5 py-2 text-sm font-semibold text-charcoal transition-colors hover:border-charcoal/40 hover:bg-white dark:border-white/20 dark:bg-dm-card dark:text-white dark:hover:bg-dm-card-2"
-            >
-              Browse all
-            </Link>
-          </div>
         </div>
 
         {/* Tablet/Desktop: 2-column editorial layout */}
