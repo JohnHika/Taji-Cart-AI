@@ -79,7 +79,7 @@ try {
       </Provider>
     </HelmetProvider>
   );
-  console.log('React rendered successfully');
+  console.log('React rendered successfully, build timestamp: 2026-07-15-v2');
 } catch (error) {
   console.error('Error rendering React app:', error);
   document.body.innerHTML = `
