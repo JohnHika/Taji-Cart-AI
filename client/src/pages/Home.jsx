@@ -173,7 +173,7 @@ const Home = () => {
         </script>
       </Helmet>
 
-      <HeroBanner bestSellers={homeCatalog.bestSellers} />
+      <HeroBanner bestSellers={homeCatalog.bestSellers} bannerProducts={homeCatalog.bannerProducts} />
 
       <TrustStrip />
 
