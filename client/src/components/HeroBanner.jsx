@@ -8,7 +8,7 @@ const isRealImage = (url = '') =>
 
 const HeroBanner = ({ bestSellers = [], bannerProducts = [] }) => {
   const products = bannerProducts.length > 0 ? bannerProducts : bestSellers;
-  const visibleProducts = products.filter((p) => isRealImage(p.image?.[0])).slice(0, 4);
+  const visibleProducts = products.filter((p) => isRealImage(p.image?.[0])).slice(0, 6);
 
   const firstProduct = bestSellers[0];
   const shopNowTo = firstProduct?._id
@@ -17,55 +17,122 @@ const HeroBanner = ({ bestSellers = [], bannerProducts = [] }) => {
 
   return (
     <section className="relative w-full overflow-hidden bg-ivory dark:bg-dm-surface">
-      {/* Subtle brand background that doesn't compete with product images */}
+      {/* Subtle brand background */}
       <div className="absolute inset-0 z-0">
-        <div className="absolute inset-0 bg-gradient-to-br from-plum-50 via-ivory to-gold-50 dark:from-plum-900/20 dark:via-dm-surface dark:to-plum-800/10" />
-        <div
-          className="absolute -right-1/4 -top-1/4 h-[70vw] w-[70vw] rounded-full opacity-30 blur-3xl dark:opacity-15"
-          style={{ background: 'radial-gradient(circle, rgba(201,148,58,0.22) 0%, rgba(201,148,58,0) 70%)' }}
-        />
+        <div className="absolute inset-0 bg-gradient-to-r from-plum-50 via-ivory to-gold-50 dark:from-plum-900/20 dark:via-dm-surface dark:to-plum-800/10" />
       </div>
 
-      <div className="container relative z-10 mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="grid min-h-[300px] grid-cols-1 items-center gap-6 py-8 md:min-h-[380px] md:grid-cols-2 md:py-10 lg:min-h-[420px]">
-          {/* Text block */}
-          <div className="order-1 max-w-xl md:order-1">
+      <div className="container relative z-10 mx-auto px-3 py-5 sm:px-4 sm:py-6 lg:px-8 lg:py-10">
+        {/* Mobile: compact horizontal layout */}
+        <div className="flex flex-col gap-4 md:hidden">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <span className="mb-1 inline-block text-[10px] font-semibold uppercase tracking-[0.2em] text-gold-600 dark:text-gold-300">
+                Premium hair
+              </span>
+              <h1 className="font-display text-2xl font-semibold leading-[1.12] text-charcoal dark:text-white">
+                Hair that feels like you.
+              </h1>
+            </div>
+
+            {visibleProducts.length > 0 && (
+              <Link
+                to={shopNowTo}
+                className="relative h-20 w-16 shrink-0 overflow-hidden rounded-lg border border-brown-200 bg-white shadow-sm dark:border-dm-border dark:bg-dm-card"
+              >
+                <img
+                  src={visibleProducts[0].image[0]}
+                  alt={visibleProducts[0].name}
+                  className="h-full w-full object-cover"
+                  loading="eager"
+                  onError={(e) => {
+                    e.currentTarget.style.display = 'none';
+                  }}
+                />
+              </Link>
+            )}
+          </div>
+
+          {visibleProducts.length > 1 && (
+            <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
+              {visibleProducts.slice(1).map((product) => {
+                const productUrl = `/product/${encodeURIComponent(valideURLConvert(product.name))}-${product._id}`;
+                return (
+                  <Link
+                    key={product._id}
+                    to={productUrl}
+                    className="relative shrink-0 overflow-hidden rounded-lg border border-brown-200 bg-white shadow-sm dark:border-dm-border dark:bg-dm-card"
+                    style={{ width: '72px', height: '72px' }}
+                  >
+                    <img
+                      src={product.image[0]}
+                      alt={product.name}
+                      className="h-full w-full object-cover"
+                      loading="lazy"
+                      onError={(e) => {
+                        e.currentTarget.style.display = 'none';
+                      }}
+                    />
+                  </Link>
+                );
+              })}
+            </div>
+          )}
+
+          <div className="flex items-center gap-2">
+            <Link
+              to={shopNowTo}
+              className="inline-flex min-h-[40px] items-center justify-center rounded-full bg-plum-700 px-5 py-2 text-sm font-semibold text-white transition-colors hover:bg-plum-600 active:scale-[0.98] dark:bg-plum-600 dark:hover:bg-plum-500"
+            >
+              Shop best sellers
+            </Link>
+            <Link
+              to="/collections"
+              className="inline-flex min-h-[40px] items-center justify-center rounded-full border border-charcoal/20 bg-white px-5 py-2 text-sm font-semibold text-charcoal transition-colors hover:border-charcoal/40 hover:bg-white dark:border-white/20 dark:bg-dm-card dark:text-white dark:hover:bg-dm-card-2"
+            >
+              Browse all
+            </Link>
+          </div>
+        </div>
+
+        {/* Tablet/Desktop: 2-column editorial layout */}
+        <div className="hidden items-center gap-8 md:grid md:grid-cols-2 lg:gap-12">
+          <div className="max-w-xl">
             <span className="mb-3 inline-block text-xs font-semibold uppercase tracking-[0.22em] text-gold-600 dark:text-gold-300">
               Premium hair · Delivered across Kenya
             </span>
 
-            <h1 className="font-display text-3xl font-semibold leading-[1.1] text-charcoal dark:text-white sm:text-4xl md:text-5xl lg:text-[3.5rem]">
+            <h1 className="font-display text-4xl font-semibold leading-[1.1] text-charcoal dark:text-white sm:text-5xl lg:text-6xl">
               Find the hair that feels like you.
             </h1>
 
-            <p className="mt-3 max-w-md text-sm leading-relaxed text-brown-600 dark:text-white/70 md:mt-4">
+            <p className="mt-4 max-w-md text-base leading-relaxed text-brown-600 dark:text-white/70">
               Shop wigs, weaves, braids and extensions designed for everyday confidence.
             </p>
 
-            <div className="mt-5 flex flex-wrap items-center gap-3">
+            <div className="mt-6 flex flex-wrap items-center gap-3">
               <Link
                 to={shopNowTo}
-                className="inline-flex min-h-[44px] items-center justify-center rounded-full bg-plum-700 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-plum-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold-500 active:scale-[0.98] dark:bg-plum-600 dark:hover:bg-plum-500"
+                className="inline-flex min-h-[48px] items-center justify-center rounded-full bg-plum-700 px-7 py-3 text-sm font-semibold text-white transition-colors hover:bg-plum-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold-500 active:scale-[0.98] dark:bg-plum-600 dark:hover:bg-plum-500"
               >
                 Shop best sellers
               </Link>
               <Link
                 to="/collections"
-                className="inline-flex min-h-[44px] items-center justify-center rounded-full border border-charcoal/20 bg-white/80 px-5 py-2.5 text-sm font-semibold text-charcoal backdrop-blur-sm transition-colors hover:border-charcoal/40 hover:bg-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-plum-600 active:scale-[0.98] dark:border-white/20 dark:bg-dm-card/80 dark:text-white dark:hover:bg-dm-card"
+                className="inline-flex min-h-[48px] items-center justify-center rounded-full border border-charcoal/20 bg-white/80 px-7 py-3 text-sm font-semibold text-charcoal backdrop-blur-sm transition-colors hover:border-charcoal/40 hover:bg-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-plum-600 active:scale-[0.98] dark:border-white/20 dark:bg-dm-card/80 dark:text-white dark:hover:bg-dm-card"
               >
                 Browse collections
               </Link>
             </div>
 
-            <p className="mt-4 text-xs italic text-brown-500 dark:text-white/50">
+            <p className="mt-5 text-xs italic text-brown-500 dark:text-white/50">
               {nawiriBrand.motto}
             </p>
           </div>
 
-          {/* Product image block */}
-          <div className="order-2 flex items-center justify-center md:order-2">
+          <div className="flex items-center justify-center">
             {visibleProducts.length > 0 ? (
-              <div className="grid w-full max-w-sm grid-cols-3 gap-2 sm:max-w-md sm:gap-3 md:max-w-lg lg:gap-4">
+              <div className="grid w-full max-w-md grid-cols-3 gap-3 lg:max-w-lg lg:gap-4">
                 {visibleProducts.slice(0, 3).map((product, index) => {
                   const productUrl = `/product/${encodeURIComponent(valideURLConvert(product.name))}-${product._id}`;
                   const isTall = index === 0;
@@ -89,7 +156,7 @@ const HeroBanner = ({ bestSellers = [], bannerProducts = [] }) => {
                         }}
                       />
                       <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-charcoal/70 to-transparent p-2">
-                        <p className="line-clamp-1 text-[11px] font-semibold text-white sm:text-xs">
+                        <p className="line-clamp-1 text-[11px] font-semibold text-white">
                           {product.name}
                         </p>
                       </div>
@@ -110,7 +177,7 @@ const HeroBanner = ({ bestSellers = [], bannerProducts = [] }) => {
                 )}
               </div>
             ) : (
-              <div className="flex h-48 w-full max-w-sm items-center justify-center rounded-lg border border-dashed border-brown-300 bg-white/80 dark:border-dm-border dark:bg-dm-card">
+              <div className="flex h-48 w-full max-w-md items-center justify-center rounded-lg border border-dashed border-brown-300 bg-white/80 dark:border-dm-border dark:bg-dm-card">
                 <span className="text-sm text-brown-500 dark:text-white/50">New arrivals loading…</span>
               </div>
             )}
