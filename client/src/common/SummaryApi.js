@@ -379,6 +379,10 @@ const SummaryApi = {
     checkSchrodinger: {
         url: `${baseURL}/api/quantum/schrodinger`,
         method: 'GET'
+    },
+    reportIssue: {
+        url: `${baseURL}/api/support/report`,
+        method: 'POST'
     }
 };
 

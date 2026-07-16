@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import toast from 'react-hot-toast';
 import {
   FaBoxOpen,
@@ -8,6 +8,7 @@ import {
   FaClipboardList,
   FaCog,
   FaCrown,
+  FaExclamationCircle,
   FaGift,
   FaHistory,
   FaLayerGroup,
@@ -33,12 +34,14 @@ import { logout } from '../store/userSlice';
 import Axios from '../utils/Axios';
 import AxiosToastError from '../utils/AxiosToastError';
 import { clearAuthStorage } from '../utils/authStorage';
+import ReportIssueModal from './modals/ReportIssueModal';
 
 const AdminMenu = ({ close, forLightPanel = false }) => {
   const user = useSelector((state) => state.user);
   const location = useLocation();
   const dispatch = useDispatch();
   const navigate = useNavigate();
+  const [reportIssueOpen, setReportIssueOpen] = useState(false);
 
   const isLinkActive = (to, exact = false) => {
     if (exact) {
@@ -196,6 +199,16 @@ const AdminMenu = ({ close, forLightPanel = false }) => {
         <MenuLink to="/dashboard/staff/completed-verifications" icon={FaHistory} label="Verification history" />
         <MenuLink to="/dashboard/staff/delivery" icon={FaCog} label="Delivery management" />
 
+        <p className={sectionClass}>Support</p>
+        <button
+          type="button"
+          onClick={() => setReportIssueOpen(true)}
+          className={`${linkBase} w-full text-left`}
+        >
+          <FaExclamationCircle size={15} className={iconMuted} />
+          <span className="min-w-0 flex-1 truncate">Report an issue</span>
+        </button>
+
         <div className={dividerClass} />
 
         <button
@@ -207,6 +220,8 @@ const AdminMenu = ({ close, forLightPanel = false }) => {
           Log out
         </button>
       </nav>
+
+      <ReportIssueModal isOpen={reportIssueOpen} onClose={() => setReportIssueOpen(false)} />
     </div>
   );
 };
