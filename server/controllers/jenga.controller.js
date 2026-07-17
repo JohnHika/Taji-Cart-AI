@@ -122,11 +122,11 @@ export const initiateJengaPayment = async (request, response) => {
       return response.status(400).json({ message: 'Pickup location is required for pickup orders', error: true, success: false });
     }
 
-    if (fulfillment_type === 'delivery') {
+    if (fulfillment_type === 'delivery' && deliveryMode === 'foot') {
       const cbdStatus = getCbdFootDeliveryStatus(customerLocation);
       if (!cbdStatus.allowed) {
         const message = cbdStatus.reason === 'outside_cbd'
-          ? `Delivery is only available within Nairobi CBD (${cbdStatus.radiusKm}km radius). Your selected location is ${Number(cbdStatus.distanceKm || 0).toFixed(2)}km away.`
+          ? `Foot delivery is only available within Nairobi CBD (${cbdStatus.radiusKm}km radius). Your selected location is ${Number(cbdStatus.distanceKm || 0).toFixed(2)}km away.`
           : 'Please enable location and pin your delivery point within Nairobi CBD.';
         return response.status(400).json({ message, error: true, success: false, code: 'DELIVERY_OUTSIDE_CBD' });
       }

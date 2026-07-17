@@ -17,6 +17,7 @@ const DeliveryLocationModal = ({
   onSave,
   initialLocation = null,
   initialInstructions = '',
+  mode = 'foot',
 }) => {
   const [position, setPosition] = useState(initialLocation);
   const [instructions, setInstructions] = useState(initialInstructions || '');
@@ -53,12 +54,16 @@ const DeliveryLocationModal = ({
         setDetecting(false);
 
         const status = getFootDeliveryEligibility(next);
-        if (status.eligible) {
-          toast.success('Location found inside Nairobi CBD.');
+        if (mode === 'foot') {
+          if (status.eligible) {
+            toast.success('Location found inside Nairobi CBD.');
+          } else {
+            toast.error(
+              `You are ${formatDistanceKm(status.distanceKm)} from CBD center. Foot delivery is limited to ${status.radiusKm}km.`
+            );
+          }
         } else {
-          toast.error(
-            `You are ${formatDistanceKm(status.distanceKm)} from CBD center. Delivery is limited to ${status.radiusKm}km.`
-          );
+          toast.success('Location detected for standard delivery.');
         }
       },
       () => {
@@ -100,8 +105,8 @@ const DeliveryLocationModal = ({
       return;
     }
 
-    if (!eligibility.eligible) {
-      toast.error(`Delivery is only available within Nairobi CBD (${NAIROBI_CBD_RADIUS_KM}km radius).`);
+    if (mode === 'foot' && !eligibility.eligible) {
+      toast.error(`Foot delivery is only available within Nairobi CBD (${NAIROBI_CBD_RADIUS_KM}km radius).`);
       return;
     }
 
@@ -150,13 +155,17 @@ const DeliveryLocationModal = ({
             className={`mb-3 px-3 py-2 rounded-lg text-xs font-medium flex items-center justify-between ${
               eligibility.eligible
                 ? 'bg-green-100 text-green-700 dark:bg-green-600/15 dark:text-green-300'
-                : 'bg-red-100 text-red-700 dark:bg-red-600/15 dark:text-red-300'
+                : mode === 'foot'
+                  ? 'bg-red-100 text-red-700 dark:bg-red-600/15 dark:text-red-300'
+                  : 'bg-blue-100 text-blue-700 dark:bg-blue-600/15 dark:text-blue-300'
             }`}
           >
             <span>
-              {eligibility.eligible
-                ? `Inside Nairobi CBD — ${formatDistanceKm(eligibility.distanceKm)} from center`
-                : `Outside CBD — ${formatDistanceKm(eligibility.distanceKm)} from center (max ${eligibility.radiusKm}km)`}
+              {mode === 'foot'
+                ? (eligibility.eligible
+                  ? `Inside Nairobi CBD — ${formatDistanceKm(eligibility.distanceKm)} from center`
+                  : `Outside CBD — ${formatDistanceKm(eligibility.distanceKm)} from center (max ${eligibility.radiusKm}km)`)
+                : `Standard delivery — ${formatDistanceKm(eligibility.distanceKm)} from CBD center`}
             </span>
             <button
               type="button"

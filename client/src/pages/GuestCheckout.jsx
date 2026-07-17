@@ -485,6 +485,7 @@ function GuestCheckout() {
         isOpen={showLocationModal}
         initialLocation={formData.customerLocation}
         initialInstructions={formData.deliveryInstructions || ''}
+        mode={formData.deliveryMode || 'standard'}
         onClose={() => setShowLocationModal(false)}
         onSave={handleLocationModalSave}
       />

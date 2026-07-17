@@ -306,13 +306,13 @@ export async function checkoutController(request, response) {
             });
         }
         
-        // Validate delivery location is within Nairobi CBD radius
-        if (fulfillment_type === 'delivery') {
+        // Validate delivery location is within Nairobi CBD radius for foot delivery only
+        if (fulfillment_type === 'delivery' && deliveryMode === 'foot') {
             const cbdStatus = getCbdFootDeliveryStatus(customerLocation);
             
             if (!cbdStatus.allowed) {
                 const outsideZoneMessage = cbdStatus.reason === 'outside_cbd'
-                    ? `Delivery is only available within Nairobi CBD (${cbdStatus.radiusKm}km radius). Your selected location is ${Number(cbdStatus.distanceKm || 0).toFixed(2)}km away.`
+                    ? `Foot delivery is only available within Nairobi CBD (${cbdStatus.radiusKm}km radius). Your selected location is ${Number(cbdStatus.distanceKm || 0).toFixed(2)}km away.`
                     : 'Please enable location and pin your delivery point within Nairobi CBD.';
                 
                 return response.status(400).json({
@@ -512,13 +512,13 @@ export async function CashOnDeliveryOrderController(request, response) {
             });
         }
 
-        // Validate delivery location is within Nairobi CBD radius
-        if (fulfillment_type === 'delivery') {
+        // Validate delivery location is within Nairobi CBD radius for foot delivery only
+        if (fulfillment_type === 'delivery' && deliveryMode === 'foot') {
           const cbdStatus = getCbdFootDeliveryStatus(customerLocation)
 
           if (!cbdStatus.allowed) {
             const outsideZoneMessage = cbdStatus.reason === 'outside_cbd'
-              ? `Delivery is only available within Nairobi CBD (${cbdStatus.radiusKm}km radius). Your selected location is ${Number(cbdStatus.distanceKm || 0).toFixed(2)}km away.`
+              ? `Foot delivery is only available within Nairobi CBD (${cbdStatus.radiusKm}km radius). Your selected location is ${Number(cbdStatus.distanceKm || 0).toFixed(2)}km away.`
               : 'Please enable location and pin your delivery point within Nairobi CBD.'
 
             return response.status(400).json({
@@ -787,13 +787,13 @@ export async function guestCheckoutController(request, response) {
             totalAmt,
         } = await buildValidatedOrderPricing({ items, deliveryCharge })
 
-        // Validate delivery location is within Nairobi CBD radius
-        if (fulfillment_type === 'delivery') {
+        // Validate delivery location is within Nairobi CBD radius for foot delivery only
+        if (fulfillment_type === 'delivery' && deliveryMode === 'foot') {
           const cbdStatus = getCbdFootDeliveryStatus(customerLocation)
 
           if (!cbdStatus.allowed) {
             const outsideZoneMessage = cbdStatus.reason === 'outside_cbd'
-              ? `Delivery is only available within Nairobi CBD (${cbdStatus.radiusKm}km radius). Your selected location is ${Number(cbdStatus.distanceKm || 0).toFixed(2)}km away.`
+              ? `Foot delivery is only available within Nairobi CBD (${cbdStatus.radiusKm}km radius). Your selected location is ${Number(cbdStatus.distanceKm || 0).toFixed(2)}km away.`
               : 'Please enable location and pin your delivery point within Nairobi CBD.'
 
             return response.status(400).json({

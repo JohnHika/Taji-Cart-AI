@@ -83,7 +83,7 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
       && addressList[selectAddress] 
       && addressList[selectAddress].status
       && customerLocation
-      && footDeliveryEligibility.eligible) ||
+      && (deliveryMode !== 'foot' || footDeliveryEligibility.eligible)) ||
     (fulfillmentMethod === 'pickup' && pickupLocation);
 
   // For foot delivery, only allow addresses whose saved coordinates are within Nairobi CBD.
@@ -249,9 +249,9 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
         return false;
       }
 
-      if (!footDeliveryEligibility.eligible) {
+      if (deliveryMode === 'foot' && !footDeliveryEligibility.eligible) {
         toast.error(
-          `Delivery is only available within Nairobi CBD (${NAIROBI_CBD_RADIUS_KM}km radius).`
+          `Foot delivery is only available within Nairobi CBD (${NAIROBI_CBD_RADIUS_KM}km radius).`
         );
         setShowLocationModal(true);
         return false;
@@ -540,7 +540,7 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
                   <p className="text-[11px] text-brown-500 dark:text-white/55">
                     {customerLocation
                       ? (deliveryMode === 'foot'
-                          ? `Distance: ${formatDistanceKm(footDeliveryEligibility.distanceKm)} (${footDeliveryEligibility.eligible ? 'eligible' : 'outside zone'})`
+                          ? `Distance: ${formatDistanceKm(footDeliveryEligibility.distanceKm)} (${deliveryMode === 'foot' ? (footDeliveryEligibility.eligible ? 'eligible' : 'outside zone') : 'standard delivery'})`
                           : `Location captured (${formatDistanceKm(footDeliveryEligibility.distanceKm)} from CBD)`)
                       : 'Location required for delivery. Tap to share your current location.'}
                   </p>
@@ -1199,6 +1199,7 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
           isOpen={showLocationModal}
           initialLocation={customerLocation}
           initialInstructions={deliveryInstructions}
+          mode={deliveryMode}
           onClose={() => setShowLocationModal(false)}
           onSave={(loc) => {
             setCustomerLocation({ lat: loc.lat, lng: loc.lng });
