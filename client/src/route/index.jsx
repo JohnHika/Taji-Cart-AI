@@ -26,6 +26,7 @@ const ShopTheLookGallery            = lazyWithRetry(() => import('../components/
 const GuestCheckout                 = lazyWithRetry(() => import('../pages/GuestCheckout'));
 const GuestOrderTracking            = lazyWithRetry(() => import('../pages/GuestOrderTracking'));
 const StaffPOS                      = lazyWithRetry(() => import('../pages/StaffPOS'));
+const SalesCounter                  = lazyWithRetry(() => import('../pages/SalesCounter'));
 const ProductListPage               = lazyWithRetry(() => import('../pages/ProductListPage'));
 const CartMobile                    = lazyWithRetry(() => import('../pages/CartMobile'));
 const UserMenuMobile                = lazyWithRetry(() => import('../pages/UserMenuMobile'));
@@ -224,7 +225,7 @@ const router = createBrowserRouter([
           { path: 'staff/completed-verifications', element: <PrivateRoute requireStaff={true}>{S(VerificationHistory)}</PrivateRoute> },
           { path: 'staff/verification-success',  element: <PrivateRoute requireStaff={true}>{S(VerificationSuccess)}</PrivateRoute> },
           { path: 'staff-pos',                   element: <PrivateRoute requireStaff={true}>{S(StaffPOS)}</PrivateRoute> },
-          { path: 'sales-counter',               element: <PrivateRoute requireStaff={true}>{S(StaffPOS)}</PrivateRoute> },
+          { path: 'sales-counter',               element: <PrivateRoute requireStaff={true}>{S(SalesCounter)}</PrivateRoute> },
           { path: 'pos-dashboard',               element: <PrivateRoute requireStaff={true}>{S(POSDashboard)}</PrivateRoute> },
           { path: 'sales-hub',                   element: <PrivateRoute requireStaff={true}>{S(POSDashboard)}</PrivateRoute> },
           { path: 'pos-sales',                   element: <PrivateRoute requireStaff={true}>{S(POSSales)}</PrivateRoute> },
