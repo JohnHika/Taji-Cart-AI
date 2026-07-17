@@ -83,6 +83,7 @@ const SalesCounter = () => {
   const filteredProducts = useMemo(() => {
     const s = search.trim().toLowerCase();
     return products.filter((p) => {
+      if (!p.price || p.price <= 0) return false; // skip products without a price
       const matchesSearch =
         !s ||
         p.name?.toLowerCase().includes(s) ||
@@ -209,27 +210,27 @@ const SalesCounter = () => {
   }
 
   return (
-    <div className="min-h-screen bg-ivory dark:bg-dm-surface text-charcoal dark:text-white pb-28">
+    <div className="min-h-screen bg-ivory dark:bg-dm-surface text-charcoal dark:text-white pb-[calc(1rem+env(safe-area-inset-bottom))]">
       {/* Header */}
-      <div className="sticky top-0 z-30 bg-white dark:bg-dm-card border-b border-brown-100 dark:border-dm-border p-3 shadow-sm">
+      <div className="sticky top-0 z-30 bg-white dark:bg-dm-card border-b border-brown-100 dark:border-dm-border p-2 shadow-sm">
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-2">
-            <div className="w-10 h-10 rounded-full bg-gold-500 flex items-center justify-center text-white">
-              <FaShoppingBasket size={20} />
+            <div className="w-9 h-9 rounded-full bg-gold-500 flex items-center justify-center text-white">
+              <FaShoppingBasket size={18} />
             </div>
             <div>
-              <h1 className="font-bold text-lg leading-tight">Sales Counter</h1>
-              <p className="text-xs text-brown-500 dark:text-white/50">Walk-in customers</p>
+              <h1 className="font-bold text-base leading-tight">Sales Counter</h1>
+              <p className="text-[11px] text-brown-500 dark:text-white/50">Walk-in customers</p>
             </div>
           </div>
           <button
             onClick={() => setShowCart(true)}
-            className="relative bg-plum-700 text-white px-3 py-2 rounded-lg flex items-center gap-2 font-medium"
+            className="relative bg-plum-700 text-white px-3 py-2 rounded-lg flex items-center gap-2 font-medium text-sm"
           >
-            <FaShoppingBasket />
+            <FaShoppingBasket size={16} />
             <span className="hidden sm:inline">Basket</span>
             {cart.length > 0 && (
-              <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs w-5 h-5 rounded-full flex items-center justify-center">
+              <span className="absolute -top-1.5 -right-1.5 bg-red-500 text-white text-[10px] w-4 h-4 rounded-full flex items-center justify-center">
                 {cart.reduce((s, i) => s + i.quantity, 0)}
               </span>
             )}
@@ -237,23 +238,23 @@ const SalesCounter = () => {
         </div>
 
         {/* Search */}
-        <div className="mt-3 relative">
-          <FaSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-brown-400" />
+        <div className="mt-2 relative">
+          <FaSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-brown-400 text-sm" />
           <input
             ref={searchRef}
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search product, SKU or barcode..."
-            className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-brown-200 dark:border-dm-border bg-plum-50/50 dark:bg-dm-card-2 text-sm focus:outline-none focus:border-plum-500"
+            className="w-full pl-9 pr-4 py-2 rounded-lg border border-brown-200 dark:border-dm-border bg-plum-50/50 dark:bg-dm-card-2 text-sm focus:outline-none focus:border-plum-500"
           />
         </div>
 
         {/* Categories */}
-        <div className="mt-3 flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
+        <div className="mt-2 -mx-2 px-2 flex gap-1.5 overflow-x-auto pb-1 scrollbar-hide">
           <button
             onClick={() => setSelectedCategory('all')}
-            className={`whitespace-nowrap px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
+            className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
               selectedCategory === 'all'
                 ? 'bg-plum-700 text-white'
                 : 'bg-brown-100 dark:bg-dm-border text-brown-700 dark:text-white/70'
@@ -265,7 +266,7 @@ const SalesCounter = () => {
             <button
               key={c._id}
               onClick={() => setSelectedCategory(c._id)}
-              className={`whitespace-nowrap px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
+              className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
                 selectedCategory === c._id
                   ? 'bg-plum-700 text-white'
                   : 'bg-brown-100 dark:bg-dm-border text-brown-700 dark:text-white/70'
@@ -278,7 +279,7 @@ const SalesCounter = () => {
       </div>
 
       {/* Product grid */}
-      <div className="p-3 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+      <div className="p-2 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 pb-8">
         {filteredProducts.length === 0 ? (
           <div className="col-span-full text-center py-12 text-brown-500 dark:text-white/50">
             No products found.
@@ -288,9 +289,9 @@ const SalesCounter = () => {
             <button
               key={p._id}
               onClick={() => addToCart(p)}
-              className="text-left bg-white dark:bg-dm-card rounded-xl border border-brown-100 dark:border-dm-border overflow-hidden active:scale-[0.98] transition-transform"
+              className="text-left bg-white dark:bg-dm-card rounded-lg border border-brown-100 dark:border-dm-border overflow-hidden active:scale-[0.98] transition-transform"
             >
-              <div className="aspect-square bg-plum-50 dark:bg-dm-card-2 flex items-center justify-center">
+              <div className="aspect-[4/3] bg-plum-50 dark:bg-dm-card-2 flex items-center justify-center">
                 {p.image ? (
                   <img
                     src={p.image}
@@ -299,17 +300,17 @@ const SalesCounter = () => {
                     loading="lazy"
                   />
                 ) : (
-                  <span className="text-3xl">🛍️</span>
+                  <span className="text-2xl">🛍️</span>
                 )}
               </div>
-              <div className="p-3">
-                <p className="text-sm font-semibold line-clamp-2 min-h-[2.5rem]">{p.name}</p>
-                <div className="mt-2 flex items-center justify-between">
-                  <span className="text-plum-700 dark:text-plum-300 font-bold text-sm">
+              <div className="p-2">
+                <p className="text-xs font-semibold line-clamp-2 min-h-[2rem]">{p.name}</p>
+                <div className="mt-1 flex items-center justify-between">
+                  <span className="text-plum-700 dark:text-plum-300 font-bold text-xs">
                     {DisplayPriceInShillings(p.price)}
                   </span>
-                  <span className="w-7 h-7 rounded-full bg-gold-500 text-white flex items-center justify-center">
-                    <FaPlus size={12} />
+                  <span className="w-6 h-6 rounded-full bg-gold-500 text-white flex items-center justify-center">
+                    <FaPlus size={10} />
                   </span>
                 </div>
               </div>
