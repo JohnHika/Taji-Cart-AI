@@ -21,7 +21,7 @@ import { clearCartItems } from '../store/cartProduct';
 import Axios from '../utils/Axios';
 import AxiosToastError from '../utils/AxiosToastError';
 import { getStoredAccessToken } from '../utils/authStorage';
-import { DEFAULT_DELIVERY_CHARGE, formatDistanceKm, getFootDeliveryEligibility, NAIROBI_CBD_RADIUS_KM } from '../utils/cbdDelivery';
+import { DEFAULT_DELIVERY_CHARGE, formatDistanceKm, getFootDeliveryEligibility, isWithinCbdRadius, NAIROBI_CBD_RADIUS_KM } from '../utils/cbdDelivery';
 import { DisplayPriceInShillings } from '../utils/DisplayPriceInShillings';
 import { Link } from 'react-router-dom';
 
@@ -85,6 +85,28 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
       && customerLocation
       && footDeliveryEligibility.eligible) ||
     (fulfillmentMethod === 'pickup' && pickupLocation);
+
+  // For foot delivery, only allow addresses whose saved coordinates are within Nairobi CBD.
+  // Standard delivery can use any active address.
+  const eligibleAddressIndexes = useMemo(() => {
+    if (deliveryMode !== 'foot') {
+      return addressList.map((_, i) => i).filter(i => addressList[i]?.status);
+    }
+    return addressList
+      .map((_, i) => i)
+      .filter(i => {
+        const addr = addressList[i];
+        return addr?.status && isWithinCbdRadius(addr.coordinates);
+      });
+  }, [addressList, deliveryMode]);
+
+  // If the currently selected address is not eligible for the chosen delivery mode, clear it.
+  useEffect(() => {
+    if (selectAddress !== null && !eligibleAddressIndexes.includes(selectAddress)) {
+      setSelectAddress(null);
+      setAddressError(true);
+    }
+  }, [eligibleAddressIndexes, selectAddress]);
   const checkoutLockRef = useRef(false);
   const [checkoutAction, setCheckoutAction] = useState('');
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState('cash'); // 'cash' | 'jenga'
@@ -357,7 +379,12 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
   };
 
   // Check if there are active addresses available
-  const hasActiveAddresses = addressList.some(address => address.status);
+  const hasActiveAddresses = useMemo(() => {
+    if (fulfillmentMethod === 'pickup') {
+      return addressList.some(address => address.status);
+    }
+    return eligibleAddressIndexes.length > 0;
+  }, [addressList, eligibleAddressIndexes, fulfillmentMethod]);
 
   // Render cut view or full page based on prop
   if (isCutView) {
@@ -393,14 +420,16 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
               )}
               {!isPaymentEnabled && hasActiveAddresses && !addressError && (
                 <div className="bg-plum-50 dark:bg-plum-900/30 border border-plum-200 dark:border-plum-700 text-plum-800 dark:text-plum-200 px-4 py-2 rounded-card mb-4 text-sm">
-                  Select an address to enable payment options.
+                  {deliveryMode === 'foot'
+                    ? `Foot delivery is only available for addresses within Nairobi CBD (${NAIROBI_CBD_RADIUS_KM}km radius).`
+                    : 'Select an address to enable payment options.'}
                 </div>
               )}
               <div className='bg-white dark:bg-dm-card p-2 grid gap-4 rounded shadow transition-colors duration-200'>
                 {hasActiveAddresses ? (
                   addressList.map((address, index) => {
-                    // Only render addresses with status = true
-                    if (!address.status) return null;
+                    // Only render addresses with status = true and eligible for the selected mode
+                    if (!eligibleAddressIndexes.includes(index)) return null;
                     
                     return (
                       <label 
@@ -436,7 +465,9 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
                   })
                 ) : (
                   <div className="p-4 text-center text-brown-400 dark:text-white/45">
-                    No delivery addresses found. Please add an address to continue.
+                    {deliveryMode === 'foot'
+                      ? `No addresses within Nairobi CBD (${NAIROBI_CBD_RADIUS_KM}km radius). Add a CBD address or switch to Standard Delivery.`
+                      : 'No delivery addresses found. Please add an address to continue.'}
                   </div>
                 )}
                 <div 
@@ -709,13 +740,15 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
           )}
           {!isPaymentEnabled && hasActiveAddresses && !addressError && (
             <div className="bg-plum-50 dark:bg-plum-900/20 border border-plum-200 dark:border-plum-700/40 text-plum-700 dark:text-plum-300 px-4 py-2 rounded-card mb-4 text-sm">
-              Select an address to enable payment options.
+              {deliveryMode === 'foot'
+                ? `Foot delivery is only available for addresses within Nairobi CBD (${NAIROBI_CBD_RADIUS_KM}km radius).`
+                : 'Select an address to enable payment options.'}
             </div>
           )}
           <div className='grid gap-3 mb-4'>
             {hasActiveAddresses ? (
               addressList.map((address, index) => {
-                if (!address.status) return null;
+                if (!eligibleAddressIndexes.includes(index)) return null;
                 return (
                   <label
                     key={`address-${address._id || index}`}
@@ -748,7 +781,9 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
               })
             ) : (
               <div className="p-6 text-center text-brown-400 dark:text-white/40 text-sm bg-white dark:bg-dm-card rounded-card border border-brown-100 dark:border-dm-border">
-                No delivery addresses found. Please add an address to continue.
+                {deliveryMode === 'foot'
+                  ? `No addresses within Nairobi CBD (${NAIROBI_CBD_RADIUS_KM}km radius). Add a CBD address or switch to Standard Delivery.`
+                  : 'No delivery addresses found. Please add an address to continue.'}
               </div>
             )}
             <div
