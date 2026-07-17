@@ -19,7 +19,6 @@ import toast from 'react-hot-toast';
 
 // Import from our modular map architecture
 import {
-  MAP_STYLES,
   DEFAULT_CENTER,
   MAP_CONFIG,
   KEYBOARD_SHORTCUTS,
@@ -84,7 +83,31 @@ const LocationPickerEnhanced = ({
     
     const map = new maplibregl.Map({
       container: mapContainerRef.current,
-      style: MAP_STYLES.liberty,
+      style: {
+        version: 8,
+        sources: {
+          osm: {
+            type: 'raster',
+            tiles: [
+              'https://a.tile.openstreetmap.org/{z}/{x}/{y}.png',
+              'https://b.tile.openstreetmap.org/{z}/{x}/{y}.png',
+              'https://c.tile.openstreetmap.org/{z}/{x}/{y}.png',
+            ],
+            tileSize: 256,
+            attribution: '&copy; OpenStreetMap contributors',
+            maxzoom: 19,
+          },
+        },
+        layers: [
+          {
+            id: 'osm',
+            type: 'raster',
+            source: 'osm',
+            minzoom: 0,
+            maxzoom: 22,
+          },
+        ],
+      },
       center,
       zoom: position ? 16 : MAP_CONFIG.initialZoom,
       ...MAP_CONFIG
