@@ -58,9 +58,13 @@ const orderSchema = new mongoose.Schema({
         enum: ['delivery', 'pickup'],
         default: 'delivery'
     },
+    deliveryInstructions: {
+        type: String,
+        default: ''
+    },
     pickup_location: {
         type: String,
-        default: ""
+        default: ''
     },
     pickup_instructions: {
         type: String,

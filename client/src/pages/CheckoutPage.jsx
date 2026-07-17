@@ -11,6 +11,7 @@ import ActiveRewards from '../components/ActiveRewards'; // Import the ActiveRew
 import AddAddress from '../components/AddAddress';
 import CheckoutRoyalCard from '../components/CheckoutRoyalCard'; // Premium Royal Card for Order Summary
 import CommunityCampaignProgress from '../components/CommunityCampaignProgress'; // Import the CommunityCampaignProgress component
+import DeliveryLocationModal from '../components/DeliveryLocationModal';
 import FulfillmentModal from '../components/FulfillmentModal';
 import JengaPayment from '../components/JengaPayment';
 import { useTheme } from '../context/ThemeContext';
@@ -50,6 +51,8 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
   );
   const [deliveryMode, setDeliveryMode] = useState(location.state?.delivery_mode || 'standard');
   const [customerLocation, setCustomerLocation] = useState(location.state?.customerLocation || null);
+  const [deliveryInstructions, setDeliveryInstructions] = useState(location.state?.deliveryInstructions || '');
+  const [showLocationModal, setShowLocationModal] = useState(false);
   const [locationLoading, setLocationLoading] = useState(false);
   
   const addressList = useSelector(state => state.addresses.addressList);
@@ -214,6 +217,13 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
 
       if (!customerLocation) {
         toast.error('Delivery requires your live location within Nairobi CBD.');
+        setShowLocationModal(true);
+        return false;
+      }
+
+      if (!deliveryInstructions.trim()) {
+        toast.error('Please enter exact delivery instructions so the rider can find you.');
+        setShowLocationModal(true);
         return false;
       }
 
@@ -221,6 +231,7 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
         toast.error(
           `Delivery is only available within Nairobi CBD (${NAIROBI_CBD_RADIUS_KM}km radius).`
         );
+        setShowLocationModal(true);
         return false;
       }
     } else if (fulfillmentMethod === 'pickup' && !pickupLocation) {
@@ -231,42 +242,7 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
   };
 
   const captureCustomerLocation = () => {
-    if (!navigator.geolocation) {
-      toast.error('Geolocation is not supported on this device/browser.');
-      return;
-    }
-
-    setLocationLoading(true);
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        const nextLocation = {
-          lat: Number(position.coords.latitude),
-          lng: Number(position.coords.longitude),
-        };
-
-        setCustomerLocation(nextLocation);
-        const eligibility = getFootDeliveryEligibility(nextLocation);
-
-        if (eligibility.eligible) {
-          toast.success('Great! You are within Nairobi CBD for foot delivery.');
-        } else {
-          toast.error(
-            `You are ${formatDistanceKm(eligibility.distanceKm)} from CBD center. Foot delivery is limited to ${eligibility.radiusKm}km.`
-          );
-        }
-
-        setLocationLoading(false);
-      },
-      () => {
-        setLocationLoading(false);
-        toast.error('Unable to access location. Please allow location permissions and try again.');
-      },
-      {
-        enableHighAccuracy: true,
-        timeout: 10000,
-        maximumAge: 0,
-      }
-    );
+    setShowLocationModal(true);
   };
 
   const handleCashOnDelivery = async() => {
@@ -290,6 +266,7 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
             fulfillment_type: fulfillmentMethod,
             delivery_mode: fulfillmentMethod === 'delivery' ? deliveryMode : 'standard',
             customerLocation,
+            deliveryInstructions,
             pickup_location: pickupLocation,
             pickup_instructions: pickupInstructions
           },
@@ -695,6 +672,7 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
                   pickup_location={pickupLocation}
                   pickup_instructions={pickupInstructions}
                   deliveryCharge={deliveryCharge}
+                  deliveryInstructions={deliveryInstructions}
                   onSuccess={handleJengaPaymentSuccess}
                   onError={handleJengaPaymentError}
                 />
@@ -1107,9 +1085,10 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
                 pickup_location={pickupLocation}
                 pickup_instructions={pickupInstructions}
                 deliveryCharge={deliveryCharge}
+                deliveryInstructions={deliveryInstructions}
                 onSuccess={handleJengaPaymentSuccess}
                 onError={handleJengaPaymentError}
-                />
+              />
             )}
 
             {/* Guest Checkout CTA — only show for unauthenticated users */}
@@ -1136,6 +1115,18 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
           onClose={() => setShowFulfillmentModal(false)}
           onSelect={handleFulfillmentSelect}
           pickupLocations={pickupLocations}
+        />
+
+        {/* Delivery location capture modal */}
+        <DeliveryLocationModal
+          isOpen={showLocationModal}
+          initialLocation={customerLocation}
+          initialInstructions={deliveryInstructions}
+          onClose={() => setShowLocationModal(false)}
+          onSave={(loc) => {
+            setCustomerLocation({ lat: loc.lat, lng: loc.lng });
+            setDeliveryInstructions(loc.deliveryInstructions || '');
+          }}
         />
 
         {/* Address Modal */}

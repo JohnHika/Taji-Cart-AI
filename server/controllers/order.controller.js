@@ -368,6 +368,7 @@ export async function checkoutController(request, response) {
             pickup_instructions: pickup_instructions || '',
             delivery_mode: deliveryMode || 'standard',
             customer_location: customerLocation || undefined,
+            deliveryInstructions: request.body.deliveryInstructions || '',
             subTotalAmt: subTotalAmt,
             deliveryCharge: deliveryCharge,
             totalAmt: totalAmt,
@@ -582,6 +583,7 @@ export async function CashOnDeliveryOrderController(request, response) {
             pickup_instructions: pickup_instructions || '',
             delivery_mode: deliveryMode || 'standard',
             customer_location: customerLocation || undefined,
+            deliveryInstructions: request.body.deliveryInstructions || '',
             pickupVerificationCode: pickupVerificationCode,
             subTotalAmt: subTotalAmt,
             deliveryCharge: deliveryCharge,
@@ -830,6 +832,7 @@ export async function guestCheckoutController(request, response) {
             delivery_mode: deliveryMode || 'standard',
             pickup_location,
             customer_location: customerLocation || undefined,
+            deliveryInstructions: request.body.deliveryInstructions || '',
             product_details: {
                 name: normalizedItems.map(item => item.productId?.name || item.name || 'Product').join(', '),
                 image: normalizedItems[0]?.productId?.image || []

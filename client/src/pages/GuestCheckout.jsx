@@ -12,6 +12,7 @@ import { nawiriBrand } from '../config/brand';
 import CheckoutRoyalCard from '../components/CheckoutRoyalCard'; // Premium Royal Card teaser
 import GuestAccountPrompt from '../components/GuestAccountPrompt';
 import { DEFAULT_DELIVERY_CHARGE, formatDistanceKm, getFootDeliveryEligibility, NAIROBI_CBD_RADIUS_KM } from '../utils/cbdDelivery';
+import DeliveryLocationModal from '../components/DeliveryLocationModal';
 import { DisplayPriceInShillings } from '../utils/DisplayPriceInShillings';
 
 const PICKUP_LOCATIONS = [
@@ -39,6 +40,7 @@ function GuestCheckout() {
     delivery_mode: 'standard',
     pickup_location: '',
     customerLocation: null,
+    deliveryInstructions: '',
   });
 
   const footDeliveryEligibility = getFootDeliveryEligibility(formData.customerLocation);
@@ -73,30 +75,18 @@ function GuestCheckout() {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
+  const [showLocationModal, setShowLocationModal] = useState(false);
+
+  const handleLocationModalSave = (loc) => {
+    setFormData(prev => ({
+      ...prev,
+      customerLocation: { lat: loc.lat, lng: loc.lng },
+      deliveryInstructions: loc.deliveryInstructions || '',
+    }));
+  };
+
   const captureCustomerLocation = () => {
-    if (!navigator.geolocation) {
-      toast.error('Geolocation is not supported on this device/browser.');
-      return;
-    }
-    setLocationLoading(true);
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        const loc = { lat: Number(position.coords.latitude), lng: Number(position.coords.longitude) };
-        const elig = getFootDeliveryEligibility(loc);
-        setFormData(prev => ({ ...prev, customerLocation: loc }));
-        if (elig.eligible) {
-          toast.success('Great! You are within Nairobi CBD for foot delivery.');
-        } else {
-          toast.error(`You are ${formatDistanceKm(elig.distanceKm)} from CBD center. Foot delivery is limited to ${elig.radiusKm}km.`);
-        }
-        setLocationLoading(false);
-      },
-      () => {
-        setLocationLoading(false);
-        toast.error('Unable to access location. Please allow location permissions and try again.');
-      },
-      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
-    );
+    setShowLocationModal(true);
   };
 
   const validate = () => {
@@ -107,8 +97,9 @@ function GuestCheckout() {
     if (isDelivery) {
       if (!formData.firstName || !formData.lastName) { toast.error('Please enter your full name'); return false; }
       if (!formData.address || !formData.city) { toast.error('Please fill in your delivery address'); return false; }
-      if (!formData.customerLocation) { toast.error('Delivery requires your live location within Nairobi CBD'); return false; }
-      if (!footDeliveryEligibility.eligible) { toast.error(`Delivery is only available within Nairobi CBD (${NAIROBI_CBD_RADIUS_KM}km radius)`); return false; }
+      if (!formData.customerLocation) { toast.error('Delivery requires your live location within Nairobi CBD'); setShowLocationModal(true); return false; }
+      if (!formData.deliveryInstructions?.trim()) { toast.error('Please enter exact delivery instructions so the rider can find you'); setShowLocationModal(true); return false; }
+      if (!footDeliveryEligibility.eligible) { toast.error(`Delivery is only available within Nairobi CBD (${NAIROBI_CBD_RADIUS_KM}km radius)`); setShowLocationModal(true); return false; }
     } else {
       if (!formData.pickup_location) { toast.error('Please select a pickup location'); return false; }
     }
@@ -144,6 +135,7 @@ function GuestCheckout() {
           deliveryCharge: deliveryCharge,
           totalAmt: orderTotal,
           customerLocation: formData.customerLocation,
+          deliveryInstructions: formData.deliveryInstructions,
           pickup_location: formData.pickup_location,
         },
       });
@@ -489,6 +481,13 @@ function GuestCheckout() {
         </div>
 
       </div>
+      <DeliveryLocationModal
+        isOpen={showLocationModal}
+        initialLocation={formData.customerLocation}
+        initialInstructions={formData.deliveryInstructions || ''}
+        onClose={() => setShowLocationModal(false)}
+        onSave={handleLocationModalSave}
+      />
     </section>
   );
 }
