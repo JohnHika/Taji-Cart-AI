@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
-import { FaCrown, FaStore } from 'react-icons/fa';
+import { FaCrown, FaStore, FaTrash } from 'react-icons/fa';
 import { FaXmark } from 'react-icons/fa6';
 import { useDispatch, useSelector } from 'react-redux';
 import { useLocation, useNavigate } from 'react-router-dom';
@@ -386,6 +386,24 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
     return eligibleAddressIndexes.length > 0;
   }, [addressList, eligibleAddressIndexes, fulfillmentMethod]);
 
+  const handleDeleteAddress = async (addressId) => {
+    if (!addressId || !window.confirm('Delete this address permanently?')) return;
+    try {
+      const response = await Axios({
+        ...SummaryApi.disableAddress,
+        data: { _id: addressId },
+      });
+      if (response.data.success) {
+        toast.success('Address deleted');
+        if (fetchAddress) {
+          await fetchAddress();
+        }
+      }
+    } catch (error) {
+      AxiosToastError(error);
+    }
+  };
+
   // Render cut view or full page based on prop
   if (isCutView) {
     return (
@@ -459,6 +477,18 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
                             <p>{address.country} - {address.pincode}</p>
                             <p>{address.mobile}</p>
                           </div>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              handleDeleteAddress(address._id);
+                            }}
+                            className="ml-auto self-start text-red-600 hover:text-red-700 dark:text-red-400 p-1"
+                            title="Delete address"
+                          >
+                            <FaTrash size={14} />
+                          </button>
                         </div>
                       </label>
                     )
@@ -775,6 +805,18 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
                         <p className="text-brown-400 dark:text-white/50">{address.country} - {address.pincode}</p>
                         <p className="text-brown-400 dark:text-white/50 text-xs mt-0.5">{address.mobile}</p>
                       </div>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          handleDeleteAddress(address._id);
+                        }}
+                        className="ml-auto self-start text-red-600 hover:text-red-700 dark:text-red-400 p-1"
+                        title="Delete address"
+                      >
+                        <FaTrash size={16} />
+                      </button>
                     </div>
                   </label>
                 )
