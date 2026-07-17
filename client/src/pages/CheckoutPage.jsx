@@ -26,7 +26,7 @@ import { DisplayPriceInShillings } from '../utils/DisplayPriceInShillings';
 import { Link } from 'react-router-dom';
 
 const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) => {
-  const { notDiscountTotalPrice, totalPrice, totalQty, fetchCartItem, fetchOrder, royalCardData, royalDiscount } = useGlobalContext();
+  const { notDiscountTotalPrice, totalPrice, totalQty, fetchCartItem, fetchOrder, fetchAddress, royalCardData, royalDiscount } = useGlobalContext();
   const { darkMode } = useTheme();
   const location = useLocation();
   const [openAddress, setOpenAddress] = useState(false);
