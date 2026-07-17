@@ -136,6 +136,15 @@ const LocationPickerEnhanced = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // When initialPosition prop changes (e.g. modal auto-detects GPS), move the
+  // map and marker to that position automatically so the user doesn't need to
+  // manually tap "Use GPS".
+  useEffect(() => {
+    if (!initialPosition || !mapInstanceRef.current) return;
+    updatePosition(initialPosition, undefined);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialPosition]);
+
   // Handle map click
   const handleMapClick = useCallback((e) => {
     const { lng, lat } = e.lngLat;
