@@ -7,9 +7,9 @@ import { formatDistanceKm, getFootDeliveryEligibility, NAIROBI_CBD_RADIUS_KM } f
 /**
  * DeliveryLocationModal
  *
- * Auto-detects the user's location, drops a pin on the map, checks Nairobi CBD
- * eligibility, and requires free-text delivery instructions so the rider knows
- * exactly where to find the customer.
+ * Mobile-first bottom sheet that auto-detects the user's location, drops a pin
+ * on a large map, checks Nairobi CBD eligibility for foot delivery, and requires
+ * free-text delivery instructions so the rider knows exactly where to go.
  */
 const DeliveryLocationModal = ({
   isOpen,
@@ -22,12 +22,8 @@ const DeliveryLocationModal = ({
   const [position, setPosition] = useState(initialLocation);
   const [instructions, setInstructions] = useState(initialInstructions || '');
   const [detecting, setDetecting] = useState(false);
-  const [placeName, setPlaceName] = useState('');
 
-  const eligibility = useMemo(
-    () => getFootDeliveryEligibility(position),
-    [position]
-  );
+  const eligibility = useMemo(() => getFootDeliveryEligibility(position), [position]);
 
   // Auto-detect location when the modal opens if we don't already have one.
   useEffect(() => {
@@ -72,12 +68,7 @@ const DeliveryLocationModal = ({
       },
       { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
     );
-  }, [isOpen, initialLocation]);
-
-  const handleLocationSelect = (loc, name) => {
-    setPosition(loc);
-    if (name) setPlaceName(name);
-  };
+  }, [isOpen, initialLocation, mode]);
 
   const handleDetectAgain = () => {
     if (!navigator.geolocation) return;
@@ -97,6 +88,10 @@ const DeliveryLocationModal = ({
       },
       { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
     );
+  };
+
+  const handleLocationSelect = (loc) => {
+    setPosition(loc);
   };
 
   const handleSave = () => {
@@ -119,115 +114,140 @@ const DeliveryLocationModal = ({
     onSave({
       ...position,
       deliveryInstructions: trimmed,
-      placeName: placeName || '',
     });
     onClose();
   };
 
   if (!isOpen) return null;
 
+  const canSave =
+    position &&
+    (mode !== 'foot' || eligibility.eligible) &&
+    instructions.trim().length > 0 &&
+    !detecting;
+
   return (
-    <div className="fixed inset-0 bg-plum-900/60 z-[60] flex items-center justify-center p-3 backdrop-blur-[2px] overflow-y-auto">
-      <div className="bg-white dark:bg-dm-card w-full max-w-lg rounded-card border border-brown-100 dark:border-dm-border shadow-hover p-4 sm:p-5 my-4 transition-colors">
-        <div className="flex justify-between items-start mb-3">
-          <div>
-            <h2 className="text-lg font-semibold text-charcoal dark:text-white flex items-center gap-2">
-              <FaMapMarkerAlt className="text-plum-600" />
+    <div className="fixed inset-0 z-[60] flex flex-col bg-black/60 backdrop-blur-[2px]">
+      {/* Backdrop click to close on desktop; on mobile the sheet covers most of the screen */}
+      <div className="flex-1 min-h-[15%]" onClick={onClose} />
+
+      {/* Bottom sheet */}
+      <div className="w-full max-w-xl mx-auto bg-white dark:bg-dm-card rounded-t-2xl shadow-2xl flex flex-col max-h-[92vh] animate-slide-up">
+        {/* Header */}
+        <div className="px-4 pt-4 pb-3 border-b border-brown-100 dark:border-dm-border flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <h2 className="text-lg font-bold text-charcoal dark:text-white flex items-center gap-2">
+              <FaMapMarkerAlt className="text-plum-600 flex-shrink-0" />
               Confirm delivery location
             </h2>
-            <p className="text-xs text-brown-500 dark:text-white/50 mt-1">
-              We detected your location. Drag the pin or search to adjust it, then tell the rider exactly where to find you.
+            <p className="text-xs text-brown-500 dark:text-white/50 mt-1 leading-snug">
+              Drag the pin or search to adjust. Add exact directions so the rider can find you.
             </p>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="p-2 rounded-lg text-brown-400 hover:text-charcoal dark:text-white/50 dark:hover:text-white transition-colors"
+            className="p-2 rounded-full bg-brown-100 dark:bg-dm-border text-brown-500 dark:text-white/60 active:scale-95 transition-transform"
             aria-label="Close"
           >
-            <FaTimes />
+            <FaTimes size={18} />
           </button>
         </div>
 
-        {/* Eligibility banner */}
-        {position && (
-          <div
-            className={`mb-3 px-3 py-2 rounded-lg text-xs font-medium flex items-center justify-between ${
-              eligibility.eligible
-                ? 'bg-green-100 text-green-700 dark:bg-green-600/15 dark:text-green-300'
-                : mode === 'foot'
-                  ? 'bg-red-100 text-red-700 dark:bg-red-600/15 dark:text-red-300'
-                  : 'bg-blue-100 text-blue-700 dark:bg-blue-600/15 dark:text-blue-300'
-            }`}
-          >
-            <span>
-              {mode === 'foot'
-                ? (eligibility.eligible
-                  ? `Inside Nairobi CBD — ${formatDistanceKm(eligibility.distanceKm)} from center`
-                  : `Outside CBD — ${formatDistanceKm(eligibility.distanceKm)} from center (max ${eligibility.radiusKm}km)`)
-                : `Standard delivery — ${formatDistanceKm(eligibility.distanceKm)} from CBD center`}
-            </span>
-            <button
-              type="button"
-              onClick={handleDetectAgain}
-              disabled={detecting}
-              className="flex items-center gap-1 px-2 py-1 rounded bg-white/60 dark:bg-black/20 hover:bg-white dark:hover:bg-black/30 transition-colors disabled:opacity-60"
-            >
-              {detecting ? <FaSpinner className="animate-spin" /> : <FaCrosshairs />}
-              <span className="hidden sm:inline">{detecting ? 'Detecting…' : 'Re-detect'}</span>
-            </button>
+        {/* Scrollable body */}
+        <div className="flex-1 overflow-y-auto">
+          {/* Status + locate me */}
+          <div className="px-4 pt-3">
+            <div className="flex items-center gap-2">
+              <div
+                className={`flex-1 px-3 py-2.5 rounded-lg text-sm font-medium ${
+                  !position
+                    ? 'bg-brown-100 dark:bg-dm-border text-brown-500 dark:text-white/60'
+                    : mode === 'foot' && !eligibility.eligible
+                      ? 'bg-red-100 dark:bg-red-900/20 text-red-700 dark:text-red-300'
+                      : mode === 'foot'
+                        ? 'bg-green-100 dark:bg-green-900/20 text-green-700 dark:text-green-300'
+                        : 'bg-blue-100 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300'
+                }`}
+              >
+                {!position ? (
+                  'Detecting your location…'
+                ) : mode === 'foot' ? (
+                  eligibility.eligible ? (
+                    <span>Inside Nairobi CBD — {formatDistanceKm(eligibility.distanceKm)} from center</span>
+                  ) : (
+                    <span>Outside CBD — {formatDistanceKm(eligibility.distanceKm)} (max {eligibility.radiusKm}km for foot)</span>
+                  )
+                ) : (
+                  <span>Standard delivery — {formatDistanceKm(eligibility.distanceKm)} from CBD center</span>
+                )}
+              </div>
+
+              <button
+                type="button"
+                onClick={handleDetectAgain}
+                disabled={detecting}
+                className="flex items-center gap-1.5 px-3 py-2.5 rounded-lg bg-plum-700 text-white text-sm font-semibold active:scale-95 disabled:opacity-60 transition-transform whitespace-nowrap"
+              >
+                {detecting ? <FaSpinner className="animate-spin" /> : <FaCrosshairs />}
+                <span className="hidden sm:inline">{detecting ? 'Detecting…' : 'My location'}</span>
+                <span className="sm:hidden">{detecting ? '…' : 'GPS'}</span>
+              </button>
+            </div>
           </div>
-        )}
 
-        {/* Map picker */}
-        <div className="mb-3">
-          <LocationPickerEnhanced
-            onLocationSelect={handleLocationSelect}
-            initialPosition={position || undefined}
-            showCoordinates={true}
-            showKeyboardShortcuts={false}
-            enableContextMenu={false}
-            className="w-full"
-          />
+          {/* Map */}
+          <div className="px-4 py-3">
+            <div className="rounded-xl overflow-hidden border border-brown-100 dark:border-dm-border">
+              <LocationPickerEnhanced
+                onLocationSelect={handleLocationSelect}
+                initialPosition={position || undefined}
+                showCoordinates={true}
+                showKeyboardShortcuts={false}
+                enableContextMenu={false}
+                className="w-full"
+              />
+            </div>
+          </div>
+
+          {/* Instructions */}
+          <div className="px-4 pb-4">
+            <label className="block text-xs font-bold uppercase tracking-wide text-brown-500 dark:text-white/50 mb-2">
+              Exact delivery instructions *
+            </label>
+            <textarea
+              value={instructions}
+              onChange={(e) => setInstructions(e.target.value)}
+              placeholder="Building name, floor, apartment, door number, nearby shop/landmark..."
+              rows={3}
+              className="w-full p-3.5 rounded-xl border border-brown-200 dark:border-dm-border bg-ivory dark:bg-dm-surface text-charcoal dark:text-white text-base placeholder:text-brown-300 dark:placeholder:text-white/30 focus:ring-2 focus:ring-plum-500 focus:border-plum-500"
+            />
+            <p className="text-xs text-brown-400 dark:text-white/40 mt-2">
+              Required so the rider knows exactly where to stop.
+            </p>
+          </div>
         </div>
 
-        {/* Delivery instructions */}
-        <div className="mb-4">
-          <label className="block text-xs font-semibold uppercase tracking-wide text-brown-500 dark:text-white/45 mb-1.5">
-            Exact delivery instructions *
-          </label>
-          <textarea
-            value={instructions}
-            onChange={(e) => setInstructions(e.target.value)}
-            placeholder="e.g. Maziwa House, 3rd floor, apartment 12B. Landmark: next to the blue petrol station."
-            rows={3}
-            className="w-full p-3 rounded-lg border border-brown-200 dark:border-dm-border bg-ivory dark:bg-dm-surface text-charcoal dark:text-white text-sm placeholder:text-brown-300 dark:placeholder:text-white/30 focus:ring-2 focus:ring-plum-500 focus:border-plum-500"
-          />
-          <p className="text-[11px] text-brown-400 dark:text-white/40 mt-1">
-            Required: building name, floor, door number, nearby landmark or shop name.
-          </p>
-        </div>
-
-        {/* Actions */}
-        <div className="flex gap-3">
-          <button
-            type="button"
-            onClick={onClose}
-            className="flex-1 py-3 rounded-pill font-semibold text-sm border border-brown-200 dark:border-dm-border text-charcoal dark:text-white hover:bg-brown-50 dark:hover:bg-dm-border transition-colors"
-          >
-            Cancel
-          </button>
+        {/* Sticky action bar */}
+        <div className="px-4 py-4 border-t border-brown-100 dark:border-dm-border bg-plum-50/40 dark:bg-dm-card-2 rounded-t-2xl">
           <button
             type="button"
             onClick={handleSave}
-            disabled={!position || !eligibility.eligible || !instructions.trim() || detecting}
-            className={`flex-1 py-3 rounded-pill font-semibold text-sm transition-colors ${
-              position && eligibility.eligible && instructions.trim()
-                ? 'bg-gold-500 hover:bg-gold-400 text-charcoal press shadow-sm hover:shadow-gold'
-                : 'bg-brown-100 dark:bg-dm-border text-brown-400 dark:text-white/35 cursor-not-allowed'
+            disabled={!canSave}
+            className={`w-full py-4 rounded-xl font-bold text-base transition-colors ${
+              canSave
+                ? 'bg-gold-500 hover:bg-gold-600 text-charcoal shadow-sm'
+                : 'bg-brown-200 dark:bg-dm-border text-brown-400 dark:text-white/40 cursor-not-allowed'
             }`}
           >
-            Confirm delivery location
+            {mode === 'foot' ? 'Confirm foot delivery location' : 'Confirm standard delivery location'}
+          </button>
+          <button
+            type="button"
+            onClick={onClose}
+            className="w-full mt-2 py-3 rounded-xl font-semibold text-sm text-brown-500 dark:text-white/60 active:bg-brown-100 dark:active:bg-dm-border transition-colors"
+          >
+            Cancel
           </button>
         </div>
       </div>
