@@ -25,7 +25,7 @@ export const isWithinCbdRadius = (coordinates) => {
   if (!coordinates || typeof coordinates.lat !== 'number' || typeof coordinates.lng !== 'number') {
     return false;
   }
-  return getDistanceFromCbdCenter(coordinates) <= NAIROBI_CBD_RADIUS_KM;
+  return haversineDistanceKm(coordinates, NAIROBI_CBD_CENTER) <= NAIROBI_CBD_RADIUS_KM;
 };
 
 export const getFootDeliveryEligibility = (customerLocation) => {
