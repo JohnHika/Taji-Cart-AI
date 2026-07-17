@@ -4,6 +4,7 @@ export const NAIROBI_CBD_CENTER = {
 };
 
 export const NAIROBI_CBD_RADIUS_KM = 3;
+export const DEFAULT_DELIVERY_CHARGE = 100; // KES
 
 const toRadians = (value) => (value * Math.PI) / 180;
 

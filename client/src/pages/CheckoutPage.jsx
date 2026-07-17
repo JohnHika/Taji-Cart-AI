@@ -20,7 +20,7 @@ import { clearCartItems } from '../store/cartProduct';
 import Axios from '../utils/Axios';
 import AxiosToastError from '../utils/AxiosToastError';
 import { getStoredAccessToken } from '../utils/authStorage';
-import { formatDistanceKm, getFootDeliveryEligibility, NAIROBI_CBD_RADIUS_KM } from '../utils/cbdDelivery';
+import { DEFAULT_DELIVERY_CHARGE, formatDistanceKm, getFootDeliveryEligibility, NAIROBI_CBD_RADIUS_KM } from '../utils/cbdDelivery';
 import { DisplayPriceInShillings } from '../utils/DisplayPriceInShillings';
 import { Link } from 'react-router-dom';
 
@@ -75,11 +75,18 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
   // For delivery: need a selected address
   // For pickup: need a pickup location
   const isPaymentEnabled = 
-    (fulfillmentMethod === 'delivery' && selectAddress !== null && addressList[selectAddress] && addressList[selectAddress].status) ||
+    (fulfillmentMethod === 'delivery' 
+      && selectAddress !== null 
+      && addressList[selectAddress] 
+      && addressList[selectAddress].status
+      && customerLocation
+      && footDeliveryEligibility.eligible) ||
     (fulfillmentMethod === 'pickup' && pickupLocation);
   const checkoutLockRef = useRef(false);
   const [checkoutAction, setCheckoutAction] = useState('');
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState('cash'); // 'cash' | 'jenga'
+
+  const deliveryCharge = fulfillmentMethod === 'delivery' ? DEFAULT_DELIVERY_CHARGE : 0;
 
   useEffect(() => {
     // Clear address error when address is selected
@@ -114,8 +121,8 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
         if (response.data.success && response.data.data) {
           const points = response.data.data.points || 0;
           setAvailablePoints(points);
-          // Each point is worth KES 1
-          setPointsValue(Math.min(points, totalPrice));
+          // Each point is worth KES 1; cap at subtotal + delivery charge
+          setPointsValue(Math.min(points, totalPrice + deliveryCharge));
           console.log("Successfully fetched loyalty data:", response.data.data);
         }
       } catch (error) {
@@ -127,7 +134,7 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
     };
     
     fetchLoyaltyData();
-  }, [user, user._id, totalPrice]);
+  }, [user, user._id, totalPrice, deliveryCharge]);
 
   // Handle selecting community reward
   const handleSelectReward = (reward) => {
@@ -155,10 +162,10 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
     ? totalPrice * (1 - communityDiscount / 100)
     : totalPrice;
 
-  // Calculate final price after applying points and community discount
+  // Calculate final price after applying points, community discount and delivery charge
   const finalPrice = usePoints 
-    ? Math.max(0, priceAfterCommunityDiscount - pointsValue) 
-    : priceAfterCommunityDiscount;
+    ? Math.max(0, priceAfterCommunityDiscount + deliveryCharge - pointsValue) 
+    : priceAfterCommunityDiscount + deliveryCharge;
   const isCheckoutBusy = checkoutAction !== '';
   const footDeliveryEligibility = useMemo(
     () => getFootDeliveryEligibility(customerLocation),
@@ -201,22 +208,20 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
     if (fulfillmentMethod === 'delivery') {
       if (!isPaymentEnabled) {
         setAddressError(true);
-        toast.error('Please select a delivery address before proceeding');
+        toast.error('Please select a delivery address and share your location before proceeding');
         return false;
       }
 
-      if (deliveryMode === 'foot') {
-        if (!customerLocation) {
-          toast.error('Foot delivery requires your live location within Nairobi CBD.');
-          return false;
-        }
+      if (!customerLocation) {
+        toast.error('Delivery requires your live location within Nairobi CBD.');
+        return false;
+      }
 
-        if (!footDeliveryEligibility.eligible) {
-          toast.error(
-            `Foot delivery is only available within Nairobi CBD (${NAIROBI_CBD_RADIUS_KM}km radius).`
-          );
-          return false;
-        }
+      if (!footDeliveryEligibility.eligible) {
+        toast.error(
+          `Delivery is only available within Nairobi CBD (${NAIROBI_CBD_RADIUS_KM}km radius).`
+        );
+        return false;
       }
     } else if (fulfillmentMethod === 'pickup' && !pickupLocation) {
       toast.error('Please select a pickup location');
@@ -276,6 +281,7 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
             list_items : cartItemsList,
             addressId : fulfillmentMethod === 'delivery' ? addressList[selectAddress]._id : null,
             subTotalAmt : totalPrice,
+            deliveryCharge: deliveryCharge,
             totalAmt : finalPrice,
             usePoints: usePoints,
             pointsUsed: usePoints ? pointsValue : 0,
@@ -465,41 +471,43 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
               </div>
 
               <div className="mt-4 p-3 bg-white dark:bg-dm-card rounded shadow border border-brown-100 dark:border-dm-border">
-                <p className="text-sm font-semibold dark:text-white mb-2">Delivery Type</p>
-                <div className="grid grid-cols-2 gap-2 text-xs">
-                  <button
-                    type="button"
-                    onClick={() => setDeliveryMode('standard')}
-                    className={`px-2 py-2 rounded ${deliveryMode === 'standard' ? 'bg-plum-700 text-white' : 'bg-plum-100 dark:bg-plum-900/30 dark:text-white/80'}`}
-                  >
-                    Standard
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setDeliveryMode('foot')}
-                    className={`px-2 py-2 rounded ${deliveryMode === 'foot' ? 'bg-plum-700 text-white' : 'bg-plum-100 dark:bg-plum-900/30 dark:text-white/80'}`}
-                  >
-                    Foot (CBD)
-                  </button>
-                </div>
+              <p className="text-sm font-semibold dark:text-white mb-2">Delivery Type</p>
+              <div className="grid grid-cols-2 gap-2 text-xs">
+                <button
+                  type="button"
+                  onClick={() => { setDeliveryMode('standard'); }}
+                  className={`px-2 py-2 rounded ${deliveryMode === 'standard' ? 'bg-plum-700 text-white' : 'bg-plum-100 dark:bg-plum-900/30 dark:text-white/80'}`}
+                >
+                  Standard
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setDeliveryMode('foot'); }}
+                  className={`px-2 py-2 rounded ${deliveryMode === 'foot' ? 'bg-plum-700 text-white' : 'bg-plum-100 dark:bg-plum-900/30 dark:text-white/80'}`}
+                >
+                  Foot (CBD)
+                </button>
+              </div>
 
-                {deliveryMode === 'foot' && (
-                  <div className="mt-2 space-y-1">
-                    <button
-                      type="button"
-                      onClick={captureCustomerLocation}
-                      disabled={locationLoading}
-                      className="w-full text-xs px-2 py-2 rounded bg-gold-500 text-charcoal font-semibold disabled:opacity-60"
-                    >
-                      {locationLoading ? 'Checking location...' : 'Use My Current Location'}
-                    </button>
-                    <p className="text-[11px] text-brown-500 dark:text-white/55">
-                      {customerLocation
-                        ? `Distance: ${formatDistanceKm(footDeliveryEligibility.distanceKm)} (${footDeliveryEligibility.eligible ? 'eligible' : 'outside zone'})`
-                        : 'Location required for foot delivery in CBD.'}
-                    </p>
-                  </div>
-                )}
+              {fulfillmentMethod === 'delivery' && (
+                <div className="mt-2 space-y-1">
+                  <button
+                    type="button"
+                    onClick={captureCustomerLocation}
+                    disabled={locationLoading}
+                    className="w-full text-xs px-2 py-2 rounded bg-gold-500 text-charcoal font-semibold disabled:opacity-60"
+                  >
+                    {locationLoading ? 'Checking location...' : 'Use My Current Location'}
+                  </button>
+                  <p className="text-[11px] text-brown-500 dark:text-white/55">
+                    {customerLocation
+                      ? (deliveryMode === 'foot'
+                          ? `Distance: ${formatDistanceKm(footDeliveryEligibility.distanceKm)} (${footDeliveryEligibility.eligible ? 'eligible' : 'outside zone'})`
+                          : `Location captured (${formatDistanceKm(footDeliveryEligibility.distanceKm)} from CBD)`)
+                      : 'Location required for delivery. Tap to share your current location.'}
+                  </p>
+                </div>
+              )}
               </div>
             </div>
 
@@ -582,7 +590,7 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
                 
                 <div className='flex gap-4 justify-between ml-1 dark:text-white/85'>
                   <p>Delivery Charge</p>
-                  <p className='flex items-center gap-2'>Free</p>
+                  <p className='flex items-center gap-2'>{DisplayPriceInShillings(deliveryCharge)}</p>
                 </div>
               </div>
             </div>
@@ -686,6 +694,7 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
                   fulfillment_type={fulfillmentMethod}
                   pickup_location={pickupLocation}
                   pickup_instructions={pickupInstructions}
+                  deliveryCharge={deliveryCharge}
                   onSuccess={handleJengaPaymentSuccess}
                   onError={handleJengaPaymentError}
                 />
@@ -773,62 +782,65 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
           </div>
 
           <div className='bg-white dark:bg-dm-card p-4 rounded-card border border-brown-100 dark:border-dm-border mb-4 transition-colors duration-200'>
-            <p className='text-sm font-semibold text-charcoal dark:text-white mb-3'>Delivery Type</p>
+          <p className='text-sm font-semibold text-charcoal dark:text-white mb-3'>Delivery Type</p>
 
-            <div className='grid sm:grid-cols-2 gap-3'>
-              <label className={`cursor-pointer rounded-card border-2 p-3 transition-all ${
-                deliveryMode === 'standard'
-                  ? 'border-plum-600 bg-plum-50 dark:border-plum-400 dark:bg-plum-900/20'
-                  : 'border-brown-100 dark:border-dm-border'
-              }`}>
-                <input
-                  type='radio'
-                  name='delivery_mode'
-                  value='standard'
-                  checked={deliveryMode === 'standard'}
-                  onChange={() => setDeliveryMode('standard')}
-                  className='hidden'
-                />
-                <p className='font-semibold text-charcoal dark:text-white'>Standard Delivery</p>
-                <p className='text-xs text-brown-500 dark:text-white/50 mt-1'>Regular rider delivery across Nairobi.</p>
-              </label>
+          <div className='grid sm:grid-cols-2 gap-3'>
+            <label className={`cursor-pointer rounded-card border-2 p-3 transition-all ${
+              deliveryMode === 'standard'
+                ? 'border-plum-600 bg-plum-50 dark:border-plum-400 dark:bg-plum-900/20'
+                : 'border-brown-100 dark:border-dm-border'
+            }`}>
+              <input
+                type='radio'
+                name='delivery_mode'
+                value='standard'
+                checked={deliveryMode === 'standard'}
+                onChange={() => setDeliveryMode('standard')}
+                className='hidden'
+              />
+              <p className='font-semibold text-charcoal dark:text-white'>Standard Delivery</p>
+              <p className='text-xs text-brown-500 dark:text-white/50 mt-1'>Available within Nairobi CBD ({NAIROBI_CBD_RADIUS_KM}km radius).</p>
+            </label>
 
-              <label className={`cursor-pointer rounded-card border-2 p-3 transition-all ${
-                deliveryMode === 'foot'
-                  ? 'border-plum-600 bg-plum-50 dark:border-plum-400 dark:bg-plum-900/20'
-                  : 'border-brown-100 dark:border-dm-border'
-              }`}>
-                <input
-                  type='radio'
-                  name='delivery_mode'
-                  value='foot'
-                  checked={deliveryMode === 'foot'}
-                  onChange={() => setDeliveryMode('foot')}
-                  className='hidden'
-                />
-                <p className='font-semibold text-charcoal dark:text-white'>Delivery by Foot</p>
-                <p className='text-xs text-brown-500 dark:text-white/50 mt-1'>Only within Nairobi CBD ({NAIROBI_CBD_RADIUS_KM}km radius).</p>
-              </label>
+            <label className={`cursor-pointer rounded-card border-2 p-3 transition-all ${
+              deliveryMode === 'foot'
+                ? 'border-plum-600 bg-plum-50 dark:border-plum-400 dark:bg-plum-900/20'
+                : 'border-brown-100 dark:border-dm-border'
+            }`}>
+              <input
+                type='radio'
+                name='delivery_mode'
+                value='foot'
+                checked={deliveryMode === 'foot'}
+                onChange={() => setDeliveryMode('foot')}
+                className='hidden'
+              />
+              <p className='font-semibold text-charcoal dark:text-white'>Delivery by Foot</p>
+              <p className='text-xs text-brown-500 dark:text-white/50 mt-1'>Only within Nairobi CBD ({NAIROBI_CBD_RADIUS_KM}km radius).</p>
+            </label>
+          </div>
+
+          {/* Location capture required for every delivery order */}
+          {fulfillmentMethod === 'delivery' && (
+            <div className='mt-3 space-y-2'>
+              <button
+                type='button'
+                onClick={captureCustomerLocation}
+                className='px-3 py-2 rounded-pill text-sm font-semibold bg-plum-700 text-white hover:bg-plum-600 transition-colors disabled:opacity-60 disabled:cursor-not-allowed'
+                disabled={locationLoading}
+              >
+                {locationLoading ? 'Checking location...' : 'Use My Current Location'}
+              </button>
+
+              <p className='text-xs text-brown-500 dark:text-white/50'>
+                {customerLocation
+                  ? (deliveryMode === 'foot'
+                      ? `Distance to CBD center: ${formatDistanceKm(footDeliveryEligibility.distanceKm)} (${footDeliveryEligibility.eligible ? 'eligible' : 'outside allowed zone'})`
+                      : `Location captured (${formatDistanceKm(footDeliveryEligibility.distanceKm)} from CBD).`)
+                  : 'Location required for delivery. Tap to share your current location.'}
+              </p>
             </div>
-
-            {deliveryMode === 'foot' && (
-              <div className='mt-3 space-y-2'>
-                <button
-                  type='button'
-                  onClick={captureCustomerLocation}
-                  className='px-3 py-2 rounded-pill text-sm font-semibold bg-plum-700 text-white hover:bg-plum-600 transition-colors disabled:opacity-60 disabled:cursor-not-allowed'
-                  disabled={locationLoading}
-                >
-                  {locationLoading ? 'Checking location...' : 'Use My Current Location'}
-                </button>
-
-                <p className='text-xs text-brown-500 dark:text-white/50'>
-                  {customerLocation
-                    ? `Distance to CBD center: ${formatDistanceKm(footDeliveryEligibility.distanceKm)} (${footDeliveryEligibility.eligible ? 'eligible' : 'outside allowed zone'})`
-                    : 'Location required to confirm CBD eligibility for foot delivery.'}
-                </p>
-              </div>
-            )}
+          )}
           </div>
         </>
       );
@@ -997,7 +1009,7 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
             
             <div className='flex gap-4 justify-between ml-1 dark:text-white/85'>
               <p>Delivery Charge</p>
-              <p className='flex items-center gap-2'>Free</p>
+              <p className='flex items-center gap-2'>{DisplayPriceInShillings(deliveryCharge)}</p>
             </div>
 
             {usePoints && (
@@ -1094,9 +1106,10 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
                 fulfillment_type={fulfillmentMethod}
                 pickup_location={pickupLocation}
                 pickup_instructions={pickupInstructions}
+                deliveryCharge={deliveryCharge}
                 onSuccess={handleJengaPaymentSuccess}
                 onError={handleJengaPaymentError}
-              />
+                />
             )}
 
             {/* Guest Checkout CTA — only show for unauthenticated users */}

@@ -14,6 +14,11 @@ import CartProductModel from '../models/cartproduct.model.js';
 import UserModel from '../models/user.model.js';
 import NotificationModel from '../models/notification.model.js';
 import { normalizeKenyanPhone, isValidAmount, amountsMatch } from '../utils/jengaValidation.js';
+import {
+  DEFAULT_DELIVERY_CHARGE,
+  extractCoordinatesFromPayload,
+  getCbdFootDeliveryStatus,
+} from '../utils/cbdDelivery.js';
 
 // buildValidatedOrderPricing / pricewithDiscount live in order.controller.js but
 // aren't exported there — re-derive the pieces this controller needs directly
@@ -96,7 +101,10 @@ export const initiateJengaPayment = async (request, response) => {
       pickup_location,
       pickup_instructions,
       phoneNumber,
+      deliveryCharge: requestedDeliveryCharge,
     } = request.body;
+
+    const customerLocation = extractCoordinatesFromPayload(request.body);
 
     const normalizedPhone = normalizeKenyanPhone(phoneNumber);
     if (!normalizedPhone) {
@@ -114,8 +122,21 @@ export const initiateJengaPayment = async (request, response) => {
       return response.status(400).json({ message: 'Pickup location is required for pickup orders', error: true, success: false });
     }
 
+    if (fulfillment_type === 'delivery') {
+      const cbdStatus = getCbdFootDeliveryStatus(customerLocation);
+      if (!cbdStatus.allowed) {
+        const message = cbdStatus.reason === 'outside_cbd'
+          ? `Delivery is only available within Nairobi CBD (${cbdStatus.radiusKm}km radius). Your selected location is ${Number(cbdStatus.distanceKm || 0).toFixed(2)}km away.`
+          : 'Please enable location and pin your delivery point within Nairobi CBD.';
+        return response.status(400).json({ message, error: true, success: false, code: 'DELIVERY_OUTSIDE_CBD' });
+      }
+    }
+
     const { normalizedItems, subTotalAmt } = await priceItems(list_items);
-    const totalAmt = subTotalAmt;
+    const deliveryCharge = fulfillment_type === 'delivery'
+      ? Number(requestedDeliveryCharge || DEFAULT_DELIVERY_CHARGE)
+      : 0;
+    const totalAmt = roundMoney(subTotalAmt + deliveryCharge);
 
     if (!isValidAmount(totalAmt)) {
       return response.status(400).json({ message: 'Order amount is invalid', error: true, success: false });
@@ -138,6 +159,7 @@ export const initiateJengaPayment = async (request, response) => {
       pickup_location: pickup_location || '',
       pickup_instructions: pickup_instructions || '',
       subTotalAmt,
+      deliveryCharge,
       totalAmt,
     }));
 

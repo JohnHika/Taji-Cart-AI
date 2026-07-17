@@ -5,6 +5,8 @@ const CBD_CENTER = {
 
 const FOOT_DELIVERY_CBD_RADIUS_KM = Number(process.env.FOOT_DELIVERY_CBD_RADIUS_KM || 3);
 
+export const DEFAULT_DELIVERY_CHARGE = Number(process.env.DEFAULT_DELIVERY_CHARGE || 100); // KES
+
 const normalizeCoordinate = (value) => {
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : null;

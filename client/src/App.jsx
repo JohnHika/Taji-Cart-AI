@@ -17,7 +17,7 @@ import { setAllCategory, setAllSubCategory, setLoadingCategory, setLoyaltyDetail
 import { setUserDetails } from './store/userSlice';
 import { fetchWishlist } from './store/wishlistSlice';
 import Axios from './utils/Axios';
-import { getStoredAccessToken } from './utils/authStorage';
+import { clearAuthStorage, getStoredAccessToken } from './utils/authStorage';
 import fetchUserDetails from './utils/fetchUserDetails';
 
 // Error fallback component
@@ -178,10 +178,7 @@ function App() {
         }
       } catch (error) {
         console.error("Session hydration error:", error);
-        sessionStorage.removeItem('accesstoken');
-        sessionStorage.removeItem('refreshToken');
-        localStorage.removeItem('accesstoken');
-        localStorage.removeItem('refreshToken');
+        clearAuthStorage();
       }
     };
 

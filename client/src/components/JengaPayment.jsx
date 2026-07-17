@@ -20,6 +20,7 @@ const JengaPayment = ({
   fulfillment_type = 'delivery',
   pickup_location = '',
   pickup_instructions = '',
+  deliveryCharge = 0,
 }) => {
   const [phoneNumber, setPhoneNumber] = useState('');
   const [stage, setStage] = useState('idle'); // idle | initiating | pending | done
@@ -112,6 +113,7 @@ const JengaPayment = ({
           fulfillment_type,
           pickup_location,
           pickup_instructions,
+          deliveryCharge,
         },
         requestLockKey: `payment:jenga:${phoneNumber}:${totalAmount}:${addressId || pickup_location || 'pickup'}`,
       });

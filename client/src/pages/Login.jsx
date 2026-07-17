@@ -13,11 +13,13 @@ import AxiosToastError from '../utils/AxiosToastError';
 import fetchUserDetails from '../utils/fetchUserDetails';
 import { getPostLoginPath } from '../utils/postLoginRedirect';
 import useGuestCartMerge from '../hooks/useGuestCartMerge';
+import { saveTokens } from '../utils/authStorage';
 
 const Login = () => {
     const [data, setData] = useState({ email: "", password: "" });
     const [showPassword, setShowPassword] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
+    const [rememberMe, setRememberMe] = useState(false);
     const submitLockRef = useRef(false);
     const navigate = useNavigate();
     const dispatch = useDispatch();
@@ -49,11 +51,11 @@ const Login = () => {
                 return;
             }
             if (response.data.success) {
-                sessionStorage.setItem('accesstoken', response.data.data.accesstoken);
-                sessionStorage.setItem('refreshToken', response.data.data.refreshToken);
-                // Also persist to localStorage so tokens survive mobile tab kills
-                localStorage.setItem('accesstoken', response.data.data.accesstoken);
-                localStorage.setItem('refreshToken', response.data.data.refreshToken);
+                saveTokens({
+                    accessToken: response.data.data.accesstoken,
+                    refreshToken: response.data.data.refreshToken,
+                    rememberMe,
+                });
                 if (window.setupRefreshTimer) window.setupRefreshTimer();
                 const userDetails = await fetchUserDetails();
                 const nextUser = {
@@ -169,6 +171,19 @@ const Login = () => {
                                     {showPassword ? <FaRegEye size={14} /> : <FaRegEyeSlash size={14} />}
                                 </button>
                             </div>
+                        </div>
+
+                        {/* Remember me */}
+                        <div className="flex items-center justify-between">
+                            <label className="flex items-center gap-2 text-sm text-charcoal dark:text-white/80 cursor-pointer">
+                                <input
+                                    type="checkbox"
+                                    checked={rememberMe}
+                                    onChange={(e) => setRememberMe(e.target.checked)}
+                                    className="accent-plum-600 w-4 h-4"
+                                />
+                                Keep me signed in
+                            </label>
                         </div>
 
                         {/* Submit */}
