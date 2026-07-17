@@ -5,7 +5,31 @@ import toast from 'react-hot-toast';
 import { searchAddress, reverseGeocode } from '../map/search/fuzzySearch';
 
 const NAIROBI = { lat: -1.286389, lng: 36.817223 };
-const MAP_STYLE = 'https://tiles.openfreemap.org/styles/bright'; // Switched to bright for better visuals
+const MAP_STYLE = {
+  version: 8,
+  sources: {
+    osm: {
+      type: 'raster',
+      tiles: [
+        'https://a.tile.openstreetmap.org/{z}/{x}/{y}.png',
+        'https://b.tile.openstreetmap.org/{z}/{x}/{y}.png',
+        'https://c.tile.openstreetmap.org/{z}/{x}/{y}.png',
+      ],
+      tileSize: 256,
+      attribution: '&copy; OpenStreetMap contributors',
+      maxzoom: 19,
+    },
+  },
+  layers: [
+    {
+      id: 'osm',
+      type: 'raster',
+      source: 'osm',
+      minzoom: 0,
+      maxzoom: 22,
+    },
+  ],
+};
 const BRAND = '#6B0F1A';
 
 // Local storage key for recent searches
