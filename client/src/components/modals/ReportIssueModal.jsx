@@ -181,6 +181,11 @@ const ReportIssueModal = ({ isOpen, onClose }) => {
                 disabled={submitting}
                 className="w-full rounded-xl border border-brown-200 dark:border-dm-border dark:bg-dm-card-2 dark:text-white px-3.5 py-2.5 text-sm transition-shadow focus:outline-none focus:ring-2 focus:ring-plum-500/40 focus:border-plum-400"
               />
+              {title.length > 0 && !titleValid && (
+                <p className="mt-1 text-xs text-plum-600 dark:text-plum-400">
+                  At least 3 characters ({title.trim().length}/3)
+                </p>
+              )}
             </div>
 
             <div className="mb-4">
@@ -197,6 +202,11 @@ const ReportIssueModal = ({ isOpen, onClose }) => {
                 disabled={submitting}
                 className="w-full rounded-xl border border-brown-200 dark:border-dm-border dark:bg-dm-card-2 dark:text-white px-3.5 py-2.5 text-sm transition-shadow focus:outline-none focus:ring-2 focus:ring-plum-500/40 focus:border-plum-400 resize-y"
               />
+              {description.length > 0 && !descriptionValid && (
+                <p className="mt-1 text-xs text-plum-600 dark:text-plum-400">
+                  At least 10 characters ({description.trim().length}/10)
+                </p>
+              )}
             </div>
 
             <div className="mb-6">
