@@ -16,6 +16,11 @@ import AxiosToastError from '../../utils/AxiosToastError';
 
 const MAX_ATTACHMENT_BYTES = 25 * 1024 * 1024;
 const ACCEPTED_TYPES = ['image/png', 'image/jpeg', 'image/gif', 'image/webp', 'video/mp4', 'video/webm', 'video/quicktime'];
+// The backend's ticketUrl points straight at Huly's own tracker UI, which
+// requires a real Huly workspace login -- the admin submitting this form
+// doesn't have one. The reporter portal is the no-login view built for
+// exactly this: sign in with the same email used to submit the ticket.
+const SUPPORT_PORTAL_URL = 'https://support.arche-axon.xyz/portal';
 
 function formatBytes(bytes) {
   if (bytes < 1024) return `${bytes} B`;
@@ -133,9 +138,12 @@ const ReportIssueModal = ({ isOpen, onClose }) => {
               <FaCheckCircle className="text-green-500" size={28} />
             </div>
             <h2 className="text-xl font-semibold mb-2 dark:text-white">Ticket submitted</h2>
-            <p className="mb-6 text-sm text-brown-500 dark:text-white/55">
+            <p className="mb-2 text-sm text-brown-500 dark:text-white/55">
               Ticket <span className="font-mono font-semibold text-plum-700 dark:text-plum-300">{ticket.ticketRef}</span> was created.
               The Nawiri Hair team will follow up.
+            </p>
+            <p className="mb-6 text-xs text-brown-400 dark:text-white/40">
+              Track it anytime at the support portal &mdash; sign in with this account&apos;s email, no separate login needed.
             </p>
             <div className="flex justify-center gap-3">
               <button
@@ -146,12 +154,12 @@ const ReportIssueModal = ({ isOpen, onClose }) => {
                 Close
               </button>
               <a
-                href={ticket.ticketUrl}
+                href={SUPPORT_PORTAL_URL}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="px-4 py-2.5 text-white rounded-xl bg-plum-700 hover:bg-plum-600 shadow-sm shadow-plum-700/30 inline-flex items-center gap-2 text-sm font-medium transition-colors"
               >
-                View ticket <FaExternalLinkAlt size={11} />
+                Track ticket <FaExternalLinkAlt size={11} />
               </a>
             </div>
           </div>
