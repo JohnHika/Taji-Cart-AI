@@ -32,7 +32,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname  = path.dirname(__filename);
 const IMAGES_DIR = path.join(__dirname, 'images');
 const SHOULD_SEED_SAMPLE_PRODUCTS = process.env.SEED_SAMPLE_PRODUCTS === 'true';
-const PLACEHOLDER_IMAGE_URL = 'https://res.cloudinary.com/demo/image/upload/v1/samples/ecommerce/leather-bag-gray';
+const PLACEHOLDER_IMAGE_URL = 'https://nawirihairke.com/images/product-photo-pending.svg';
 const CLOUDINARY_UPLOAD_TIMEOUT_MS = Number(process.env.CLOUDINARY_UPLOAD_TIMEOUT_MS || 20000);
 
 // ── Cloudinary ──────────────────────────────────────────────────────────────

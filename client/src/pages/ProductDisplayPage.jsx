@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react'
+import { Helmet } from 'react-helmet-async'
 import { FaAngleLeft, FaAngleRight, FaStar, FaShieldAlt, FaTruck, FaTags, FaRuler } from "react-icons/fa"
-import { FiHeart } from 'react-icons/fi'
+import { FiShare2 } from 'react-icons/fi'
 import { useSelector } from 'react-redux'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { toast } from 'react-toastify'
@@ -10,11 +11,13 @@ import image3 from '../assets/Wide_Assortment.png'
 import SummaryApi from '../common/SummaryApi'
 import AddToCartButton from '../components/AddToCartButton'
 import StarRating from '../components/StarRating'
+import WishlistButton from '../components/WishlistButton'
 import Axios from '../utils/Axios'
 import AxiosToastError from '../utils/AxiosToastError'
 import { DisplayPriceInShillings } from '../utils/DisplayPriceInShillings'
 import { pricewithDiscount } from '../utils/PriceWithDiscount'
 import { valideURLConvert } from '../utils/valideURLConvert'
+import WatermarkedImage from '../components/WatermarkedImage'
 
 const TABS = ['Description', 'Details', 'Reviews'];
 
@@ -71,7 +74,6 @@ const ProductDisplayPage = () => {
   const userIsAdmin = user?.role === 'admin';
   // Works for email/password AND Google OAuth — either _id or email indicates a logged-in user
   const isLoggedIn = !!(user?._id || user?.email);
-  const [wishlisted, setWishlisted] = useState(false);
 
   const [ratingData, setRatingData] = useState([]);
   const [userRating, setUserRating] = useState(0);
@@ -107,14 +109,25 @@ const ProductDisplayPage = () => {
     }
   };
 
-  const handleWishlist = () => {
-    if (!isLoggedIn) {
-      toast.info('Please sign in to save to wishlist');
-      navigate('/login');
+  const handleShare = async () => {
+    const shareUrl = `https://nawirihairke.com/share/product/${productId}`;
+    const shareText = `${data.name} — Nawiri Hair`;
+
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: shareText, url: shareUrl });
+      } catch (err) {
+        // User cancelled the native share sheet — no error toast needed
+      }
       return;
     }
-    setWishlisted(prev => !prev);
-    toast.success(wishlisted ? 'Removed from wishlist' : 'Added to wishlist ❤️');
+
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      toast.success('Product link copied!');
+    } catch (err) {
+      toast.info(shareUrl);
+    }
   };
 
   const fetchProductDetails = async () => {
@@ -219,8 +232,62 @@ const ProductDisplayPage = () => {
   const hasDiscount = hasValidPrice && data.discount > 0;
   const canPurchase = data.stock > 0 && hasValidPrice;
 
+  const pageTitle = data.name
+    ? `${data.name} — Nawiri Hair`
+    : 'Nawiri Hair — Premium Hair Products';
+  const pageDesc = data.description
+    ? String(data.description).replace(/<[^>]+>/g, '').slice(0, 155)
+    : `Buy ${data.name || 'premium hair products'} at Nawiri Hair. Fast delivery across Kenya.`;
+  const pageImage = data.image?.[0] || 'https://nawirihairke.com/images/nawiri_logo.jpeg';
+  const pageUrl = `https://nawirihairke.com/product/${params.productId}`;
+  const jsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'Product',
+    name: data.name,
+    image: data.image,
+    description: pageDesc,
+    sku: data.sku || undefined,
+    brand: { '@type': 'Brand', name: 'Nawiri Hair' },
+    ...(hasValidPrice && {
+      offers: {
+        '@type': 'Offer',
+        url: pageUrl,
+        priceCurrency: 'KES',
+        price: discountedPrice ?? data.price,
+        availability: data.stock > 0
+          ? 'https://schema.org/InStock'
+          : 'https://schema.org/OutOfStock',
+        seller: { '@type': 'Organization', name: 'Nawiri Hair' },
+      },
+    }),
+    ...(averageRating > 0 && ratingCount > 0 && {
+      aggregateRating: {
+        '@type': 'AggregateRating',
+        ratingValue: averageRating.toFixed(1),
+        reviewCount: ratingCount,
+        bestRating: 5,
+        worstRating: 1,
+      },
+    }),
+  };
+
   return (
     <div className="bg-ivory dark:bg-dm-surface min-h-screen">
+      <Helmet>
+        <title>{pageTitle}</title>
+        <meta name="description" content={pageDesc} />
+        <link rel="canonical" href={pageUrl} />
+        <meta property="og:type" content="product" />
+        <meta property="og:title" content={pageTitle} />
+        <meta property="og:description" content={pageDesc} />
+        <meta property="og:image" content={pageImage} />
+        <meta property="og:url" content={pageUrl} />
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content={pageTitle} />
+        <meta name="twitter:description" content={pageDesc} />
+        <meta name="twitter:image" content={pageImage} />
+        <script type="application/ld+json">{JSON.stringify(jsonLd)}</script>
+      </Helmet>
       <div className="max-w-7xl mx-auto px-3 sm:px-5 lg:px-8 py-6 sm:py-8">
 
         {/* Breadcrumb */}
@@ -245,14 +312,14 @@ const ProductDisplayPage = () => {
           <div className="flex flex-col gap-3">
             {/* Main image */}
             <div className="relative bg-white dark:bg-dm-card rounded-card border border-brown-100 dark:border-dm-border shadow-card overflow-hidden">
-              <div className="aspect-square">
-                <img
-                  src={data.image[image]}
-                  alt={data.name}
-                  className="w-full h-full object-contain p-4 transition-opacity duration-300"
-                  onError={(e) => { e.target.src = 'https://via.placeholder.com/400?text=No+Image'; }}
-                />
-              </div>
+              <WatermarkedImage
+                src={data.image[image]}
+                alt={data.name}
+                fallback="https://via.placeholder.com/400?text=No+Image"
+                className="aspect-square"
+                imgClassName="w-full h-full object-contain p-4 transition-opacity duration-300"
+                watermarkClassName="w-[18%] max-w-[80px] opacity-70 bottom-3 right-3"
+              />
               {hasDiscount && (
                 <div className="absolute top-3 left-3 bg-gold-500 text-charcoal text-xs font-bold font-price px-2.5 py-1 rounded-pill shadow-sm">
                   {data.discount}% OFF
@@ -289,7 +356,14 @@ const ProductDisplayPage = () => {
                       onClick={() => setImage(i)}
                       className={`flex-shrink-0 w-16 h-16 rounded-lg border-2 overflow-hidden transition-all duration-200 ${i === image ? 'border-plum-700 shadow-plum' : 'border-brown-100 dark:border-dm-border hover:border-plum-300'}`}
                     >
-                      <img src={img} alt={`thumb ${i + 1}`} className="w-full h-full object-contain" onError={(e) => { e.target.src = 'https://via.placeholder.com/100'; }} />
+                      <WatermarkedImage
+                        src={img}
+                        alt={`thumb ${i + 1}`}
+                        fallback="https://via.placeholder.com/100"
+                        className="h-full w-full"
+                        imgClassName="w-full h-full object-contain"
+                        watermarkClassName="w-1/3 max-w-[18px] opacity-70 bottom-0.5 right-0.5"
+                      />
                     </button>
                   ))}
                 </div>
@@ -379,23 +453,30 @@ const ProductDisplayPage = () => {
                   <div className="flex-1">
                     <AddToCartButton data={data} />
                   </div>
+                  <WishlistButton productId={productId} variant="pill" />
                   <button
-                    onClick={handleWishlist}
-                    className={`flex items-center justify-center gap-2 border rounded-pill py-2.5 px-5 text-sm font-semibold transition-colors flex-shrink-0 ${
-                      wishlisted
-                        ? 'border-blush-500 bg-blush-50 text-blush-500 dark:bg-blush-500/10 dark:border-blush-400 dark:text-blush-300'
-                        : 'border-plum-200 dark:border-plum-700 text-plum-700 dark:text-plum-200 hover:bg-plum-50 dark:hover:bg-plum-900/30'
-                    }`}
-                    aria-label={wishlisted ? 'Remove from wishlist' : 'Add to wishlist'}
+                    onClick={handleShare}
+                    className="flex items-center justify-center gap-2 border border-plum-200 dark:border-plum-700 text-plum-700 dark:text-plum-200 hover:bg-plum-50 dark:hover:bg-plum-900/30 rounded-pill py-2.5 px-5 text-sm font-semibold transition-colors flex-shrink-0"
+                    aria-label="Share this product"
                   >
-                    <FiHeart size={16} className={wishlisted ? 'fill-current' : ''} />
-                    {wishlisted ? 'Saved' : 'Wishlist'}
+                    <FiShare2 size={16} />
+                    Share
                   </button>
                 </>
               ) : (
-                <div className="w-full text-center py-3 bg-brown-100 dark:bg-dm-card-2 text-brown-400 dark:text-white/30 rounded-pill text-sm font-semibold">
-                  {data.stock > 0 ? 'Price update in progress' : 'Out of Stock'}
-                </div>
+                <>
+                  <div className="flex-1 text-center py-3 bg-brown-100 dark:bg-dm-card-2 text-brown-400 dark:text-white/30 rounded-pill text-sm font-semibold">
+                    {data.stock > 0 ? 'Price update in progress' : 'Out of Stock'}
+                  </div>
+                  <button
+                    onClick={handleShare}
+                    className="flex items-center justify-center gap-2 border border-plum-200 dark:border-plum-700 text-plum-700 dark:text-plum-200 hover:bg-plum-50 dark:hover:bg-plum-900/30 rounded-pill py-2.5 px-5 text-sm font-semibold transition-colors flex-shrink-0"
+                    aria-label="Share this product"
+                  >
+                    <FiShare2 size={16} />
+                    Share
+                  </button>
+                </>
               )}
             </div>
 

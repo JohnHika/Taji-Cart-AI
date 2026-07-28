@@ -4,6 +4,7 @@
  */
 
 import { useEffect, useRef, useCallback, useState } from 'react';
+import maplibregl from 'maplibre-gl';
 import { useRouting } from '../routing/useRouting';
 
 // Route colors by segment

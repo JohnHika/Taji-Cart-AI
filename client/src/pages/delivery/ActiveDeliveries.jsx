@@ -337,9 +337,16 @@ const ActiveDeliveries = () => {
                         Dispatched {formatDate(order.dispatchedAt || order.updatedAt || order.createdAt)}
                       </p>
                     </div>
-                    <span className="px-3 py-1 rounded-full text-xs font-medium bg-sky-100 text-sky-800 dark:bg-sky-800 dark:text-sky-200">
-                      Ready to claim
-                    </span>
+                    <div className="flex items-center gap-2">
+                      {order.deliveryMode === 'foot' && (
+                        <span className="px-3 py-1 rounded-full text-xs font-medium bg-gold-100 text-gold-800 dark:bg-gold-800 dark:text-gold-200">
+                          On foot (CBD)
+                        </span>
+                      )}
+                      <span className="px-3 py-1 rounded-full text-xs font-medium bg-sky-100 text-sky-800 dark:bg-sky-800 dark:text-sky-200">
+                        Ready to claim
+                      </span>
+                    </div>
                   </div>
                 </div>
 
@@ -426,16 +433,23 @@ const ActiveDeliveries = () => {
                       {formatDate(order.createdAt)}
                     </p>
                   </div>
-                  <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                    order.status === 'driver_assigned' ? 'bg-plum-100 text-plum-800 dark:bg-plum-800 dark:text-plum-200' :
-                    order.status === 'out_for_delivery' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-800 dark:text-yellow-200' :
-                    'bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-200'
-                  }`}>
-                    {getStatusLabel(order.status)}
-                  </span>
+                  <div className="flex items-center gap-2">
+                    {order.deliveryMode === 'foot' && (
+                      <span className="px-3 py-1 rounded-full text-xs font-medium bg-gold-100 text-gold-800 dark:bg-gold-800 dark:text-gold-200">
+                        On foot (CBD)
+                      </span>
+                    )}
+                    <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                      order.status === 'driver_assigned' ? 'bg-plum-100 text-plum-800 dark:bg-plum-800 dark:text-plum-200' :
+                      order.status === 'out_for_delivery' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-800 dark:text-yellow-200' :
+                      'bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-200'
+                    }`}>
+                      {getStatusLabel(order.status)}
+                    </span>
+                  </div>
                 </div>
               </div>
-              
+
               <div className="p-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                   <div>
@@ -443,8 +457,8 @@ const ActiveDeliveries = () => {
                     <div className="flex items-start">
                       <FaUser className="text-brown-400 dark:text-white/40 mt-1 mr-2" />
                       <div>
-                        <p className="text-charcoal dark:text-white font-medium">{order.customer.name}</p>
-                        <p className="text-sm text-brown-500 dark:text-white/40">{order.customer.phone}</p>
+                        <p className="text-charcoal dark:text-white font-medium">{order.customer?.name}</p>
+                        <p className="text-sm text-brown-500 dark:text-white/40">{order.customer?.phone}</p>
                       </div>
                     </div>
                   </div>
@@ -453,23 +467,23 @@ const ActiveDeliveries = () => {
                     <h4 className="text-sm font-medium text-brown-400 dark:text-white/40 mb-2">Delivery Address</h4>
                     <div className="flex items-start">
                       <FaMapMarkerAlt className="text-brown-400 mt-1 mr-2" />
-                      <p className="text-charcoal dark:text-white/70">{order.deliveryAddress}</p>
+                      <p className="text-charcoal dark:text-white/70">{order.deliveryAddress?.fullAddress || order.deliveryAddress?.street || order.deliveryAddress}</p>
                     </div>
                   </div>
                 </div>
-                
+
                 <div className="mt-4 flex flex-col gap-3 border-t pt-4 dark:border-dm-border sm:flex-row sm:items-center sm:justify-between">
                   <div className="font-medium">
                     <span className="text-brown-400 dark:text-white/40">Total: </span>
-                    <span className="text-charcoal dark:text-white">KSh {order.total.toFixed(2)}</span>
+                    <span className="text-charcoal dark:text-white">KSh {Number(order.total || 0).toFixed(2)}</span>
                   </div>
-                  
+
                   <div className="flex flex-col gap-2 sm:flex-row sm:space-x-3">
                     <a
                       href={
                         order.coordinates?.lat && order.coordinates?.lng
                           ? `https://maps.google.com/?q=${order.coordinates.lat},${order.coordinates.lng}`
-                          : `https://maps.google.com/?q=${encodeURIComponent(order.deliveryAddress || '')}`
+                          : `https://maps.google.com/?q=${encodeURIComponent(order.deliveryAddress?.fullAddress || order.deliveryAddress?.street || '')}`
                       }
                       target="_blank"
                       rel="noopener noreferrer"

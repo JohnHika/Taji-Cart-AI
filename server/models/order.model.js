@@ -21,6 +21,10 @@ const orderSchema = new mongoose.Schema({
         name: String,
         image: Array,
     },
+    quantity: {
+        type: Number,
+        default: 1
+    },
     paymentId: {
         type: String,
         default: ""
@@ -41,6 +45,10 @@ const orderSchema = new mongoose.Schema({
         type: Number,
         default: 0
     },
+    deliveryCharge: {
+        type: Number,
+        default: 0
+    },
     invoice_receipt: {
         type: String,
         default: ""
@@ -50,9 +58,13 @@ const orderSchema = new mongoose.Schema({
         enum: ['delivery', 'pickup'],
         default: 'delivery'
     },
+    deliveryInstructions: {
+        type: String,
+        default: ''
+    },
     pickup_location: {
         type: String,
-        default: ""
+        default: ''
     },
     pickup_instructions: {
         type: String,
@@ -71,6 +83,10 @@ const orderSchema = new mongoose.Schema({
         type: String,
         enum: ['pending', 'processing', 'shipped', 'dispatched', 'driver_assigned', 'out_for_delivery', 'nearby', 'delivered', 'ready_for_pickup', 'picked_up', 'cancelled'],
         default: 'pending'
+    },
+    // Persisted lifecycle timestamp used by delivery history, reporting, and payouts.
+    deliveredAt: {
+        type: Date
     },
     statusHistory: {
         type: [{
@@ -110,6 +126,13 @@ const orderSchema = new mongoose.Schema({
         dispatchedAt: { type: Date },
         dispatchedBy: { type: mongoose.Schema.ObjectId, ref: 'User' },
         dispatchNotes: { type: String }
+    },
+    // Rider's rating of the customer for this delivery (one-shot, set by the assigned driver after delivery)
+    customerRating: {
+        rating: { type: Number, min: 1, max: 5 },
+        comment: { type: String, trim: true },
+        ratedAt: { type: Date },
+        ratedBy: { type: mongoose.Schema.ObjectId, ref: 'DeliveryPersonnel' }
     },
     pickupVerificationCode: {
         type: String,

@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { Helmet } from 'react-helmet-async';
 import { useDispatch, useSelector } from 'react-redux';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import SummaryApi from '../common/SummaryApi';
@@ -220,10 +221,36 @@ const ProductListPage = () => {
     );
   }
 
+  const catTitle = currentSubcategoryLabel
+    ? `${currentSubcategoryLabel} — ${currentCategoryLabel} | Nawiri Hair`
+    : `${currentCategoryLabel} | Nawiri Hair`;
+  const catDesc = currentSubcategoryLabel
+    ? `Shop ${currentSubcategoryLabel} styles in ${currentCategoryLabel} at Nawiri Hair. Fast delivery across Kenya.`
+    : `Browse our full range of ${currentCategoryLabel} at Nawiri Hair. Premium quality, fast delivery across Kenya.`;
+
   return (
     <section className="min-h-screen w-full bg-ivory dark:bg-dm-surface">
+      <Helmet>
+        <title>{catTitle}</title>
+        <meta name="description" content={catDesc} />
+        <link rel="canonical" href={`https://nawirihairke.com${location.pathname}`} />
+        <meta property="og:title" content={catTitle} />
+        <meta property="og:description" content={catDesc} />
+        <meta property="og:type" content="website" />
+        <meta property="og:image" content="https://nawirihairke.com/images/nawiri_logo.jpeg" />
+      </Helmet>
       <div className="mx-auto max-w-7xl p-2 sm:p-4">
         <div className="mb-6 sm:mb-8">
+          <button
+            type="button"
+            onClick={() => navigate(-1)}
+            className="mb-3 inline-flex items-center gap-1.5 text-sm font-semibold text-brown-600 transition-colors hover:text-plum-700 dark:text-white/60 dark:hover:text-white"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+            </svg>
+            Back
+          </button>
           <h1 className="mb-2 text-3xl font-bold text-charcoal dark:text-white sm:text-4xl">
             {currentCategoryLabel}
           </h1>

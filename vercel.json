@@ -6,6 +6,25 @@
   "outputDirectory": "client/dist",
   "rewrites": [
     {
+      "source": "/sitemap.xml",
+      "destination": "https://taji-cart-api.onrender.com/sitemap.xml"
+    },
+    {
+      "source": "/share/(.*)",
+      "destination": "https://taji-cart-api.onrender.com/share/$1"
+    },
+    {
+      "source": "/product/(.*)",
+      "has": [
+        {
+          "type": "header",
+          "key": "user-agent",
+          "value": ".*(WhatsApp|facebookexternalhit|Facebot|Twitterbot|LinkedInBot|TelegramBot|Slackbot|Discordbot|Googlebot|bingbot|Pinterest).*"
+        }
+      ],
+      "destination": "https://taji-cart-api.onrender.com/share/bot/product/$1"
+    },
+    {
       "source": "/api/(.*)",
       "has": [
         {

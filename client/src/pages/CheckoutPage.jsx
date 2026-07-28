@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
-import { FaCrown, FaStore } from 'react-icons/fa';
+import { FaCrown, FaStore, FaTrash } from 'react-icons/fa';
 import { FaXmark } from 'react-icons/fa6';
 import { useDispatch, useSelector } from 'react-redux';
 import { useLocation, useNavigate } from 'react-router-dom';
@@ -11,7 +11,9 @@ import ActiveRewards from '../components/ActiveRewards'; // Import the ActiveRew
 import AddAddress from '../components/AddAddress';
 import CheckoutRoyalCard from '../components/CheckoutRoyalCard'; // Premium Royal Card for Order Summary
 import CommunityCampaignProgress from '../components/CommunityCampaignProgress'; // Import the CommunityCampaignProgress component
+import DeliveryLocationModal from '../components/DeliveryLocationModal';
 import FulfillmentModal from '../components/FulfillmentModal';
+import JengaPayment from '../components/JengaPayment';
 import { useTheme } from '../context/ThemeContext';
 import useCriteriaGate from '../hooks/useCriteriaGate';
 import { useGlobalContext } from '../provider/GlobalProvider';
@@ -19,12 +21,12 @@ import { clearCartItems } from '../store/cartProduct';
 import Axios from '../utils/Axios';
 import AxiosToastError from '../utils/AxiosToastError';
 import { getStoredAccessToken } from '../utils/authStorage';
-import { formatDistanceKm, getFootDeliveryEligibility, NAIROBI_CBD_RADIUS_KM } from '../utils/cbdDelivery';
+import { DEFAULT_DELIVERY_CHARGE, formatDistanceKm, getFootDeliveryEligibility, isWithinCbdRadius, NAIROBI_CBD_RADIUS_KM } from '../utils/cbdDelivery';
 import { DisplayPriceInShillings } from '../utils/DisplayPriceInShillings';
 import { Link } from 'react-router-dom';
 
 const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) => {
-  const { notDiscountTotalPrice, totalPrice, totalQty, fetchCartItem, fetchOrder, royalCardData, royalDiscount } = useGlobalContext();
+  const { notDiscountTotalPrice, totalPrice, totalQty, fetchCartItem, fetchOrder, fetchAddress, royalCardData, royalDiscount } = useGlobalContext();
   const { darkMode } = useTheme();
   const location = useLocation();
   const [openAddress, setOpenAddress] = useState(false);
@@ -49,6 +51,8 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
   );
   const [deliveryMode, setDeliveryMode] = useState(location.state?.delivery_mode || 'standard');
   const [customerLocation, setCustomerLocation] = useState(location.state?.customerLocation || null);
+  const [deliveryInstructions, setDeliveryInstructions] = useState(location.state?.deliveryInstructions || '');
+  const [showLocationModal, setShowLocationModal] = useState(false);
   const [locationLoading, setLocationLoading] = useState(false);
   
   const addressList = useSelector(state => state.addresses.addressList);
@@ -74,10 +78,40 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
   // For delivery: need a selected address
   // For pickup: need a pickup location
   const isPaymentEnabled = 
-    (fulfillmentMethod === 'delivery' && selectAddress !== null && addressList[selectAddress] && addressList[selectAddress].status) ||
+    (fulfillmentMethod === 'delivery' 
+      && selectAddress !== null 
+      && addressList[selectAddress] 
+      && addressList[selectAddress].status
+      && customerLocation
+      && (deliveryMode !== 'foot' || footDeliveryEligibility.eligible)) ||
     (fulfillmentMethod === 'pickup' && pickupLocation);
+
+  // For foot delivery, only allow addresses whose saved coordinates are within Nairobi CBD.
+  // Standard delivery can use any active address.
+  const eligibleAddressIndexes = useMemo(() => {
+    if (deliveryMode !== 'foot') {
+      return addressList.map((_, i) => i).filter(i => addressList[i]?.status);
+    }
+    return addressList
+      .map((_, i) => i)
+      .filter(i => {
+        const addr = addressList[i];
+        return addr?.status && isWithinCbdRadius(addr.coordinates);
+      });
+  }, [addressList, deliveryMode]);
+
+  // If the currently selected address is not eligible for the chosen delivery mode, clear it.
+  useEffect(() => {
+    if (selectAddress !== null && !eligibleAddressIndexes.includes(selectAddress)) {
+      setSelectAddress(null);
+      setAddressError(true);
+    }
+  }, [eligibleAddressIndexes, selectAddress]);
   const checkoutLockRef = useRef(false);
   const [checkoutAction, setCheckoutAction] = useState('');
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState('cash'); // 'cash' | 'jenga'
+
+  const deliveryCharge = fulfillmentMethod === 'delivery' ? DEFAULT_DELIVERY_CHARGE : 0;
 
   useEffect(() => {
     // Clear address error when address is selected
@@ -112,8 +146,8 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
         if (response.data.success && response.data.data) {
           const points = response.data.data.points || 0;
           setAvailablePoints(points);
-          // Each point is worth KES 1
-          setPointsValue(Math.min(points, totalPrice));
+          // Each point is worth KES 1; cap at subtotal + delivery charge
+          setPointsValue(Math.min(points, totalPrice + deliveryCharge));
           console.log("Successfully fetched loyalty data:", response.data.data);
         }
       } catch (error) {
@@ -125,7 +159,7 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
     };
     
     fetchLoyaltyData();
-  }, [user, user._id, totalPrice]);
+  }, [user, user._id, totalPrice, deliveryCharge]);
 
   // Handle selecting community reward
   const handleSelectReward = (reward) => {
@@ -153,10 +187,10 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
     ? totalPrice * (1 - communityDiscount / 100)
     : totalPrice;
 
-  // Calculate final price after applying points and community discount
+  // Calculate final price after applying points, community discount and delivery charge
   const finalPrice = usePoints 
-    ? Math.max(0, priceAfterCommunityDiscount - pointsValue) 
-    : priceAfterCommunityDiscount;
+    ? Math.max(0, priceAfterCommunityDiscount + deliveryCharge - pointsValue) 
+    : priceAfterCommunityDiscount + deliveryCharge;
   const isCheckoutBusy = checkoutAction !== '';
   const footDeliveryEligibility = useMemo(
     () => getFootDeliveryEligibility(customerLocation),
@@ -199,22 +233,28 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
     if (fulfillmentMethod === 'delivery') {
       if (!isPaymentEnabled) {
         setAddressError(true);
-        toast.error('Please select a delivery address before proceeding');
+        toast.error('Please select a delivery address and share your location before proceeding');
         return false;
       }
 
-      if (deliveryMode === 'foot') {
-        if (!customerLocation) {
-          toast.error('Foot delivery requires your live location within Nairobi CBD.');
-          return false;
-        }
+      if (!customerLocation) {
+        toast.error('Delivery requires your live location within Nairobi CBD.');
+        setShowLocationModal(true);
+        return false;
+      }
 
-        if (!footDeliveryEligibility.eligible) {
-          toast.error(
-            `Foot delivery is only available within Nairobi CBD (${NAIROBI_CBD_RADIUS_KM}km radius).`
-          );
-          return false;
-        }
+      if (!deliveryInstructions.trim()) {
+        toast.error('Please enter exact delivery instructions so the rider can find you.');
+        setShowLocationModal(true);
+        return false;
+      }
+
+      if (deliveryMode === 'foot' && !footDeliveryEligibility.eligible) {
+        toast.error(
+          `Foot delivery is only available within Nairobi CBD (${NAIROBI_CBD_RADIUS_KM}km radius).`
+        );
+        setShowLocationModal(true);
+        return false;
       }
     } else if (fulfillmentMethod === 'pickup' && !pickupLocation) {
       toast.error('Please select a pickup location');
@@ -224,42 +264,7 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
   };
 
   const captureCustomerLocation = () => {
-    if (!navigator.geolocation) {
-      toast.error('Geolocation is not supported on this device/browser.');
-      return;
-    }
-
-    setLocationLoading(true);
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        const nextLocation = {
-          lat: Number(position.coords.latitude),
-          lng: Number(position.coords.longitude),
-        };
-
-        setCustomerLocation(nextLocation);
-        const eligibility = getFootDeliveryEligibility(nextLocation);
-
-        if (eligibility.eligible) {
-          toast.success('Great! You are within Nairobi CBD for foot delivery.');
-        } else {
-          toast.error(
-            `You are ${formatDistanceKm(eligibility.distanceKm)} from CBD center. Foot delivery is limited to ${eligibility.radiusKm}km.`
-          );
-        }
-
-        setLocationLoading(false);
-      },
-      () => {
-        setLocationLoading(false);
-        toast.error('Unable to access location. Please allow location permissions and try again.');
-      },
-      {
-        enableHighAccuracy: true,
-        timeout: 10000,
-        maximumAge: 0,
-      }
-    );
+    setShowLocationModal(true);
   };
 
   const handleCashOnDelivery = async() => {
@@ -274,6 +279,7 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
             list_items : cartItemsList,
             addressId : fulfillmentMethod === 'delivery' ? addressList[selectAddress]._id : null,
             subTotalAmt : totalPrice,
+            deliveryCharge: deliveryCharge,
             totalAmt : finalPrice,
             usePoints: usePoints,
             pointsUsed: usePoints ? pointsValue : 0,
@@ -282,6 +288,7 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
             fulfillment_type: fulfillmentMethod,
             delivery_mode: fulfillmentMethod === 'delivery' ? deliveryMode : 'standard',
             customerLocation,
+            deliveryInstructions,
             pickup_location: pickupLocation,
             pickup_instructions: pickupInstructions
           },
@@ -319,6 +326,28 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
     });
   }
 
+  const handleJengaPaymentSuccess = () => {
+    dispatch(clearCartItems());
+
+    if (fetchCartItem) {
+      fetchCartItem();
+    }
+
+    if (fetchOrder) {
+      fetchOrder();
+    }
+
+    if (isCutView && onClose) {
+      onClose();
+    }
+
+    navigate('/success', { state: { text: 'Order' } });
+  };
+
+  const handleJengaPaymentError = (message) => {
+    toast.error(message || 'Payment failed. Please try again.');
+  };
+
   // Handle fulfillment method selection
   const handleFulfillmentSelect = (data) => {
     setFulfillmentMethod(data.fulfillment_type);
@@ -350,7 +379,30 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
   };
 
   // Check if there are active addresses available
-  const hasActiveAddresses = addressList.some(address => address.status);
+  const hasActiveAddresses = useMemo(() => {
+    if (fulfillmentMethod === 'pickup') {
+      return addressList.some(address => address.status);
+    }
+    return eligibleAddressIndexes.length > 0;
+  }, [addressList, eligibleAddressIndexes, fulfillmentMethod]);
+
+  const handleDeleteAddress = async (addressId) => {
+    if (!addressId || !window.confirm('Delete this address permanently?')) return;
+    try {
+      const response = await Axios({
+        ...SummaryApi.disableAddress,
+        data: { _id: addressId },
+      });
+      if (response.data.success) {
+        toast.success('Address deleted');
+        if (fetchAddress) {
+          await fetchAddress();
+        }
+      }
+    } catch (error) {
+      AxiosToastError(error);
+    }
+  };
 
   // Render cut view or full page based on prop
   if (isCutView) {
@@ -386,14 +438,16 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
               )}
               {!isPaymentEnabled && hasActiveAddresses && !addressError && (
                 <div className="bg-plum-50 dark:bg-plum-900/30 border border-plum-200 dark:border-plum-700 text-plum-800 dark:text-plum-200 px-4 py-2 rounded-card mb-4 text-sm">
-                  Select an address to enable payment options.
+                  {deliveryMode === 'foot'
+                    ? `Foot delivery is only available for addresses within Nairobi CBD (${NAIROBI_CBD_RADIUS_KM}km radius).`
+                    : 'Select an address to enable payment options.'}
                 </div>
               )}
               <div className='bg-white dark:bg-dm-card p-2 grid gap-4 rounded shadow transition-colors duration-200'>
                 {hasActiveAddresses ? (
                   addressList.map((address, index) => {
-                    // Only render addresses with status = true
-                    if (!address.status) return null;
+                    // Only render addresses with status = true and eligible for the selected mode
+                    if (!eligibleAddressIndexes.includes(index)) return null;
                     
                     return (
                       <label 
@@ -423,13 +477,27 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
                             <p>{address.country} - {address.pincode}</p>
                             <p>{address.mobile}</p>
                           </div>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              handleDeleteAddress(address._id);
+                            }}
+                            className="ml-auto self-start text-red-600 hover:text-red-700 dark:text-red-400 p-1"
+                            title="Delete address"
+                          >
+                            <FaTrash size={14} />
+                          </button>
                         </div>
                       </label>
                     )
                   })
                 ) : (
                   <div className="p-4 text-center text-brown-400 dark:text-white/45">
-                    No delivery addresses found. Please add an address to continue.
+                    {deliveryMode === 'foot'
+                      ? `No addresses within Nairobi CBD (${NAIROBI_CBD_RADIUS_KM}km radius). Add a CBD address or switch to Standard Delivery.`
+                      : 'No delivery addresses found. Please add an address to continue.'}
                   </div>
                 )}
                 <div 
@@ -441,41 +509,43 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
               </div>
 
               <div className="mt-4 p-3 bg-white dark:bg-dm-card rounded shadow border border-brown-100 dark:border-dm-border">
-                <p className="text-sm font-semibold dark:text-white mb-2">Delivery Type</p>
-                <div className="grid grid-cols-2 gap-2 text-xs">
-                  <button
-                    type="button"
-                    onClick={() => setDeliveryMode('standard')}
-                    className={`px-2 py-2 rounded ${deliveryMode === 'standard' ? 'bg-plum-700 text-white' : 'bg-plum-100 dark:bg-plum-900/30 dark:text-white/80'}`}
-                  >
-                    Standard
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setDeliveryMode('foot')}
-                    className={`px-2 py-2 rounded ${deliveryMode === 'foot' ? 'bg-plum-700 text-white' : 'bg-plum-100 dark:bg-plum-900/30 dark:text-white/80'}`}
-                  >
-                    Foot (CBD)
-                  </button>
-                </div>
+              <p className="text-sm font-semibold dark:text-white mb-2">Delivery Type</p>
+              <div className="grid grid-cols-2 gap-2 text-xs">
+                <button
+                  type="button"
+                  onClick={() => { setDeliveryMode('standard'); }}
+                  className={`px-2 py-2 rounded ${deliveryMode === 'standard' ? 'bg-plum-700 text-white' : 'bg-plum-100 dark:bg-plum-900/30 dark:text-white/80'}`}
+                >
+                  Standard
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setDeliveryMode('foot'); }}
+                  className={`px-2 py-2 rounded ${deliveryMode === 'foot' ? 'bg-plum-700 text-white' : 'bg-plum-100 dark:bg-plum-900/30 dark:text-white/80'}`}
+                >
+                  Foot (CBD)
+                </button>
+              </div>
 
-                {deliveryMode === 'foot' && (
-                  <div className="mt-2 space-y-1">
-                    <button
-                      type="button"
-                      onClick={captureCustomerLocation}
-                      disabled={locationLoading}
-                      className="w-full text-xs px-2 py-2 rounded bg-gold-500 text-charcoal font-semibold disabled:opacity-60"
-                    >
-                      {locationLoading ? 'Checking location...' : 'Use My Current Location'}
-                    </button>
-                    <p className="text-[11px] text-brown-500 dark:text-white/55">
-                      {customerLocation
-                        ? `Distance: ${formatDistanceKm(footDeliveryEligibility.distanceKm)} (${footDeliveryEligibility.eligible ? 'eligible' : 'outside zone'})`
-                        : 'Location required for foot delivery in CBD.'}
-                    </p>
-                  </div>
-                )}
+              {fulfillmentMethod === 'delivery' && (
+                <div className="mt-2 space-y-1">
+                  <button
+                    type="button"
+                    onClick={captureCustomerLocation}
+                    disabled={locationLoading}
+                    className="w-full text-xs px-2 py-2 rounded bg-gold-500 text-charcoal font-semibold disabled:opacity-60"
+                  >
+                    {locationLoading ? 'Checking location...' : 'Use My Current Location'}
+                  </button>
+                  <p className="text-[11px] text-brown-500 dark:text-white/55">
+                    {customerLocation
+                      ? (deliveryMode === 'foot'
+                          ? `Distance: ${formatDistanceKm(footDeliveryEligibility.distanceKm)} (${deliveryMode === 'foot' ? (footDeliveryEligibility.eligible ? 'eligible' : 'outside zone') : 'standard delivery'})`
+                          : `Location captured (${formatDistanceKm(footDeliveryEligibility.distanceKm)} from CBD)`)
+                      : 'Location required for delivery. Tap to share your current location.'}
+                  </p>
+                </div>
+              )}
               </div>
             </div>
 
@@ -558,7 +628,7 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
                 
                 <div className='flex gap-4 justify-between ml-1 dark:text-white/85'>
                   <p>Delivery Charge</p>
-                  <p className='flex items-center gap-2'>Free</p>
+                  <p className='flex items-center gap-2'>{DisplayPriceInShillings(deliveryCharge)}</p>
                 </div>
               </div>
             </div>
@@ -611,19 +681,63 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
               </div>
             </div>
 
-            {/* Payment Methods - Cash Only for Customers */}
+            {/* Payment Methods */}
             <div className='space-y-4'>
-              <button 
-                className={`w-full py-2 px-4 border-2 font-semibold transition-colors duration-200 rounded ${
-                  isPaymentEnabled && !isCheckoutBusy
-                    ? 'border-plum-600 text-plum-700 hover:bg-plum-50 hover:text-plum-900 dark:border-plum-500 dark:text-plum-200 dark:hover:bg-plum-900/40 dark:hover:text-white' 
-                    : 'border-brown-200 text-brown-300 dark:border-dm-border dark:text-white/30 cursor-not-allowed'
-                }`}
-                onClick={handleCashOnDelivery}
-                disabled={!isPaymentEnabled || isCheckoutBusy}
-              >
-                {checkoutAction === 'cash' ? 'Placing order...' : `Cash on Delivery ${!isPaymentEnabled ? '(Select Address First)' : ''}`}
-              </button>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setSelectedPaymentMethod('cash')}
+                  className={`flex-1 py-2 px-3 rounded text-sm font-semibold border-2 transition-colors ${
+                    selectedPaymentMethod === 'cash'
+                      ? 'border-plum-600 text-plum-700 bg-plum-50 dark:border-plum-500 dark:text-plum-200 dark:bg-plum-900/20'
+                      : 'border-brown-200 text-brown-400 dark:border-dm-border dark:text-white/40'
+                  }`}
+                >
+                  Cash on Delivery
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSelectedPaymentMethod('jenga')}
+                  className={`flex-1 py-2 px-3 rounded text-sm font-semibold border-2 transition-colors ${
+                    selectedPaymentMethod === 'jenga'
+                      ? 'border-plum-600 text-plum-700 bg-plum-50 dark:border-plum-500 dark:text-plum-200 dark:bg-plum-900/20'
+                      : 'border-brown-200 text-brown-400 dark:border-dm-border dark:text-white/40'
+                  }`}
+                >
+                  M-Pesa
+                </button>
+              </div>
+
+              {selectedPaymentMethod === 'cash' && (
+                <button
+                  className={`w-full py-2 px-4 border-2 font-semibold transition-colors duration-200 rounded ${
+                    isPaymentEnabled && !isCheckoutBusy
+                      ? 'border-plum-600 text-plum-700 hover:bg-plum-50 hover:text-plum-900 dark:border-plum-500 dark:text-plum-200 dark:hover:bg-plum-900/40 dark:hover:text-white'
+                      : 'border-brown-200 text-brown-300 dark:border-dm-border dark:text-white/30 cursor-not-allowed'
+                  }`}
+                  onClick={handleCashOnDelivery}
+                  disabled={!isPaymentEnabled || isCheckoutBusy}
+                >
+                  {checkoutAction === 'cash' ? 'Placing order...' : `Cash on Delivery ${!isPaymentEnabled ? '(Select Address First)' : ''}`}
+                </button>
+              )}
+
+              {selectedPaymentMethod === 'jenga' && isPaymentEnabled && (
+                <JengaPayment
+                  cartItems={cartItemsList}
+                  totalAmount={finalPrice}
+                  addressId={fulfillmentMethod === 'delivery' ? addressList[selectAddress]?._id : null}
+                  communityRewardId={selectedReward ? selectedReward._id : null}
+                  communityDiscountAmount={selectedReward && selectedReward.type === 'discount' ? communityDiscount : 0}
+                  fulfillment_type={fulfillmentMethod}
+                  pickup_location={pickupLocation}
+                  pickup_instructions={pickupInstructions}
+                  deliveryCharge={deliveryCharge}
+                  deliveryInstructions={deliveryInstructions}
+                  onSuccess={handleJengaPaymentSuccess}
+                  onError={handleJengaPaymentError}
+                />
+              )}
             </div>
           </div>
           </div>
@@ -656,13 +770,15 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
           )}
           {!isPaymentEnabled && hasActiveAddresses && !addressError && (
             <div className="bg-plum-50 dark:bg-plum-900/20 border border-plum-200 dark:border-plum-700/40 text-plum-700 dark:text-plum-300 px-4 py-2 rounded-card mb-4 text-sm">
-              Select an address to enable payment options.
+              {deliveryMode === 'foot'
+                ? `Foot delivery is only available for addresses within Nairobi CBD (${NAIROBI_CBD_RADIUS_KM}km radius).`
+                : 'Select an address to enable payment options.'}
             </div>
           )}
           <div className='grid gap-3 mb-4'>
             {hasActiveAddresses ? (
               addressList.map((address, index) => {
-                if (!address.status) return null;
+                if (!eligibleAddressIndexes.includes(index)) return null;
                 return (
                   <label
                     key={`address-${address._id || index}`}
@@ -689,13 +805,27 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
                         <p className="text-brown-400 dark:text-white/50">{address.country} - {address.pincode}</p>
                         <p className="text-brown-400 dark:text-white/50 text-xs mt-0.5">{address.mobile}</p>
                       </div>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          handleDeleteAddress(address._id);
+                        }}
+                        className="ml-auto self-start text-red-600 hover:text-red-700 dark:text-red-400 p-1"
+                        title="Delete address"
+                      >
+                        <FaTrash size={16} />
+                      </button>
                     </div>
                   </label>
                 )
               })
             ) : (
               <div className="p-6 text-center text-brown-400 dark:text-white/40 text-sm bg-white dark:bg-dm-card rounded-card border border-brown-100 dark:border-dm-border">
-                No delivery addresses found. Please add an address to continue.
+                {deliveryMode === 'foot'
+                  ? `No addresses within Nairobi CBD (${NAIROBI_CBD_RADIUS_KM}km radius). Add a CBD address or switch to Standard Delivery.`
+                  : 'No delivery addresses found. Please add an address to continue.'}
               </div>
             )}
             <div
@@ -707,62 +837,65 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
           </div>
 
           <div className='bg-white dark:bg-dm-card p-4 rounded-card border border-brown-100 dark:border-dm-border mb-4 transition-colors duration-200'>
-            <p className='text-sm font-semibold text-charcoal dark:text-white mb-3'>Delivery Type</p>
+          <p className='text-sm font-semibold text-charcoal dark:text-white mb-3'>Delivery Type</p>
 
-            <div className='grid sm:grid-cols-2 gap-3'>
-              <label className={`cursor-pointer rounded-card border-2 p-3 transition-all ${
-                deliveryMode === 'standard'
-                  ? 'border-plum-600 bg-plum-50 dark:border-plum-400 dark:bg-plum-900/20'
-                  : 'border-brown-100 dark:border-dm-border'
-              }`}>
-                <input
-                  type='radio'
-                  name='delivery_mode'
-                  value='standard'
-                  checked={deliveryMode === 'standard'}
-                  onChange={() => setDeliveryMode('standard')}
-                  className='hidden'
-                />
-                <p className='font-semibold text-charcoal dark:text-white'>Standard Delivery</p>
-                <p className='text-xs text-brown-500 dark:text-white/50 mt-1'>Regular rider delivery across Nairobi.</p>
-              </label>
+          <div className='grid sm:grid-cols-2 gap-3'>
+            <label className={`cursor-pointer rounded-card border-2 p-3 transition-all ${
+              deliveryMode === 'standard'
+                ? 'border-plum-600 bg-plum-50 dark:border-plum-400 dark:bg-plum-900/20'
+                : 'border-brown-100 dark:border-dm-border'
+            }`}>
+              <input
+                type='radio'
+                name='delivery_mode'
+                value='standard'
+                checked={deliveryMode === 'standard'}
+                onChange={() => setDeliveryMode('standard')}
+                className='hidden'
+              />
+              <p className='font-semibold text-charcoal dark:text-white'>Standard Delivery</p>
+              <p className='text-xs text-brown-500 dark:text-white/50 mt-1'>Available within Nairobi CBD ({NAIROBI_CBD_RADIUS_KM}km radius).</p>
+            </label>
 
-              <label className={`cursor-pointer rounded-card border-2 p-3 transition-all ${
-                deliveryMode === 'foot'
-                  ? 'border-plum-600 bg-plum-50 dark:border-plum-400 dark:bg-plum-900/20'
-                  : 'border-brown-100 dark:border-dm-border'
-              }`}>
-                <input
-                  type='radio'
-                  name='delivery_mode'
-                  value='foot'
-                  checked={deliveryMode === 'foot'}
-                  onChange={() => setDeliveryMode('foot')}
-                  className='hidden'
-                />
-                <p className='font-semibold text-charcoal dark:text-white'>Delivery by Foot</p>
-                <p className='text-xs text-brown-500 dark:text-white/50 mt-1'>Only within Nairobi CBD ({NAIROBI_CBD_RADIUS_KM}km radius).</p>
-              </label>
+            <label className={`cursor-pointer rounded-card border-2 p-3 transition-all ${
+              deliveryMode === 'foot'
+                ? 'border-plum-600 bg-plum-50 dark:border-plum-400 dark:bg-plum-900/20'
+                : 'border-brown-100 dark:border-dm-border'
+            }`}>
+              <input
+                type='radio'
+                name='delivery_mode'
+                value='foot'
+                checked={deliveryMode === 'foot'}
+                onChange={() => setDeliveryMode('foot')}
+                className='hidden'
+              />
+              <p className='font-semibold text-charcoal dark:text-white'>Delivery by Foot</p>
+              <p className='text-xs text-brown-500 dark:text-white/50 mt-1'>Only within Nairobi CBD ({NAIROBI_CBD_RADIUS_KM}km radius).</p>
+            </label>
+          </div>
+
+          {/* Location capture required for every delivery order */}
+          {fulfillmentMethod === 'delivery' && (
+            <div className='mt-3 space-y-2'>
+              <button
+                type='button'
+                onClick={captureCustomerLocation}
+                className='px-3 py-2 rounded-pill text-sm font-semibold bg-plum-700 text-white hover:bg-plum-600 transition-colors disabled:opacity-60 disabled:cursor-not-allowed'
+                disabled={locationLoading}
+              >
+                {locationLoading ? 'Checking location...' : 'Use My Current Location'}
+              </button>
+
+              <p className='text-xs text-brown-500 dark:text-white/50'>
+                {customerLocation
+                  ? (deliveryMode === 'foot'
+                      ? `Distance to CBD center: ${formatDistanceKm(footDeliveryEligibility.distanceKm)} (${footDeliveryEligibility.eligible ? 'eligible' : 'outside allowed zone'})`
+                      : `Location captured (${formatDistanceKm(footDeliveryEligibility.distanceKm)} from CBD).`)
+                  : 'Location required for delivery. Tap to share your current location.'}
+              </p>
             </div>
-
-            {deliveryMode === 'foot' && (
-              <div className='mt-3 space-y-2'>
-                <button
-                  type='button'
-                  onClick={captureCustomerLocation}
-                  className='px-3 py-2 rounded-pill text-sm font-semibold bg-plum-700 text-white hover:bg-plum-600 transition-colors disabled:opacity-60 disabled:cursor-not-allowed'
-                  disabled={locationLoading}
-                >
-                  {locationLoading ? 'Checking location...' : 'Use My Current Location'}
-                </button>
-
-                <p className='text-xs text-brown-500 dark:text-white/50'>
-                  {customerLocation
-                    ? `Distance to CBD center: ${formatDistanceKm(footDeliveryEligibility.distanceKm)} (${footDeliveryEligibility.eligible ? 'eligible' : 'outside allowed zone'})`
-                    : 'Location required to confirm CBD eligibility for foot delivery.'}
-                </p>
-              </div>
-            )}
+          )}
           </div>
         </>
       );
@@ -931,7 +1064,7 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
             
             <div className='flex gap-4 justify-between ml-1 dark:text-white/85'>
               <p>Delivery Charge</p>
-              <p className='flex items-center gap-2'>Free</p>
+              <p className='flex items-center gap-2'>{DisplayPriceInShillings(deliveryCharge)}</p>
             </div>
 
             {usePoints && (
@@ -977,18 +1110,63 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
 
           <div className='w-full flex flex-col gap-3 mt-5'>
             <p className="text-xs font-semibold uppercase tracking-widest text-brown-300 dark:text-white/30 mb-1">Payment Method</p>
-            <button
-              className={`flex items-center justify-between w-full py-3 px-4 rounded-card border-2 font-semibold text-sm transition-all duration-200 press ${
-                isPaymentEnabled && !isCheckoutBusy
-                  ? 'border-plum-600 text-plum-700 dark:border-plum-500 dark:text-plum-200 bg-plum-50 dark:bg-plum-900/20 hover:bg-plum-100 dark:hover:bg-plum-900/40'
-                  : 'border-brown-100 dark:border-dm-border text-brown-300 dark:text-white/20 cursor-not-allowed'
-              }`}
-              onClick={handleCashOnDelivery}
-              disabled={!isPaymentEnabled || isCheckoutBusy}
-            >
-              <span>{checkoutAction === 'cash' ? 'Placing order...' : `Cash on ${fulfillmentMethod === 'delivery' ? 'Delivery' : 'Pickup'}`}</span>
-              {!isPaymentEnabled && <span className="text-xs font-normal opacity-60">{fulfillmentMethod === 'delivery' ? 'Select address first' : 'Select pickup location'}</span>}
-            </button>
+
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setSelectedPaymentMethod('cash')}
+                className={`flex-1 py-2 px-3 rounded-card text-sm font-semibold border-2 transition-colors ${
+                  selectedPaymentMethod === 'cash'
+                    ? 'border-plum-600 text-plum-700 bg-plum-50 dark:border-plum-500 dark:text-plum-200 dark:bg-plum-900/20'
+                    : 'border-brown-100 dark:border-dm-border text-brown-300 dark:text-white/40'
+                }`}
+              >
+                Cash
+              </button>
+              <button
+                type="button"
+                onClick={() => setSelectedPaymentMethod('jenga')}
+                className={`flex-1 py-2 px-3 rounded-card text-sm font-semibold border-2 transition-colors ${
+                  selectedPaymentMethod === 'jenga'
+                    ? 'border-plum-600 text-plum-700 bg-plum-50 dark:border-plum-500 dark:text-plum-200 dark:bg-plum-900/20'
+                    : 'border-brown-100 dark:border-dm-border text-brown-300 dark:text-white/40'
+                }`}
+              >
+                M-Pesa
+              </button>
+            </div>
+
+            {selectedPaymentMethod === 'cash' && (
+              <button
+                className={`flex items-center justify-between w-full py-3 px-4 rounded-card border-2 font-semibold text-sm transition-all duration-200 press ${
+                  isPaymentEnabled && !isCheckoutBusy
+                    ? 'border-plum-600 text-plum-700 dark:border-plum-500 dark:text-plum-200 bg-plum-50 dark:bg-plum-900/20 hover:bg-plum-100 dark:hover:bg-plum-900/40'
+                    : 'border-brown-100 dark:border-dm-border text-brown-300 dark:text-white/20 cursor-not-allowed'
+                }`}
+                onClick={handleCashOnDelivery}
+                disabled={!isPaymentEnabled || isCheckoutBusy}
+              >
+                <span>{checkoutAction === 'cash' ? 'Placing order...' : `Cash on ${fulfillmentMethod === 'delivery' ? 'Delivery' : 'Pickup'}`}</span>
+                {!isPaymentEnabled && <span className="text-xs font-normal opacity-60">{fulfillmentMethod === 'delivery' ? 'Select address first' : 'Select pickup location'}</span>}
+              </button>
+            )}
+
+            {selectedPaymentMethod === 'jenga' && isPaymentEnabled && (
+              <JengaPayment
+                cartItems={cartItemsList}
+                totalAmount={finalPrice}
+                addressId={fulfillmentMethod === 'delivery' ? addressList[selectAddress]?._id : null}
+                communityRewardId={selectedReward ? selectedReward._id : null}
+                communityDiscountAmount={selectedReward && selectedReward.type === 'discount' ? communityDiscount : 0}
+                fulfillment_type={fulfillmentMethod}
+                pickup_location={pickupLocation}
+                pickup_instructions={pickupInstructions}
+                deliveryCharge={deliveryCharge}
+                deliveryInstructions={deliveryInstructions}
+                onSuccess={handleJengaPaymentSuccess}
+                onError={handleJengaPaymentError}
+              />
+            )}
 
             {/* Guest Checkout CTA — only show for unauthenticated users */}
             {!user?._id && (
@@ -1014,6 +1192,19 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
           onClose={() => setShowFulfillmentModal(false)}
           onSelect={handleFulfillmentSelect}
           pickupLocations={pickupLocations}
+        />
+
+        {/* Delivery location capture modal */}
+        <DeliveryLocationModal
+          isOpen={showLocationModal}
+          initialLocation={customerLocation}
+          initialInstructions={deliveryInstructions}
+          mode={deliveryMode}
+          onClose={() => setShowLocationModal(false)}
+          onSave={(loc) => {
+            setCustomerLocation({ lat: loc.lat, lng: loc.lng });
+            setDeliveryInstructions(loc.deliveryInstructions || '');
+          }}
         />
 
         {/* Address Modal */}

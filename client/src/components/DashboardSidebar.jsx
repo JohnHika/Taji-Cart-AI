@@ -32,6 +32,7 @@ import SummaryApi from '../common/SummaryApi';
 import { logout } from '../store/userSlice';
 import Axios from '../utils/Axios';
 import AxiosToastError from '../utils/AxiosToastError';
+import { clearAuthStorage } from '../utils/authStorage';
 
 const DashboardSidebar = ({ userRole, isStaff }) => {
   const user = useSelector(state => state.user);
@@ -47,7 +48,7 @@ const DashboardSidebar = ({ userRole, isStaff }) => {
       const response = await Axios({ ...SummaryApi.logout });
       if (response.data.success) {
         dispatch(logout());
-        localStorage.clear();
+        clearAuthStorage();
         toast.success(response.data.message);
         navigate("/");
       }

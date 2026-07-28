@@ -16,7 +16,7 @@ import CategoryModel    from '../models/category.model.js';
 import SubCategoryModel from '../models/subCategory.model.js';
 import ProductModel     from '../models/product.model.js';
 
-const PLACEHOLDER = 'https://res.cloudinary.com/demo/image/upload/v1/samples/ecommerce/leather-bag-gray';
+const PLACEHOLDER = 'https://nawirihairke.com/images/product-photo-pending.svg';
 
 // ─── Full product data from 3RDMAY sheet ─────────────────────────────────────
 // Format: [HAIR_TYPE, [[COLOR, STOCK], ...]]

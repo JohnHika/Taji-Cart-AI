@@ -11,7 +11,8 @@ import { fetchCartItems } from '../store/cartProduct';
 import { nawiriBrand } from '../config/brand';
 import CheckoutRoyalCard from '../components/CheckoutRoyalCard'; // Premium Royal Card teaser
 import GuestAccountPrompt from '../components/GuestAccountPrompt';
-import { formatDistanceKm, getFootDeliveryEligibility, NAIROBI_CBD_RADIUS_KM } from '../utils/cbdDelivery';
+import { DEFAULT_DELIVERY_CHARGE, formatDistanceKm, getFootDeliveryEligibility, NAIROBI_CBD_RADIUS_KM } from '../utils/cbdDelivery';
+import DeliveryLocationModal from '../components/DeliveryLocationModal';
 import { DisplayPriceInShillings } from '../utils/DisplayPriceInShillings';
 
 const PICKUP_LOCATIONS = [
@@ -39,6 +40,7 @@ function GuestCheckout() {
     delivery_mode: 'standard',
     pickup_location: '',
     customerLocation: null,
+    deliveryInstructions: '',
   });
 
   const footDeliveryEligibility = getFootDeliveryEligibility(formData.customerLocation);
@@ -52,13 +54,16 @@ function GuestCheckout() {
 
   // Delivery needs address form; pickup does not
   const isDelivery = formData.fulfillment_type === 'delivery';
+  const deliveryCharge = isDelivery ? DEFAULT_DELIVERY_CHARGE : 0;
+  const orderTotal = total + deliveryCharge;
+
+  // Delivery needs address form + location; pickup does not
   const isReadyToOrder = useMemo(() => {
     if (!formData.guestEmail || !formData.guestPhone) return false;
     if (isDelivery) {
       if (!formData.firstName || !formData.lastName || !formData.address || !formData.city) return false;
-      if (formData.delivery_mode === 'foot') {
-        if (!formData.customerLocation || !footDeliveryEligibility.eligible) return false;
-      }
+      if (!formData.customerLocation) return false;
+      if (!footDeliveryEligibility.eligible) return false;
     } else {
       if (!formData.pickup_location) return false;
     }
@@ -70,30 +75,18 @@ function GuestCheckout() {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
+  const [showLocationModal, setShowLocationModal] = useState(false);
+
+  const handleLocationModalSave = (loc) => {
+    setFormData(prev => ({
+      ...prev,
+      customerLocation: { lat: loc.lat, lng: loc.lng },
+      deliveryInstructions: loc.deliveryInstructions || '',
+    }));
+  };
+
   const captureCustomerLocation = () => {
-    if (!navigator.geolocation) {
-      toast.error('Geolocation is not supported on this device/browser.');
-      return;
-    }
-    setLocationLoading(true);
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        const loc = { lat: Number(position.coords.latitude), lng: Number(position.coords.longitude) };
-        const elig = getFootDeliveryEligibility(loc);
-        setFormData(prev => ({ ...prev, customerLocation: loc }));
-        if (elig.eligible) {
-          toast.success('Great! You are within Nairobi CBD for foot delivery.');
-        } else {
-          toast.error(`You are ${formatDistanceKm(elig.distanceKm)} from CBD center. Foot delivery is limited to ${elig.radiusKm}km.`);
-        }
-        setLocationLoading(false);
-      },
-      () => {
-        setLocationLoading(false);
-        toast.error('Unable to access location. Please allow location permissions and try again.');
-      },
-      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
-    );
+    setShowLocationModal(true);
   };
 
   const validate = () => {
@@ -104,10 +97,9 @@ function GuestCheckout() {
     if (isDelivery) {
       if (!formData.firstName || !formData.lastName) { toast.error('Please enter your full name'); return false; }
       if (!formData.address || !formData.city) { toast.error('Please fill in your delivery address'); return false; }
-      if (formData.delivery_mode === 'foot') {
-        if (!formData.customerLocation) { toast.error('Foot delivery requires your live location within Nairobi CBD'); return false; }
-        if (!footDeliveryEligibility.eligible) { toast.error(`Foot delivery is only available within Nairobi CBD (${NAIROBI_CBD_RADIUS_KM}km radius)`); return false; }
-      }
+      if (!formData.customerLocation) { toast.error('Delivery requires your live location within Nairobi CBD'); setShowLocationModal(true); return false; }
+      if (!formData.deliveryInstructions?.trim()) { toast.error('Please enter exact delivery instructions so the rider can find you'); setShowLocationModal(true); return false; }
+      if (!footDeliveryEligibility.eligible) { toast.error(`Delivery is only available within Nairobi CBD (${NAIROBI_CBD_RADIUS_KM}km radius)`); setShowLocationModal(true); return false; }
     } else {
       if (!formData.pickup_location) { toast.error('Please select a pickup location'); return false; }
     }
@@ -140,7 +132,10 @@ function GuestCheckout() {
           },
           fulfillment_type: formData.fulfillment_type,
           delivery_mode: formData.delivery_mode,
+          deliveryCharge: deliveryCharge,
+          totalAmt: orderTotal,
           customerLocation: formData.customerLocation,
+          deliveryInstructions: formData.deliveryInstructions,
           pickup_location: formData.pickup_location,
         },
       });
@@ -182,7 +177,7 @@ function GuestCheckout() {
             </div>
             <div className="flex justify-between">
               <span className="text-brown-500 dark:text-white/60">Total</span>
-              <span className="font-bold text-gold-600">{DisplayPriceInShillings(orderSuccess.total)}</span>
+              <span className="font-bold text-gold-600">{DisplayPriceInShillings(orderSuccess.total + deliveryCharge)}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-brown-500 dark:text-white/60">Payment</span>
@@ -331,7 +326,7 @@ function GuestCheckout() {
                   <p className="text-sm font-semibold text-charcoal dark:text-white mb-3">Delivery Type</p>
                   <div className="grid sm:grid-cols-2 gap-3">
                     {[
-                      { value: 'standard', label: 'Standard Delivery', desc: 'Regular rider delivery across Nairobi.' },
+                      { value: 'standard', label: 'Standard Delivery', desc: `Available within Nairobi CBD (${NAIROBI_CBD_RADIUS_KM}km radius).` },
                       { value: 'foot', label: 'Delivery by Foot', desc: `Only within Nairobi CBD (${NAIROBI_CBD_RADIUS_KM}km radius).` },
                     ].map(opt => (
                       <label
@@ -349,7 +344,8 @@ function GuestCheckout() {
                     ))}
                   </div>
 
-                  {formData.delivery_mode === 'foot' && (
+                  {/* Location capture required for every delivery order */}
+                  {isDelivery && (
                     <div className="mt-3 space-y-2">
                       <button
                         type="button"
@@ -361,8 +357,10 @@ function GuestCheckout() {
                       </button>
                       <p className="text-xs text-brown-500 dark:text-white/50">
                         {formData.customerLocation
-                          ? `Distance to CBD center: ${formatDistanceKm(footDeliveryEligibility.distanceKm)} (${footDeliveryEligibility.eligible ? 'eligible' : 'outside allowed zone'})`
-                          : 'Location required to confirm CBD eligibility for foot delivery.'}
+                          ? (formData.delivery_mode === 'foot'
+                              ? `Distance to CBD center: ${formatDistanceKm(footDeliveryEligibility.distanceKm)} (${footDeliveryEligibility.eligible ? 'eligible' : 'outside allowed zone'})`
+                              : `Location captured (${formatDistanceKm(footDeliveryEligibility.distanceKm)} from CBD).`)
+                          : 'Location required for delivery. Tap to share your current location.'}
                       </p>
                     </div>
                   )}
@@ -439,11 +437,11 @@ function GuestCheckout() {
               </div>
               <div className="flex justify-between text-charcoal dark:text-white/85">
                 <span>Delivery Charge</span>
-                <span>Free</span>
+                <span>{DisplayPriceInShillings(deliveryCharge)}</span>
               </div>
               <div className="flex justify-between mt-2 pt-2 border-t border-brown-100 dark:border-dm-border">
                 <span className="font-bold text-charcoal dark:text-white">Total</span>
-                <span className="font-bold text-gold-600 dark:text-gold-300 font-price">{DisplayPriceInShillings(total)}</span>
+                <span className="font-bold text-gold-600 dark:text-gold-300 font-price">{DisplayPriceInShillings(orderTotal)}</span>
               </div>
             </div>
           </div>
@@ -483,6 +481,14 @@ function GuestCheckout() {
         </div>
 
       </div>
+      <DeliveryLocationModal
+        isOpen={showLocationModal}
+        initialLocation={formData.customerLocation}
+        initialInstructions={formData.deliveryInstructions || ''}
+        mode={formData.deliveryMode || 'standard'}
+        onClose={() => setShowLocationModal(false)}
+        onSave={handleLocationModalSave}
+      />
     </section>
   );
 }

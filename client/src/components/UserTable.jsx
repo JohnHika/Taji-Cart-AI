@@ -68,6 +68,18 @@ const UserTable = ({ users, onDelete, onChangeRole, onBlockUser, onUnblockUser, 
     });
   };
 
+  const formatDateTime = (dateString) => {
+    if (!dateString) return 'N/A';
+    return new Date(dateString).toLocaleString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit'
+    });
+  };
+
   return (
     <div className="w-full max-w-full overflow-x-hidden md:overflow-x-auto">
       <div className="divide-y divide-brown-100 dark:divide-dm-border md:hidden">
@@ -103,7 +115,7 @@ const UserTable = ({ users, onDelete, onChangeRole, onBlockUser, onUnblockUser, 
                 Joined {formatDate(user.createdAt)}
               </span>
               <span className="inline-flex items-center rounded-full bg-brown-50 px-2.5 py-1 text-xs font-medium text-charcoal dark:bg-dm-card-2 dark:text-white/70">
-                Last login {user.last_login_date ? formatDate(user.last_login_date) : 'Never'}
+                Last active {user.last_login_date ? formatDateTime(user.last_login_date) : 'Never'}
               </span>
             </div>
 
@@ -177,7 +189,7 @@ const UserTable = ({ users, onDelete, onChangeRole, onBlockUser, onUnblockUser, 
             <th className="py-2 px-3 border-b dark:border-dm-border text-left">Email</th>
             <th className="py-2 px-3 border-b dark:border-dm-border text-left">Phone</th>
             <th className="py-2 px-3 border-b dark:border-dm-border text-left">Joined</th>
-            <th className="py-2 px-3 border-b dark:border-dm-border text-left">Last Login</th>
+            <th className="py-2 px-3 border-b dark:border-dm-border text-left">Last Active</th>
             <th className="py-2 px-3 border-b dark:border-dm-border text-left">Status</th>
             <th className="py-2 px-3 border-b dark:border-dm-border text-left">Role</th>
             {canManageUsers && (
@@ -212,8 +224,8 @@ const UserTable = ({ users, onDelete, onChangeRole, onBlockUser, onUnblockUser, 
                 </div>
               </td>
               <td className="py-2 px-3 border-b dark:border-dm-border">
-                <div className="max-w-[90px] truncate" title={user.last_login_date ? formatDate(user.last_login_date) : 'Never'}>
-                  {user.last_login_date ? formatDate(user.last_login_date) : 'Never'}
+                <div className="max-w-[160px] truncate" title={user.last_login_date ? formatDateTime(user.last_login_date) : 'Never'}>
+                  {user.last_login_date ? formatDateTime(user.last_login_date) : 'Never'}
                 </div>
               </td>
               <td className="py-2 px-3 border-b dark:border-dm-border">

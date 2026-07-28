@@ -1,132 +1,96 @@
-import React, { useEffect } from 'react';
+import React, { Suspense, useEffect } from 'react';
 import { createBrowserRouter, Navigate, useLocation } from 'react-router-dom';
 import App from '../App';
+import PrivateRoute from '../components/PrivateRoute';
+import lazyWithRetry from '../utils/lazyWithRetry';
+
+// Eagerly loaded — tiny, needed on every route
 import CategoryFallbackErrorPage from '../components/CategoryFallbackErrorPage';
 import CategorySmartFallback from '../components/CategorySmartFallback';
-import MpesaPaymentStatus from '../components/MpesaPaymentStatus';
-import PrivateRoute from '../components/PrivateRoute';
-import Dashboard from '../layouts/Dashboard';
-import DeliveryLayout from '../layouts/DeliveryLayout';
-import ActiveCampaigns from '../pages/ActiveCampaigns';
-import Address from '../pages/Address';
-// import AdminChatMonitor from '../pages/admin/AdminChatMonitor'; // Hidden: AI not yet complete
-import AllOrdersAdmin from '../pages/admin/AllOrdersAdmin';
-// import ChatSessionView from '../pages/admin/ChatSessionView'; // Hidden: AI not yet complete
-import CommunityPerksAdmin from '../pages/admin/CommunityPerksAdmin';
-import LoyaltyProgramAdmin from '../pages/admin/LoyaltyProgramAdmin';
-import UsersAdmin from '../pages/admin/UsersAdmin';
-import CategoryPage from '../pages/CategoryPage';
-// import ChatInterface from '../pages/ChatInterface'; // Hidden: AI not yet complete
-import CommunityPerks from '../pages/CommunityPerks';
-import ActiveDeliveries from '../pages/delivery/ActiveDeliveries';
-import CompletedDeliveries from '../pages/delivery/CompletedDeliveries';
-import DeliveryDashboard from '../pages/delivery/Dashboard';
-import DeliveryHistory from '../pages/delivery/DeliveryHistory';
-import DeliveryMap from '../pages/delivery/DeliveryMap';
-import DeliverySimulator from '../pages/DeliverySimulator';
-import DashboardHome from '../pages/DashboardHome';
-import Home from '../pages/Home';
-import Login from '../pages/Login';
-import MyOrders from '../pages/MyOrders';
-import OtpVerification from '../pages/OtpVerification';
-import OrderTracking from '../pages/OrderTracking.jsx';
-import ProductPage from '../pages/Product';
-import ProductDisplayPage from '../pages/ProductDisplayPage';
-import ProductListPage from '../pages/ProductListPage';
-import Register from '../pages/Register';
-import ResetPassword from '../pages/ResetPassword';
-import SearchPage from '../pages/SearchPage'; // Add SearchPage import
-import SocialAuthSuccess from '../pages/SocialAuthSuccess'; // Import the SocialAuthSuccess component
-import StaffPOS from '../pages/StaffPOS'; // Import POS component
-import POSDashboard from '../pages/POSDashboard'; // Import POS Dashboard component
-import POSSales from '../pages/POSSales';
-import ShopTheLookGallery from '../components/ShopTheLookGallery';
-import GuestCheckout from '../pages/GuestCheckout';
-import GuestOrderTracking from '../pages/GuestOrderTracking';
 
-// Import new staff components
-import StaffDashboard from '../pages/staff/Dashboard';
-import ActiveDeliveriesManagement from '../pages/staff/DeliveryManagement/ActiveDeliveries';
-import CompletedDeliveriesManagement from '../pages/staff/DeliveryManagement/CompletedDeliveries';
-import DeliveryManagement from '../pages/staff/DeliveryManagement';
-import DispatchedOrders from '../pages/staff/DeliveryManagement/DispatchedOrders';
-import DriversManagement from '../pages/staff/DeliveryManagement/DriversManagement';
-import PendingDispatch from '../pages/staff/DeliveryManagement/PendingDispatch';
+// Lazy-loaded page chunks
+const Home                          = lazyWithRetry(() => import('../pages/Home'));
+const Login                         = lazyWithRetry(() => import('../pages/Login'));
+const Register                      = lazyWithRetry(() => import('../pages/Register'));
+const VerifyEmailPage               = lazyWithRetry(() => import('../pages/VerifyEmailPage'));
+const ForgotPassword                = lazyWithRetry(() => import('../pages/ForgotPassword'));
+const OtpVerification               = lazyWithRetry(() => import('../pages/OtpVerification'));
+const ResetPassword                 = lazyWithRetry(() => import('../pages/ResetPassword'));
+const SocialAuthSuccess             = lazyWithRetry(() => import('../pages/SocialAuthSuccess'));
+const SearchPage                    = lazyWithRetry(() => import('../pages/SearchPage'));
+const OrderTracking                 = lazyWithRetry(() => import('../pages/OrderTracking'));
+const ProductDisplayPage            = lazyWithRetry(() => import('../pages/ProductDisplayPage'));
+const CollectionsPage               = lazyWithRetry(() => import('../pages/CollectionsPage'));
+const WishlistPage                  = lazyWithRetry(() => import('../pages/WishlistPage'));
+const ShopTheLookGallery            = lazyWithRetry(() => import('../components/ShopTheLookGallery'));
+const GuestCheckout                 = lazyWithRetry(() => import('../pages/GuestCheckout'));
+const GuestOrderTracking            = lazyWithRetry(() => import('../pages/GuestOrderTracking'));
+const StaffPOS                      = lazyWithRetry(() => import('../pages/StaffPOS'));
+const SalesCounter                  = lazyWithRetry(() => import('../pages/SalesCounter'));
+const ProductListPage               = lazyWithRetry(() => import('../pages/ProductListPage'));
+const CartMobile                    = lazyWithRetry(() => import('../pages/CartMobile'));
+const UserMenuMobile                = lazyWithRetry(() => import('../pages/UserMenuMobile'));
+const ProductPage                   = lazyWithRetry(() => import('../pages/Product'));
+const SubCategoryPage               = lazyWithRetry(() => import('../pages/SubCategoryPage'));
+const ActiveCampaigns               = lazyWithRetry(() => import('../pages/ActiveCampaigns'));
+const Success                       = lazyWithRetry(() => import('../pages/Success'));
+const DeliverySimulator             = lazyWithRetry(() => import('../pages/DeliverySimulator'));
+const LoyaltyProgramPage            = lazyWithRetry(() => import('../pages/LoyaltyProgramPage'));
+const Address                       = lazyWithRetry(() => import('../pages/Address'));
+const MyOrders                      = lazyWithRetry(() => import('../pages/MyOrders'));
+const UserProfile                   = lazyWithRetry(() => import('../pages/UserProfile'));
+const DashboardHome                 = lazyWithRetry(() => import('../pages/DashboardHome'));
+const DashboardCart                 = lazyWithRetry(() => import('../pages/DashboardCart'));
+const DashboardCheckout             = lazyWithRetry(() => import('../pages/DashboardCheckout'));
+const UploadProduct                 = lazyWithRetry(() => import('../pages/UploadProduct'));
+const CategoryPage                  = lazyWithRetry(() => import('../pages/CategoryPage'));
+const AllOrdersAdmin                = lazyWithRetry(() => import('../pages/admin/AllOrdersAdmin'));
+const LoyaltyProgramAdmin           = lazyWithRetry(() => import('../pages/admin/LoyaltyProgramAdmin'));
+const UsersAdmin                    = lazyWithRetry(() => import('../pages/admin/UsersAdmin'));
+const CommunityPerksAdmin           = lazyWithRetry(() => import('../pages/admin/CommunityPerksAdmin'));
+const DriverVerificationDashboard   = lazyWithRetry(() => import('../pages/admin/DriverVerificationDashboard'));
+const CommunityPerks                = lazyWithRetry(() => import('../pages/CommunityPerks'));
+const POSDashboard                  = lazyWithRetry(() => import('../pages/POSDashboard'));
+const POSSales                      = lazyWithRetry(() => import('../pages/POSSales'));
+const DashboardLayout               = lazyWithRetry(() => import('../layouts/Dashboard'));
+const DeliveryLayout                = lazyWithRetry(() => import('../layouts/DeliveryLayout'));
+const DeliveryDashboard             = lazyWithRetry(() => import('../pages/delivery/Dashboard'));
+const ActiveDeliveries              = lazyWithRetry(() => import('../pages/delivery/ActiveDeliveries'));
+const CompletedDeliveries           = lazyWithRetry(() => import('../pages/delivery/CompletedDeliveries'));
+const DeliveryHistory               = lazyWithRetry(() => import('../pages/delivery/DeliveryHistory'));
+const DeliveryMap                   = lazyWithRetry(() => import('../pages/delivery/DeliveryMap'));
+const StaffDashboard                = lazyWithRetry(() => import('../pages/staff/Dashboard'));
+const DeliveryManagement            = lazyWithRetry(() => import('../pages/staff/DeliveryManagement'));
+const PendingDispatch               = lazyWithRetry(() => import('../pages/staff/DeliveryManagement/PendingDispatch'));
+const DispatchedOrders              = lazyWithRetry(() => import('../pages/staff/DeliveryManagement/DispatchedOrders'));
+const ActiveDeliveriesManagement    = lazyWithRetry(() => import('../pages/staff/DeliveryManagement/ActiveDeliveries'));
+const CompletedDeliveriesManagement = lazyWithRetry(() => import('../pages/staff/DeliveryManagement/CompletedDeliveries'));
+const DriversManagement             = lazyWithRetry(() => import('../pages/staff/DeliveryManagement/DriversManagement'));
+const PendingPickups                = lazyWithRetry(() => import('../pages/staff/PendingPickups'));
+const VerificationHistory           = lazyWithRetry(() => import('../pages/staff/VerificationHistory'));
+const VerificationSuccess           = lazyWithRetry(() => import('../pages/staff/VerificationSuccess'));
+const VerifyPickup                  = lazyWithRetry(() => import('../pages/staff/VerifyPickup'));
 
-// Legacy staff pages
-import PendingPickups from '../pages/staff/PendingPickups';
-import VerificationHistory from '../pages/staff/VerificationHistory';
-import VerificationSuccess from '../pages/staff/VerificationSuccess';
-import VerifyPickup from '../pages/staff/VerifyPickup';
-import CollectionsPage from '../pages/CollectionsPage';
-import ForgotPassword from '../pages/ForgotPassword';
-import SubCategoryPage from '../pages/SubCategoryPage';
-import Success from '../pages/Success';
-import UploadProduct from '../pages/UploadProduct';
-import LoyaltyProgramPage from '../pages/LoyaltyProgramPage';
-import UserProfile from '../pages/UserProfile';
-import UserMenuMobile from '../pages/UserMenuMobile';
-import CartMobile from '../pages/CartMobile';
-import DashboardCart from '../pages/DashboardCart';
-import DashboardCheckout from '../pages/DashboardCheckout';
-import VerifyEmailPage from '../pages/VerifyEmailPage';
+// Suspense spinner shown while a lazy chunk is loading
+const PageLoader = () => (
+  <div className="min-h-[60vh] flex items-center justify-center">
+    <div className="w-8 h-8 border-4 border-gold-500 border-t-transparent rounded-full animate-spin" />
+  </div>
+);
+
+// Wrap a lazy element — must only be called inside render, not at module level
+const S = (Component) => (
+  <Suspense fallback={<PageLoader />}>
+    <Component />
+  </Suspense>
+);
 
 function LegacyCheckoutRedirect() {
   const location = useLocation();
   return <Navigate to="/dashboard/checkout" replace state={location.state} />;
 }
 
-// Add this debugging code near the top of your router configuration
-console.log("==== ROUTER CONFIGURATION ====");
-console.log("Configuring routes:", {
-  // List all your routes here for debugging
-  categoryRoutes: [
-    "/:categoryName-:categoryId",
-    "/:categoryName/:categoryId"
-  ],
-});
-
-// Add this at the top of the file (before the router definition)
-console.log("==== DEBUGGING CATEGORY ROUTES ====");
-console.log("Current location:", window.location.pathname);
-
-// Add a function to determine if a path should be treated as a category page
-function isCategoryRoute(path) {
-  // More lenient check for alphanumeric IDs at the end
-  return /[a-f0-9]{12,}$/.test(path) || /-[a-f0-9]{12,}$/.test(path);
-}
-
 const isMongoObjectId = (value = '') => /^[a-f0-9]{24}$/i.test(value);
-
-// Get the current path
-const currentPath = window.location.pathname;
-if (isCategoryRoute(currentPath)) {
-  console.log("Detected current path is likely a category route:", currentPath);
-}
-
-// Add a diagnostic wrapper component to help debug route issues
-const RouteDebugger = ({ component: Component, routeName }) => {
-  console.log(`Rendering route: ${routeName}`);
-  
-  useEffect(() => {
-    console.log(`Route ${routeName} mounted`);
-    return () => console.log(`Route ${routeName} unmounted`);
-  }, [routeName]);
-  
-  try {
-    return <Component />;
-  } catch (error) {
-    console.error(`Error rendering ${routeName}:`, error);
-    return (
-      <div className="p-8 bg-red-50 text-red-500 rounded m-4">
-        <h2 className="text-xl font-bold">Error rendering {routeName}</h2>
-        <pre className="mt-4 p-4 bg-brown-50 rounded overflow-auto">
-          {error.stack || error.message}
-        </pre>
-      </div>
-    );
-  }
-};
 
 const router = createBrowserRouter([
   {
@@ -134,537 +98,158 @@ const router = createBrowserRouter([
     element: <App />,
     errorElement: <CategoryFallbackErrorPage />,
     children: [
-      {
-        index: true,
-        element: <Home />
-      },
-      // Standard app routes
-      {
-        path: 'login',
-        element: <Login />
-      },
-      {
-        path: 'register',
-        element: <Register />
-      },
-      {
-        path: 'verify-email',
-        element: <VerifyEmailPage />
-      },
-      {
-        path: 'forgot-password',
-        element: <ForgotPassword />
-      },
-      {
-        path: 'verification-otp',
-        element: <OtpVerification />
-      },
-      {
-        path: 'reset-password',
-        element: <ResetPassword />
-      },
-      // Add SocialAuthSuccess route
-      {
-        path: 'social-auth-success',
-        element: <SocialAuthSuccess />
-      },
-      // Add search route
-      {
-        path: 'search',
-        element: <RouteDebugger component={SearchPage} routeName="Search Page" />
-      },
+      { index: true,                     element: S(Home) },
+      { path: 'login',                   element: S(Login) },
+      { path: 'register',                element: S(Register) },
+      { path: 'verify-email',            element: S(VerifyEmailPage) },
+      { path: 'forgot-password',         element: S(ForgotPassword) },
+      { path: 'verification-otp',        element: S(OtpVerification) },
+      { path: 'reset-password',          element: S(ResetPassword) },
+      { path: 'social-auth-success',     element: S(SocialAuthSuccess) },
+      { path: 'search',                  element: S(SearchPage) },
+      { path: 'order-tracking/:orderId', element: S(OrderTracking) },
+      { path: 'product/:productId',      element: S(ProductDisplayPage) },
+      { path: 'categories',              element: <Navigate to="/" replace /> },
+      { path: 'collections',             element: S(CollectionsPage) },
+      { path: 'shop-the-look',           element: S(ShopTheLookGallery) },
+      { path: 'guest-checkout',          element: S(GuestCheckout) },
+      { path: 'order/track-guest',       element: S(GuestOrderTracking) },
+      { path: 'mobile/cart',             element: S(CartMobile) },
+      { path: 'mobile/profile',          element: <PrivateRoute>{S(UserMenuMobile)}</PrivateRoute> },
+      { path: 'product',                 element: S(ProductPage) },
+      { path: 'subcategory',             element: S(SubCategoryPage) },
+      { path: 'campaigns',              element: S(ActiveCampaigns) },
+      { path: 'success',                element: S(Success) },
       {
         path: 'checkout',
-        element: (
-          <PrivateRoute>
-            <LegacyCheckoutRedirect />
-          </PrivateRoute>
-        )
-      },
-      {
-        path: 'order-tracking/:orderId',
-        element: <OrderTracking />
-      },
-      {
-        path: 'product/:productId',
-        element: <ProductDisplayPage />
-      },
-      {
-        path: 'categories',
-        element: <Navigate to="/" replace />
-      },
-      {
-        path: 'collections',
-        element: <CollectionsPage />
-      },
-      {
-        path: 'shop-the-look',
-        element: <RouteDebugger component={ShopTheLookGallery} routeName="Shop the Look Gallery" />
-      },
-      {
-        path: 'guest-checkout',
-        element: <GuestCheckout />
-      },
-      {
-        path: 'order/track-guest',
-        element: <RouteDebugger component={GuestOrderTracking} routeName="Guest Order Tracking" />
-      },
-
-      // Staff POS route - must be before category catch-all routes
-      {
-        path: 'staff-pos',
-        element: (
-          <PrivateRoute requireStaff={true}>
-            <StaffPOS />
-          </PrivateRoute>
-        )
-      },
-      {
-        path: 'sales-counter',
-        element: (
-          <PrivateRoute requireStaff={true}>
-            <StaffPOS />
-          </PrivateRoute>
-        )
-      },
-      
-      // Core category routes - With proper flexibility for IDs
-      {
-        path: 'product-category/:categoryId',
-        element: <ProductListPage />
-      },
-      // Primary category pattern with name and ID
-      {
-        path: ':categoryName-:categoryId',
-        element: <RouteDebugger component={ProductListPage} routeName="Category by name-id" />,
-        loader: ({ params }) => {
-          if (!isMongoObjectId(params.categoryId)) {
-            throw new Response("Not Found", { status: 404 });
-          }
-          return null;
-        }
-      },
-      // Subcategory pattern
-      {
-        path: ':categoryName-:categoryId/:subcategoryName-:subcategoryId',
-        element: <RouteDebugger component={ProductListPage} routeName="Category with subcategory" />,
-        loader: ({ params }) => {
-          if (!isMongoObjectId(params.categoryId) || !isMongoObjectId(params.subcategoryId)) {
-            throw new Response("Not Found", { status: 404 });
-          }
-          return null;
-        }
-      },
-      // Generic pattern for category routes with ObjectId-like IDs at the end (24 chars hex)
-      // This should only match actual category slugs, not app routes like staff-pos
-      {
-        path: ':slug-:id',
-        element: <RouteDebugger component={ProductListPage} routeName="Generic category route" />,
-        loader: ({ params }) => {
-          // Only match if the ID looks like a MongoDB ObjectId (24 character hex string)
-          // and the slug doesn't contain reserved words
-          const reservedWords = ['staff', 'admin', 'dashboard', 'pos', 'api', 'auth', 'login', 'register'];
-          const containsReserved = reservedWords.some(word => params.slug?.toLowerCase().includes(word));
-          
-          if (!/^[a-f0-9]{24}$/i.test(params.id) || containsReserved) {
-            throw new Response("Not Found", { status: 404 });
-          }
-          return null;
-        }
-      },
-      
-      // Chat route hidden: AI feature not yet complete
-      // {
-      //   path: 'chat',
-      //   element: <ChatInterface />
-      // },
-      
-      // Mobile-specific routes
-      {
-        path: 'mobile/cart',
-        element: <CartMobile />
-      },
-      {
-        path: 'mobile/profile',
-        element: (
-          <PrivateRoute>
-            <UserMenuMobile />
-          </PrivateRoute>
-        )
+        element: <PrivateRoute><LegacyCheckoutRedirect /></PrivateRoute>,
       },
       {
         path: 'wishlist',
-        element: (
-          <PrivateRoute>
-            <div className="min-h-[60vh] flex flex-col items-center justify-center gap-4 bg-ivory dark:bg-dm-surface p-6 text-center">
-              <div className="w-14 h-14 rounded-full bg-plum-50 dark:bg-plum-900/20 flex items-center justify-center">
-                <span className="text-2xl">🤍</span>
-              </div>
-              <h1 className="text-xl font-semibold text-charcoal dark:text-white">Wishlist</h1>
-              <p className="text-sm text-brown-400 dark:text-white/50">Your wishlist is coming soon!</p>
-            </div>
-          </PrivateRoute>
-        )
-      },
-      {
-        path: 'product',
-        element: <ProductPage />
-      },
-      {
-        path: 'subcategory',
-        element: <SubCategoryPage />
-      },
-      {
-        path: 'campaigns',
-        element: <ActiveCampaigns />
-      },
-      {
-        path: 'success',
-        element: <Success />
-      },
-      {
-        path: 'mpesa-payment-status',
-        element: <MpesaPaymentStatus />
+        element: <PrivateRoute>{S(WishlistPage)}</PrivateRoute>,
       },
       {
         path: 'delivery-simulator',
-        element: (
-          <PrivateRoute>
-            <DeliverySimulator />
-          </PrivateRoute>
-        )
+        element: <PrivateRoute>{S(DeliverySimulator)}</PrivateRoute>,
       },
-      
-      // Delivery routes with specialized layout
+      {
+        path: 'staff-pos',
+        element: <PrivateRoute requireStaff={true}>{S(StaffPOS)}</PrivateRoute>,
+      },
+      {
+        path: 'sales-counter',
+        element: <PrivateRoute requireStaff={true}>{S(StaffPOS)}</PrivateRoute>,
+      },
+
+      // Category routes
+      {
+        path: 'product-category/:categoryId',
+        element: S(ProductListPage),
+      },
+      {
+        path: ':categoryName-:categoryId',
+        element: S(ProductListPage),
+        loader: ({ params }) => {
+          if (!isMongoObjectId(params.categoryId)) throw new Response('Not Found', { status: 404 });
+          return null;
+        },
+      },
+      {
+        path: ':categoryName-:categoryId/:subcategoryName-:subcategoryId',
+        element: S(ProductListPage),
+        loader: ({ params }) => {
+          if (!isMongoObjectId(params.categoryId) || !isMongoObjectId(params.subcategoryId)) {
+            throw new Response('Not Found', { status: 404 });
+          }
+          return null;
+        },
+      },
+      {
+        path: ':slug-:id',
+        element: S(ProductListPage),
+        loader: ({ params }) => {
+          const reservedWords = ['staff', 'admin', 'dashboard', 'pos', 'api', 'auth', 'login', 'register'];
+          const containsReserved = reservedWords.some(word => params.slug?.toLowerCase().includes(word));
+          if (!/^[a-f0-9]{24}$/i.test(params.id) || containsReserved) {
+            throw new Response('Not Found', { status: 404 });
+          }
+          return null;
+        },
+      },
+
+      // Delivery routes
       {
         path: 'delivery',
-        element: (
-          <PrivateRoute requireDelivery={true}>
-            <DeliveryLayout />
-          </PrivateRoute>
-        ),
+        element: <PrivateRoute requireDelivery={true}>{S(DeliveryLayout)}</PrivateRoute>,
         children: [
-          {
-            path: 'dashboard',
-            element: <DeliveryDashboard />
-          },
-          {
-            path: 'active',
-            element: <ActiveDeliveries />
-          },
-          {
-            path: 'completed',
-            element: <CompletedDeliveries />
-          },
-          {
-            path: 'history',
-            element: <DeliveryHistory />
-          },
-          {
-            path: 'map',
-            element: <DeliveryMap />
-          }
-        ]
+          { path: 'dashboard', element: S(DeliveryDashboard) },
+          { path: 'active',    element: S(ActiveDeliveries) },
+          { path: 'completed', element: S(CompletedDeliveries) },
+          { path: 'history',   element: S(DeliveryHistory) },
+          { path: 'map',       element: S(DeliveryMap) },
+        ],
       },
-      // Dashboard routes - All under one unified dashboard structure
+
+      // Dashboard routes
       {
         path: 'dashboard',
-        element: (
-          <PrivateRoute>
-            <Dashboard />
-          </PrivateRoute>
-        ),
+        element: <PrivateRoute>{S(DashboardLayout)}</PrivateRoute>,
         children: [
-          {
-            index: true,
-            element: <DashboardHome />
-          },
-          {
-            path: 'profile',
-            element: <UserProfile />
-          },
-          {
-            path: 'cart',
-            element: <DashboardCart />
-          },
-          {
-            path: 'checkout',
-            element: <DashboardCheckout />
-          },
-
-          // Admin routes
-          {
-            path: 'upload-product',
-            element: (
-              <PrivateRoute requireAdmin={true}>
-                <UploadProduct />
-              </PrivateRoute>
-            )
-          },
-          {
-            path: 'product',
-            element: (
-              <PrivateRoute requireAdmin={true}>
-                <ProductPage />
-              </PrivateRoute>
-            )
-          },
-          {
-            path: 'category',
-            element: (
-              <PrivateRoute requireAdmin={true}>
-                <CategoryPage />
-              </PrivateRoute>
-            )
-          },
-          {
-            path: 'subcategory',
-            element: (
-              <PrivateRoute requireAdmin={true}>
-                <SubCategoryPage />
-              </PrivateRoute>
-            )
-          },
-          {
-            path: 'allorders',
-            element: (
-              <PrivateRoute requireAdmin={true}>
-                <AllOrdersAdmin />
-              </PrivateRoute>
-            )
-          },
-          {
-            path: 'loyalty-program-admin',
-            element: (
-              <PrivateRoute requireAdmin={true}>
-                <LoyaltyProgramAdmin />
-              </PrivateRoute>
-            )
-          },
-          {
-            path: 'users-admin',
-            element: (
-              <PrivateRoute requireAdmin={true}>
-                <UsersAdmin />
-              </PrivateRoute>
-            )
-          },
-          
-          // User routes
-          {
-            path: 'myorders',
-            element: (
-              <PrivateRoute>
-                <MyOrders />
-              </PrivateRoute>
-            )
-          },
-          {
-            path: 'address',
-            element: (
-              <PrivateRoute>
-                <Address />
-              </PrivateRoute>
-            )
-          },
-          {
-            path: 'admin-community-perks',
-            element: (
-              <PrivateRoute requireAdmin={true}>
-                <CommunityPerksAdmin />
-              </PrivateRoute>
-            )
-          },
-          {
-            path: 'community-perks',
-            element: (
-              <PrivateRoute>
-                <CommunityPerks />
-              </PrivateRoute>
-            )
-          },
-          {
-            path: 'loyalty-program',
-            element: (
-              <PrivateRoute>
-                <LoyaltyProgramPage />
-              </PrivateRoute>
-            )
-          },
-          {
-            path: 'active-campaigns',
-            element: (
-              <PrivateRoute>
-                <ActiveCampaigns />
-              </PrivateRoute>
-            )
-          },
-          
-          // Delivery driver routes — redirect to the canonical /delivery/* tree
-          // which uses DeliveryLayout with delivery-specific navigation.
+          { index: true,      element: S(DashboardHome) },
+          { path: 'profile',  element: S(UserProfile) },
+          { path: 'cart',     element: S(DashboardCart) },
+          { path: 'checkout', element: S(DashboardCheckout) },
+          { path: 'upload-product',         element: <PrivateRoute requireAdmin={true}>{S(UploadProduct)}</PrivateRoute> },
+          { path: 'product',                element: <PrivateRoute requireAdmin={true}>{S(ProductPage)}</PrivateRoute> },
+          { path: 'category',               element: <PrivateRoute requireAdmin={true}>{S(CategoryPage)}</PrivateRoute> },
+          { path: 'subcategory',            element: <PrivateRoute requireAdmin={true}>{S(SubCategoryPage)}</PrivateRoute> },
+          { path: 'allorders',              element: <PrivateRoute requireAdmin={true}>{S(AllOrdersAdmin)}</PrivateRoute> },
+          { path: 'loyalty-program-admin',  element: <PrivateRoute requireAdmin={true}>{S(LoyaltyProgramAdmin)}</PrivateRoute> },
+          { path: 'users-admin',            element: <PrivateRoute requireAdmin={true}>{S(UsersAdmin)}</PrivateRoute> },
+          { path: 'admin-community-perks',  element: <PrivateRoute requireAdmin={true}>{S(CommunityPerksAdmin)}</PrivateRoute> },
+          { path: 'driver-verification',    element: <PrivateRoute requireAdmin={true}>{S(DriverVerificationDashboard)}</PrivateRoute> },
+          { path: 'myorders',               element: <PrivateRoute>{S(MyOrders)}</PrivateRoute> },
+          { path: 'address',                element: <PrivateRoute>{S(Address)}</PrivateRoute> },
+          { path: 'community-perks',        element: <PrivateRoute>{S(CommunityPerks)}</PrivateRoute> },
+          { path: 'loyalty-program',        element: <PrivateRoute>{S(LoyaltyProgramPage)}</PrivateRoute> },
+          { path: 'active-campaigns',       element: <PrivateRoute>{S(ActiveCampaigns)}</PrivateRoute> },
+          // Delivery redirects
           { path: 'delivery/dashboard', element: <Navigate to="/delivery/dashboard" replace /> },
           { path: 'delivery/active',    element: <Navigate to="/delivery/active"    replace /> },
           { path: 'delivery/completed', element: <Navigate to="/delivery/completed" replace /> },
           { path: 'delivery/history',   element: <Navigate to="/delivery/history"   replace /> },
           { path: 'delivery/map',       element: <Navigate to="/delivery/map"       replace /> },
-          
-          // Staff specific routes - redirects for backward compatibility
-          {
-            path: 'staff',
-            element: (
-              <PrivateRoute requireStaff={true}>
-                <StaffDashboard />
-              </PrivateRoute>
-            )
-          },
-          {
-            path: 'staff/dashboard',
-            element: (
-              <PrivateRoute requireStaff={true}>
-                <StaffDashboard />
-              </PrivateRoute>
-            )
-          },
-          {
-            path: 'staff/pending-pickups',
-            element: (
-              <PrivateRoute requireStaff={true}>
-                <PendingPickups />
-              </PrivateRoute>
-            )
-          },
-          {
-            path: 'staff/verify-pickup',
-            element: (
-              <PrivateRoute requireStaff={true}>
-                <VerifyPickup />
-              </PrivateRoute>
-            )
-          },
-          {
-            path: 'staff/completed-verifications',
-            element: (
-              <PrivateRoute requireStaff={true}>
-                <VerificationHistory />
-              </PrivateRoute>
-            )
-          },
-          {
-            path: 'staff/verification-success',
-            element: (
-              <PrivateRoute requireStaff={true}>
-                <VerificationSuccess />
-              </PrivateRoute>
-            )
-          },
-          {
-            path: 'staff-pos',
-            element: (
-              <PrivateRoute requireStaff={true}>
-                <StaffPOS />
-              </PrivateRoute>
-            )
-          },
-          {
-            path: 'sales-counter',
-            element: (
-              <PrivateRoute requireStaff={true}>
-                <StaffPOS />
-              </PrivateRoute>
-            )
-          },
-          {
-            path: 'pos-dashboard',
-            element: (
-              <PrivateRoute requireStaff={true}>
-                <POSDashboard />
-              </PrivateRoute>
-            )
-          },
-          {
-            path: 'sales-hub',
-            element: (
-              <PrivateRoute requireStaff={true}>
-                <POSDashboard />
-              </PrivateRoute>
-            )
-          },
-          {
-            path: 'pos-sales',
-            element: (
-              <PrivateRoute requireStaff={true}>
-                <POSSales />
-              </PrivateRoute>
-            )
-          },
-          {
-            path: 'sales-history',
-            element: (
-              <PrivateRoute requireStaff={true}>
-                <POSSales />
-              </PrivateRoute>
-            )
-          },
+          // Staff routes
+          { path: 'staff',                       element: <PrivateRoute requireStaff={true}>{S(StaffDashboard)}</PrivateRoute> },
+          { path: 'staff/dashboard',             element: <PrivateRoute requireStaff={true}>{S(StaffDashboard)}</PrivateRoute> },
+          { path: 'staff/pending-pickups',       element: <PrivateRoute requireStaff={true}>{S(PendingPickups)}</PrivateRoute> },
+          { path: 'staff/verify-pickup',         element: <PrivateRoute requireStaff={true}>{S(VerifyPickup)}</PrivateRoute> },
+          { path: 'staff/completed-verifications', element: <PrivateRoute requireStaff={true}>{S(VerificationHistory)}</PrivateRoute> },
+          { path: 'staff/verification-success',  element: <PrivateRoute requireStaff={true}>{S(VerificationSuccess)}</PrivateRoute> },
+          { path: 'staff-pos',                   element: <PrivateRoute requireStaff={true}>{S(StaffPOS)}</PrivateRoute> },
+          { path: 'sales-counter',               element: <PrivateRoute requireStaff={true}>{S(SalesCounter)}</PrivateRoute> },
+          { path: 'pos-dashboard',               element: <PrivateRoute requireStaff={true}>{S(POSDashboard)}</PrivateRoute> },
+          { path: 'sales-hub',                   element: <PrivateRoute requireStaff={true}>{S(POSDashboard)}</PrivateRoute> },
+          { path: 'pos-sales',                   element: <PrivateRoute requireStaff={true}>{S(POSSales)}</PrivateRoute> },
+          { path: 'sales-history',               element: <PrivateRoute requireStaff={true}>{S(POSSales)}</PrivateRoute> },
           {
             path: 'staff/delivery',
-            element: (
-              <PrivateRoute requireStaff={true}>
-                <DeliveryManagement />
-              </PrivateRoute>
-            ),
+            element: <PrivateRoute requireStaff={true}>{S(DeliveryManagement)}</PrivateRoute>,
             children: [
-              {
-                index: true,
-                element: <Navigate to="pending" replace />
-              },
-              {
-                path: 'pending',
-                element: <PendingDispatch />
-              },
-              {
-                path: 'dispatched',
-                element: <DispatchedOrders />
-              },
-              {
-                path: 'active',
-                element: <ActiveDeliveriesManagement />
-              },
-              {
-                path: 'completed',
-                element: <CompletedDeliveriesManagement />
-              },
-              {
-                path: 'drivers',
-                element: <DriversManagement />
-              }
-            ]
-          }
-        ]
+              { index: true,         element: <Navigate to="pending" replace /> },
+              { path: 'pending',     element: S(PendingDispatch) },
+              { path: 'dispatched',  element: S(DispatchedOrders) },
+              { path: 'active',      element: S(ActiveDeliveriesManagement) },
+              { path: 'completed',   element: S(CompletedDeliveriesManagement) },
+              { path: 'drivers',     element: S(DriversManagement) },
+            ],
+          },
+        ],
       },
-      // Admin chat routes hidden: AI feature not yet complete
-      // {
-      //   path: 'admin/chats',
-      //   element: (
-      //     <PrivateRoute requireAdmin={true}>
-      //       <AdminChatMonitor />
-      //     </PrivateRoute>
-      //   )
-      // },
-      // {
-      //   path: 'admin/chat/:id',
-      //   element: (
-      //     <PrivateRoute requireAdmin={true}>
-      //       <ChatSessionView />
-      //     </PrivateRoute>
-      //   )
-      // },
-      // Improved catch-all route
-      {
-        path: '*',
-        element: <CategorySmartFallback />
-      }
-    ]
-  }
+
+      { path: '*', element: <CategorySmartFallback /> },
+    ],
+  },
 ]);
 
 export default router;

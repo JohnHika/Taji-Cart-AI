@@ -7,6 +7,7 @@ import { fetchCartItems } from '../store/cartProduct';
 import { setUserDetails } from '../store/userSlice';
 import fetchUserDetails from '../utils/fetchUserDetails';
 import { getPostLoginPath } from '../utils/postLoginRedirect';
+import { saveTokens } from '../utils/authStorage';
 
 const createParamsFromSource = (rawValue = '') => {
   if (!rawValue) {
@@ -66,13 +67,9 @@ const SocialAuthSuccess = () => {
           window.history.replaceState(null, document.title, location.pathname);
         }
 
-        // Save tokens to both storages so they survive mobile tab kills
-        sessionStorage.setItem('accesstoken', token);
-        localStorage.setItem('accesstoken', token);
-        if (refreshToken) {
-          sessionStorage.setItem('refreshToken', refreshToken);
-          localStorage.setItem('refreshToken', refreshToken);
-        }
+        // Save tokens respecting the user's previous "Keep me signed in" choice.
+        const rememberMe = localStorage.getItem('rememberMe') === 'true';
+        saveTokens({ accessToken: token, refreshToken, rememberMe });
 
         // Build user object from either JSON userData or individual params
         let userObject = null;

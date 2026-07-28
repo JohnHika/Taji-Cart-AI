@@ -1,7 +1,7 @@
 import axios from 'axios';
 import { apiBaseUrl } from '../common/apiBaseUrl';
 import SummaryApi from '../common/SummaryApi';
-import { getStoredAccessToken } from './authStorage';
+import { clearAuthStorage, getRememberMe, getStoredAccessToken, getStoredRefreshToken, saveTokens } from './authStorage';
 
 const inFlightMutationRequests = new Map();
 
@@ -120,9 +120,7 @@ if (typeof window !== 'undefined') {
 
 const refreshToken = async () => {
   try {
-    const storedRefreshToken =
-      sessionStorage.getItem('refreshToken') ||
-      localStorage.getItem('refreshToken');
+    const storedRefreshToken = getStoredRefreshToken();
 
     if (!storedRefreshToken) {
       throw new Error('No refresh token available');
@@ -140,11 +138,11 @@ const refreshToken = async () => {
         refreshToken: newRefreshToken
       } = response.data.data;
 
-      // Persist to both storages so tokens survive mobile tab kills
-      sessionStorage.setItem('accesstoken', accessToken);
-      sessionStorage.setItem('refreshToken', newRefreshToken);
-      localStorage.setItem('accesstoken', accessToken);
-      localStorage.setItem('refreshToken', newRefreshToken);
+      saveTokens({
+        accessToken,
+        refreshToken: newRefreshToken,
+        rememberMe: getRememberMe(),
+      });
       setupRefreshTimer();
 
       console.log('Token refreshed successfully');
@@ -154,13 +152,14 @@ const refreshToken = async () => {
     throw new Error('Failed to refresh token');
   } catch (error) {
     console.error('Token refresh failed:', error);
-    sessionStorage.removeItem('accesstoken');
-    sessionStorage.removeItem('refreshToken');
-    localStorage.removeItem('accesstoken');
-    localStorage.removeItem('refreshToken');
 
-    if (typeof window !== 'undefined') {
-      window.location.href = '/login';
+    // Only clear the session for actual auth failures, not transient network errors.
+    const isAuthError = error.response && (error.response.status === 401 || error.response.status === 403);
+    if (isAuthError) {
+      clearAuthStorage();
+      if (typeof window !== 'undefined') {
+        window.location.href = '/login';
+      }
     }
 
     throw error;
@@ -169,6 +168,33 @@ const refreshToken = async () => {
 
 if (typeof window !== 'undefined' && (sessionStorage.getItem('accesstoken') || localStorage.getItem('accesstoken'))) {
   setupRefreshTimer();
+}
+
+// Proactively refresh on app focus if the access token might be stale and a
+// refresh token exists. This mimics Amazon/Jumia-style long-lived sessions.
+if (typeof window !== 'undefined' && typeof document !== 'undefined') {
+  let lastFocusRefresh = 0;
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState !== 'visible') return;
+    const now = Date.now();
+    if (now - lastFocusRefresh < 60 * 1000) return;
+    const accessToken = getStoredAccessToken();
+    const refreshToken = getStoredRefreshToken();
+    if (!accessToken || !refreshToken) return;
+
+    // Decode the access token expiry without pulling in jwt-decode.
+    try {
+      const payload = JSON.parse(atob(accessToken.split('.')[1]));
+      const expiresAt = (payload.exp || 0) * 1000;
+      // Refresh if it expires in the next 5 minutes or already expired
+      if (expiresAt - now < 5 * 60 * 1000) {
+        lastFocusRefresh = now;
+        refreshToken().catch(() => {});
+      }
+    } catch {
+      // Ignore malformed token
+    }
+  });
 }
 
 instance.interceptors.response.use(

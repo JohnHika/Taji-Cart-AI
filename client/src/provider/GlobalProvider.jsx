@@ -8,6 +8,7 @@ import { handleAddItemCart } from "../store/cartProduct";
 import { setOrder } from "../store/orderSlice";
 import Axios from "../utils/Axios";
 import AxiosToastError from "../utils/AxiosToastError";
+import { clearAuthStorage } from "../utils/authStorage";
 import { getRoyalCardDiscount, pricewithDiscount } from "../utils/PriceWithDiscount";
 
 // Default context value to prevent undefined destructuring during concurrent rendering
@@ -205,16 +206,14 @@ const GlobalProvider = ({ children }) => {
             dispatch(handleAddItemCart([]));
             setRoyalCardData(null);
             setRoyalDiscount(0);
-
-            // Clear localStorage as fallback
-            localStorage.clear();
+            clearAuthStorage();
         } catch (error) {
             console.error("Logout error:", error);
             // Still clear local state even if API call fails
             dispatch(handleAddItemCart([]));
             setRoyalCardData(null);
             setRoyalDiscount(0);
-            localStorage.clear();
+            clearAuthStorage();
         }
     };
 

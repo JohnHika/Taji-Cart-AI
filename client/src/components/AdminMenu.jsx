@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import toast from 'react-hot-toast';
 import {
   FaBoxOpen,
@@ -8,8 +8,10 @@ import {
   FaClipboardList,
   FaCog,
   FaCrown,
+  FaExclamationCircle,
   FaGift,
   FaHistory,
+  FaIdCard,
   FaLayerGroup,
   FaListAlt,
   FaMapMarkerAlt,
@@ -32,12 +34,15 @@ import { nawiriBrand } from '../config/brand';
 import { logout } from '../store/userSlice';
 import Axios from '../utils/Axios';
 import AxiosToastError from '../utils/AxiosToastError';
+import { clearAuthStorage } from '../utils/authStorage';
+import ReportIssueModal from './modals/ReportIssueModal';
 
 const AdminMenu = ({ close, forLightPanel = false }) => {
   const user = useSelector((state) => state.user);
   const location = useLocation();
   const dispatch = useDispatch();
   const navigate = useNavigate();
+  const [reportIssueOpen, setReportIssueOpen] = useState(false);
 
   const isLinkActive = (to, exact = false) => {
     if (exact) {
@@ -97,7 +102,7 @@ const AdminMenu = ({ close, forLightPanel = false }) => {
       if (response.data.success) {
         close?.();
         dispatch(logout());
-        localStorage.clear();
+        clearAuthStorage();
         toast.success(response.data.message);
         navigate('/');
       }
@@ -185,6 +190,7 @@ const AdminMenu = ({ close, forLightPanel = false }) => {
 
         <p className={sectionClass}>Orders & delivery</p>
         <MenuLink to="/dashboard/allorders" icon={FaClipboardList} label="All orders" />
+        <MenuLink to="/dashboard/driver-verification" icon={FaIdCard} label="Driver verification" />
         <MenuLink to="/dashboard/myorders" icon={FaShoppingBag} label="My orders" />
         <MenuLink to="/dashboard/address" icon={FaMapMarkerAlt} label="Save address" />
 
@@ -194,6 +200,16 @@ const AdminMenu = ({ close, forLightPanel = false }) => {
         <MenuLink to="/dashboard/staff/verify-pickup" icon={FaCheck} label="Verify pickup" />
         <MenuLink to="/dashboard/staff/completed-verifications" icon={FaHistory} label="Verification history" />
         <MenuLink to="/dashboard/staff/delivery" icon={FaCog} label="Delivery management" />
+
+        <p className={sectionClass}>Support</p>
+        <button
+          type="button"
+          onClick={() => setReportIssueOpen(true)}
+          className={`${linkBase} w-full text-left`}
+        >
+          <FaExclamationCircle size={15} className={iconMuted} />
+          <span className="min-w-0 flex-1 truncate">Report an issue</span>
+        </button>
 
         <div className={dividerClass} />
 
@@ -206,6 +222,8 @@ const AdminMenu = ({ close, forLightPanel = false }) => {
           Log out
         </button>
       </nav>
+
+      <ReportIssueModal isOpen={reportIssueOpen} onClose={() => setReportIssueOpen(false)} />
     </div>
   );
 };

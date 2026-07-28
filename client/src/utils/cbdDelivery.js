@@ -4,6 +4,7 @@ export const NAIROBI_CBD_CENTER = {
 };
 
 export const NAIROBI_CBD_RADIUS_KM = 3;
+export const DEFAULT_DELIVERY_CHARGE = 100; // KES
 
 const toRadians = (value) => (value * Math.PI) / 180;
 
@@ -20,8 +21,15 @@ export const haversineDistanceKm = (from, to) => {
   return 6371 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 };
 
-export const getFootDeliveryEligibility = (coords) => {
-  if (!coords || typeof coords.lat !== 'number' || typeof coords.lng !== 'number') {
+export const isWithinCbdRadius = (coordinates) => {
+  if (!coordinates || typeof coordinates.lat !== 'number' || typeof coordinates.lng !== 'number') {
+    return false;
+  }
+  return haversineDistanceKm(coordinates, NAIROBI_CBD_CENTER) <= NAIROBI_CBD_RADIUS_KM;
+};
+
+export const getFootDeliveryEligibility = (customerLocation) => {
+  if (!customerLocation || typeof customerLocation.lat !== 'number' || typeof customerLocation.lng !== 'number') {
     return {
       eligible: false,
       reason: 'missing_location',
@@ -30,7 +38,7 @@ export const getFootDeliveryEligibility = (coords) => {
     };
   }
 
-  const distanceKm = haversineDistanceKm(coords, NAIROBI_CBD_CENTER);
+  const distanceKm = haversineDistanceKm(customerLocation, NAIROBI_CBD_CENTER);
 
   return {
     eligible: distanceKm <= NAIROBI_CBD_RADIUS_KM,

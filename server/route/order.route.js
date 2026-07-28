@@ -23,6 +23,8 @@ import {
 import { admin } from '../middleware/Admin.js'
 import auth from '../middleware/auth.js'
 import staff from '../middleware/Staff.js'
+import { delivery } from '../middleware/Delivery.js'
+import { requireStaffPermission } from '../middleware/requireStaffPermission.js'
 
 const orderRouter = Router()
 
@@ -42,22 +44,23 @@ orderRouter.put('/status/:id', auth, admin, updateOrderStatus)
 
 // Delivery tracking routes
 orderRouter.get("/track/:id", auth, getOrderTrackingDetails);
-orderRouter.post("/assign-delivery", auth, admin, assignDeliveryPersonnel);
-orderRouter.post("/update-location", auth, updateOrderLocation);
-orderRouter.get("/delivery-assigned", auth, getAssignedOrders); // For testing
+// Retired: these older routes bypassed the dispatch/verification/capacity flow.
+orderRouter.post("/assign-delivery", auth, admin, (_req, res) => res.status(410).json({ success: false, message: 'Use /api/delivery/assign-driver instead.' }));
+orderRouter.post("/update-location", auth, delivery, (_req, res) => res.status(410).json({ success: false, message: 'Use /api/delivery/update-location instead.' }));
+orderRouter.get("/delivery-assigned", auth, (_req, res) => res.status(410).json({ success: false, message: 'This testing endpoint has been retired.' }));
 
 // Staff Pickup Verification Routes
-orderRouter.post('/verify-pickup', auth, staff, verifyPickupController);
-orderRouter.put('/complete-pickup', auth, staff, completePickupController);
-orderRouter.get('/pending-pickups', auth, staff, getPendingPickupsController);
-orderRouter.get('/verification-history', auth, staff, getVerificationHistoryController);
-orderRouter.get('/pickup-orders-history', auth, staff, getAllPickupOrdersHistory);
+orderRouter.post('/verify-pickup', auth, staff, requireStaffPermission('pickup.verify_code'), verifyPickupController);
+orderRouter.put('/complete-pickup', auth, staff, requireStaffPermission('pickup.complete'), completePickupController);
+orderRouter.get('/pending-pickups', auth, staff, requireStaffPermission('pickup.view_queue'), getPendingPickupsController);
+orderRouter.get('/verification-history', auth, staff, requireStaffPermission('pickup.view_history'), getVerificationHistoryController);
+orderRouter.get('/pickup-orders-history', auth, staff, requireStaffPermission('pickup.view_history'), getAllPickupOrdersHistory);
 
 // Staff routes for order verification
-orderRouter.post('/staff/verify-pickup-code', auth, staff, verifyPickupCode);
-orderRouter.post('/staff/complete-pickup', auth, staff, completePickupController);
-orderRouter.get('/staff/pending-pickups', auth, staff, getPendingPickupsController);
-orderRouter.get('/staff/verification-history', auth, staff, getVerificationHistoryController);
-orderRouter.get('/staff/pickup-orders-history', auth, staff, getAllPickupOrdersHistory);
+orderRouter.post('/staff/verify-pickup-code', auth, staff, requireStaffPermission('pickup.verify_code'), verifyPickupCode);
+orderRouter.post('/staff/complete-pickup', auth, staff, requireStaffPermission('pickup.complete'), completePickupController);
+orderRouter.get('/staff/pending-pickups', auth, staff, requireStaffPermission('pickup.view_queue'), getPendingPickupsController);
+orderRouter.get('/staff/verification-history', auth, staff, requireStaffPermission('pickup.view_history'), getVerificationHistoryController);
+orderRouter.get('/staff/pickup-orders-history', auth, staff, requireStaffPermission('pickup.view_history'), getAllPickupOrdersHistory);
 
 export default orderRouter

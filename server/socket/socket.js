@@ -1,6 +1,7 @@
 import jwt from 'jsonwebtoken';
 import { Server } from 'socket.io';
 import OrderModel from '../models/order.model.js';
+import DeliveryPersonnelModel from '../models/deliverypersonnel.model.js';
 import UserModel from '../models/user.model.js';
 
 let io;
@@ -40,6 +41,21 @@ const isPrivateNetworkOrigin = (origin) => {
     } catch (error) {
         return false;
     }
+};
+
+const hasOrderAccess = async (user, roles, orderId) => {
+    if (!orderId || !/^[0-9a-fA-F]{24}$/.test(String(orderId)) || !user?._id) return false;
+    if (roles.includes('admin') || roles.includes('staff')) return Boolean(await OrderModel.exists({ _id: orderId }));
+
+    const order = await OrderModel.findById(orderId).select('userId deliveryPersonnel');
+    if (!order) return false;
+    if (order.userId?.toString() === user._id.toString()) return true;
+
+    if (roles.includes('delivery')) {
+        const profile = await DeliveryPersonnelModel.findOne({ userId: user._id }).select('_id');
+        return Boolean(profile && order.deliveryPersonnel?.toString() === profile._id.toString());
+    }
+    return false;
 };
 
 export const initializeSocket = (server) => {
@@ -130,7 +146,7 @@ export const initializeSocket = (server) => {
         }
         
         // Join specific rooms on request
-        socket.on('join', (room) => {
+        socket.on('join', async (room) => {
             if (room === 'staff-pickups' && socket.userRoles?.includes('staff')) {
                 socket.join('staff-pickups');
                 console.log(`Staff ${socket.user._id} joined staff-pickups room`);
@@ -138,31 +154,44 @@ export const initializeSocket = (server) => {
                 socket.join('delivery-updates');
                 console.log(`Delivery personnel ${socket.user._id} joined delivery-updates room`);
             } else if (room.startsWith('order_')) {
-                // Allow customers to join their own order rooms
-                socket.join(room);
-                console.log(`User ${socket.user?._id || 'Unknown'} joined ${room}`);
+                const orderId = room.slice('order_'.length);
+                if (await hasOrderAccess(socket.user, socket.userRoles || [], orderId)) {
+                    socket.join(room);
+                    console.log(`User ${socket.user?._id || 'Unknown'} joined ${room}`);
+                }
             }
         });
         
         // Join order tracking room
-        socket.on('joinOrderRoom', (orderId) => {
-            socket.join(`order_${orderId}`);
-            console.log(`Client joined room: order_${orderId}`);
+        socket.on('joinOrderRoom', async (orderId) => {
+            if (await hasOrderAccess(socket.user, socket.userRoles || [], orderId)) {
+                socket.join(`order_${orderId}`);
+                console.log(`Client joined room: order_${orderId}`);
+            }
         });
         
         // Delivery personnel updates their location
         socket.on('updateLocation', async (data) => {
             try {
                 const { orderId, location } = data;
+                if (!socket.userRoles?.includes('delivery') || !location ||
+                    !Number.isFinite(Number(location.lat)) || !Number.isFinite(Number(location.lng)) ||
+                    Number(location.lat) < -90 || Number(location.lat) > 90 ||
+                    Number(location.lng) < -180 || Number(location.lng) > 180) {
+                    return;
+                }
+
+                const profile = await DeliveryPersonnelModel.findOne({ userId: socket.user._id }).select('_id');
+                const order = profile && await OrderModel.findOne({ _id: orderId, deliveryPersonnel: profile._id }).select('orderId');
+                if (!order) return;
                 
-                // Update order location in database
-                await OrderModel.findByIdAndUpdate(orderId, {
-                    currentLocation: {
+                const currentLocation = {
                         lat: location.lat,
                         lng: location.lng,
                         lastUpdated: new Date()
-                    }
-                });
+                };
+                // Keep all persisted checkout lines in sync.
+                await OrderModel.updateMany({ orderId: order.orderId, deliveryPersonnel: profile._id }, { $set: { currentLocation } });
                 
                 // Broadcast to all clients in this order room
                 io.to(`order_${orderId}`).emit('locationUpdated', {

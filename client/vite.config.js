@@ -14,6 +14,19 @@ export default defineConfig({
   optimizeDeps: {
     include: ['xlsx'],
   },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'vendor-react':  ['react', 'react-dom', 'react-router-dom'],
+          'vendor-redux':  ['@reduxjs/toolkit', 'react-redux'],
+          'vendor-ui':     ['react-hot-toast', 'react-toastify'],
+          'vendor-axios':  ['axios'],
+          'vendor-xlsx':   ['xlsx'],
+        },
+      },
+    },
+  },
   server: {
     host: '0.0.0.0',
     port: 5173,

@@ -6,6 +6,7 @@ import LoyaltyCard from '../models/loyaltycard.model.js'
 import UserModel from '../models/user.model.js'
 import { nawiriBrand } from '../utils/brand.js'
 import { renderAccountNoticeEmail } from '../utils/emailTemplates.js'
+import { STAFF_GRANTABLE_PERMISSIONS, getEffectiveStaffPermissions } from '../utils/staffPermissions.js'
 import { normalizeEmail, validateEmailAddress } from '../utils/emailValidation.js'
 import forgotPasswordTemplate from '../utils/forgotPasswordTemplate.js'
 import generatedAccessToken from '../utils/generatedAccessToken.js'
@@ -110,16 +111,18 @@ const ensureDeliveryProfileForUser = async (user, { syncProfile = false } = {}) 
             isActive: true,
             isAvailable: true,
             isOnline: false,
-            ...syncedProfile,
         }
 
+        // $set and $setOnInsert must not target the same path in one update, or Mongo
+        // throws a path-conflict error and the whole update silently fails (returns null
+        // from the caller's perspective, since the error is swallowed below).
         const update = syncProfile
             ? {
                 $set: syncedProfile,
                 $setOnInsert: seedProfile,
             }
             : {
-                $setOnInsert: seedProfile,
+                $setOnInsert: { ...seedProfile, ...syncedProfile },
             }
 
         return await DeliveryPersonnelModel.findOneAndUpdate(
@@ -1311,10 +1314,16 @@ export async function refreshToken(request, response) {
             }
 
             const userId = verifyToken?._id;
-            
+
             // Generate new tokens
             const newAccessToken = await generatedAccessToken(userId);
             const newRefreshToken = await genertedRefreshToken(userId);
+
+            // Keep last-active timestamp current for sessions kept alive via refresh
+            await UserModel.findByIdAndUpdate(userId, {
+                last_login_date: new Date(),
+                lastLogin: new Date()
+            });
 
             // Set cookies for security
             const cookiesOption = {
@@ -1448,8 +1457,16 @@ export async function changePassword(request, response) {
         }
 
         // Password complexity validation - only apply to new password, not current password
-        const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
-        if (!passwordRegex.test(newPassword)) {
+        // Allow any non-alphanumeric character as the "special character" rather than a
+        // fixed short list, since the error message doesn't tell the user which symbols
+        // are accepted and rejecting valid-looking passwords (e.g. containing '#') is
+        // confusing when the strength meter already reports them as strong.
+        const hasMinLength = newPassword.length >= 8;
+        const hasUppercase = /[A-Z]/.test(newPassword);
+        const hasLowercase = /[a-z]/.test(newPassword);
+        const hasNumber = /\d/.test(newPassword);
+        const hasSpecialChar = /[^A-Za-z0-9]/.test(newPassword);
+        if (!hasMinLength || !hasUppercase || !hasLowercase || !hasNumber || !hasSpecialChar) {
             return response.status(400).json({
                 message: "New password must be at least 8 characters and include uppercase, lowercase, number, and special character",
                 error: true,
@@ -2357,6 +2374,55 @@ export async function setStaffRoleController(req, res) {
 }
 
 // ── Wishlist ────────────────────────────────────────────────────────────────
+
+export const getStaffPermissionCatalog = async (_req, res) => {
+    return res.json({
+        success: true,
+        data: { grantablePermissions: STAFF_GRANTABLE_PERMISSIONS }
+    });
+};
+
+export const updateStaffPermissionsController = async (req, res) => {
+    try {
+        const { userId, permissions } = req.body;
+        if (!userId || !Array.isArray(permissions)) {
+            return res.status(400).json({ success: false, message: 'userId and permissions array are required' });
+        }
+
+        const allowed = new Set(STAFF_GRANTABLE_PERMISSIONS.map((permission) => permission.id));
+        const normalized = [...new Set(permissions.filter((permission) => typeof permission === 'string'))];
+        if (normalized.some((permission) => !allowed.has(permission))) {
+            return res.status(400).json({ success: false, message: 'One or more permissions are not grantable' });
+        }
+
+        const staffUser = await UserModel.findById(userId);
+        if (!staffUser) return res.status(404).json({ success: false, message: 'Staff user not found' });
+        if (!(staffUser.isStaff || staffUser.role === 'staff')) {
+            return res.status(400).json({ success: false, message: 'Extra permissions can only be assigned to staff members' });
+        }
+
+        staffUser.staffPermissions = normalized;
+        staffUser.staffPermissionAudit.push({
+            permissions: normalized,
+            changedBy: req.userId,
+            changedAt: new Date()
+        });
+        await staffUser.save();
+
+        return res.json({
+            success: true,
+            message: 'Staff permissions updated',
+            data: {
+                userId: staffUser._id,
+                staffPermissions: staffUser.staffPermissions,
+                effectivePermissions: getEffectiveStaffPermissions(staffUser)
+            }
+        });
+    } catch (error) {
+        console.error('Error updating staff permissions:', error);
+        return res.status(500).json({ success: false, message: 'Unable to update staff permissions' });
+    }
+};
 
 export const getWishlist = async (req, res) => {
     try {

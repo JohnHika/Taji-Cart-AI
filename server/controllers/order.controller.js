@@ -13,6 +13,7 @@ import UserRewardModel from "../models/userreward.model.js";
 import UserModel from "../models/user.model.js";
 import { getIO } from '../socket/socket.js'; // Add this import
 import {
+  DEFAULT_DELIVERY_CHARGE,
   extractCoordinatesFromPayload,
   getCbdFootDeliveryStatus,
   getDeliveryModeFromPayload,
@@ -108,6 +109,7 @@ const buildValidatedOrderPricing = async ({
   pointsUsed = 0,
   communityRewardId = null,
   communityDiscountAmount = 0,
+  deliveryCharge = 0,
 }) => {
   const orderItems = Array.isArray(items) ? items : [];
 
@@ -200,7 +202,8 @@ const buildValidatedOrderPricing = async ({
   return {
     normalizedItems,
     subTotalAmt,
-    totalAmt: roundMoney(Math.max(0, priceAfterCommunityDiscount - appliedPoints)),
+    deliveryCharge,
+    totalAmt: roundMoney(Math.max(0, priceAfterCommunityDiscount - appliedPoints + deliveryCharge)),
     loyaltyCard,
     appliedPoints,
     communityReward,
@@ -303,20 +306,20 @@ export async function checkoutController(request, response) {
             });
         }
         
-        // Validate foot delivery for CBD
-        if (fulfillment_type === 'delivery' && isFootDeliveryMode(deliveryMode)) {
+        // Validate delivery location is within Nairobi CBD radius for foot delivery only
+        if (fulfillment_type === 'delivery' && deliveryMode === 'foot') {
             const cbdStatus = getCbdFootDeliveryStatus(customerLocation);
             
             if (!cbdStatus.allowed) {
                 const outsideZoneMessage = cbdStatus.reason === 'outside_cbd'
-                    ? `Foot delivery is available only within Nairobi CBD (${cbdStatus.radiusKm}km radius). Your selected location is ${Number(cbdStatus.distanceKm || 0).toFixed(2)}km away.`
-                    : 'Please enable location and pin your delivery point to use foot delivery in Nairobi CBD.';
+                    ? `Foot delivery is only available within Nairobi CBD (${cbdStatus.radiusKm}km radius). Your selected location is ${Number(cbdStatus.distanceKm || 0).toFixed(2)}km away.`
+                    : 'Please enable location and pin your delivery point within Nairobi CBD.';
                 
                 return response.status(400).json({
                     message: outsideZoneMessage,
                     error: true,
                     success: false,
-                    code: 'FOOT_DELIVERY_OUTSIDE_CBD',
+                    code: 'DELIVERY_OUTSIDE_CBD',
                     details: {
                         radiusKm: cbdStatus.radiusKm,
                         distanceKm: cbdStatus.distanceKm,
@@ -325,6 +328,8 @@ export async function checkoutController(request, response) {
                 });
             }
         }
+        
+        const deliveryCharge = fulfillment_type === 'delivery' ? DEFAULT_DELIVERY_CHARGE : 0;
         
         const {
             normalizedItems,
@@ -340,6 +345,7 @@ export async function checkoutController(request, response) {
             pointsUsed,
             communityRewardId,
             communityDiscountAmount,
+            deliveryCharge,
         });
         
         // All items in one checkout share the same orderId so reports can
@@ -362,7 +368,9 @@ export async function checkoutController(request, response) {
             pickup_instructions: pickup_instructions || '',
             delivery_mode: deliveryMode || 'standard',
             customer_location: customerLocation || undefined,
+            deliveryInstructions: request.body.deliveryInstructions || '',
             subTotalAmt: subTotalAmt,
+            deliveryCharge: deliveryCharge,
             totalAmt: totalAmt,
         }));
         
@@ -504,19 +512,20 @@ export async function CashOnDeliveryOrderController(request, response) {
             });
         }
 
-        if (fulfillment_type === 'delivery' && isFootDeliveryMode(deliveryMode)) {
+        // Validate delivery location is within Nairobi CBD radius for foot delivery only
+        if (fulfillment_type === 'delivery' && deliveryMode === 'foot') {
           const cbdStatus = getCbdFootDeliveryStatus(customerLocation)
 
           if (!cbdStatus.allowed) {
             const outsideZoneMessage = cbdStatus.reason === 'outside_cbd'
-              ? `Foot delivery is available only within Nairobi CBD (${cbdStatus.radiusKm}km radius). Your selected location is ${Number(cbdStatus.distanceKm || 0).toFixed(2)}km away.`
-              : 'Please enable location and pin your delivery point to use foot delivery in Nairobi CBD.'
+              ? `Foot delivery is only available within Nairobi CBD (${cbdStatus.radiusKm}km radius). Your selected location is ${Number(cbdStatus.distanceKm || 0).toFixed(2)}km away.`
+              : 'Please enable location and pin your delivery point within Nairobi CBD.'
 
             return response.status(400).json({
               message: outsideZoneMessage,
               error: true,
               success: false,
-              code: 'FOOT_DELIVERY_OUTSIDE_CBD',
+              code: 'DELIVERY_OUTSIDE_CBD',
               details: {
                 radiusKm: cbdStatus.radiusKm,
                 distanceKm: cbdStatus.distanceKm,
@@ -525,6 +534,8 @@ export async function CashOnDeliveryOrderController(request, response) {
             })
           }
         }
+
+        const deliveryCharge = fulfillment_type === 'delivery' ? DEFAULT_DELIVERY_CHARGE : 0;
 
         const {
             normalizedItems,
@@ -540,6 +551,7 @@ export async function CashOnDeliveryOrderController(request, response) {
             pointsUsed,
             communityRewardId,
             communityDiscountAmount,
+            deliveryCharge,
         });
 
         // Generate verification code for pickup orders
@@ -571,8 +583,10 @@ export async function CashOnDeliveryOrderController(request, response) {
             pickup_instructions: pickup_instructions || '',
             delivery_mode: deliveryMode || 'standard',
             customer_location: customerLocation || undefined,
+            deliveryInstructions: request.body.deliveryInstructions || '',
             pickupVerificationCode: pickupVerificationCode,
             subTotalAmt: subTotalAmt,
+            deliveryCharge: deliveryCharge,
             totalAmt: totalAmt,
         }))
 
@@ -765,25 +779,28 @@ export async function guestCheckoutController(request, response) {
             })
         }
 
+        const deliveryCharge = fulfillment_type === 'delivery' ? DEFAULT_DELIVERY_CHARGE : 0;
+
         const {
             normalizedItems,
             subTotalAmt,
             totalAmt,
-        } = await buildValidatedOrderPricing({ items })
+        } = await buildValidatedOrderPricing({ items, deliveryCharge })
 
-        if (fulfillment_type === 'delivery' && isFootDeliveryMode(deliveryMode)) {
+        // Validate delivery location is within Nairobi CBD radius for foot delivery only
+        if (fulfillment_type === 'delivery' && deliveryMode === 'foot') {
           const cbdStatus = getCbdFootDeliveryStatus(customerLocation)
 
           if (!cbdStatus.allowed) {
             const outsideZoneMessage = cbdStatus.reason === 'outside_cbd'
-              ? `Foot delivery is available only within Nairobi CBD (${cbdStatus.radiusKm}km radius). Your selected location is ${Number(cbdStatus.distanceKm || 0).toFixed(2)}km away.`
-              : 'Please enable location and pin your delivery point to use foot delivery in Nairobi CBD.'
+              ? `Foot delivery is only available within Nairobi CBD (${cbdStatus.radiusKm}km radius). Your selected location is ${Number(cbdStatus.distanceKm || 0).toFixed(2)}km away.`
+              : 'Please enable location and pin your delivery point within Nairobi CBD.'
 
             return response.status(400).json({
               message: outsideZoneMessage,
               error: true,
               success: false,
-              code: 'FOOT_DELIVERY_OUTSIDE_CBD',
+              code: 'DELIVERY_OUTSIDE_CBD',
               details: {
                 radiusKm: cbdStatus.radiusKm,
                 distanceKm: cbdStatus.distanceKm,
@@ -793,7 +810,6 @@ export async function guestCheckoutController(request, response) {
           }
         }
 
-        // Generate verification code for pickup orders
         const generateVerificationCode = () => {
             return Math.random().toString(36).substring(2, 8).toUpperCase()
         }
@@ -816,11 +832,13 @@ export async function guestCheckoutController(request, response) {
             delivery_mode: deliveryMode || 'standard',
             pickup_location,
             customer_location: customerLocation || undefined,
+            deliveryInstructions: request.body.deliveryInstructions || '',
             product_details: {
                 name: normalizedItems.map(item => item.productId?.name || item.name || 'Product').join(', '),
                 image: normalizedItems[0]?.productId?.image || []
             },
             subTotalAmt,
+            deliveryCharge,
             totalAmt,
             status: 'pending',
             statusHistory: [{
@@ -943,6 +961,7 @@ export async function getOrderDetailsController(request, response) {
                     totalAmt: { $first: '$totalAmt' },
                     deliveryPersonnel: { $first: '$deliveryPersonnel' },
                     estimatedDeliveryTime: { $first: '$estimatedDeliveryTime' },
+                    deliveredAt: { $first: '$deliveredAt' },
                     createdAt: { $first: '$createdAt' },
                     updatedAt: { $max: '$updatedAt' },
                     items: {
@@ -1357,6 +1376,20 @@ export async function updateOrderStatus(request, response) {
       }
     );
 
+    // An admin completion must release the same driver capacity as a driver
+    // completion; otherwise a driver can remain permanently at capacity.
+    if (status === 'delivered' && previousStatus !== 'delivered' && order.deliveryPersonnel) {
+      const driver = await DeliveryPersonnelModel.findById(order.deliveryPersonnel);
+      const wasActive = Boolean(driver?.activeOrders?.some((activeOrderId) => activeOrderId?.toString() === order._id.toString()));
+      if (driver && wasActive) {
+        driver.activeOrders = driver.activeOrders.filter((activeOrderId) => activeOrderId?.toString() !== order._id.toString());
+        driver.activeOrdersCount = Math.max(0, (driver.activeOrdersCount || 0) - 1);
+        driver.isAvailable = driver.isActive !== false && driver.isOnline === true && driver.activeOrdersCount < 5;
+        driver.lastActive = new Date();
+        await driver.save();
+      }
+    }
+
     // Driver performance update (once, not per line item)
     if (status === 'delivered' && order.deliveryPersonnel) {
       try {
@@ -1573,7 +1606,7 @@ export async function updateOrderLocation(request, response) {
     try {
         const { orderId, location, status } = request.body;
         
-        if (!orderId || !location || !location.lat || !location.lng) {
+        if (!orderId || !location || location.lat == null || location.lng == null) {
             return response.status(400).json({
                 message: "Order ID and location coordinates are required",
                 success: false
@@ -1586,6 +1619,20 @@ export async function updateOrderLocation(request, response) {
                 message: "Order not found",
                 success: false
             });
+        }
+
+        const personnel = await DeliveryPersonnelModel.findOne({ userId: request.userId }).select('_id');
+        if (!personnel || !order.deliveryPersonnel || order.deliveryPersonnel.toString() !== personnel._id.toString()) {
+            return response.status(403).json({ message: 'You are not assigned to this delivery', success: false });
+        }
+        if (!Number.isFinite(Number(location.lat)) || !Number.isFinite(Number(location.lng)) ||
+            Number(location.lat) < -90 || Number(location.lat) > 90 ||
+            Number(location.lng) < -180 || Number(location.lng) > 180) {
+            return response.status(400).json({ message: 'Invalid location coordinates', success: false });
+        }
+        const transitions = { driver_assigned: ['out_for_delivery'], out_for_delivery: ['nearby', 'delivered'], nearby: ['delivered'] };
+        if (status && !(transitions[order.status] || []).includes(status)) {
+            return response.status(409).json({ message: `Cannot change ${order.status} directly to ${status}`, success: false });
         }
         
         const locationUpdate = {
@@ -1603,7 +1650,8 @@ export async function updateOrderLocation(request, response) {
             pushFields.statusHistory = {
                 status,
                 timestamp: new Date(),
-                location: { lat: location.lat, lng: location.lng }
+                location: { lat: location.lat, lng: location.lng },
+                updatedBy: request.userId
             };
 
             if (status === 'delivered') {

@@ -1,48 +1,33 @@
-import { useEffect, useRef, useState } from 'react';
-import { FaApple, FaChrome, FaDownload, FaMobileAlt, FaShareSquare, FaTimes } from 'react-icons/fa';
+import { useEffect, useState } from 'react';
+import PropTypes from 'prop-types';
+import { FaDownload, FaMobileAlt, FaTimes } from 'react-icons/fa';
 
 const DISMISS_KEY = 'nawiri_pwa_install_dismissed_v2';
 
-/** Detect iOS — `beforeinstallprompt` is not supported there */
-function isIOS() {
-  return /iphone|ipad|ipod/i.test(navigator.userAgent) && !(window.navigator.standalone);
-}
-
 /**
  * PWAInstallBanner
- * – Always visible on mobile / md screens (hidden lg+) unless dismissed
- * – When `beforeinstallprompt` fires → native one-tap install
- * – On iOS → show "Share → Add to Home Screen" instructions
- * – Without prompt (dev, Firefox, etc.) → show generic install guidance
- * – Dismissal persisted in localStorage so it doesn't reappear
+ * – Only renders when the browser offers a real `beforeinstallprompt` event.
+ * – Dismissal persisted in localStorage so it doesn't reappear.
  */
-export default function PWAInstallBanner() {
+export default function PWAInstallBanner({ context = 'footer' }) {
   const [deferredPrompt, setDeferredPrompt] = useState(null);
   const [dismissed, setDismissed] = useState(false);
   const [installing, setInstalling] = useState(false);
   const [alreadyInstalled, setAlreadyInstalled] = useState(false);
-  const [showGuide, setShowGuide] = useState(false);
-  const guideRef = useRef(null);
-  const ios = isIOS();
 
   useEffect(() => {
-    // Already dismissed by user
     if (localStorage.getItem(DISMISS_KEY)) {
       setDismissed(true);
       return;
     }
 
-    // Capture the native install prompt (Chrome / Edge / Android)
     const handler = (e) => {
       e.preventDefault();
       setDeferredPrompt(e);
     };
     window.addEventListener('beforeinstallprompt', handler);
-
-    // Hide once app is installed
     window.addEventListener('appinstalled', () => setAlreadyInstalled(true));
 
-    // Already running as standalone (installed)
     if (window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone) {
       setAlreadyInstalled(true);
     }
@@ -51,18 +36,6 @@ export default function PWAInstallBanner() {
       window.removeEventListener('beforeinstallprompt', handler);
     };
   }, []);
-
-  // Close guide panel when clicking outside
-  useEffect(() => {
-    if (!showGuide) return;
-    const onOutside = (e) => {
-      if (guideRef.current && !guideRef.current.contains(e.target)) {
-        setShowGuide(false);
-      }
-    };
-    document.addEventListener('mousedown', onOutside);
-    return () => document.removeEventListener('mousedown', onOutside);
-  }, [showGuide]);
 
   const handleInstall = async () => {
     if (!deferredPrompt) return;
@@ -81,94 +54,44 @@ export default function PWAInstallBanner() {
     localStorage.setItem(DISMISS_KEY, '1');
   };
 
-  // Don't render if dismissed or already installed
   if (dismissed || alreadyInstalled) return null;
+  if (!deferredPrompt) return null;
 
   return (
-    /* Hidden on lg+ (desktop) — only shows on mobile/md */
-    <div className="lg:hidden mx-2 sm:mx-4 mt-3 mb-1">
-      <div className="relative rounded-2xl border border-plum-200/60 bg-gradient-to-r from-plum-50 to-blush-50 dark:from-plum-900/30 dark:to-dm-card dark:border-plum-700/40 px-4 py-3 shadow-sm">
-
-        {/* Dismiss button — top-right */}
+    <div className="mx-auto w-full max-w-md px-4 py-4">
+      <div className="relative rounded-lg border border-brown-200 bg-white px-4 py-3 shadow-sm dark:border-dm-border dark:bg-dm-card">
         <button
           onClick={handleDismiss}
           aria-label="Dismiss install prompt"
-          className="absolute top-2 right-2 w-6 h-6 flex items-center justify-center rounded-full text-brown-400 dark:text-white/30 hover:text-brown-600 dark:hover:text-white/60 hover:bg-blush-100 dark:hover:bg-dm-card-2 transition-colors"
+          className="absolute right-2 top-2 flex h-6 w-6 items-center justify-center rounded-full text-brown-400 transition-colors hover:bg-brown-100 hover:text-brown-600 dark:text-white/30 dark:hover:bg-dm-card-2 dark:hover:text-white/60"
         >
-          <FaTimes size={9} />
+          <FaTimes size={10} />
         </button>
 
         <div className="flex items-start gap-3 pr-5">
-          {/* Icon */}
-          <div className="flex-shrink-0 w-10 h-10 rounded-full bg-plum-100 dark:bg-plum-800/50 flex items-center justify-center mt-0.5">
-            <FaMobileAlt className="text-plum-600 dark:text-plum-300" size={16} />
+          <div className="mt-0.5 flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-plum-100 text-plum-600 dark:bg-plum-800/50 dark:text-plum-300">
+            <FaMobileAlt size={15} />
           </div>
 
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold text-charcoal dark:text-white leading-tight">
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-semibold leading-tight text-charcoal dark:text-white">
               Install the Nawiri Hair app
             </p>
-            <p className="text-xs text-brown-500 dark:text-white/50 mt-0.5 leading-snug">
-              Shop faster, get order updates &amp; access offline
+            <p className="mt-0.5 text-xs leading-snug text-brown-500 dark:text-white/50">
+              {context === 'footer'
+                ? 'Shop faster and get order updates from your home screen.'
+                : 'Shop faster and get order updates.'}
             </p>
 
-            <div className="mt-2.5">
-              {/* Chrome / Android — native prompt available */}
-              {deferredPrompt && (
-                <button
-                  onClick={handleInstall}
-                  disabled={installing}
-                  className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-plum-700 hover:bg-plum-800 active:scale-95 text-white text-xs font-semibold rounded-xl transition-all disabled:opacity-60 shadow-sm"
-                >
-                  <FaDownload size={10} />
-                  {installing ? 'Installing…' : 'Install App'}
-                </button>
-              )}
-
-              {/* iOS — native prompt not available */}
-              {ios && !deferredPrompt && (
-                <p className="text-xs text-plum-700 dark:text-plum-300 flex items-center gap-1.5 font-medium">
-                  <FaApple size={12} />
-                  Tap
-                  <FaShareSquare size={11} className="text-plum-500" />
-                  then &ldquo;Add to Home Screen&rdquo;
-                </p>
-              )}
-
-              {/* Other browsers — Install button that opens a step-by-step guide */}
-              {!ios && !deferredPrompt && (
-                <div ref={guideRef} className="relative">
-                  <button
-                    onClick={() => setShowGuide((v) => !v)}
-                    className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-plum-700 hover:bg-plum-800 active:scale-95 text-white text-xs font-semibold rounded-xl transition-all shadow-sm"
-                  >
-                    <FaDownload size={10} />
-                    Install App
-                  </button>
-
-                  {/* Step-by-step guide popover */}
-                  {showGuide && (
-                    <div className="absolute left-0 top-9 z-50 w-64 rounded-2xl border border-plum-200/60 dark:border-plum-700/40 bg-white dark:bg-dm-card shadow-xl p-3.5 text-xs leading-relaxed">
-                      <p className="font-semibold text-charcoal dark:text-white mb-2 flex items-center gap-1.5">
-                        <FaChrome size={12} className="text-plum-600" />
-                        Install in Chrome
-                      </p>
-                      <ol className="space-y-1.5 text-brown-600 dark:text-white/60 list-decimal list-inside">
-                        <li>Open this page in <strong className="text-charcoal dark:text-white">Google Chrome</strong></li>
-                        <li>Tap the <strong className="text-charcoal dark:text-white">⋮ menu</strong> (top-right)</li>
-                        <li>Select <strong className="text-charcoal dark:text-white">"Add to Home screen"</strong></li>
-                        <li>Tap <strong className="text-charcoal dark:text-white">Install</strong> — done!</li>
-                      </ol>
-                      <button
-                        onClick={() => setShowGuide(false)}
-                        className="mt-2.5 w-full text-center text-xs text-plum-600 dark:text-plum-300 hover:underline"
-                      >
-                        Got it
-                      </button>
-                    </div>
-                  )}
-                </div>
-              )}
+            <div className="mt-2">
+              <button
+                onClick={handleInstall}
+                disabled={installing}
+                className="inline-flex min-h-[36px] items-center gap-1.5 rounded-lg bg-plum-700 px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-plum-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold-500 disabled:opacity-60"
+              >
+                <FaDownload size={10} />
+                {installing ? 'Installing…' : 'Install App'}
+              </button>
             </div>
           </div>
         </div>
@@ -176,3 +99,7 @@ export default function PWAInstallBanner() {
     </div>
   );
 }
+
+PWAInstallBanner.propTypes = {
+  context: PropTypes.string,
+};

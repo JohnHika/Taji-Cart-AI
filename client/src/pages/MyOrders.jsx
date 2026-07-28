@@ -1,11 +1,66 @@
 import React, { useEffect, useState } from 'react'
-import { FaBox, FaCalendarAlt, FaMapMarkerAlt, FaMoneyBillWave, FaQrcode, FaShoppingBag, FaSpinner, FaStore, FaTruck } from 'react-icons/fa'
+import { FaBox, FaCalendarAlt, FaMapMarkerAlt, FaMoneyBillWave, FaQrcode, FaShoppingBag, FaSpinner, FaStar, FaStore, FaTruck } from 'react-icons/fa'
 import { useDispatch, useSelector } from 'react-redux'
 import { Link } from 'react-router-dom'
 import { toast } from 'react-toastify'
 import NoData from '../components/NoData'
 import { setOrder } from '../store/orderSlice'
 import Axios from '../utils/Axios'
+import AxiosToastError from '../utils/AxiosToastError'
+
+const RateDriver = ({ orderId, ratedValue, onRated }) => {
+  const [submitting, setSubmitting] = useState(false)
+
+  const submitRating = async (rating) => {
+    try {
+      setSubmitting(true)
+      const response = await Axios({
+        url: `/api/delivery/rate-driver/${orderId}`,
+        method: 'POST',
+        data: { rating }
+      })
+
+      if (response.data?.success) {
+        toast.success(response.data.message || 'Rating submitted')
+        onRated(rating)
+      } else {
+        toast.error(response.data?.message || 'Failed to submit rating')
+      }
+    } catch (error) {
+      if (error.response?.status === 409) {
+        toast.error('You have already rated this delivery')
+        onRated(ratedValue || 5)
+      } else {
+        AxiosToastError(error)
+      }
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  return (
+    <div className="flex items-center gap-2">
+      <span className="text-sm text-brown-600 dark:text-white/55">
+        {ratedValue ? 'You rated your rider' : 'Rate your rider:'}
+      </span>
+      <div className="flex">
+        {[1, 2, 3, 4, 5].map((star) => (
+          <button
+            key={star}
+            type="button"
+            disabled={Boolean(ratedValue) || submitting}
+            onClick={() => submitRating(star)}
+            className="disabled:cursor-default"
+          >
+            <FaStar
+              className={`w-4 h-4 ${star <= (ratedValue || 0) ? 'text-yellow-400' : 'text-brown-200 dark:text-brown-500'} ${ratedValue ? '' : 'hover:text-yellow-300 cursor-pointer'}`}
+            />
+          </button>
+        ))}
+      </div>
+    </div>
+  )
+}
 
 const statusColors = {
   pending: 'bg-gold-100 text-gold-600 border-gold-200',
@@ -30,6 +85,7 @@ const MyOrders = () => {
   const user = useSelector(state => state.user)
   const dispatch = useDispatch()
   const [loading, setLoading] = useState(false)
+  const [driverRatings, setDriverRatings] = useState({})
 
   useEffect(() => {
     // Only fetch orders if user is authenticated
@@ -156,23 +212,29 @@ const MyOrders = () => {
                   {/* Product information — always row on mobile (image + text side by side) */}
                   <div className="flex gap-3 mb-4 pb-4 border-b border-brown-100 dark:border-dm-border">
                     <div className="shrink-0">
-                      <img
-                        src={order.product_details.image[0]}
-                        className="w-16 h-16 sm:w-20 sm:h-20 object-cover rounded-lg border border-brown-100 dark:border-dm-border"
-                        alt={order.product_details.name}
-                      />
+                      {order.product_details?.image?.[0] ? (
+                        <img
+                          src={order.product_details.image[0]}
+                          className="w-16 h-16 sm:w-20 sm:h-20 object-cover rounded-lg border border-brown-100 dark:border-dm-border"
+                          alt={order.product_details?.name || 'Product'}
+                        />
+                      ) : (
+                        <div className="w-16 h-16 sm:w-20 sm:h-20 flex items-center justify-center rounded-lg border border-brown-100 dark:border-dm-border bg-brown-50 dark:bg-dm-card-2 text-brown-300 dark:text-white/30">
+                          <FaBox size={20} />
+                        </div>
+                      )}
                     </div>
                     <div className="flex-grow min-w-0">
-                      <h3 className="font-medium text-sm sm:text-base text-charcoal dark:text-white mb-1 line-clamp-2">{order.product_details.name}</h3>
+                      <h3 className="font-medium text-sm sm:text-base text-charcoal dark:text-white mb-1 line-clamp-2">{order.product_details?.name || 'Product unavailable'}</h3>
                       <p className="text-xs text-brown-600 dark:text-white/55 mb-1 line-clamp-2 hidden sm:block">
-                        {order.product_details.description
+                        {order.product_details?.description
                           ? order.product_details.description.substring(0, 100) + '...'
                           : 'No description available'}
                       </p>
                       <div className="flex items-center justify-between gap-2">
                         <span className="text-xs text-brown-600 dark:text-white/50">Qty: <span className="text-charcoal dark:text-white/80 font-medium">{order.quantity || 1}</span></span>
                         <span className="text-sm font-semibold text-charcoal dark:text-white">
-                          KSh {order.product_details.price?.toLocaleString() || 'N/A'}
+                          KSh {order.product_details?.price?.toLocaleString() || 'N/A'}
                         </span>
                       </div>
                     </div>
@@ -270,6 +332,16 @@ const MyOrders = () => {
                       </div>
                     </div>
                   </div>
+
+                  {order.fulfillment_type === 'delivery' && order.status === 'delivered' && (
+                    <div className="mt-4 pt-4 border-t border-brown-100 dark:border-dm-border">
+                      <RateDriver
+                        orderId={order.orderId}
+                        ratedValue={driverRatings[order.orderId]}
+                        onRated={(rating) => setDriverRatings((prev) => ({ ...prev, [order.orderId]: rating }))}
+                      />
+                    </div>
+                  )}
                 </div>
               </div>
             ))}

@@ -177,6 +177,54 @@ export const verifyDriver = async (req, res) => {
     }
 };
 
+// Admin: Bulk verify or reject drivers (e.g. shop's existing trusted riders)
+export const bulkVerifyDrivers = async (req, res) => {
+    try {
+        const { driverIds, status, notes } = req.body;
+        const adminId = req.userId;
+
+        if (!Array.isArray(driverIds) || driverIds.length === 0) {
+            return res.status(400).json({
+                success: false,
+                message: 'driverIds must be a non-empty array'
+            });
+        }
+
+        if (!['verified', 'rejected'].includes(status)) {
+            return res.status(400).json({
+                success: false,
+                message: 'Invalid status. Must be "verified" or "rejected"'
+            });
+        }
+
+        const result = await DriverPersonnelModel.updateMany(
+            { _id: { $in: driverIds } },
+            {
+                $set: {
+                    verificationStatus: status,
+                    verificationNotes: notes || '',
+                    verifiedBy: adminId,
+                    verifiedAt: new Date()
+                }
+            }
+        );
+
+        res.status(200).json({
+            success: true,
+            message: `${result.modifiedCount} driver(s) ${status} successfully`,
+            data: { modifiedCount: result.modifiedCount }
+        });
+
+    } catch (error) {
+        console.error('Error bulk verifying drivers:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error bulk verifying drivers',
+            error: error.message
+        });
+    }
+};
+
 // Get driver verification status
 export const getDriverVerificationStatus = async (req, res) => {
     try {

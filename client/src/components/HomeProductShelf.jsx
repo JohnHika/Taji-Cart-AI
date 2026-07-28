@@ -1,4 +1,5 @@
-import React, { useRef } from 'react';
+import { useRef } from 'react';
+import PropTypes from 'prop-types';
 import { Link } from 'react-router-dom';
 import { FaAngleLeft, FaAngleRight } from 'react-icons/fa6';
 import CardLoading from './CardLoading';
@@ -25,7 +26,7 @@ const HomeProductShelf = ({
   };
 
   return (
-    <section className="mb-5 sm:mb-10">
+    <section className="mb-8 sm:mb-12">
       <div className="mb-4 flex items-end justify-between gap-3 sm:mb-5">
         <div className="min-w-0">
           <h2 className="text-xl font-bold text-charcoal dark:text-white sm:text-2xl">{title}</h2>
@@ -46,15 +47,15 @@ const HomeProductShelf = ({
       </div>
 
       <div className="relative">
-        {/* Right-edge fade cue visible on mobile/tablet to hint at horizontal scroll */}
-        <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-10 bg-gradient-to-l from-ivory dark:from-dm-surface lg:hidden" />
-
         <div
           ref={containerRef}
-          className="flex gap-3 overflow-x-auto scroll-smooth pb-2 scrollbar-hide sm:gap-4"
+          className="flex gap-3 overflow-x-auto scroll-smooth pb-4 scrollbar-hide sm:gap-4 lg:gap-5 snap-x snap-mandatory"
         >
-          {(loading ? Array.from({ length: 6 }) : products).map((item, index) => (
-            <div key={loading ? `shelf-loading-${title}-${index}` : item._id} className="flex-shrink-0">
+          {(loading ? Array.from({ length: 5 }) : products).map((item, index) => (
+            <div
+              key={loading ? `shelf-loading-${title}-${index}` : item._id}
+              className="flex-shrink-0 snap-start"
+            >
               {loading ? <CardLoading /> : <CardProduct data={item} />}
             </div>
           ))}
@@ -64,7 +65,7 @@ const HomeProductShelf = ({
           <button
             type="button"
             onClick={() => scrollByAmount(-260)}
-            className="pointer-events-auto -ml-3 rounded-full border border-brown-200 bg-white p-2 text-plum-700 shadow-md transition-colors hover:bg-plum-50 dark:border-dm-border dark:bg-dm-card dark:text-plum-200 dark:hover:bg-plum-900/30"
+            className="pointer-events-auto -ml-3 rounded-full border border-brown-200 bg-white p-2 text-plum-700 shadow-sm transition-colors hover:bg-plum-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold-500 dark:border-dm-border dark:bg-dm-card dark:text-plum-200 dark:hover:bg-plum-900/30"
             aria-label={`Scroll ${title} left`}
           >
             <FaAngleLeft />
@@ -75,7 +76,7 @@ const HomeProductShelf = ({
           <button
             type="button"
             onClick={() => scrollByAmount(260)}
-            className="pointer-events-auto -mr-3 rounded-full border border-brown-200 bg-white p-2 text-plum-700 shadow-md transition-colors hover:bg-plum-50 dark:border-dm-border dark:bg-dm-card dark:text-plum-200 dark:hover:bg-plum-900/30"
+            className="pointer-events-auto -mr-3 rounded-full border border-brown-200 bg-white p-2 text-plum-700 shadow-sm transition-colors hover:bg-plum-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold-500 dark:border-dm-border dark:bg-dm-card dark:text-plum-200 dark:hover:bg-plum-900/30"
             aria-label={`Scroll ${title} right`}
           >
             <FaAngleRight />
@@ -84,6 +85,16 @@ const HomeProductShelf = ({
       </div>
     </section>
   );
+};
+
+HomeProductShelf.propTypes = {
+  title: PropTypes.string,
+  subtitle: PropTypes.string,
+  products: PropTypes.arrayOf(PropTypes.object),
+  loading: PropTypes.bool,
+  viewAllTo: PropTypes.string,
+  viewAllState: PropTypes.object,
+  viewAllLabel: PropTypes.string,
 };
 
 export default HomeProductShelf;

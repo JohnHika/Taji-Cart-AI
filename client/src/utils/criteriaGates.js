@@ -68,7 +68,7 @@ const requireDriverVerified = (user = {}) => {
     return buildRequirement(
       'driver_verified',
       'Driver verification',
-      'Your delivery profile was rejected. Please update your profile or contact an administrator before continuing.',
+      'Your delivery profile was rejected. This requires an administrator to review it again — please contact support so they can update your verification status.',
       {
         fixType: 'external',
         redirectTo: '/dashboard/profile',
@@ -80,11 +80,11 @@ const requireDriverVerified = (user = {}) => {
   return buildRequirement(
     'driver_verified',
     'Driver verification',
-    'Your delivery profile is still awaiting approval. You cannot continue until verification is completed.',
+    'Your delivery profile is still awaiting admin approval. This is not something you can complete yourself — an administrator needs to verify your driver account before you can claim deliveries.',
     {
       fixType: 'external',
       redirectTo: '/dashboard/profile',
-      actionLabel: 'View profile',
+      actionLabel: 'View my account',
     }
   );
 };
@@ -129,7 +129,7 @@ const requireDriverAvailable = (user = {}) => {
     return null;
   }
 
-  if ((deliveryProfile.activeOrdersCount || 0) >= 5) {
+  if ((deliveryProfile.activeOrdersCount || 0) >= 3) {
     return buildRequirement(
       'driver_capacity',
       'Delivery capacity',

@@ -3,25 +3,50 @@
   "installCommand": "npm install",
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
+  "headers": [
+    {
+      "source": "/assets/(.*)",
+      "headers": [
+        { "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }
+      ]
+    },
+    {
+      "source": "/(.*)",
+      "headers": [
+        { "key": "X-Content-Type-Options", "value": "nosniff" },
+        { "key": "X-Frame-Options", "value": "SAMEORIGIN" },
+        { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" }
+      ]
+    }
+  ],
   "rewrites": [
     {
-      "source": "/api/(.*)",
+      "source": "/sitemap.xml",
+      "destination": "https://taji-cart-api.onrender.com/sitemap.xml"
+    },
+    {
+      "source": "/share/(.*)",
+      "destination": "https://taji-cart-api.onrender.com/share/$1"
+    },
+    {
+      "source": "/product/(.*)",
       "has": [
         {
-          "type": "host",
-          "value": "api.nawirihairke.com"
+          "type": "header",
+          "key": "user-agent",
+          "value": ".*(WhatsApp|facebookexternalhit|Facebot|Twitterbot|LinkedInBot|TelegramBot|Slackbot|Discordbot|Googlebot|bingbot|Pinterest).*"
         }
       ],
+      "destination": "https://taji-cart-api.onrender.com/share/bot/product/$1"
+    },
+    {
+      "source": "/api/(.*)",
+      "has": [{ "type": "host", "value": "api.nawirihairke.com" }],
       "destination": "https://taji-cart-api.onrender.com/api/$1"
     },
     {
       "source": "/auth/(.*)",
-      "has": [
-        {
-          "type": "host",
-          "value": "api.nawirihairke.com"
-        }
-      ],
+      "has": [{ "type": "host", "value": "api.nawirihairke.com" }],
       "destination": "https://taji-cart-api.onrender.com/auth/$1"
     },
     { "source": "/(.*)", "destination": "/index.html" }

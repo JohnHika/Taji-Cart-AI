@@ -9,6 +9,7 @@ import isStaff from '../utils/isStaff';
 const BottomNavigation = () => {
   const location = useLocation();
   const user = useSelector(state => state.user);
+  const wishlistCount = useSelector(state => state.wishlist?.items?.length || 0);
   const { totalQty } = useGlobalContext();
   const isAdmin = isadmin(user);
   const isDelivery = user?.isDelivery === true || user?.role === 'delivery';
@@ -50,10 +51,10 @@ const BottomNavigation = () => {
       { label: 'Home',    icon: FaHome,       path: '/',              active: location.pathname === '/' },
       { label: 'Search',  icon: FaSearch,     path: '/search',        active: location.pathname === '/search' },
       { label: 'Cart',    icon: FaShoppingCart, path: '/mobile/cart', active: location.pathname === '/mobile/cart', badge: totalQty > 0 ? totalQty : null },
-      { label: 'Wishlist', icon: FaHeart,     path: '/wishlist',      active: location.pathname === '/wishlist' },
+      { label: 'Wishlist', icon: FaHeart,     path: '/wishlist',      active: location.pathname === '/wishlist', badge: wishlistCount > 0 ? wishlistCount : null },
       { label: user?._id ? 'Profile' : 'Login', icon: FaUser, path: user?._id ? '/dashboard/profile' : '/login', active: location.pathname === '/mobile/profile' || location.pathname === '/dashboard/profile' },
     ];
-  }, [isAdmin, isDelivery, isUserStaff, location.pathname, totalQty, user?._id]);
+  }, [isAdmin, isDelivery, isUserStaff, location.pathname, totalQty, user?._id, wishlistCount]);
 
   const hiddenRoutes = ['/login', '/register', '/checkout', '/dashboard/checkout', '/dashboard/cart', '/mobile/cart', '/mobile/profile'];
   if (hiddenRoutes.includes(location.pathname)) return null;

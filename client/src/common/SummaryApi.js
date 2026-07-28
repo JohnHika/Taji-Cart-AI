@@ -61,6 +61,14 @@ const SummaryApi = {
         url: `${baseURL}/api/user/verify-phone-otp`,
         method: 'POST'
     },
+    getWishlist: {
+        url: `${baseURL}/api/user/wishlist`,
+        method: 'GET'
+    },
+    toggleWishlist: {
+        url: `${baseURL}/api/user/wishlist/toggle`,
+        method: 'POST'
+    },
     addCategory: {
         url: `${baseURL}/api/category/add-category`,
         method: 'post'
@@ -189,25 +197,13 @@ const SummaryApi = {
         url: `${baseURL}/api/mpesa/stk-push`,
         method: 'post'
     },
-    mpesaDirectPayment: {
-        url: `${baseURL}/api/mpesa-direct/pay`,
+    jengaPayment: {
+        url: `${baseURL}/api/jenga/pay`,
         method: 'post'
     },
-    checkMpesaDirectStatus: {
-        url: `${baseURL}/api/mpesa-direct/status/:checkoutRequestId`,
+    checkJengaStatus: {
+        url: `${baseURL}/api/jenga/status/:orderReference`,
         method: 'get'
-    },
-    equityPayment: {
-        url: `${baseURL}/api/equity/pay`,
-        method: 'post'
-    },
-    payheroPayment: {
-        url: `${baseURL}/api/payhero/pay`,
-        method: 'post'
-    },
-    payheroCOD: {
-        url: `${baseURL}/api/payhero/cod`,
-        method: 'post'
     },
     getAllProducts: {
         url: `${baseURL}/api/product/get`,
@@ -383,6 +379,10 @@ const SummaryApi = {
     checkSchrodinger: {
         url: `${baseURL}/api/quantum/schrodinger`,
         method: 'GET'
+    },
+    reportIssue: {
+        url: `${baseURL}/api/support/report`,
+        method: 'POST'
     }
 };
 

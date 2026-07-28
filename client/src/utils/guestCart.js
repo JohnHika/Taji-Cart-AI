@@ -27,7 +27,7 @@ export const saveGuestCart = (items) => {
   try {
     Cookies.set(GUEST_CART_COOKIE, JSON.stringify(items), {
       expires: CART_EXPIRY_DAYS,
-      secure: process.env.NODE_ENV === 'production',
+      secure: import.meta.env.PROD,
       sameSite: 'lax'
     });
   } catch (error) {

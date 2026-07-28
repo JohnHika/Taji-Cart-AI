@@ -30,6 +30,10 @@ import userRouter from './route/user.route.js';
 import authRoutes from './routes/auth.routes.js';
 import posRouter from './routes/pos.js';
 import mpesaRouter from './route/mpesa.route.js';
+import jengaRouter from './route/jenga.route.js';
+import sitemapRouter from './route/sitemap.route.js';
+import shareRouter from './route/share.route.js';
+import supportRouter from './route/support.route.js';
 
 // ── Controllers used directly on admin routes ───────────────────────────────
 import {
@@ -122,6 +126,8 @@ app.use(session({
 
 // ── Routes ───────────────────────────────────────────────────────────────────
 
+app.use('/sitemap.xml', sitemapRouter);
+app.use('/share', shareRouter);
 app.use('/api/user', userRouter);
 app.use('/api/auth', authRoutes);
 app.use('/auth', authRoutes);
@@ -141,6 +147,8 @@ app.use('/api', campaignRouter);
 app.use('/api/tracking', trackingRouter);
 app.use('/api/pos', posRouter);
 app.use('/api/mpesa', mpesaRouter);
+app.use('/api/jenga', jengaRouter);
+app.use('/api/support', supportRouter);
 app.use('/api/delivery', deliveryRoutes);
 app.use('/api/driver-verification', driverVerificationRoutes);
 app.use('/api/driver-financials', driverFinancialRoutes);

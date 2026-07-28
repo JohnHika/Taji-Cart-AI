@@ -121,45 +121,15 @@ module.exports = {
           '0%':   { opacity: '0' },
           '100%': { opacity: '1' },
         },
-        slideInLeft: {
-          '0%':   { opacity: '0', transform: 'translateX(-24px)' },
-          '100%': { opacity: '1', transform: 'translateX(0)' },
-        },
-        slideInRight: {
-          '0%':   { opacity: '0', transform: 'translateX(24px)' },
-          '100%': { opacity: '1', transform: 'translateX(0)' },
-        },
         shimmer: {
           '0%':   { backgroundPosition: '-200% 0' },
           '100%': { backgroundPosition: '200% 0' },
         },
-        'gold-shimmer': {
-          '0%':   { backgroundPosition: '200% 0' },
-          '100%': { backgroundPosition: '-200% 0' },
-        },
-        float: {
-          '0%, 100%': { transform: 'translateY(0)' },
-          '50%':      { transform: 'translateY(-6px)' },
-        },
-        scaleIn: {
-          '0%':   { opacity: '0', transform: 'scale(0.95)' },
-          '100%': { opacity: '1', transform: 'scale(1)' },
-        },
-        pulse: {
-          '0%, 100%': { opacity: '1' },
-          '50%':      { opacity: '0.5' },
-        },
       },
       animation: {
         'fade-up':        'fadeUp 0.5s ease both',
-        'fade-up-slow':   'fadeUp 0.7s ease both',
         'fade-in':        'fadeIn 0.4s ease both',
-        'slide-in-left':  'slideInLeft 0.4s ease both',
-        'slide-in-right': 'slideInRight 0.4s ease both',
         'shimmer':        'shimmer 1.6s linear infinite',
-        'gold-shimmer':   'gold-shimmer 3s linear infinite',
-        'float':          'float 3s ease-in-out infinite',
-        'scale-in':       'scaleIn 0.3s ease both',
       },
     },
   },
