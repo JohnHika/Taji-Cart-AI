@@ -106,50 +106,6 @@ const requireDriverActive = (user = {}) => {
     : null;
 };
 
-const requireDriverOnline = (user = {}) => {
-  const deliveryProfile = getDeliveryProfile(user);
-
-  return deliveryProfile?.isOnline === true
-    ? null
-    : buildRequirement(
-        'driver_online',
-        'Online delivery status',
-        'Go online before claiming or accepting delivery work.',
-        {
-          fixType: 'presence',
-          actionLabel: 'Go online now',
-        }
-      );
-};
-
-const requireDriverAvailable = (user = {}) => {
-  const deliveryProfile = getDeliveryProfile(user);
-
-  if (!deliveryProfile) {
-    return null;
-  }
-
-  if ((deliveryProfile.activeOrdersCount || 0) >= 3) {
-    return buildRequirement(
-      'driver_capacity',
-      'Delivery capacity',
-      'You already have the maximum number of active deliveries. Finish one first before claiming another order.'
-    );
-  }
-
-  return deliveryProfile?.isAvailable === false
-    ? buildRequirement(
-        'driver_available',
-        'Available for assignments',
-        'Mark yourself available before claiming or accepting delivery work.',
-        {
-          fixType: 'presence',
-          actionLabel: 'Mark available',
-        }
-      )
-    : null;
-};
-
 export const TASK_REQUIREMENTS = {
   privileged_workspace: {
     title: 'Complete your account details',
@@ -175,20 +131,6 @@ export const TASK_REQUIREMENTS = {
     title: 'Complete your delivery requirements',
     description: 'Sort out the missing delivery requirements below before updating this order.',
     checks: [requireName, requireEmail, requireMobile, requireDriverPhone, requireDriverVerified, requireDriverActive],
-  },
-  delivery_claim: {
-    title: 'You cannot claim deliveries yet',
-    description: 'Complete the missing requirements below before claiming an available order.',
-    checks: [
-      requireName,
-      requireEmail,
-      requireMobile,
-      requireDriverPhone,
-      requireDriverVerified,
-      requireDriverActive,
-      requireDriverOnline,
-      requireDriverAvailable,
-    ],
   },
 };
 
