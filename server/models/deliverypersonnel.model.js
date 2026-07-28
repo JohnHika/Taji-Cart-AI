@@ -38,7 +38,7 @@ const deliveryPersonnelSchema = new mongoose.Schema({
     vehicleDetails: {
         type: {
             type: String,
-            enum: ['motorcycle', 'bicycle', 'car', 'van'],
+            enum: ['motorcycle', 'bicycle', 'car', 'van', 'on_foot'],
             default: 'motorcycle'
         },
         registrationNumber: {

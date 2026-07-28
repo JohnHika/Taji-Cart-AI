@@ -961,6 +961,7 @@ export async function getOrderDetailsController(request, response) {
                     totalAmt: { $first: '$totalAmt' },
                     deliveryPersonnel: { $first: '$deliveryPersonnel' },
                     estimatedDeliveryTime: { $first: '$estimatedDeliveryTime' },
+                    deliveredAt: { $first: '$deliveredAt' },
                     createdAt: { $first: '$createdAt' },
                     updatedAt: { $max: '$updatedAt' },
                     items: {

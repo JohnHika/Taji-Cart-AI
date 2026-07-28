@@ -6,6 +6,7 @@ import {
     submitDriverDocuments,
     getDriversForVerification,
     verifyDriver,
+    bulkVerifyDrivers,
     getDriverVerificationStatus,
     checkExpiringDocuments
 } from '../controllers/driverVerification.controller.js';
@@ -43,6 +44,13 @@ router.put(
     auth,
     admin,
     verifyDriver
+);
+
+router.put(
+    '/bulk-verify',
+    auth,
+    admin,
+    bulkVerifyDrivers
 );
 
 router.get(

@@ -1,10 +1,11 @@
-import React, { useState, useEffect } from 'react';
-import { FaCheckCircle, FaTimesCircle, FaClock, FaSearch, FaFileAlt, FaMotorcycle, FaIdCard,
-         FaExclamationTriangle, FaFilter, FaDownload, FaEye, FaEdit } from 'react-icons/fa';
-import { useTable, useSortBy, usePagination, useFilters } from 'react-table';
+import React, { useMemo, useState, useEffect } from 'react';
+import { FaCheckCircle, FaTimesCircle, FaTimes, FaClock, FaSearch, FaFileAlt, FaMotorcycle, FaIdCard,
+         FaExclamationTriangle, FaFilter, FaEye } from 'react-icons/fa';
 import Axios from '../../utils/Axios';
 import toast from 'react-hot-toast';
 import { format } from 'date-fns';
+
+const PAGE_SIZE_OPTIONS = [5, 10, 20, 50];
 
 const DriverVerificationDashboard = () => {
   const [drivers, setDrivers] = useState([]);
@@ -14,6 +15,8 @@ const DriverVerificationDashboard = () => {
   const [notes, setNotes] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [filterStatus, setFilterStatus] = useState('all');
+  const [selectedIds, setSelectedIds] = useState([]);
+  const [bulkSubmitting, setBulkSubmitting] = useState(false);
 
   // Fetch drivers based on verification status
   const fetchDrivers = async (status = 'all') => {
@@ -40,7 +43,42 @@ const DriverVerificationDashboard = () => {
 
   useEffect(() => {
     fetchDrivers(filterStatus);
+    setSelectedIds([]);
   }, [filterStatus]);
+
+  const toggleSelected = (driverId) => {
+    setSelectedIds((prev) =>
+      prev.includes(driverId) ? prev.filter((id) => id !== driverId) : [...prev, driverId]
+    );
+  };
+
+  const toggleSelectAll = () => {
+    setSelectedIds((prev) => (prev.length === drivers.length ? [] : drivers.map((d) => d._id)));
+  };
+
+  const handleBulkVerify = async () => {
+    if (selectedIds.length === 0) return;
+
+    try {
+      setBulkSubmitting(true);
+      const response = await Axios({
+        url: '/api/driver-verification/bulk-verify',
+        method: 'PUT',
+        data: { driverIds: selectedIds, status: 'verified', notes: 'Bulk verified - trusted rider' }
+      });
+
+      if (response.data.success) {
+        toast.success(response.data.message || 'Drivers verified successfully!');
+        setSelectedIds([]);
+        fetchDrivers(filterStatus);
+      }
+    } catch (error) {
+      console.error('Error bulk verifying drivers:', error);
+      toast.error('Failed to bulk verify drivers');
+    } finally {
+      setBulkSubmitting(false);
+    }
+  };
 
   // Handle verification decision
   const handleVerify = async (status) => {
@@ -64,137 +102,38 @@ const DriverVerificationDashboard = () => {
     }
   };
 
-  // Define table columns
-  const columns = React.useMemo(
-    () => [
-      {
-        Header: 'Driver',
-        accessor: 'userId.name',
-        Cell: ({ row }) => (
-          <div className="flex items-center">
-            <div className="w-10 h-10 rounded-full bg-plum-100 flex items-center justify-center mr-3">
-              <FaMotorcycle className="text-plum-600" />
-            </div>
-            <div>
-              <div className="font-medium">{row.original.userId?.name || 'N/A'}</div>
-              <div className="text-sm text-brown-500">{row.original.userId?.email || 'N/A'}</div>
-            </div>
-          </div>
-        )
-      },
-      {
-        Header: 'Phone',
-        accessor: 'userId.mobile',
-        Cell: ({ value }) => value || 'N/A'
-      },
-      {
-        Header: 'Status',
-        accessor: 'verificationStatus',
-        Cell: ({ value }) => (
-          <span className={`px-3 py-1 rounded-full text-sm font-medium ${
-            value === 'verified' ? 'bg-brown-100 text-brown-800 dark:bg-brown-600/20 dark:text-brown-200' :
-            value === 'rejected' ? 'bg-blush-100 text-blush-700 dark:bg-blush-500/20 dark:text-blush-300' :
-            'bg-gold-100 text-gold-700 dark:bg-gold-600/20 dark:text-gold-300'
-          }`}>
-            {value === 'pending' ? 'Pending' :
-             value === 'verified' ? 'Verified' : 'Rejected'}
-          </span>
-        )
-      },
-      {
-        Header: 'Documents',
-        accessor: 'idNumber',
-        Cell: ({ row }) => (
-          <div className="flex items-center space-x-2">
-            {row.original.idNumber ? <FaIdCard className="text-brown-500" title="ID Uploaded" /> : <FaIdCard className="text-brown-200 dark:text-white/25" title="ID Missing" />}
-            {row.original.licenseNumber ? <FaFileAlt className="text-brown-500" title="License Uploaded" /> : <FaFileAlt className="text-brown-200 dark:text-white/25" title="License Missing" />}
-            {row.original.kraPin ? <FaFileAlt className="text-brown-500" title="KRA PIN Uploaded" /> : <FaFileAlt className="text-brown-200 dark:text-white/25" title="KRA PIN Missing" />}
-          </div>
-        )
-      },
-      {
-        Header: 'Vehicle',
-        accessor: 'vehicleDetails.type',
-        Cell: ({ row }) => (
-          <div>
-            {row.original.vehicleDetails?.type ? (
-              <div>
-                <div className="capitalize">{row.original.vehicleDetails.type}</div>
-                <div className="text-xs text-brown-500">{row.original.vehicleDetails.registrationNumber || 'No reg #'}</div>
-              </div>
-            ) : 'Not specified'}
-          </div>
-        )
-      },
-      {
-        Header: 'Actions',
-        Cell: ({ row }) => (
-          <div className="flex space-x-2">
-            <button
-              onClick={() => {
-                setSelectedDriver(row.original);
-                setVerificationStatus(row.original.verificationStatus);
-                setNotes('');
-                setIsModalOpen(true);
-              }}
-              className="p-2 text-plum-600 hover:bg-plum-50 rounded-full"
-              title="Review documents"
-            >
-              <FaEye size={16} />
-            </button>
-            {row.original.verificationStatus === 'pending' && (
-              <button
-                onClick={async () => {
-                  try {
-                    const response = await Axios({
-                      url: `/api/driver-verification/${row.original._id}/verify`,
-                      method: 'PUT',
-                      data: { status: 'verified', notes: 'Quick verify' }
-                    });
-                    if (response.data.success) {
-                      toast.success('Driver verified successfully!');
-                      fetchDrivers(filterStatus);
-                    }
-                  } catch (error) {
-                    toast.error('Failed to verify driver');
-                  }
-                }}
-                className="p-2 text-brown-600 hover:bg-brown-50 dark:hover:bg-dm-card-2 rounded-full"
-                title="Quick verify"
-              >
-                <FaCheckCircle size={16} />
-              </button>
-            )}
-          </div>
-        )
-      }
-    ],
-    []
-  );
+  const [pageIndex, setPageIndex] = useState(0);
+  const [pageSize, setPageSize] = useState(10);
 
-  const {
-    getTableProps,
-    getTableBodyProps,
-    headerGroups,
-    page,
-    prepareRow,
-    canPreviousPage,
-    canNextPage,
-    pageOptions,
-    nextPage,
-    previousPage,
-    setPageSize,
-    state: { pageIndex, pageSize }
-  } = useTable(
-    {
-      columns,
-      data: drivers,
-      initialState: { pageIndex: 0, pageSize: 10 }
-    },
-    useFilters,
-    useSortBy,
-    usePagination
+  useEffect(() => {
+    setPageIndex(0);
+  }, [drivers.length, pageSize]);
+
+  const pageCount = Math.max(1, Math.ceil(drivers.length / pageSize));
+  const page = useMemo(
+    () => drivers.slice(pageIndex * pageSize, pageIndex * pageSize + pageSize),
+    [drivers, pageIndex, pageSize]
   );
+  const canPreviousPage = pageIndex > 0;
+  const canNextPage = pageIndex < pageCount - 1;
+  const previousPage = () => setPageIndex((prev) => Math.max(0, prev - 1));
+  const nextPage = () => setPageIndex((prev) => Math.min(pageCount - 1, prev + 1));
+
+  const quickVerify = async (driverId) => {
+    try {
+      const response = await Axios({
+        url: `/api/driver-verification/${driverId}/verify`,
+        method: 'PUT',
+        data: { status: 'verified', notes: 'Quick verify' }
+      });
+      if (response.data.success) {
+        toast.success('Driver verified successfully!');
+        fetchDrivers(filterStatus);
+      }
+    } catch (error) {
+      toast.error('Failed to verify driver');
+    }
+  };
 
   return (
     <div className="container mx-auto px-4 py-6 dark:bg-dm-surface dark:text-white">
@@ -266,6 +205,17 @@ const DriverVerificationDashboard = () => {
             <option value="rejected">Rejected</option>
           </select>
 
+          {selectedIds.length > 0 && (
+            <button
+              onClick={handleBulkVerify}
+              disabled={bulkSubmitting}
+              className="flex items-center gap-2 px-4 py-2 bg-brown-600 text-white rounded-md hover:bg-brown-500 transition-colors disabled:opacity-60"
+            >
+              <FaCheckCircle />
+              {bulkSubmitting ? 'Verifying...' : `Mark ${selectedIds.length} verified`}
+            </button>
+          )}
+
           <button
             onClick={() => fetchDrivers(filterStatus)}
             className="ml-auto flex items-center gap-2 px-4 py-2 bg-plum-700 text-white rounded-md hover:bg-plum-600 transition-colors"
@@ -291,43 +241,100 @@ const DriverVerificationDashboard = () => {
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table {...getTableProps()} className="w-full divide-y divide-brown-100 dark:divide-dm-border">
+            <table className="w-full divide-y divide-brown-100 dark:divide-dm-border">
               <thead className="bg-brown-50 dark:bg-dm-card-2">
-                {headerGroups.map(headerGroup => (
-                  <tr {...headerGroup.getHeaderGroupProps()}>
-                    {headerGroup.headers.map(column => (
-                      <th
-                        {...column.getHeaderProps(column.getSortByToggleProps())}
-                        className="px-6 py-3 text-left text-xs font-medium text-brown-600 dark:text-white/70 uppercase tracking-wider"
-                      >
-                        <div className="flex items-center">
-                          {column.render('Header')}
-                          <span>
-                            {column.isSorted
-                              ? column.isSortedDesc
-                                ? ' 🔽'
-                                : ' 🔼'
-                              : ''}
-                          </span>
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-brown-600 dark:text-white/70 uppercase tracking-wider">
+                    <input
+                      type="checkbox"
+                      checked={drivers.length > 0 && selectedIds.length === drivers.length}
+                      onChange={toggleSelectAll}
+                      aria-label="Select all drivers"
+                    />
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-brown-600 dark:text-white/70 uppercase tracking-wider">Driver</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-brown-600 dark:text-white/70 uppercase tracking-wider">Phone</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-brown-600 dark:text-white/70 uppercase tracking-wider">Status</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-brown-600 dark:text-white/70 uppercase tracking-wider">Documents</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-brown-600 dark:text-white/70 uppercase tracking-wider">Vehicle</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-brown-600 dark:text-white/70 uppercase tracking-wider">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="bg-white dark:bg-dm-card divide-y divide-brown-100 dark:divide-dm-border">
+                {page.map((driver) => (
+                  <tr key={driver._id} className="hover:bg-brown-50 dark:hover:bg-dm-card-2">
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.includes(driver._id)}
+                        onChange={() => toggleSelected(driver._id)}
+                        aria-label={`Select ${driver.userId?.name || 'driver'}`}
+                      />
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center">
+                        <div className="w-10 h-10 rounded-full bg-plum-100 flex items-center justify-center mr-3">
+                          <FaMotorcycle className="text-plum-600" />
                         </div>
-                      </th>
-                    ))}
+                        <div>
+                          <div className="font-medium">{driver.userId?.name || 'N/A'}</div>
+                          <div className="text-sm text-brown-500">{driver.userId?.email || 'N/A'}</div>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">{driver.userId?.mobile || 'N/A'}</td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+                        driver.verificationStatus === 'verified' ? 'bg-brown-100 text-brown-800 dark:bg-brown-600/20 dark:text-brown-200' :
+                        driver.verificationStatus === 'rejected' ? 'bg-blush-100 text-blush-700 dark:bg-blush-500/20 dark:text-blush-300' :
+                        'bg-gold-100 text-gold-700 dark:bg-gold-600/20 dark:text-gold-300'
+                      }`}>
+                        {driver.verificationStatus === 'pending' ? 'Pending' :
+                         driver.verificationStatus === 'verified' ? 'Verified' : 'Rejected'}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center space-x-2">
+                        {driver.idNumber ? <FaIdCard className="text-brown-500" title="ID Uploaded" /> : <FaIdCard className="text-brown-200 dark:text-white/25" title="ID Missing" />}
+                        {driver.licenseNumber ? <FaFileAlt className="text-brown-500" title="License Uploaded" /> : <FaFileAlt className="text-brown-200 dark:text-white/25" title="License Missing" />}
+                        {driver.kraPin ? <FaFileAlt className="text-brown-500" title="KRA PIN Uploaded" /> : <FaFileAlt className="text-brown-200 dark:text-white/25" title="KRA PIN Missing" />}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      {driver.vehicleDetails?.type ? (
+                        <div>
+                          <div className="capitalize">{driver.vehicleDetails.type}</div>
+                          <div className="text-xs text-brown-500">{driver.vehicleDetails.registrationNumber || 'No reg #'}</div>
+                        </div>
+                      ) : 'Not specified'}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex space-x-2">
+                        <button
+                          onClick={() => {
+                            setSelectedDriver(driver);
+                            setVerificationStatus(driver.verificationStatus);
+                            setNotes('');
+                            setIsModalOpen(true);
+                          }}
+                          className="p-2 text-plum-600 hover:bg-plum-50 rounded-full"
+                          title="Review documents"
+                        >
+                          <FaEye size={16} />
+                        </button>
+                        {driver.verificationStatus === 'pending' && (
+                          <button
+                            onClick={() => quickVerify(driver._id)}
+                            className="p-2 text-brown-600 hover:bg-brown-50 dark:hover:bg-dm-card-2 rounded-full"
+                            title="Quick verify"
+                          >
+                            <FaCheckCircle size={16} />
+                          </button>
+                        )}
+                      </div>
+                    </td>
                   </tr>
                 ))}
-              </thead>
-              <tbody {...getTableBodyProps()} className="bg-white dark:bg-dm-card divide-y divide-brown-100 dark:divide-dm-border">
-                {page.map(row => {
-                  prepareRow(row);
-                  return (
-                    <tr {...row.getRowProps()} className="hover:bg-brown-50 dark:hover:bg-dm-card-2">
-                      {row.cells.map(cell => (
-                        <td {...cell.getCellProps()} className="px-6 py-4 whitespace-nowrap">
-                          {cell.render('Cell')}
-                        </td>
-                      ))}
-                    </tr>
-                  );
-                })}
               </tbody>
             </table>
 
@@ -349,7 +356,7 @@ const DriverVerificationDashboard = () => {
                   Next
                 </button>
                 <span className="text-sm text-brown-500 dark:text-white/55">
-                  Page {pageIndex + 1} of {pageOptions.length}
+                  Page {pageIndex + 1} of {pageCount}
                 </span>
               </div>
               <div className="flex items-center space-x-2">
@@ -359,7 +366,7 @@ const DriverVerificationDashboard = () => {
                   onChange={e => setPageSize(Number(e.target.value))}
                   className="text-sm border border-brown-200 dark:border-dm-border rounded px-2 py-1"
                 >
-                  {[5, 10, 20, 50].map(size => (
+                  {PAGE_SIZE_OPTIONS.map(size => (
                     <option key={size} value={size}>{size}</option>
                   ))}
                 </select>

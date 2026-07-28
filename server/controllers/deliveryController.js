@@ -6,9 +6,10 @@ import { default as Order, default as OrderModel } from '../models/order.model.j
 import User from '../models/user.model.js';
 import { emitNewDeliveryAssigned, emitOrderStatusUpdated, getIO } from '../socket/socket.js';
 import { nawiriBrand } from '../utils/brand.js';
+import { isFootDeliveryMode } from '../utils/cbdDelivery.js';
 import { renderOrderNoticeEmail } from '../utils/emailTemplates.js';
 
-const DELIVERY_DRIVER_CAPACITY = 5;
+const DELIVERY_DRIVER_CAPACITY = 3;
 const DISPATCH_CONFLICT_STATUSES = ['dispatched', 'driver_assigned', 'out_for_delivery', 'nearby', 'delivered', 'cancelled'];
 const DELIVERY_ORDER_FILTER = {
   $or: [
@@ -646,6 +647,7 @@ const formatAvailableDeliveryOrder = (order) => ({
   items: formatDeliveryItems(order),
   total: order.totalAmt || order.total || 0,
   paymentStatus: order.payment_status || order.paymentStatus || 'unknown',
+  deliveryMode: isFootDeliveryMode(order.delivery_mode) ? 'foot' : 'standard',
   createdAt: order.createdAt,
   updatedAt: order.updatedAt,
   dispatchedAt: order.dispatchInfo?.dispatchedAt || null
@@ -824,6 +826,7 @@ export const getActiveOrders = async (req, res) => {
             coordinates: order.delivery_address?.coordinates || null,
             deliveryNotes: order.delivery_address?.deliveryInstructions || '',
             total: order.totalAmt,
+            deliveryMode: isFootDeliveryMode(order.delivery_mode) ? 'foot' : 'standard',
             createdAt: order.createdAt,
             currentLocation: order.currentLocation || null,
             estimatedDeliveryTime: order.estimatedDeliveryTime
@@ -886,6 +889,96 @@ export const getCompletedOrders = async (req, res) => {
         success: false,
         message: 'Error retrieving completed orders'
     });
+  }
+};
+
+// Customer rates the rider who delivered their order. One rating per order.
+// orderId here is the public order-group id (Order.orderId), since that's what the
+// customer's order-list (an aggregated/grouped view) exposes as the identifier.
+export const rateDeliveryDriver = async (req, res) => {
+  try {
+    const customerId = req.userId;
+    const { orderId } = req.params;
+    const { rating, comment } = req.body;
+
+    const ratingValue = Number(rating);
+    if (!Number.isFinite(ratingValue) || ratingValue < 1 || ratingValue > 5) {
+      return res.status(400).json({ success: false, message: 'Rating must be a number between 1 and 5' });
+    }
+
+    const order = await OrderModel.findOne({ orderId, userId: customerId, status: 'delivered' });
+
+    if (!order) {
+      return res.status(404).json({ success: false, message: 'Delivered order not found for this account' });
+    }
+
+    if (!order.deliveryPersonnel) {
+      return res.status(400).json({ success: false, message: 'This order has no assigned rider to rate' });
+    }
+
+    const driver = await DeliveryPersonnelModel.findById(order.deliveryPersonnel);
+    if (!driver) {
+      return res.status(404).json({ success: false, message: 'Rider not found' });
+    }
+
+    const alreadyRated = driver.ratings.some((entry) => String(entry.orderId) === String(order._id));
+    if (alreadyRated) {
+      return res.status(409).json({ success: false, message: 'You have already rated this delivery' });
+    }
+
+    driver.ratings.push({ orderId: order._id, rating: ratingValue, comment: comment || '' });
+    const ratingSum = driver.ratings.reduce((sum, entry) => sum + entry.rating, 0);
+    driver.averageRating = ratingSum / driver.ratings.length;
+    await driver.save();
+
+    return res.json({ success: true, message: 'Thanks for rating your delivery!' });
+  } catch (error) {
+    console.error('Error rating delivery driver:', error);
+    return res.status(500).json({ success: false, message: 'Error submitting rating' });
+  }
+};
+
+// Rider rates the customer for a delivered order they handled. One rating per order.
+export const rateDeliveryCustomer = async (req, res) => {
+  try {
+    const driverId = req.userId;
+    const { orderId } = req.params;
+    const { rating, comment } = req.body;
+
+    const ratingValue = Number(rating);
+    if (!Number.isFinite(ratingValue) || ratingValue < 1 || ratingValue > 5) {
+      return res.status(400).json({ success: false, message: 'Rating must be a number between 1 and 5' });
+    }
+
+    const personnelFilter = await getDriverPersonnelFilter(driverId);
+    const order = await OrderModel.findOne({
+      _id: orderId,
+      deliveryPersonnel: personnelFilter,
+      status: 'delivered'
+    });
+
+    if (!order) {
+      return res.status(404).json({ success: false, message: 'Delivered order not found or not assigned to you' });
+    }
+
+    if (order.customerRating?.rating) {
+      return res.status(409).json({ success: false, message: 'You have already rated this customer' });
+    }
+
+    const driverProfile = await DeliveryPersonnelModel.findOne({ userId: driverId });
+
+    order.customerRating = {
+      rating: ratingValue,
+      comment: comment || '',
+      ratedAt: new Date(),
+      ratedBy: driverProfile?._id || null
+    };
+    await order.save();
+
+    return res.json({ success: true, message: 'Thanks for rating your customer!' });
+  } catch (error) {
+    console.error('Error rating delivery customer:', error);
+    return res.status(500).json({ success: false, message: 'Error submitting rating' });
   }
 };
 

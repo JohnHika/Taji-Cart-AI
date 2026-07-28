@@ -111,16 +111,18 @@ const ensureDeliveryProfileForUser = async (user, { syncProfile = false } = {}) 
             isActive: true,
             isAvailable: true,
             isOnline: false,
-            ...syncedProfile,
         }
 
+        // $set and $setOnInsert must not target the same path in one update, or Mongo
+        // throws a path-conflict error and the whole update silently fails (returns null
+        // from the caller's perspective, since the error is swallowed below).
         const update = syncProfile
             ? {
                 $set: syncedProfile,
                 $setOnInsert: seedProfile,
             }
             : {
-                $setOnInsert: seedProfile,
+                $setOnInsert: { ...seedProfile, ...syncedProfile },
             }
 
         return await DeliveryPersonnelModel.findOneAndUpdate(

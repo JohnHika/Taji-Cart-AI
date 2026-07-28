@@ -27,7 +27,9 @@ import {
     toggleDriverStatusForStaff,
     updateDriverPresence,
     updateDriverLocation,
-    updateOrderStatus
+    updateOrderStatus,
+    rateDeliveryCustomer,
+    rateDeliveryDriver
 } from '../controllers/deliveryController.js';
 
 const deliveryRouter = Router();
@@ -73,6 +75,13 @@ deliveryRouter.post('/accept/:orderId', auth, delivery, acceptAvailableDeliveryO
 
 // Update driver location
 deliveryRouter.post('/update-location', auth, delivery, updateDriverLocation);
+
+// Rider rates the customer for a delivered order
+deliveryRouter.post('/rate-customer/:orderId', auth, delivery, rateDeliveryCustomer);
+
+// CUSTOMER ROUTE (any authenticated customer, not delivery-role-gated)
+// Customer rates the rider who delivered their order
+deliveryRouter.post('/rate-driver/:orderId', auth, rateDeliveryDriver);
 
 // ADMIN & STAFF ROUTES
 // Get staff dashboard statistics

@@ -48,6 +48,7 @@ const AllOrdersAdmin                = lazyWithRetry(() => import('../pages/admin
 const LoyaltyProgramAdmin           = lazyWithRetry(() => import('../pages/admin/LoyaltyProgramAdmin'));
 const UsersAdmin                    = lazyWithRetry(() => import('../pages/admin/UsersAdmin'));
 const CommunityPerksAdmin           = lazyWithRetry(() => import('../pages/admin/CommunityPerksAdmin'));
+const DriverVerificationDashboard   = lazyWithRetry(() => import('../pages/admin/DriverVerificationDashboard'));
 const CommunityPerks                = lazyWithRetry(() => import('../pages/CommunityPerks'));
 const POSDashboard                  = lazyWithRetry(() => import('../pages/POSDashboard'));
 const POSSales                      = lazyWithRetry(() => import('../pages/POSSales'));
@@ -206,6 +207,7 @@ const router = createBrowserRouter([
           { path: 'loyalty-program-admin',  element: <PrivateRoute requireAdmin={true}>{S(LoyaltyProgramAdmin)}</PrivateRoute> },
           { path: 'users-admin',            element: <PrivateRoute requireAdmin={true}>{S(UsersAdmin)}</PrivateRoute> },
           { path: 'admin-community-perks',  element: <PrivateRoute requireAdmin={true}>{S(CommunityPerksAdmin)}</PrivateRoute> },
+          { path: 'driver-verification',    element: <PrivateRoute requireAdmin={true}>{S(DriverVerificationDashboard)}</PrivateRoute> },
           { path: 'myorders',               element: <PrivateRoute>{S(MyOrders)}</PrivateRoute> },
           { path: 'address',                element: <PrivateRoute>{S(Address)}</PrivateRoute> },
           { path: 'community-perks',        element: <PrivateRoute>{S(CommunityPerks)}</PrivateRoute> },
