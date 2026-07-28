@@ -2196,9 +2196,11 @@ export async function deleteUserController(req, res) {
 /**
  * Set or unset delivery role (admin only)
  */
+const VEHICLE_TYPES = ['motorcycle', 'bicycle', 'car', 'van', 'on_foot'];
+
 export async function setDeliveryRoleController(req, res) {
     try {
-        const { userId, isDelivery } = req.body;
+        const { userId, isDelivery, vehicleType } = req.body;
         
         if (!userId) {
             return res.status(400).json({
@@ -2260,6 +2262,7 @@ export async function setDeliveryRoleController(req, res) {
                         ...buildDeliveryPersonnelProfile(updatedUser),
                         isActive: true,
                         isAvailable: true,
+                        ...(VEHICLE_TYPES.includes(vehicleType) ? { 'vehicleDetails.type': vehicleType } : {}),
                     },
                 },
                 {

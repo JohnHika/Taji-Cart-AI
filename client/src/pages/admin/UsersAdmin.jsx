@@ -185,16 +185,16 @@ const UsersAdmin = () => {
     setIsRoleModalOpen(true);
   };
 
-  const handleSaveRole = async (userId, isAdmin, isDelivery, isStaff, staffPermissions = []) => {
+  const handleSaveRole = async (userId, isAdmin, isDelivery, isStaff, staffPermissions = [], vehicleType) => {
     try {
       setLoading(true);
-      
+
       // Handle admin role
       const adminResponse = await Axios({
         url: '/api/user/admin/update-role',
         method: 'PUT',
-        data: { 
-          userId, 
+        data: {
+          userId,
           isAdmin,
           // Set the appropriate role based on hierarchy
           role: isAdmin ? 'admin' : isStaff ? 'staff' : isDelivery ? 'delivery' : 'user'
@@ -205,7 +205,7 @@ const UsersAdmin = () => {
       const deliveryResponse = await Axios({
         url: '/api/user/admin/set-delivery',
         method: 'PUT',
-        data: { userId, isDelivery }
+        data: { userId, isDelivery, ...(isDelivery && vehicleType ? { vehicleType } : {}) }
       });
       
       // Handle staff role

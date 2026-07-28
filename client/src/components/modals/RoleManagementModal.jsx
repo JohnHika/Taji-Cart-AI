@@ -1,13 +1,23 @@
 import React, { useEffect, useState } from 'react';
 import { FaTimes, FaTruck, FaUser, FaUserShield } from 'react-icons/fa';
 
+const VEHICLE_TYPES = [
+  ['motorcycle', 'Motorcycle'],
+  ['bicycle', 'Bicycle'],
+  ['car', 'Car'],
+  ['van', 'Van'],
+  ['on_foot', 'On foot (CBD)'],
+];
+
 const RoleManagementModal = ({ isOpen, onClose, user, onSave }) => {
   const [role, setRole] = useState('customer');
   const [extraPermissions, setExtraPermissions] = useState([]);
-  
+  const [vehicleType, setVehicleType] = useState('motorcycle');
+
   useEffect(() => {
     if (user) {
       setExtraPermissions(Array.isArray(user.staffPermissions) ? user.staffPermissions : []);
+      setVehicleType(user.vehicleType || 'motorcycle');
       if (user.isAdmin) {
         setRole('admin');
       } else if (user.isDelivery || user.role === 'delivery') {
@@ -19,33 +29,33 @@ const RoleManagementModal = ({ isOpen, onClose, user, onSave }) => {
       }
     }
   }, [user]);
-  
+
   if (!isOpen || !user) return null;
-  
+
   const handleSubmit = (e) => {
     e.preventDefault();
     const isAdmin = role === 'admin';
     const isDelivery = role === 'driver';
     const isStaff = role === 'staff';
-    onSave(user._id, isAdmin, isDelivery, isStaff, extraPermissions);
+    onSave(user._id, isAdmin, isDelivery, isStaff, extraPermissions, isDelivery ? vehicleType : undefined);
   };
   
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-      <div className="bg-white dark:bg-dm-card rounded-lg shadow-lg p-6 w-full max-w-md mx-auto">
-        <div className="flex justify-between items-center mb-5">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
+      <div className="bg-white dark:bg-dm-card rounded-lg shadow-lg w-full max-w-md mx-auto max-h-[90vh] flex flex-col">
+        <div className="flex justify-between items-center p-6 pb-0">
           <h2 className="text-xl font-semibold text-charcoal dark:text-white">
             Manage User Role
           </h2>
-          <button 
+          <button
             onClick={onClose}
             className="text-brown-400 hover:text-charcoal dark:text-white/55 dark:hover:text-white"
           >
             <FaTimes size={18} />
           </button>
         </div>
-        
-        <div className="mb-4">
+
+        <div className="px-6 pt-4">
           <p className="text-brown-500 dark:text-white/55">
             User: <span className="font-medium">{user?.name || 'Unknown'}</span>
           </p>
@@ -53,8 +63,9 @@ const RoleManagementModal = ({ isOpen, onClose, user, onSave }) => {
             Email: <span className="font-medium">{user?.email || 'Unknown'}</span>
           </p>
         </div>
-        
-        <form onSubmit={handleSubmit}>
+
+        <form onSubmit={handleSubmit} className="flex flex-col min-h-0 flex-1">
+          <div className="flex-1 min-h-0 overflow-y-auto px-6 py-4">
           <div className="mb-6">
             <label className="block text-charcoal dark:text-white/55 mb-2">Select Role:</label>
             <div className="space-y-2">
@@ -119,6 +130,20 @@ const RoleManagementModal = ({ isOpen, onClose, user, onSave }) => {
               </label>
             </div>
           </div>
+          {role === 'driver' && (
+            <div className="mb-6 border-t border-brown-100 dark:border-dm-border pt-4">
+              <label className="block text-sm font-medium text-charcoal dark:text-white mb-2">Delivery mode</label>
+              <select
+                value={vehicleType}
+                onChange={(event) => setVehicleType(event.target.value)}
+                className="w-full rounded-lg border border-brown-200 dark:border-dm-border bg-white dark:bg-dm-card-2 px-3 py-2 text-sm text-charcoal dark:text-white"
+              >
+                {VEHICLE_TYPES.map(([value, label]) => (
+                  <option key={value} value={value}>{label}</option>
+                ))}
+              </select>
+            </div>
+          )}
           {role === 'staff' && (
             <div className="mb-6 border-t border-brown-100 dark:border-dm-border pt-4">
               <p className="text-sm font-medium text-charcoal dark:text-white mb-2">Additional permissions</p>
@@ -148,8 +173,9 @@ const RoleManagementModal = ({ isOpen, onClose, user, onSave }) => {
               ))}
             </div>
           )}
-          
-          <div className="flex justify-end space-x-3">
+          </div>
+
+          <div className="flex justify-end space-x-3 border-t border-brown-100 dark:border-dm-border p-6 pt-4">
             <button
               type="button"
               onClick={onClose}
