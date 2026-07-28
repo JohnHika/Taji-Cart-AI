@@ -7,9 +7,7 @@ import { requireStaffPermission } from '../middleware/requireStaffPermission.js'
 
 // Import controller functions from deliveryController.js
 import {
-    acceptAvailableDeliveryOrder,
     getActiveDeliveriesForStaff,
-    getAvailableDeliveryOrders,
     assignDeliveryPersonnel,
     getCompletedDeliveriesForStaff,
     getDispatchedOrders,
@@ -66,12 +64,6 @@ deliveryRouter.post('/update-status', auth, delivery, updateOrderStatus);
 
 // Driver online/offline presence
 deliveryRouter.post('/presence', auth, delivery, updateDriverPresence);
-
-// Driver claimable delivery pool
-deliveryRouter.get('/available', auth, delivery, getAvailableDeliveryOrders);
-
-// Driver self-accept available delivery
-deliveryRouter.post('/accept/:orderId', auth, delivery, acceptAvailableDeliveryOrder);
 
 // Update driver location
 deliveryRouter.post('/update-location', auth, delivery, updateDriverLocation);

@@ -9,11 +9,9 @@ import AxiosToastError from '../../utils/AxiosToastError';
 
 const ActiveDeliveries = () => {
   const [activeOrders, setActiveOrders] = useState([]);
-  const [availableOrders, setAvailableOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
-  const [claimingOrderIds, setClaimingOrderIds] = useState([]);
   const socketRef = useRef(null);
   const { ensureCriteria, gateModal } = useCriteriaGate();
 
@@ -29,37 +27,18 @@ const ActiveDeliveries = () => {
         setError(null);
       }
 
-      const [activeResponse, availableResponse] = await Promise.allSettled([
-        Axios({
-          url: '/api/delivery/active-orders',
-          method: 'GET'
-        }),
-        Axios({
-          url: '/api/delivery/available',
-          method: 'GET'
-        })
-      ]);
+      const response = await Axios({
+        url: '/api/delivery/active-orders',
+        method: 'GET'
+      });
 
-      let activeError = null;
-
-      if (activeResponse.status === 'fulfilled' && activeResponse.value.data?.success) {
-        setActiveOrders(activeResponse.value.data.data || []);
+      if (response.data?.success) {
+        setActiveOrders(response.data.data || []);
       } else {
-        activeError = activeResponse.status === 'fulfilled'
-          ? (activeResponse.value.data?.message || 'Failed to fetch active deliveries')
-          : 'Failed to load active deliveries. Please try again later.';
-      }
-
-      if (availableResponse.status === 'fulfilled' && availableResponse.value.data?.success) {
-        setAvailableOrders(availableResponse.value.data.data || []);
-      } else {
-        setAvailableOrders([]);
-      }
-
-      if (activeError) {
-        setError(activeError);
+        const message = response.data?.message || 'Failed to fetch active deliveries';
+        setError(message);
         if (!silent) {
-          toast.error(activeError);
+          toast.error(message);
         }
       }
     } catch (error) {
@@ -101,13 +80,11 @@ const ActiveDeliveries = () => {
           console.log('Socket disconnected from delivery updates');
         });
 
-        // Listen for new delivery assignments
+        // Listen for new delivery assignments made by staff/admin
         socket.on('new_delivery_assigned', (data) => {
           console.log('New delivery assigned', data);
           toast.success(`New delivery assigned: Order #${data.orderId}`);
-          
-          // Add to our list of active orders
-          setAvailableOrders(prevOrders => prevOrders.filter(order => order._id !== data._id && order._id !== data.orderId));
+
           setActiveOrders(prevOrders => {
             const existing = prevOrders.some(order => order._id === data._id);
             return existing ? prevOrders : [data, ...prevOrders];
@@ -117,27 +94,20 @@ const ActiveDeliveries = () => {
         // Listen for order status updates
         socket.on('order_status_updated', (data) => {
           console.log('Order status updated', data);
-          
+
           if (data.status === 'cancelled') {
             toast.error(`Order #${data.orderId} has been cancelled`);
             // Remove from active orders
-            setActiveOrders(prevOrders => 
-              prevOrders.filter(order => order._id !== data._id)
-            );
-            setAvailableOrders(prevOrders => 
+            setActiveOrders(prevOrders =>
               prevOrders.filter(order => order._id !== data._id)
             );
           } else {
             // Update the order status
-            setActiveOrders(prevOrders => 
-              prevOrders.map(order => 
+            setActiveOrders(prevOrders =>
+              prevOrders.map(order =>
                 order._id === data._id ? { ...order, status: data.status } : order
               )
             );
-
-            if (['driver_assigned', 'out_for_delivery', 'nearby', 'delivered'].includes(data.status)) {
-              setAvailableOrders(prevOrders => prevOrders.filter(order => order._id !== data._id));
-            }
           }
         });
         
@@ -209,33 +179,6 @@ const ActiveDeliveries = () => {
     });
   };
 
-  const handleClaimDelivery = async (orderId) => {
-    if (!(await ensureCriteria('delivery_claim'))) {
-      return;
-    }
-
-    try {
-      setClaimingOrderIds((prev) => [...prev, orderId]);
-
-      const response = await Axios({
-        url: `/api/delivery/accept/${orderId}`,
-        method: 'POST'
-      });
-
-      if (response.data?.success) {
-        toast.success(response.data.message || 'Delivery claimed successfully');
-        await fetchDeliveries({ showLoader: false, silent: true });
-      } else {
-        toast.error(response.data?.message || 'Failed to claim delivery');
-      }
-    } catch (error) {
-      console.error('Error claiming delivery:', error);
-      AxiosToastError(error);
-    } finally {
-      setClaimingOrderIds((prev) => prev.filter((id) => id !== orderId));
-    }
-  };
-  
   const handleStatusUpdate = async (orderId, newStatus) => {
     if (!(await ensureCriteria('delivery_progress'))) {
       return;
@@ -301,9 +244,9 @@ const ActiveDeliveries = () => {
     <div className="mobile-page-shell px-0 py-0 sm:px-0 sm:py-0 lg:px-0">
       <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold dark:text-white">Delivery Workboard</h1>
+          <h1 className="text-2xl font-bold dark:text-white">My Deliveries</h1>
           <p className="mt-1 text-sm text-brown-500 dark:text-white/40">
-            Claim dispatched jobs, then progress your active deliveries from one place.
+            Deliveries assigned to you by dispatch. Update their status as you go.
           </p>
         </div>
 
@@ -318,100 +261,14 @@ const ActiveDeliveries = () => {
         </button>
       </div>
 
-      {availableOrders.length > 0 && (
-        <div className="mb-8">
-          <h2 className="mb-4 text-xl font-semibold text-charcoal dark:text-white">Available to Claim</h2>
-          <div className="grid gap-6">
-            {availableOrders.map(order => (
-              <div
-                key={order._id}
-                className="bg-white dark:bg-dm-card rounded-lg shadow overflow-hidden"
-              >
-                <div className="px-6 py-4 border-b border-brown-100 dark:border-dm-border bg-sky-50 dark:bg-sky-900/20">
-                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                    <div>
-                      <h3 className="text-lg font-semibold text-charcoal dark:text-white">
-                        Order #{order.orderId}
-                      </h3>
-                      <p className="text-sm text-brown-500 dark:text-white/40">
-                        Dispatched {formatDate(order.dispatchedAt || order.updatedAt || order.createdAt)}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      {order.deliveryMode === 'foot' && (
-                        <span className="px-3 py-1 rounded-full text-xs font-medium bg-gold-100 text-gold-800 dark:bg-gold-800 dark:text-gold-200">
-                          On foot (CBD)
-                        </span>
-                      )}
-                      <span className="px-3 py-1 rounded-full text-xs font-medium bg-sky-100 text-sky-800 dark:bg-sky-800 dark:text-sky-200">
-                        Ready to claim
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="p-6">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                    <div>
-                      <h4 className="text-sm font-medium text-brown-400 dark:text-white/40 mb-2">Customer</h4>
-                      <div className="flex items-start">
-                        <FaUser className="text-brown-400 dark:text-white/40 mt-1 mr-2" />
-                        <div>
-                          <p className="text-charcoal dark:text-white font-medium">{order.customer?.name}</p>
-                          <p className="text-sm text-brown-500 dark:text-white/40">{order.customer?.phone}</p>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div>
-                      <h4 className="text-sm font-medium text-brown-400 dark:text-white/40 mb-2">Delivery Address</h4>
-                      <div className="flex items-start">
-                        <FaMapMarkerAlt className="text-brown-400 mt-1 mr-2" />
-                        <p className="text-charcoal dark:text-white/70">{order.deliveryAddress?.fullAddress || order.deliveryAddress?.street || order.deliveryAddress}</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="mt-4 flex flex-col gap-3 border-t pt-4 dark:border-dm-border sm:flex-row sm:items-center sm:justify-between">
-                    <div className="font-medium">
-                      <span className="text-brown-400 dark:text-white/40">Total: </span>
-                      <span className="text-charcoal dark:text-white">KSh {Number(order.total || 0).toFixed(2)}</span>
-                    </div>
-
-                    <button
-                      type="button"
-                      onClick={() => handleClaimDelivery(order._id)}
-                      disabled={claimingOrderIds.includes(order._id)}
-                      className="px-3 py-2 bg-sky-700 text-white rounded hover:bg-sky-600 disabled:opacity-60 flex items-center justify-center"
-                    >
-                      {claimingOrderIds.includes(order._id) ? (
-                        <>
-                          <FaSpinner className="animate-spin mr-1" />
-                          Claiming...
-                        </>
-                      ) : (
-                        <>
-                          <FaTruck className="mr-1" />
-                          Claim Delivery
-                        </>
-                      )}
-                    </button>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-      
-      {activeOrders.length === 0 && availableOrders.length === 0 ? (
+      {activeOrders.length === 0 ? (
         <div className="bg-white dark:bg-dm-card rounded-lg shadow p-8 text-center">
           <FaTruck className="mx-auto text-brown-400 dark:text-white/40 mb-4" size={48} />
           <p className="text-brown-500 dark:text-white/40">
-            You don&apos;t have any active or claimable deliveries at the moment.
+            You don&apos;t have any deliveries assigned to you right now.
           </p>
         </div>
-      ) : activeOrders.length > 0 ? (
+      ) : (
         <div className="grid gap-6">
           <h2 className="text-xl font-semibold text-charcoal dark:text-white">Your Active Deliveries</h2>
           {activeOrders.map(order => (
@@ -521,13 +378,6 @@ const ActiveDeliveries = () => {
               </div>
             </div>
           ))}
-        </div>
-      ) : (
-        <div className="bg-white dark:bg-dm-card rounded-lg shadow p-8 text-center">
-          <FaTruck className="mx-auto text-brown-400 dark:text-white/40 mb-4" size={48} />
-          <p className="text-brown-500 dark:text-white/40">
-            You have deliveries waiting to be claimed, but nothing is assigned to you yet.
-          </p>
         </div>
       )}
       {gateModal}
