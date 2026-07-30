@@ -11,6 +11,7 @@ import OrderModel from "../models/order.model.js";
 import ProductModel from "../models/product.model.js"; // Add this import
 import UserRewardModel from "../models/userreward.model.js";
 import UserModel from "../models/user.model.js";
+import AddressModel from "../models/address.model.js";
 import { getIO } from '../socket/socket.js'; // Add this import
 import {
   DEFAULT_DELIVERY_CHARGE,
@@ -1274,22 +1275,26 @@ export async function getAllOrdersAdmin(request, response) {
       {
         $lookup: {
           from: 'users',
-          localField: 'userId',
-          foreignField: '_id',
-          as: 'userId',
-          pipeline: [{ $project: { name: 1, email: 1, mobile: 1, profile_pic: 1 } }]
+          let: { userId: '$userId' },
+          pipeline: [
+            { $match: { $expr: { $eq: ['$_id', '$$userId'] } } },
+            { $project: { name: 1, email: 1, mobile: 1, profile_pic: 1 } }
+          ],
+          as: 'userId'
         }
       },
-      { $unwind: { path: '$userId', preserveNullAndEmpty: true } },
+      { $unwind: { path: '$userId', preserveNullAndEmptyArrays: true } },
       {
         $lookup: {
           from: 'addresses',
-          localField: 'delivery_address',
-          foreignField: '_id',
+          let: { deliveryAddress: '$delivery_address' },
+          pipeline: [
+            { $match: { $expr: { $eq: ['$_id', '$$deliveryAddress'] } } }
+          ],
           as: 'delivery_address'
         }
       },
-      { $unwind: { path: '$delivery_address', preserveNullAndEmpty: true } }
+      { $unwind: { path: '$delivery_address', preserveNullAndEmptyArrays: true } }
     ];
 
     const orders = await OrderModel.aggregate(aggregatePipeline);
@@ -1301,6 +1306,7 @@ export async function getAllOrdersAdmin(request, response) {
     });
   } catch (error) {
     console.error("Error getting all orders:", error);
+    console.error("Error stack:", error.stack);
     return response.status(500).json({
       message: error.message || "Internal server error",
       success: false
@@ -1921,7 +1927,7 @@ export async function getMostRecentOrder(request, response) {
           as: 'delivery_address'
         }
       },
-      { $unwind: { path: '$delivery_address', preserveNullAndEmpty: true } }
+      { $unwind: { path: '$delivery_address', preserveNullAndEmptyArrays: true } }
     ]);
 
     if (!results.length) {
