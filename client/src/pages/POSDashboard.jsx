@@ -1,12 +1,16 @@
 import React, { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
-import { 
-  FaCalendarAlt, 
-  FaChartBar, 
-  FaCreditCard, 
-  FaDollarSign, 
-  FaShoppingCart, 
-  FaTimes 
+import { jsPDF } from 'jspdf';
+import {
+  FaCalendarAlt,
+  FaChartBar,
+  FaCreditCard,
+  FaMoneyBillWave,
+  FaDownload,
+  FaReceipt,
+  FaShoppingCart,
+  FaTimes,
+  FaUser
 } from 'react-icons/fa';
 import { useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
@@ -15,6 +19,149 @@ import Axios from '../utils/Axios';
 import AxiosToastError from '../utils/AxiosToastError';
 import { DisplayPriceInShillings } from '../utils/DisplayPriceInShillings';
 import isStaff from '../utils/isStaff';
+
+const getSaleSubtotal = (sale) => Number(
+  sale?.subtotal ??
+  (sale?.items || []).reduce((sum, item) => sum + Number(item.price || 0) * Number(item.quantity || 0), 0)
+);
+
+const getSaleItemTotal = (item) => Number(item?.total ?? Number(item?.price || 0) * Number(item?.quantity || 0));
+
+const downloadSaleReceipt = (sale) => {
+  const doc = new jsPDF({ unit: 'mm', format: 'a4' });
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const left = 18;
+  const right = pageWidth - 18;
+  const plum = [75, 30, 62];
+  const gold = [201, 148, 58];
+  const muted = [125, 78, 64];
+  const subtotal = getSaleSubtotal(sale);
+  const discount = Number(sale.discount || 0);
+  const tax = Number(sale.tax || 0);
+  const total = Number(sale.total || 0);
+  const customer = sale.customer?.name || sale.customerName || 'Walk-in customer';
+  const date = new Date(sale.saleDate).toLocaleString('en-KE');
+  let y = 20;
+
+  doc.setFillColor(...plum);
+  doc.rect(0, 0, pageWidth, 42, 'F');
+  doc.setTextColor(255, 255, 255);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(21);
+  doc.text('NAWIRI HAIR', left, y);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(9);
+  doc.setTextColor(240, 214, 232);
+  doc.text('Beauty, confidence, delivered.', left, y + 7);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(12);
+  doc.setTextColor(255, 255, 255);
+  doc.text('SALES RECEIPT', right, y, { align: 'right' });
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(9);
+  doc.text(`#${sale.saleNumber || 'N/A'}`, right, y + 7, { align: 'right' });
+
+  y = 56;
+  doc.setTextColor(...plum);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(10);
+  doc.text('SALE DETAILS', left, y);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(9);
+  doc.setTextColor(...muted);
+  doc.text(date, left, y + 7);
+  doc.text(`Cashier: ${sale.cashierName || 'N/A'}`, left, y + 13);
+  doc.text(`Customer: ${customer}`, right, y + 7, { align: 'right' });
+  if (sale.customerPhone) doc.text(`Phone: ${sale.customerPhone}`, right, y + 13, { align: 'right' });
+
+  y += 27;
+  doc.setFillColor(250, 248, 245);
+  doc.roundedRect(left, y - 5, right - left, 10, 2, 2, 'F');
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(8);
+  doc.setTextColor(...muted);
+  doc.text('ITEM', left + 4, y + 1);
+  doc.text('QTY', right - 45, y + 1, { align: 'right' });
+  doc.text('AMOUNT', right - 4, y + 1, { align: 'right' });
+  y += 12;
+
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(9);
+  (sale.items || []).forEach((item) => {
+    const name = String(item.name || 'Item');
+    const lines = doc.splitTextToSize(name, 95);
+    doc.setTextColor(26, 15, 20);
+    doc.text(lines, left + 4, y);
+    doc.setTextColor(...muted);
+    doc.text(String(item.quantity || 0), right - 45, y, { align: 'right' });
+    doc.setTextColor(26, 15, 20);
+    doc.text(DisplayPriceInShillings(getSaleItemTotal(item)), right - 4, y, { align: 'right' });
+    y += Math.max(7, lines.length * 5);
+    if (item.sku) {
+      doc.setFontSize(7.5);
+      doc.setTextColor(...muted);
+      doc.text(`SKU: ${item.sku}`, left + 4, y - 2);
+      doc.setFontSize(9);
+      y += 3;
+    }
+    doc.setDrawColor(240, 232, 229);
+    doc.line(left + 4, y, right - 4, y);
+    y += 7;
+  });
+
+  y += 3;
+  const summaryRows = [
+    ['Subtotal', subtotal],
+    ...(discount > 0 ? [['Discount', -discount]] : []),
+    ['Tax', tax]
+  ];
+  doc.setFontSize(9);
+  summaryRows.forEach(([label, value]) => {
+    doc.setTextColor(...muted);
+    doc.text(label, right - 65, y, { align: 'right' });
+    doc.setTextColor(26, 15, 20);
+    doc.text(DisplayPriceInShillings(value), right - 4, y, { align: 'right' });
+    y += 7;
+  });
+
+  doc.setFillColor(...plum);
+  doc.roundedRect(right - 92, y, 92, 14, 2, 2, 'F');
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(11);
+  doc.setTextColor(255, 255, 255);
+  doc.text('TOTAL', right - 65, y + 9, { align: 'right' });
+  doc.text(DisplayPriceInShillings(total), right - 4, y + 9, { align: 'right' });
+  y += 27;
+
+  doc.setFillColor(253, 245, 228);
+  doc.roundedRect(left, y - 5, right - left, 25, 3, 3, 'F');
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(9);
+  doc.setTextColor(...plum);
+  doc.text('PAYMENT', left + 5, y + 3);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(...muted);
+  doc.text(`Method: ${String(sale.paymentMethod || 'N/A').toUpperCase()}`, left + 5, y + 11);
+  if (sale.change > 0) doc.text(`Change: ${DisplayPriceInShillings(sale.change)}`, right - 5, y + 11, { align: 'right' });
+  y += 34;
+
+  if (sale.note) {
+    doc.setTextColor(...muted);
+    doc.setFontSize(8.5);
+    doc.text(`Note: ${sale.note}`, left, y);
+    y += 10;
+  }
+
+  doc.setDrawColor(...gold);
+  doc.line(left, y, right, y);
+  doc.setTextColor(...muted);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(9);
+  doc.text('Thank you for choosing Nawiri Hair.', pageWidth / 2, y + 9, { align: 'center' });
+  doc.setFontSize(8);
+  doc.text('Keep this receipt for your records.', pageWidth / 2, y + 15, { align: 'center' });
+  doc.save(`nawiri-hair-receipt-${sale.saleNumber || 'sale'}.pdf`);
+};
 
 const POSDashboard = () => {
   const user = useSelector(state => state.user);
@@ -202,7 +349,7 @@ const POSDashboard = () => {
             <div className="grid grid-cols-2 gap-3 sm:gap-4">
               <div className="rounded-2xl border border-brown-100 bg-ivory p-3 dark:border-dm-border dark:bg-dm-card-2 sm:p-4">
                 <div className="mb-2 flex h-9 w-9 items-center justify-center rounded-xl bg-plum-100 text-plum-700 dark:bg-plum-900/30 dark:text-plum-300 sm:mb-3 sm:h-11 sm:w-11">
-                  <FaDollarSign size={16} />
+                  <FaMoneyBillWave size={16} />
                 </div>
                 <p className="text-[10px] font-semibold uppercase tracking-wide text-brown-500 dark:text-white/40 sm:text-xs">Total Sales</p>
                 <p className="mt-1 text-xl font-black tracking-tight text-charcoal dark:text-white sm:mt-2 sm:text-2xl">
@@ -609,67 +756,165 @@ const POSDashboard = () => {
 
       {/* Receipt Modal */}
       {showReceiptModal && selectedSale && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center">
-          <div className="bg-white dark:bg-dm-card rounded-lg p-6 w-[440px] max-w-full mx-4">
-            <div className="flex justify-between items-center mb-3">
-              <h4 className="text-lg font-semibold text-charcoal dark:text-white">Receipt #{selectedSale.saleNumber}</h4>
-              <button onClick={() => setShowReceiptModal(false)} className="text-brown-400 hover:text-charcoal dark:text-white/40 dark:hover:text-charcoal">
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-charcoal/70 p-4 backdrop-blur-sm"
+          role="presentation"
+          onClick={() => setShowReceiptModal(false)}
+        >
+          <div
+            className="flex max-h-[calc(100vh-2rem)] w-full max-w-xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl dark:bg-dm-card"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="receipt-title"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="flex items-start justify-between bg-plum-700 px-5 py-5 text-white sm:px-7">
+              <div className="flex items-center gap-3">
+                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-white/15 text-gold-300">
+                  <FaReceipt size={20} />
+                </div>
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-plum-100">Nawiri Hair</p>
+                  <h4 id="receipt-title" className="mt-1 text-xl font-bold tracking-tight">Sales receipt</h4>
+                  <p className="mt-1 text-xs text-plum-100">#{selectedSale.saleNumber || 'N/A'}</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowReceiptModal(false)}
+                className="rounded-full p-2 text-plum-100 transition-colors hover:bg-white/10 hover:text-white"
+                aria-label="Close receipt"
+              >
                 <FaTimes />
               </button>
             </div>
-            <div className="text-xs text-brown-500 dark:text-white/55 mb-3">
-              <div>{new Date(selectedSale.saleDate).toLocaleString()}</div>
-              <div>Customer: {selectedSale.customer?.name || selectedSale.customerName || 'Walk-in'}</div>
-              {selectedSale.customerPhone && <div>Phone: {selectedSale.customerPhone}</div>}
-              <div>Cashier: {selectedSale.cashierName}</div>
-            </div>
-            <div className="border-t border-b border-brown-100 dark:border-dm-border py-2 max-h-64 overflow-y-auto">
-              {(selectedSale.items || []).map((it, idx) => (
-                <div key={idx} className="flex justify-between text-sm py-1">
-                  <div className="pr-2">
-                    <div className="font-medium text-charcoal dark:text-white">{it.quantity} x {it.name}</div>
-                    <div className="text-xs text-brown-400 dark:text-white/40">@ {DisplayPriceInShillings(it.price)}</div>
-                    {it.sku && (
-                      <div className="text-xs text-brown-400 dark:text-white/40">Barcode: {it.sku}</div>
-                    )}
+
+            <div className="flex-1 overflow-y-auto p-5 sm:p-7">
+              <div className="grid gap-3 rounded-xl border border-brown-100 bg-ivory p-4 dark:border-dm-border dark:bg-dm-card-2 sm:grid-cols-2">
+                <div className="flex items-start gap-3">
+                  <FaCalendarAlt className="mt-0.5 text-gold-600" />
+                  <div>
+                    <p className="text-[10px] font-bold uppercase tracking-wide text-brown-400 dark:text-white/40">Date and time</p>
+                    <p className="mt-1 text-sm font-medium text-charcoal dark:text-white">{new Date(selectedSale.saleDate).toLocaleString('en-KE')}</p>
                   </div>
-                  <div className="font-semibold text-charcoal dark:text-white">{DisplayPriceInShillings(it.total || (it.price * it.quantity))}</div>
                 </div>
-              ))}
-            </div>
-            <div className="mt-3 space-y-1 text-sm">
-              <div className="flex justify-between"><span className="text-brown-500 dark:text-white/40">Subtotal</span><span className="text-charcoal dark:text-white">{DisplayPriceInShillings(selectedSale.subtotal || ((selectedSale.items||[]).reduce((s,i)=>s+(i.price*i.quantity),0)))}</span></div>
-              {selectedSale.discount > 0 && <div className="flex justify-between"><span className="text-brown-500 dark:text-white/40">Discount</span><span className="text-plum-600">-{DisplayPriceInShillings(selectedSale.discount)}</span></div>}
-              <div className="flex justify-between"><span className="text-brown-500 dark:text-white/40">Tax</span><span className="text-charcoal dark:text-white">{DisplayPriceInShillings(selectedSale.tax || 0)}</span></div>
-              <div className="flex justify-between text-base font-semibold"><span>Total</span><span>{DisplayPriceInShillings(selectedSale.total)}</span></div>
-            </div>
-            <div className="mt-3 text-xs text-brown-500 dark:text-white/40">
-              <div className="flex justify-between">
-                <span>Payment</span>
-                <span className="capitalize">{selectedSale.paymentMethod}</span>
+                <div className="flex items-start gap-3">
+                  <FaUser className="mt-0.5 text-gold-600" />
+                  <div>
+                    <p className="text-[10px] font-bold uppercase tracking-wide text-brown-400 dark:text-white/40">Customer</p>
+                    <p className="mt-1 text-sm font-medium text-charcoal dark:text-white">{selectedSale.customer?.name || selectedSale.customerName || 'Walk-in customer'}</p>
+                    {selectedSale.customerPhone && <p className="mt-0.5 text-xs text-brown-500 dark:text-white/45">{selectedSale.customerPhone}</p>}
+                  </div>
+                </div>
+                <div className="flex items-start gap-3 sm:col-span-2">
+                  <FaCreditCard className="mt-0.5 text-gold-600" />
+                  <div>
+                    <p className="text-[10px] font-bold uppercase tracking-wide text-brown-400 dark:text-white/40">Cashier and payment</p>
+                    <p className="mt-1 text-sm font-medium capitalize text-charcoal dark:text-white">
+                      {selectedSale.cashierName || 'N/A'} · {selectedSale.paymentMethod || 'N/A'}
+                    </p>
+                  </div>
+                </div>
               </div>
-              {selectedSale.paymentMethod === 'split' && Array.isArray(selectedSale.payments) && (
-                <div className="mt-1 space-y-0.5">
-                  {selectedSale.payments.map((p, i) => (
-                    <div key={i} className="flex justify-between">
-                      <span className="text-brown-400 dark:text-white/40">{p.method === 'mobile' ? `M-Pesa${p.phone ? ` (${p.phone})` : ''}` : p.method}</span>
-                      <span>{DisplayPriceInShillings(p.amount)}</span>
+
+              <div className="mt-6">
+                <div className="mb-3 flex items-center justify-between">
+                  <h5 className="text-sm font-bold uppercase tracking-wide text-charcoal dark:text-white">Items purchased</h5>
+                  <span className="text-xs text-brown-400 dark:text-white/40">{(selectedSale.items || []).length} line items</span>
+                </div>
+                <div className="divide-y divide-brown-100 overflow-hidden rounded-xl border border-brown-100 dark:divide-dm-border dark:border-dm-border">
+                  {(selectedSale.items || []).map((item, index) => (
+                    <div key={`${item.sku || item.name || 'item'}-${index}`} className="flex items-start justify-between gap-4 p-4">
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold text-charcoal dark:text-white">{item.name || 'Item'}</p>
+                        <p className="mt-1 text-xs text-brown-500 dark:text-white/45">
+                          {item.quantity || 0} × {DisplayPriceInShillings(item.price || 0)}
+                        </p>
+                        {item.sku && <p className="mt-1 text-[11px] text-brown-400 dark:text-white/35">SKU: {item.sku}</p>}
+                      </div>
+                      <p className="shrink-0 text-sm font-bold text-charcoal dark:text-white">{DisplayPriceInShillings(getSaleItemTotal(item))}</p>
                     </div>
                   ))}
+                  {(selectedSale.items || []).length === 0 && (
+                    <p className="p-5 text-center text-sm text-brown-400 dark:text-white/40">No item details available.</p>
+                  )}
                 </div>
-              )}
-              {selectedSale.change > 0 && (
-                <div className="flex justify-between text-green-600 dark:text-green-400 mt-1">
-                  <span>Change</span>
-                  <span>{DisplayPriceInShillings(selectedSale.change)}</span>
+              </div>
+
+              <div className="mt-6 grid gap-4 sm:grid-cols-[1fr_220px] sm:items-end">
+                <div className="rounded-xl bg-gold-100 p-4 dark:bg-gold-900/20">
+                  <div className="flex items-center gap-2 text-sm font-bold text-plum-800 dark:text-gold-200">
+                    <FaMoneyBillWave /> Payment received in Kenyan shillings
+                  </div>
+                  {selectedSale.paymentMethod === 'split' && Array.isArray(selectedSale.payments) && (
+                    <div className="mt-3 space-y-1 text-xs text-brown-600 dark:text-white/55">
+                      {selectedSale.payments.map((payment, index) => (
+                        <div key={index} className="flex justify-between gap-3">
+                          <span className="capitalize">{payment.method === 'mobile' ? 'M-Pesa' : payment.method}</span>
+                          <span>{DisplayPriceInShillings(payment.amount)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {selectedSale.change > 0 && (
+                    <div className="mt-3 flex justify-between border-t border-gold-200 pt-2 text-xs font-semibold text-green-700 dark:border-gold-700/40 dark:text-green-300">
+                      <span>Change</span>
+                      <span>{DisplayPriceInShillings(selectedSale.change)}</span>
+                    </div>
+                  )}
+                </div>
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between text-brown-500 dark:text-white/45">
+                    <span>Subtotal</span>
+                    <span>{DisplayPriceInShillings(getSaleSubtotal(selectedSale))}</span>
+                  </div>
+                  {selectedSale.discount > 0 && (
+                    <div className="flex justify-between text-plum-600 dark:text-plum-300">
+                      <span>Discount</span>
+                      <span>-{DisplayPriceInShillings(selectedSale.discount)}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between text-brown-500 dark:text-white/45">
+                    <span>Tax</span>
+                    <span>{DisplayPriceInShillings(selectedSale.tax || 0)}</span>
+                  </div>
+                  <div className="mt-2 flex items-center justify-between border-t border-brown-200 pt-3 dark:border-dm-border">
+                    <span className="font-bold text-charcoal dark:text-white">Total</span>
+                    <span className="text-lg font-black text-plum-700 dark:text-gold-300">{DisplayPriceInShillings(selectedSale.total)}</span>
+                  </div>
+                </div>
+              </div>
+
+              {selectedSale.note && (
+                <div className="mt-5 rounded-xl border border-brown-100 bg-brown-50 p-3 text-xs italic text-brown-500 dark:border-dm-border dark:bg-dm-card-2 dark:text-white/45">
+                  Note: {selectedSale.note}
                 </div>
               )}
             </div>
-            {selectedSale.note && (
-              <div className="mt-3 text-xs text-brown-400 italic">Note: {selectedSale.note}</div>
-            )}
-            <div className="mt-4 flex justify-end">
-              <button onClick={() => setShowReceiptModal(false)} className="px-4 py-2 rounded-lg border border-brown-200 dark:border-dm-border hover:bg-ivory dark:hover:bg-dm-card-2 text-sm text-charcoal dark:text-white/55">Close</button>
+
+            <div className="flex flex-col-reverse gap-3 border-t border-brown-100 bg-ivory px-5 py-4 dark:border-dm-border dark:bg-dm-card-2 sm:flex-row sm:justify-end sm:px-7">
+              <button
+                type="button"
+                onClick={() => setShowReceiptModal(false)}
+                className="rounded-xl border border-brown-200 px-4 py-2.5 text-sm font-semibold text-charcoal transition-colors hover:bg-white dark:border-dm-border dark:text-white dark:hover:bg-dm-card"
+              >
+                Close
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  try {
+                    downloadSaleReceipt(selectedSale);
+                    toast.success('Receipt downloaded as PDF.');
+                  } catch (error) {
+                    console.error('Receipt download failed:', error);
+                    toast.error('Unable to download receipt.');
+                  }
+                }}
+                className="inline-flex items-center justify-center gap-2 rounded-xl bg-plum-700 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-plum-800"
+              >
+                <FaDownload /> Download PDF
+              </button>
             </div>
           </div>
         </div>
