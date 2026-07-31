@@ -1463,19 +1463,25 @@ export async function getOrderTrackingDetails(request, response) {
     try {
         const { id } = request.params;
         
-        // Validate if ID is in correct format
-        if (!id.match(/^[0-9a-fA-F]{24}$/)) {
+        if (!id || typeof id !== 'string') {
             return response.status(400).json({
-                message: "Invalid order ID format",
+                message: "Order ID is required",
                 success: false,
                 errorCode: "INVALID_ID_FORMAT"
             });
         }
-        
+
+        // Orders expose both MongoDB `_id` values and customer-facing `orderId`
+        // values such as `ORD-6a54e51bc74c4203c2075899`. Tracking links may use
+        // either form, so resolve the identifier before applying authorization.
+        const orderQuery = mongoose.Types.ObjectId.isValid(id)
+            ? { _id: id }
+            : { orderId: id.trim() };
+
         // Fetch order with populated delivery personnel and status history
-        const order = await OrderModel.findById(id)
+        const order = await OrderModel.findOne(orderQuery)
             .populate('deliveryPersonnel')
-          .populate('productId', 'name price image')
+            .populate('productId', 'name price image')
             .populate('delivery_address');
         
         if (!order) {

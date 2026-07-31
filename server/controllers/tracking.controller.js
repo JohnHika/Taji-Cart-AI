@@ -1,4 +1,5 @@
 import geolib from 'geolib';
+import mongoose from 'mongoose';
 import DeliveryPersonnelModel from '../models/deliverypersonnel.model.js';
 import NotificationModel from '../models/notification.model.js';
 import OrderModel from '../models/order.model.js';
@@ -37,9 +38,23 @@ const calculateETA = (start, end, speedKmh = 30) => {
 export const getOrderTrackingDetails = async (req, res) => {
     try {
         const { id } = req.params;
-        
+
+        if (!id || typeof id !== 'string') {
+            return res.status(400).json({
+                success: false,
+                message: 'Order ID is required',
+                errorCode: 'INVALID_ID_FORMAT'
+            });
+        }
+
+        // Accept either the MongoDB `_id` or the customer-facing `orderId`
+        // (for example, ORD-6a54e51bc74c4203c2075899).
+        const orderQuery = mongoose.Types.ObjectId.isValid(id)
+            ? { _id: id }
+            : { orderId: id.trim() };
+
         // Validate if the order belongs to the requesting user
-        const order = await OrderModel.findById(id)
+        const order = await OrderModel.findOne(orderQuery)
             .populate('deliveryPersonnel', 'name phoneNumber currentLocation')
             .populate('delivery_address');
         
