@@ -6,6 +6,7 @@ import { valideURLConvert } from '../utils/valideURLConvert';
 import AddToCartButton from './AddToCartButton';
 import WatermarkedImage from './WatermarkedImage';
 import WishlistButton from './WishlistButton';
+import WhatsAppOrderButton from './WhatsAppOrderButton';
 
 const CardProduct = ({ data }) => {
   const hasValidPrice = Number.isFinite(Number(data.price));
@@ -70,13 +71,21 @@ const CardProduct = ({ data }) => {
             </span>
           )}
 
-          <div className="mt-2 w-full" onClick={(e) => e.preventDefault()}>
+          <div className="mt-2 flex w-full gap-2" onClick={(e) => e.preventDefault()}>
             {!hasValidPrice ? null : isOutOfStock ? (
               <p className="text-left text-[11px] font-medium text-red-500 dark:text-red-400">
                 Out of stock
               </p>
             ) : (
-              <AddToCartButton data={data} />
+              <>
+                <div className="min-w-0 flex-1">
+                  <AddToCartButton data={data} />
+                </div>
+                <WhatsAppOrderButton
+                  product={data}
+                  className="h-[34px] w-[34px] shrink-0"
+                />
+              </>
             )}
           </div>
         </div>

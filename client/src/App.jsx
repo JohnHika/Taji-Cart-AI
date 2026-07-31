@@ -11,7 +11,9 @@ import CartMobileLink from './components/CartMobile';
 import DashboardMobileHeader from './components/DashboardMobileHeader';
 import Footer from './components/Footer';
 import Header from './components/Header';
+import WhatsAppOrderWidget from './components/WhatsAppOrderWidget';
 import GlobalProvider from './provider/GlobalProvider';
+import { WhatsAppOrderProvider } from './provider/WhatsAppOrderProvider';
 import { fetchCartItems } from './store/cartProduct';
 import { setAllCategory, setAllSubCategory, setLoadingCategory, setLoyaltyDetails } from './store/productSlice';
 import { setUserDetails } from './store/userSlice';
@@ -295,6 +297,7 @@ function App() {
   return (
     <ErrorBoundary FallbackComponent={ErrorFallback}>
       <GlobalProvider>
+        <WhatsAppOrderProvider>
         <ScrollRestoration />
         {isDashboardShell && !isPOSPage && <DashboardMobileHeader />}
         {showStoreChrome && <Header />}
@@ -309,7 +312,9 @@ function App() {
         <Toaster />
         <ToastContainer position="top-right" autoClose={3000} />
         {showStoreChrome && location.pathname !== '/checkout' && location.pathname !== '/dashboard/checkout' && user?._id && <CartMobileLink />}
+        {showStoreChrome && <WhatsAppOrderWidget />}
         {/* ChatbotAI hidden: AI feature not yet complete */}
+        </WhatsAppOrderProvider>
       </GlobalProvider>
     </ErrorBoundary>
   );
