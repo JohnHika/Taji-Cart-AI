@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
 import {
+  FaArrowLeft,
   FaMinus,
   FaPlus,
   FaSearch,
@@ -212,33 +213,50 @@ const SalesCounter = () => {
   return (
     <div className="min-h-screen bg-ivory dark:bg-dm-surface text-charcoal dark:text-white pb-[calc(1rem+env(safe-area-inset-bottom))]">
       {/* Header */}
-      <div className="sticky top-0 z-30 bg-white dark:bg-dm-card border-b border-brown-100 dark:border-dm-border p-2 shadow-sm">
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex items-center gap-2">
-            <div className="w-9 h-9 rounded-full bg-gold-500 flex items-center justify-center text-white">
-              <FaShoppingBasket size={18} />
-            </div>
-            <div>
-              <h1 className="font-bold text-base leading-tight">Sales Counter</h1>
-              <p className="text-[11px] text-brown-500 dark:text-white/50">Walk-in customers</p>
+      <header className="sticky top-0 z-30 border-b border-brown-100 bg-white shadow-sm dark:border-dm-border dark:bg-dm-card">
+        <div className="flex items-center justify-between gap-3 px-3 pb-2 pt-3 sm:px-4">
+          <div className="flex min-w-0 items-center gap-2">
+            <button
+              type="button"
+              onClick={() => navigate('/dashboard/pos-dashboard')}
+              className="inline-flex shrink-0 items-center gap-1.5 rounded-xl border border-brown-200 px-2.5 py-2 text-xs font-semibold text-brown-700 transition-colors hover:border-plum-300 hover:bg-plum-50 hover:text-plum-700 dark:border-dm-border dark:text-white/70 dark:hover:bg-dm-card-2 sm:px-3"
+              aria-label="Back to Sales Hub"
+            >
+              <FaArrowLeft size={12} />
+              <span className="hidden sm:inline">Back to Sales Hub</span>
+              <span className="sm:hidden">Back</span>
+            </button>
+            <div className="hidden h-7 w-px bg-brown-200 dark:bg-dm-border sm:block" />
+            <div className="flex min-w-0 items-center gap-2">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gold-500 text-white shadow-sm">
+                <FaShoppingBasket size={16} />
+              </div>
+              <div className="min-w-0">
+                <h1 className="truncate text-base font-bold leading-tight text-charcoal dark:text-white">Sales Counter</h1>
+                <p className="text-[11px] text-brown-500 dark:text-white/50">Walk-in customers</p>
+              </div>
             </div>
           </div>
           <button
             onClick={() => setShowCart(true)}
-            className="relative bg-plum-700 text-white px-3 py-2 rounded-lg flex items-center gap-2 font-medium text-sm"
+            className="relative inline-flex shrink-0 items-center gap-2 rounded-xl bg-plum-700 px-3 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-plum-800"
           >
-            <FaShoppingBasket size={16} />
+            <FaShoppingBasket size={15} />
             <span className="hidden sm:inline">Basket</span>
             {cart.length > 0 && (
-              <span className="absolute -top-1.5 -right-1.5 bg-red-500 text-white text-[10px] w-4 h-4 rounded-full flex items-center justify-center">
-                {cart.reduce((s, i) => s + i.quantity, 0)}
+              <span className="absolute -right-1.5 -top-1.5 flex h-5 min-w-5 items-center justify-center rounded-full border-2 border-white bg-gold-500 px-1 text-[10px] font-bold text-charcoal dark:border-dm-card">
+                {cart.reduce((sum, item) => sum + item.quantity, 0)}
               </span>
             )}
           </button>
         </div>
+        <div className="flex items-center justify-between gap-3 border-t border-brown-100 px-3 py-2 text-xs dark:border-dm-border sm:px-4">
+          <span className="font-semibold uppercase tracking-wide text-brown-400 dark:text-white/40">Current sale</span>
+          <span className="font-bold tabular-nums text-plum-700 dark:text-gold-300">{cart.reduce((sum, item) => sum + item.quantity, 0)} items · {DisplayPriceInShillings(totals.total)}</span>
+        </div>
 
         {/* Search */}
-        <div className="mt-2 relative">
+        <div className="relative px-3 pt-2 sm:px-4">
           <FaSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-brown-400 text-sm" />
           <input
             ref={searchRef}
@@ -251,7 +269,7 @@ const SalesCounter = () => {
         </div>
 
         {/* Categories */}
-        <div className="mt-2 -mx-2 px-2 flex gap-1.5 overflow-x-auto pb-1 scrollbar-hide">
+        <div className="flex gap-1.5 overflow-x-auto px-3 pb-2 pt-2 scrollbar-hide sm:px-4">
           <button
             onClick={() => setSelectedCategory('all')}
             className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
@@ -276,7 +294,7 @@ const SalesCounter = () => {
             </button>
           ))}
         </div>
-      </div>
+      </header>
 
       {/* Product grid */}
       <div className="p-2 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 pb-8">
