@@ -14,6 +14,13 @@ export const getStoredAccessToken = () => {
 
 export const hasStoredAccessToken = () => Boolean(getStoredAccessToken());
 
+// Network and server errors must not sign a customer out. Only a server-confirmed
+// authentication rejection means the saved session is no longer usable.
+export const isAuthSessionError = (error) => {
+    const status = error?.response?.status;
+    return status === 401 || status === 403;
+};
+
 export const getStoredRefreshToken = () => {
     if (typeof window === 'undefined') {
         return '';

@@ -1,7 +1,7 @@
 import axios from 'axios';
 import { apiBaseUrl } from '../common/apiBaseUrl';
 import SummaryApi from '../common/SummaryApi';
-import { clearAuthStorage, getRememberMe, getStoredAccessToken, getStoredRefreshToken, saveTokens } from './authStorage';
+import { clearAuthStorage, getRememberMe, getStoredAccessToken, getStoredRefreshToken, isAuthSessionError, saveTokens } from './authStorage';
 
 const inFlightMutationRequests = new Map();
 
@@ -154,7 +154,7 @@ const refreshToken = async () => {
     console.error('Token refresh failed:', error);
 
     // Only clear the session for actual auth failures, not transient network errors.
-    const isAuthError = error.response && (error.response.status === 401 || error.response.status === 403);
+    const isAuthError = isAuthSessionError(error);
     if (isAuthError) {
       clearAuthStorage();
       if (typeof window !== 'undefined') {

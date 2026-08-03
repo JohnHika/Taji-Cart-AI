@@ -1,10 +1,11 @@
 import jwt from 'jsonwebtoken'
 import UserModel from "../models/user.model.js"
+import { PERSISTENT_SESSION_REFRESH_TOKEN_TTL } from './authSession.js'
 
 const genertedRefreshToken = async(userId)=>{
     const token = await jwt.sign({ _id : userId},  // Changing 'id' to '_id' for consistency
         process.env.SECRET_KEY_REFRESH_TOKEN,
-        { expiresIn : '7d'}  // Keeping 7 days for refresh token
+        { expiresIn : PERSISTENT_SESSION_REFRESH_TOKEN_TTL }
     )
 
     const updateRefreshTokenUser = await UserModel.updateOne(

@@ -12,6 +12,7 @@ import forgotPasswordTemplate from '../utils/forgotPasswordTemplate.js'
 import generatedAccessToken from '../utils/generatedAccessToken.js'
 import generatedOtp from '../utils/generatedOtp.js'
 import genertedRefreshToken from '../utils/generatedRefreshToken.js'
+import { isCurrentRefreshToken } from '../utils/authSession.js'
 import { sendVerificationEmail } from '../utils/sendVerificationEmail.js'
 import uploadImageClodinary from '../utils/uploadImageClodinary.js'
 
@@ -1314,6 +1315,17 @@ export async function refreshToken(request, response) {
             }
 
             const userId = verifyToken?._id;
+
+            // A refresh token must still be the user's current server-side token.
+            // Logout clears this value, so a logged-out token cannot be reused.
+            const user = await UserModel.findById(userId).select('refresh_token');
+            if (!user || !isCurrentRefreshToken(user.refresh_token, refreshToken)) {
+                return response.status(401).json({
+                    message: "Invalid or expired token",
+                    error: true,
+                    success: false
+                });
+            }
 
             // Generate new tokens
             const newAccessToken = await generatedAccessToken(userId);

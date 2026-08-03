@@ -14,7 +14,7 @@ global.window = {};
 global.localStorage = createStorage();
 global.sessionStorage = createStorage();
 
-const { getRememberMe, saveTokens } = await import('./authStorage.js');
+const { getRememberMe, isAuthSessionError, saveTokens } = await import('./authStorage.js');
 
 test('keeps customers signed in by default until they opt out', () => {
   assert.equal(getRememberMe(), true);
@@ -31,4 +31,12 @@ test('persists tokens across browser restarts when sign-in is kept enabled', () 
 
   assert.equal(localStorage.getItem('accesstoken'), 'access');
   assert.equal(localStorage.getItem('refreshToken'), 'refresh');
+});
+
+test('only treats confirmed authentication rejections as reasons to clear a session', () => {
+  assert.equal(isAuthSessionError({ response: { status: 401 } }), true);
+  assert.equal(isAuthSessionError({ response: { status: 403 } }), true);
+  assert.equal(isAuthSessionError({ response: { status: 500 } }), false);
+  assert.equal(isAuthSessionError({ code: 'ECONNABORTED' }), false);
+  assert.equal(isAuthSessionError(new Error('Network Error')), false);
 });

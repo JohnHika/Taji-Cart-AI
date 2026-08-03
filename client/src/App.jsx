@@ -19,7 +19,7 @@ import { setAllCategory, setAllSubCategory, setLoadingCategory, setLoyaltyDetail
 import { setUserDetails } from './store/userSlice';
 import { fetchWishlist } from './store/wishlistSlice';
 import Axios from './utils/Axios';
-import { clearAuthStorage, getStoredAccessToken } from './utils/authStorage';
+import { clearAuthStorage, getStoredAccessToken, isAuthSessionError } from './utils/authStorage';
 import fetchUserDetails from './utils/fetchUserDetails';
 import { getPOSOverflowClass } from './utils/posLayout';
 
@@ -181,7 +181,11 @@ function App() {
         }
       } catch (error) {
         console.error("Session hydration error:", error);
-        clearAuthStorage();
+        if (isAuthSessionError(error)) {
+          clearAuthStorage();
+        } else {
+          console.warn('Keeping the saved session after a temporary hydration failure.');
+        }
       }
     };
 
