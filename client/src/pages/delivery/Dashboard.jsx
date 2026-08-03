@@ -114,13 +114,19 @@ const Dashboard = () => {
       return;
     }
 
+    const riderCallConfirmed = newStatus === 'nearby';
+    if (riderCallConfirmed && !window.confirm('Confirm that you have called the customer and told them you are nearby.')) {
+      return;
+    }
+
     try {
       const response = await Axios({
         url: '/api/delivery/update-status',
         method: 'POST',
         data: {
           orderId,
-          status: newStatus
+          status: newStatus,
+          riderCallConfirmed
         }
       });
       

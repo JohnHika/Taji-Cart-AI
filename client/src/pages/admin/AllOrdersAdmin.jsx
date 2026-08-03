@@ -130,7 +130,13 @@ const OrderDetailModal = ({ order, onClose, onStatusChange, onDispatchStateSync 
   
   const handleStatusChange = (e) => {
     const newStatus = e.target.value;
-    onStatusChange(order._id, newStatus);
+    const riderCallConfirmed = newStatus === 'nearby';
+
+    if (riderCallConfirmed && !window.confirm('Confirm that the rider has called the customer before marking this order as nearby.')) {
+      return;
+    }
+
+    onStatusChange(order._id, newStatus, { riderCallConfirmed });
   };
 
   if (!order) return null;
@@ -1002,7 +1008,7 @@ const AllOrdersAdmin = () => {
     }
   };
   
-  const updateOrderStatus = async (orderId, status) => {
+  const updateOrderStatus = async (orderId, status, options = {}) => {
     const patchOrderState = (targetOrderId, updates) => {
       setOnlineOrders(prevOrders =>
         prevOrders.map(order =>
@@ -1021,7 +1027,7 @@ const AllOrdersAdmin = () => {
       const response = await Axios({
         url: `/api/order/status/${orderId}`,
         method: 'PUT',
-        data: { status }
+        data: { status, ...options }
       });
       
       if (response.data.success) {

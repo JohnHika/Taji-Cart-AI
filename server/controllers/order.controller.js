@@ -22,6 +22,7 @@ import {
 } from '../utils/cbdDelivery.js';
 import { markRewardAsUsed, processOrderContribution } from './communitycampaign.controller.js'; // Add this import
 import { nawiriBrand } from "../utils/brand.js";
+import { buildRiderCallMessage, notifyCustomerRiderWillCall } from "../utils/deliveryRiderCall.js";
 import { renderOrderNoticeEmail } from "../utils/emailTemplates.js";
 import { getOrderIdentifierQuery } from "../utils/orderIdentifier.js";
 
@@ -1321,7 +1322,7 @@ export async function getAllOrdersAdmin(request, response) {
 export async function updateOrderStatus(request, response) {
   try {
     const { id } = request.params;
-    const { status } = request.body;
+    const { status, riderCallConfirmed } = request.body;
     
     // Validate status
     const validStatuses = ['pending', 'processing', 'shipped', 'dispatched', 'driver_assigned', 'out_for_delivery', 'nearby', 'delivered', 'ready_for_pickup', 'picked_up', 'cancelled'];
@@ -1353,6 +1354,13 @@ export async function updateOrderStatus(request, response) {
     
     const previousStatus = order.status;
 
+    if (status === 'nearby' && !order.riderCallConfirmedAt && riderCallConfirmed !== true) {
+      return response.status(400).json({
+        message: 'Confirm that the rider has called the customer before marking this delivery as nearby',
+        success: false
+      });
+    }
+
     // Restore stock for ALL line-item docs in this order when cancelling
     if (status === 'cancelled' && previousStatus !== 'cancelled') {
       try {
@@ -1376,6 +1384,10 @@ export async function updateOrderStatus(request, response) {
     const updateFields = { status };
     if (status === 'delivered') {
       updateFields.deliveredAt = new Date();
+    }
+    if (status === 'nearby' && !order.riderCallConfirmedAt) {
+      updateFields.riderCallConfirmedAt = new Date();
+      updateFields.riderCallConfirmedBy = request.userId;
     }
 
     await OrderModel.updateMany(
@@ -1435,6 +1447,9 @@ export async function updateOrderStatus(request, response) {
         case 'delivered':
           notificationMessage = "Your order has been delivered";
           break;
+        case 'nearby':
+          notificationMessage = buildRiderCallMessage(order.orderId || order._id?.toString());
+          break;
         case 'cancelled':
           notificationMessage = "Your order has been cancelled";
           break;
@@ -1452,6 +1467,21 @@ export async function updateOrderStatus(request, response) {
     } catch (notificationError) {
       console.error("Error creating order status notification:", notificationError);
       // Continue with the response even if notification fails
+    }
+
+    if (status === 'nearby') {
+      try {
+        const customer = order.userId
+          ? await UserModel.findById(order.userId).select('name email mobile phone')
+          : null;
+        const deliveryNotice = await notifyCustomerRiderWillCall({ order, customer });
+
+        if (deliveryNotice.results.some((result) => result.status === 'rejected')) {
+          console.error('One or more rider-call delivery notices could not be sent');
+        }
+      } catch (deliveryNoticeError) {
+        console.error('Error sending rider-call delivery notice:', deliveryNoticeError);
+      }
     }
     
     return response.json({

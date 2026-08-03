@@ -7,6 +7,7 @@ import User from '../models/user.model.js';
 import { emitNewDeliveryAssigned, emitOrderStatusUpdated, getIO } from '../socket/socket.js';
 import { nawiriBrand } from '../utils/brand.js';
 import { isFootDeliveryMode } from '../utils/cbdDelivery.js';
+import { buildRiderCallMessage, notifyCustomerRiderWillCall } from '../utils/deliveryRiderCall.js';
 import { renderOrderNoticeEmail } from '../utils/emailTemplates.js';
 
 const DELIVERY_DRIVER_CAPACITY = 3;
@@ -1150,7 +1151,7 @@ export const exportDeliveryHistory = async (req, res) => {
 export const updateOrderStatus = async (req, res) => {
   try {
     const driverId = req.userId;
-    const { orderId, status } = req.body;
+    const { orderId, status, riderCallConfirmed } = req.body;
     
     if (!orderId || !status) {
         return res.status(400).json({
@@ -1185,6 +1186,13 @@ export const updateOrderStatus = async (req, res) => {
         });
     }
 
+    if (status === 'nearby' && !order.riderCallConfirmedAt && riderCallConfirmed !== true) {
+      return res.status(400).json({
+        success: false,
+        message: 'Confirm that you have called the customer before marking this delivery as nearby'
+      });
+    }
+
     const transitions = {
       driver_assigned: ['out_for_delivery'],
       out_for_delivery: ['nearby', 'delivered'],
@@ -1200,6 +1208,10 @@ export const updateOrderStatus = async (req, res) => {
     const changedAt = new Date();
     const updateFields = { status };
     if (status === 'delivered') updateFields.deliveredAt = changedAt;
+    if (status === 'nearby' && !order.riderCallConfirmedAt) {
+      updateFields.riderCallConfirmedAt = changedAt;
+      updateFields.riderCallConfirmedBy = driverId;
+    }
 
     await OrderModel.updateMany(
       { orderId: order.orderId, deliveryPersonnel: personnelFilter },
@@ -1218,6 +1230,30 @@ export const updateOrderStatus = async (req, res) => {
 
     order.status = status;
     if (status === 'delivered') order.deliveredAt = changedAt;
+    if (updateFields.riderCallConfirmedAt) {
+      order.riderCallConfirmedAt = updateFields.riderCallConfirmedAt;
+      order.riderCallConfirmedBy = driverId;
+    }
+
+    if (status === 'nearby') {
+      const customer = order.userId
+        ? await User.findById(order.userId).select('name email mobile phone')
+        : null;
+      const message = buildRiderCallMessage(order.orderId || order._id?.toString());
+
+      await createNotificationIfPossible({
+        type: 'order_update',
+        title: 'Your rider is nearby',
+        message,
+        isRead: false,
+        userId: order.userId
+      }, 'rider-call notification');
+
+      const deliveryNotice = await notifyCustomerRiderWillCall({ order, customer });
+      if (deliveryNotice.results.some((result) => result.status === 'rejected')) {
+        console.error('One or more rider-call delivery notices could not be sent');
+      }
+    }
     
     if (status === 'delivered') {
       // Release driver capacity now that this delivery is complete

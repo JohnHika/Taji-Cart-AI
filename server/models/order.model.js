@@ -122,6 +122,13 @@ const orderSchema = new mongoose.Schema({
         type: mongoose.Schema.ObjectId,
         ref: 'DeliveryPersonnel'
     },
+    riderCallConfirmedAt: {
+        type: Date
+    },
+    riderCallConfirmedBy: {
+        type: mongoose.Schema.ObjectId,
+        ref: 'User'
+    },
     dispatchInfo: {
         dispatchedAt: { type: Date },
         dispatchedBy: { type: mongoose.Schema.ObjectId, ref: 'User' },
