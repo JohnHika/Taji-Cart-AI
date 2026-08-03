@@ -16,8 +16,8 @@ import LoadingSpinner from '../components/LoadingSpinner';
 import Axios from '../utils/Axios';
 import AxiosToastError from '../utils/AxiosToastError';
 import { DisplayPriceInShillings } from '../utils/DisplayPriceInShillings';
+import { calculateSalesCounterTotals } from '../utils/salesCounterTotals';
 
-const TAX_RATE = 0.16;
 const PAYMENT_METHODS = [
   { id: 'cash', label: 'Cash', color: 'bg-green-600' },
   { id: 'mpesa', label: 'M-Pesa', color: 'bg-green-700' },
@@ -130,11 +130,7 @@ const SalesCounter = () => {
   };
 
   const totals = useMemo(() => {
-    const subtotal = cart.reduce((s, i) => s + i.price * i.quantity, 0);
-    const tax = subtotal * TAX_RATE;
-    const total = subtotal + tax;
-    const tendered = Number(amountTendered) || 0;
-    return { subtotal, tax, total, change: Math.max(0, tendered - total) };
+    return calculateSalesCounterTotals(cart, amountTendered);
   }, [cart, amountTendered]);
 
   const resetSale = () => {
@@ -490,10 +486,6 @@ const SalesCounter = () => {
                 <div className="flex justify-between">
                   <span className="text-brown-500 dark:text-white/60">Subtotal</span>
                   <span>{DisplayPriceInShillings(totals.subtotal)}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-brown-500 dark:text-white/60">Tax (16%)</span>
-                  <span>{DisplayPriceInShillings(totals.tax)}</span>
                 </div>
                 <div className="flex justify-between text-base font-bold pt-1 border-t border-brown-200 dark:border-dm-border">
                   <span>Total</span>
