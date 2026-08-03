@@ -761,6 +761,32 @@ export const getProductDetailsController = async (request, response) => {
   }
 };
 
+// Admin repair tools must be able to open products that are intentionally hidden
+// from customers for missing images or invalid prices.
+export const getProductDetailsForAdminController = async (request, response) => {
+  try {
+    const { productId } = request.body;
+
+    if (!productId) {
+      return response.status(400).json({ success: false, message: 'Product ID is required' });
+    }
+
+    if (!mongoose.Types.ObjectId.isValid(productId)) {
+      return response.status(400).json({ success: false, message: 'Invalid product ID format' });
+    }
+
+    const product = await ProductModel.findById(productId).populate('category subCategory');
+    if (!product) {
+      return response.status(404).json({ success: false, message: 'Product not found' });
+    }
+
+    return response.status(200).json({ success: true, data: product });
+  } catch (error) {
+    console.error('Error in getProductDetailsForAdminController:', error);
+    return response.status(500).json({ success: false, message: 'Unable to load product for editing' });
+  }
+};
+
 //update product
 export const updateProductDetails = async(request,response)=>{
     try {

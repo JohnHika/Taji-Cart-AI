@@ -133,6 +133,10 @@ const SummaryApi = {
         url: `${baseURL}/api/product/get-product-details`,
         method: 'post'
     },
+    getAdminProductDetails: {
+        url: `${baseURL}/api/product/admin/detail`,
+        method: 'post'
+    },
     updateProductDetails: {
         url: `${baseURL}/api/product/update-product-details`,
         method: 'put'

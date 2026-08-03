@@ -9,7 +9,11 @@ import WatermarkedImage from '../components/WatermarkedImage';
 import Axios from '../utils/Axios';
 import AxiosToastError from '../utils/AxiosToastError';
 import { DisplayPriceInShillings } from '../utils/DisplayPriceInShillings';
+import { getAdminProductPage } from '../utils/adminProductPresentation';
 import { exportToExcel, exportToCSV, exportToPDF, exportToWord, exportToJSON } from '../utils/exportUtils';
+
+const PRODUCTS_PER_PAGE = 12;
+const PRODUCT_VIEW_PREFERENCE = 'adminProductViewMode';
 
 const normalizeSearchValue = (value = '') => String(value ?? '')
   .toLowerCase()
@@ -46,7 +50,6 @@ const DashboardProduct = () => {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
-  const [productsPerPage] = useState(10);
   const [sortBy, setSortBy] = useState('createdAt');
   const [sortOrder, setSortOrder] = useState('desc');
   const [filterCategory, setFilterCategory] = useState('');
@@ -61,7 +64,7 @@ const DashboardProduct = () => {
   });
   const [showUnpricedOnly, setShowUnpricedOnly] = useState(false);
   const [isMobileView, setIsMobileView] = useState(false);
-  const [viewMode, setViewMode] = useState('table'); // 'table' or 'grid'
+  const [viewMode, setViewMode] = useState('grid'); // 'table' or 'grid'
   
   // Function to calculate price with discount
   const pricewithDiscount = (price, discount) => {
@@ -120,14 +123,14 @@ const DashboardProduct = () => {
     };
     
     // Get the saved preference from localStorage, or use defaults
-    const savedViewMode = localStorage.getItem('preferredViewMode');
+    const savedViewMode = localStorage.getItem(PRODUCT_VIEW_PREFERENCE);
     if (savedViewMode) {
       setViewMode(savedViewMode);
     } else {
       // Only set a default on first load - don't override user preference
-      const defaultMode = window.innerWidth < 768 ? 'grid' : 'table';
+      const defaultMode = 'grid';
       setViewMode(defaultMode);
-      localStorage.setItem('preferredViewMode', defaultMode);
+      localStorage.setItem(PRODUCT_VIEW_PREFERENCE, defaultMode);
     }
     
     checkMobileView();
@@ -233,16 +236,24 @@ const DashboardProduct = () => {
       }
     });
 
-  const indexOfLastProduct = currentPage * productsPerPage;
-  const indexOfFirstProduct = indexOfLastProduct - productsPerPage;
-  const currentProducts = filteredProducts.slice(indexOfFirstProduct, indexOfLastProduct);
-  const totalPages = Math.max(1, Math.ceil(filteredProducts.length / productsPerPage));
+  const productPage = getAdminProductPage(filteredProducts, currentPage, PRODUCTS_PER_PAGE);
+  const {
+    currentPage: resolvedCurrentPage,
+    currentProducts,
+    totalItems,
+    totalPages,
+    startItem,
+    endItem,
+  } = {
+    ...productPage,
+    currentProducts: productPage.items,
+  };
 
   useEffect(() => {
-    if (currentPage > totalPages) {
-      setCurrentPage(totalPages);
+    if (currentPage !== resolvedCurrentPage) {
+      setCurrentPage(resolvedCurrentPage);
     }
-  }, [currentPage, totalPages]);
+  }, [currentPage, resolvedCurrentPage]);
 
   const handleSelectAll = () => {
     if (selectedProducts.length === currentProducts.length) {
@@ -263,7 +274,7 @@ const DashboardProduct = () => {
   const toggleViewMode = () => {
     const newMode = viewMode === 'table' ? 'grid' : 'table';
     setViewMode(newMode);
-    localStorage.setItem('preferredViewMode', newMode);
+    localStorage.setItem(PRODUCT_VIEW_PREFERENCE, newMode);
   };
 
   const handleExport = (format) => {
@@ -296,6 +307,7 @@ const DashboardProduct = () => {
           {!isMobileView && (
             <button
               onClick={toggleViewMode}
+              aria-pressed={viewMode === 'grid'}
               className="bg-brown-100 dark:bg-dm-card-2 hover:bg-brown-100 dark:hover:bg-dm-card-2 text-charcoal dark:text-white px-3 py-2 rounded-md flex items-center transition-colors duration-200"
               title={viewMode === 'table' ? 'Switch to Grid View' : 'Switch to Table View'}
             >
@@ -408,7 +420,7 @@ const DashboardProduct = () => {
         <>
           {/* Product grid view for mobile/small screens */}
           {(viewMode === 'grid' || isMobileView) && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 min-[480px]:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-4">
               {currentProducts.length === 0 ? (
                 <div className="col-span-full text-center py-10 text-brown-400 dark:text-white/40">
                   No products found
@@ -417,7 +429,7 @@ const DashboardProduct = () => {
                 currentProducts.map(product => (
                   <div 
                     key={product._id} 
-                    className="bg-white dark:bg-dm-card rounded-lg shadow overflow-hidden border border-brown-100 dark:border-dm-border hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1"
+                    className="min-w-0 bg-white dark:bg-dm-card rounded-lg shadow overflow-hidden border border-brown-100 dark:border-dm-border hover:shadow-lg transition-shadow duration-200"
                   >
                     <div className="relative h-48 bg-brown-50 dark:bg-dm-card-2">
                       <WatermarkedImage
@@ -675,39 +687,19 @@ const DashboardProduct = () => {
             </div>
           )}
           
-          {filteredProducts.length > productsPerPage && (
-            <div className="mt-4 px-4 py-3 flex items-center justify-between border-t border-brown-100 dark:border-dm-border bg-white dark:bg-dm-card rounded-lg shadow">
-              <div className="flex-1 flex justify-between sm:hidden">
-                <button
-                  onClick={() => setCurrentPage(currentPage > 1 ? currentPage - 1 : 1)}
-                  disabled={currentPage === 1}
-                  className="relative inline-flex items-center px-4 py-2 border border-brown-200 text-sm font-medium rounded-md text-charcoal bg-white hover:bg-ivory disabled:opacity-50 disabled:cursor-not-allowed dark:bg-dm-card-2 dark:border-dm-border dark:text-white dark:hover:bg-dm-border"
-                >
-                  Previous
-                </button>
-                <button
-                  onClick={() => setCurrentPage(currentPage < totalPages ? currentPage + 1 : totalPages)}
-                  disabled={currentPage === totalPages}
-                  className="ml-3 relative inline-flex items-center px-4 py-2 border border-brown-200 text-sm font-medium rounded-md text-charcoal bg-white hover:bg-ivory disabled:opacity-50 disabled:cursor-not-allowed dark:bg-dm-card-2 dark:border-dm-border dark:text-white dark:hover:bg-dm-border"
-                >
-                  Next
-                </button>
-              </div>
-              <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
-                <div>
-                  <p className="text-sm text-charcoal dark:text-white/55">
-                    Showing <span className="font-medium">{indexOfFirstProduct + 1}</span> to <span className="font-medium">{Math.min(indexOfLastProduct, filteredProducts.length)}</span> of{' '}
-                    <span className="font-medium">{filteredProducts.length}</span> results
-                  </p>
-                </div>
-                <div>
-                  <Pagination 
-                    currentPage={currentPage}
-                    totalPages={totalPages}
-                    onPageChange={setCurrentPage}
-                  />
-                </div>
-              </div>
+          {totalItems > 0 && (
+            <div className="mt-4 px-3 py-3 sm:px-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between border-t border-brown-100 dark:border-dm-border bg-white dark:bg-dm-card rounded-lg shadow">
+              <p className="text-sm text-charcoal dark:text-white/55" aria-live="polite">
+                Showing <span className="font-semibold">{startItem}</span>–<span className="font-semibold">{endItem}</span> of{' '}
+                <span className="font-semibold">{totalItems}</span> products
+              </p>
+              {totalPages > 1 && (
+                <Pagination
+                  currentPage={resolvedCurrentPage}
+                  totalPages={totalPages}
+                  onPageChange={setCurrentPage}
+                />
+              )}
             </div>
           )}
         </>

@@ -69,7 +69,7 @@ const UploadProduct = () => {
     try {
       setFormLoading(true);
       const response = await Axios({
-        ...SummaryApi.getProductDetails,
+        ...SummaryApi.getAdminProductDetails,
         data: { productId: editProductId }
       });
       
