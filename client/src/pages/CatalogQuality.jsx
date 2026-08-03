@@ -1,10 +1,14 @@
 import { useEffect, useState } from 'react';
+import { motion, useReducedMotion } from 'framer-motion';
 import { FaArrowRight, FaCheckCircle, FaEyeSlash, FaImage, FaPen, FaTags } from 'react-icons/fa';
 import { Link } from 'react-router-dom';
 import SummaryApi from '../common/SummaryApi';
 import Axios from '../utils/Axios';
 import AxiosToastError from '../utils/AxiosToastError';
 import { getCatalogVisibilityCopy } from '../utils/catalogQualityPresentation';
+import { getCatalogQualityMotion } from '../utils/catalogQualityMotion';
+
+const MotionLink = motion(Link);
 
 const CatalogQuality = () => {
   const [hideIncompleteProducts, setHideIncompleteProducts] = useState(true);
@@ -12,6 +16,7 @@ const CatalogQuality = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const reduceMotion = useReducedMotion();
 
   const loadCatalogQuality = async () => {
     try {
@@ -73,7 +78,7 @@ const CatalogQuality = () => {
   return (
     <main className="min-h-screen bg-ivory px-3 py-4 dark:bg-dm-surface sm:px-5 sm:py-6">
       <div className="mx-auto max-w-6xl">
-        <header className="mb-5 rounded-card border border-brown-100 bg-white p-4 shadow-sm dark:border-dm-border dark:bg-dm-card sm:p-6">
+        <motion.header {...getCatalogQualityMotion(reduceMotion, 0)} className="mb-5 rounded-card border border-brown-100 bg-white p-4 shadow-sm dark:border-dm-border dark:bg-dm-card sm:p-6">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
             <div className="max-w-2xl">
               <p className="mb-1 text-xs font-bold uppercase tracking-[0.18em] text-gold-600 dark:text-gold-300">Storefront control</p>
@@ -82,16 +87,17 @@ const CatalogQuality = () => {
                 Keep the customer storefront focused on products that are ready to buy. Fix the items below directly from this queue.
               </p>
             </div>
-            <Link
+            <MotionLink
               to="/dashboard/product"
+              whileTap={reduceMotion ? undefined : { scale: 0.98 }}
               className="inline-flex min-h-11 items-center justify-center gap-2 rounded-pill border border-plum-200 px-4 py-2 text-sm font-semibold text-plum-700 transition-colors hover:bg-plum-50 dark:border-plum-700 dark:text-plum-200 dark:hover:bg-plum-900/30"
             >
               All products <FaArrowRight aria-hidden="true" />
-            </Link>
+            </MotionLink>
           </div>
-        </header>
+        </motion.header>
 
-        <section className="mb-5 rounded-card border border-plum-100 bg-white p-4 shadow-sm dark:border-dm-border dark:bg-dm-card sm:p-6" aria-busy={loading || saving}>
+        <motion.section {...getCatalogQualityMotion(reduceMotion, 1)} className="mb-5 rounded-card border border-plum-100 bg-white p-4 shadow-sm dark:border-dm-border dark:bg-dm-card sm:p-6" aria-busy={loading || saving}>
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex min-w-0 items-start gap-3">
               <span className={`mt-0.5 inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${hideIncompleteProducts ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300' : 'bg-gold-100 text-gold-700 dark:bg-gold-500/15 dark:text-gold-300'}`}>
@@ -114,9 +120,9 @@ const CatalogQuality = () => {
               />
             </label>
           </div>
-        </section>
+        </motion.section>
 
-        <section className="rounded-card border border-brown-100 bg-white shadow-sm dark:border-dm-border dark:bg-dm-card">
+        <motion.section {...getCatalogQualityMotion(reduceMotion, 2)} className="rounded-card border border-brown-100 bg-white shadow-sm dark:border-dm-border dark:bg-dm-card">
           <div className="flex flex-col gap-2 border-b border-brown-100 px-4 py-4 dark:border-dm-border sm:flex-row sm:items-center sm:justify-between sm:px-6">
             <div>
               <h2 className="text-lg font-bold text-charcoal dark:text-white">Needs attention</h2>
@@ -148,8 +154,8 @@ const CatalogQuality = () => {
             </div>
           ) : (
             <ul className="divide-y divide-brown-100 dark:divide-dm-border">
-              {incompleteProducts.map((product) => (
-                <li key={product._id} className="flex flex-col gap-4 p-4 sm:flex-row sm:items-center sm:px-6">
+              {incompleteProducts.map((product, index) => (
+                <motion.li {...getCatalogQualityMotion(reduceMotion, index + 3)} key={product._id} className="flex flex-col gap-4 p-4 sm:flex-row sm:items-center sm:px-6">
                   <div className="flex min-w-0 flex-1 items-start gap-3">
                     <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-blush-100 text-blush-600 dark:bg-blush-500/15 dark:text-blush-300"><FaTags aria-hidden="true" /></span>
                     <div className="min-w-0">
@@ -164,17 +170,18 @@ const CatalogQuality = () => {
                       </div>
                     </div>
                   </div>
-                  <Link
+                  <MotionLink
                     to={`/dashboard/upload-product?edit=${product._id}`}
+                    whileTap={reduceMotion ? undefined : { scale: 0.98 }}
                     className="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-pill bg-plum-700 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-plum-600"
                   >
                     <FaPen aria-hidden="true" /> Fix product
-                  </Link>
-                </li>
+                  </MotionLink>
+                </motion.li>
               ))}
             </ul>
           )}
-        </section>
+        </motion.section>
       </div>
     </main>
   );
