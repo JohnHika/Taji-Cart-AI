@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { motion, useReducedMotion } from 'framer-motion';
 import { Helmet } from 'react-helmet-async';
 import { FaUsers } from 'react-icons/fa';
 import { Link, useNavigate } from 'react-router-dom';
@@ -26,6 +27,13 @@ const Home = () => {
   const [loadingCampaign, setLoadingCampaign] = useState(true);
   const [homeCatalog, setHomeCatalog] = useState(emptyHomeCatalog);
   const [loadingCatalog, setLoadingCatalog] = useState(true);
+  const reduceMotion = useReducedMotion();
+  const reveal = (delay = 0) => ({
+    initial: reduceMotion ? false : { opacity: 0, y: 14 },
+    whileInView: { opacity: 1, y: 0 },
+    viewport: { once: true, amount: 0.15 },
+    transition: { duration: 0.42, delay: reduceMotion ? 0 : delay, ease: 'easeOut' },
+  });
 
   useEffect(() => {
     fetchHomeCatalog();
@@ -173,10 +181,12 @@ const Home = () => {
         </script>
       </Helmet>
 
-      <HeroBanner bestSellers={homeCatalog.bestSellers} bannerProducts={homeCatalog.bannerProducts} />
+      <motion.div {...reveal()}>
+        <HeroBanner bestSellers={homeCatalog.bestSellers} bannerProducts={homeCatalog.bannerProducts} />
+      </motion.div>
 
       {/* Featured styles strip - shows variety immediately after the banner */}
-      <div className="border-y border-brown-200 bg-white dark:border-dm-border dark:bg-dm-card">
+      <motion.div {...reveal(0.04)} className="border-y border-brown-200 bg-white dark:border-dm-border dark:bg-dm-card">
         <div className="container mx-auto px-3 py-4 sm:px-4">
           <div className="mb-3 flex items-center justify-between">
             <span className="text-xs font-bold uppercase tracking-[0.2em] text-brown-500 dark:text-white/55">
@@ -225,7 +235,7 @@ const Home = () => {
             <div className="h-24 animate-pulse rounded-lg bg-brown-100 dark:bg-dm-card" />
           )}
         </div>
-      </div>
+      </motion.div>
 
       <div className="container mx-auto px-3 pt-8 sm:px-4 sm:pt-10">
         <div className="mb-5 flex flex-col gap-3 sm:mb-6 sm:flex-row sm:items-end sm:justify-between">

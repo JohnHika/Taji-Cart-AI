@@ -31,7 +31,8 @@ export const getRememberMe = () => {
         return false;
     }
 
-    return localStorage.getItem('rememberMe') === 'true';
+    // Customer sessions persist by default. A customer can opt out on a shared device.
+    return localStorage.getItem('rememberMe') !== 'false';
 };
 
 export const setRememberMe = (value) => {
@@ -39,11 +40,7 @@ export const setRememberMe = (value) => {
         return;
     }
 
-    if (value) {
-        localStorage.setItem('rememberMe', 'true');
-    } else {
-        localStorage.removeItem('rememberMe');
-    }
+    localStorage.setItem('rememberMe', value ? 'true' : 'false');
 };
 
 export const saveTokens = ({ accessToken, refreshToken, rememberMe }) => {

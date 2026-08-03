@@ -1,4 +1,5 @@
 import React, { useRef, useState } from 'react';
+import { motion, useReducedMotion } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { FaEnvelope, FaRegEye, FaRegEyeSlash } from "react-icons/fa";
 import { useDispatch } from 'react-redux';
@@ -13,13 +14,14 @@ import AxiosToastError from '../utils/AxiosToastError';
 import fetchUserDetails from '../utils/fetchUserDetails';
 import { getPostLoginPath } from '../utils/postLoginRedirect';
 import useGuestCartMerge from '../hooks/useGuestCartMerge';
-import { saveTokens } from '../utils/authStorage';
+import { getRememberMe, saveTokens } from '../utils/authStorage';
 
 const Login = () => {
     const [data, setData] = useState({ email: "", password: "" });
     const [showPassword, setShowPassword] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
-    const [rememberMe, setRememberMe] = useState(false);
+    const [rememberMe, setRememberMe] = useState(() => getRememberMe());
+    const reduceMotion = useReducedMotion();
     const submitLockRef = useRef(false);
     const navigate = useNavigate();
     const dispatch = useDispatch();
@@ -92,7 +94,12 @@ const Login = () => {
     return (
         <section className="w-full min-h-screen flex bg-ivory dark:bg-dm-surface transition-colors">
             {/* Left brand panel (desktop only) */}
-            <div className="hidden lg:flex flex-col justify-between w-1/2 bg-plum-900 p-10 xl:p-14 relative overflow-hidden">
+            <motion.div
+                className="hidden lg:flex flex-col justify-between w-1/2 bg-plum-900 p-10 xl:p-14 relative overflow-hidden"
+                initial={reduceMotion ? false : { opacity: 0, x: -18 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.5, ease: 'easeOut' }}
+            >
                 {/* Decorative circles */}
                 <div className="absolute -top-20 -right-20 w-64 h-64 rounded-full bg-plum-700/40" />
                 <div className="absolute -bottom-16 -left-16 w-48 h-48 rounded-full bg-plum-800/60" />
@@ -115,11 +122,16 @@ const Login = () => {
                     <div className="w-4 h-1 rounded-full bg-white/20" />
                     <div className="w-2 h-1 rounded-full bg-white/20" />
                 </div>
-            </div>
+            </motion.div>
 
             {/* Right form panel */}
             <div className="flex-1 flex items-center justify-center py-10 px-4 sm:px-8 lg:px-12">
-                <div className="w-full max-w-md animate-fade-up">
+                <motion.div
+                    className="w-full max-w-md"
+                    initial={reduceMotion ? false : { opacity: 0, y: 16 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.45, delay: reduceMotion ? 0 : 0.08, ease: 'easeOut' }}
+                >
                     <div className="mb-7">
                         <h1 className="text-2xl font-bold text-charcoal dark:text-white">Welcome back</h1>
                         <p className="text-sm text-brown-400 dark:text-white/50 mt-1">Sign in to your Nawiri Hair account</p>
@@ -187,9 +199,10 @@ const Login = () => {
                         </div>
 
                         {/* Submit */}
-                        <button
+                        <motion.button
                             type="submit"
                             disabled={!valideValue || isLoading}
+                            whileTap={reduceMotion ? undefined : { scale: 0.98 }}
                             className={`w-full py-3 rounded-pill font-semibold text-sm transition-all duration-200 press mt-1 ${
                                 valideValue && !isLoading
                                     ? 'bg-gold-500 hover:bg-gold-400 text-charcoal shadow-sm hover:shadow-gold'
@@ -197,7 +210,7 @@ const Login = () => {
                             }`}
                         >
                             {isLoading ? "Signing in..." : "Sign In"}
-                        </button>
+                        </motion.button>
                     </form>
 
                     {/* Social auth */}
@@ -214,7 +227,7 @@ const Login = () => {
                             Create one
                         </Link>
                     </p>
-                </div>
+                </motion.div>
             </div>
         </section>
     );

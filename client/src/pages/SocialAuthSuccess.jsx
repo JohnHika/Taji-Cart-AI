@@ -7,7 +7,7 @@ import { fetchCartItems } from '../store/cartProduct';
 import { setUserDetails } from '../store/userSlice';
 import fetchUserDetails from '../utils/fetchUserDetails';
 import { getPostLoginPath } from '../utils/postLoginRedirect';
-import { saveTokens } from '../utils/authStorage';
+import { getRememberMe, saveTokens } from '../utils/authStorage';
 
 const createParamsFromSource = (rawValue = '') => {
   if (!rawValue) {
@@ -68,7 +68,7 @@ const SocialAuthSuccess = () => {
         }
 
         // Save tokens respecting the user's previous "Keep me signed in" choice.
-        const rememberMe = localStorage.getItem('rememberMe') === 'true';
+        const rememberMe = getRememberMe();
         saveTokens({ accessToken: token, refreshToken, rememberMe });
 
         // Build user object from either JSON userData or individual params
