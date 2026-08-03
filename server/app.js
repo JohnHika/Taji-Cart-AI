@@ -32,6 +32,7 @@ import posRouter from './routes/pos.js';
 import mpesaRouter from './route/mpesa.route.js';
 import jengaRouter from './route/jenga.route.js';
 import sitemapRouter from './route/sitemap.route.js';
+import merchantFeedRouter from './route/merchantFeed.route.js';
 import shareRouter from './route/share.route.js';
 import supportRouter from './route/support.route.js';
 
@@ -127,6 +128,7 @@ app.use(session({
 // ── Routes ───────────────────────────────────────────────────────────────────
 
 app.use('/sitemap.xml', sitemapRouter);
+app.use('/merchant-feed.xml', merchantFeedRouter);
 app.use('/share', shareRouter);
 app.use('/api/user', userRouter);
 app.use('/api/auth', authRoutes);
