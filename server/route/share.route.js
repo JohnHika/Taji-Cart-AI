@@ -2,6 +2,7 @@ import express from 'express';
 import ProductModel from '../models/product.model.js';
 import CategoryModel from '../models/category.model.js';
 import { getCustomerProductFilter } from '../controllers/catalogQuality.controller.js';
+import { buildProductStructuredData } from '../utils/productStructuredData.js';
 
 const router = express.Router();
 const SITE_URL = 'https://nawirihairke.com';
@@ -90,6 +91,18 @@ router.get('/bot/product/:slugId', async (req, res) => {
     const description = rawDesc || `Buy ${product.name} at Nawiri Hair. Fast delivery across Kenya.`;
     const image = product.image?.[0] || DEFAULT_IMAGE;
     const canonicalUrl = `${SITE_URL}/product/${slug(product.name)}-${product._id}`;
+    const productSchema = buildProductStructuredData({ product, canonicalUrl, description });
+    const offer = productSchema.offers;
+    const schemaJson = JSON.stringify(productSchema).replace(/</g, '\\u003c');
+    const offerMeta = offer
+      ? `<meta property="product:price:amount" content="${escapeHtml(offer.price)}" />
+    <meta property="product:price:currency" content="KES" />`
+      : '';
+    const offerContent = offer
+      ? `<img src="${escapeHtml(image)}" alt="${escapeHtml(product.name)}" />
+    <p>Price: KSh ${escapeHtml(offer.price)}</p>
+    <p>Availability: ${offer.availability.endsWith('InStock') ? 'In stock' : 'Out of stock'}</p>`
+      : `<img src="${escapeHtml(image)}" alt="${escapeHtml(product.name)}" />`;
 
     res.setHeader('Content-Type', 'text/html');
     res.setHeader('Cache-Control', 'public, max-age=3600, stale-while-revalidate=86400');
@@ -105,14 +118,17 @@ router.get('/bot/product/:slugId', async (req, res) => {
     <meta property="og:description" content="${escapeHtml(description)}" />
     <meta property="og:image" content="${escapeHtml(image)}" />
     <meta property="og:url" content="${escapeHtml(canonicalUrl)}" />
+    ${offerMeta}
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="${escapeHtml(`${product.name} — Nawiri Hair`)}" />
     <meta name="twitter:description" content="${escapeHtml(description)}" />
     <meta name="twitter:image" content="${escapeHtml(image)}" />
+    <script type="application/ld+json">${schemaJson}</script>
   </head>
   <body>
     <h1>${escapeHtml(product.name)}</h1>
     <p>${escapeHtml(description)}</p>
+    ${offerContent}
   </body>
 </html>`);
   } catch (err) {
