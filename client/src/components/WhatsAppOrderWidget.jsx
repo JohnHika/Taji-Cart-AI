@@ -1,8 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
 import { FaMinus, FaPlus, FaTrash, FaUser, FaWhatsapp } from 'react-icons/fa';
 import toast from 'react-hot-toast';
+import { useSelector } from 'react-redux';
+import { useLocation } from 'react-router-dom';
 import { nawiriBrand } from '../config/brand';
+import { useGlobalContext } from '../provider/GlobalProvider';
 import { useWhatsAppOrder } from '../provider/WhatsAppOrderProvider';
+import { shouldRenderMobileCartSummary } from '../utils/mobileShell';
 import {
   buildWhatsAppOrderMessage,
   createWhatsAppOrderUrl,
@@ -10,6 +14,9 @@ import {
 } from '../utils/whatsappOrder';
 
 const WhatsAppOrderWidget = () => {
+  const location = useLocation();
+  const user = useSelector((state) => state.user);
+  const { totalQty } = useGlobalContext();
   const {
     items,
     itemCount,
@@ -24,6 +31,11 @@ const WhatsAppOrderWidget = () => {
   const [fulfillmentMethod, setFulfillmentMethod] = useState('pickup');
   const [deliveryLocation, setDeliveryLocation] = useState('');
   const [note, setNote] = useState('');
+  const cartSummaryVisible = shouldRenderMobileCartSummary({
+    isAuthenticated: Boolean(user?._id),
+    totalQty,
+    pathname: location.pathname,
+  });
 
   const orderTotal = useMemo(
     () => items.reduce((sum, item) => sum + item.price * item.quantity, 0),
@@ -74,7 +86,11 @@ const WhatsAppOrderWidget = () => {
         <button
           type="button"
           onClick={() => setIsOpen(true)}
-          className="fixed bottom-[calc(5.5rem+env(safe-area-inset-bottom))] right-4 z-30 inline-flex items-center gap-2 rounded-full bg-green-600 px-4 py-3 text-sm font-bold text-white shadow-xl transition-colors hover:bg-green-700 lg:bottom-6 lg:right-6"
+          className={`press fixed right-4 z-30 inline-flex items-center gap-2 rounded-full bg-green-600 px-4 py-3 text-sm font-bold text-white shadow-card transition-colors hover:bg-green-700 lg:bottom-6 lg:right-6 ${
+            cartSummaryVisible
+              ? 'bottom-[calc(9.75rem+env(safe-area-inset-bottom))]'
+              : 'bottom-[calc(5.5rem+env(safe-area-inset-bottom))]'
+          }`}
           aria-label={`Review WhatsApp order with ${itemCount} items`}
         >
           <FaWhatsapp size={19} />

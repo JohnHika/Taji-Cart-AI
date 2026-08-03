@@ -1,4 +1,5 @@
 import React, { useMemo } from 'react';
+import { motion, useReducedMotion } from 'framer-motion';
 import { FaCashRegister, FaClipboardList, FaCompass, FaHeart, FaHome, FaMapMarkedAlt, FaSearch, FaShoppingCart, FaStore, FaTruck, FaUser, FaUsers } from 'react-icons/fa';
 import { useSelector } from 'react-redux';
 import { Link, useLocation } from 'react-router-dom';
@@ -14,6 +15,7 @@ const BottomNavigation = () => {
   const isAdmin = isadmin(user);
   const isDelivery = user?.isDelivery === true || user?.role === 'delivery';
   const isUserStaff = isStaff(user) && !isAdmin;
+  const reduceMotion = useReducedMotion();
 
   const navItems = useMemo(() => {
     if (isAdmin) {
@@ -61,16 +63,12 @@ const BottomNavigation = () => {
 
   return (
     <nav
-      className="lg:hidden fixed bottom-0 left-0 right-0 z-40"
+      className="fixed bottom-0 left-0 right-0 z-40 border-t border-brown-200 bg-white/95 lg:hidden dark:border-dm-border dark:bg-dm-card/95"
       style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
       aria-label="Main navigation"
     >
-      {/* Brand accent line — plum → gold gradient */}
-      <div className="h-[2px] w-full bg-gradient-to-r from-plum-800 via-plum-500 to-gold-400 opacity-75" />
-
-      {/* Nav body */}
-      <div className="bg-white/98 dark:bg-dm-card/99 backdrop-blur-xl shadow-[0_-8px_48px_rgba(75,30,62,0.18)]">
-        <div className={`grid items-stretch px-2 pt-2.5 pb-3 ${navItems.length >= 6 ? 'grid-cols-6' : 'grid-cols-5'}`}>
+      <div className="shadow-[0_-4px_18px_rgba(75,30,62,0.08)]">
+        <div className={`grid min-h-[4.25rem] items-center px-1 py-1.5 ${navItems.length >= 6 ? 'grid-cols-6' : 'grid-cols-5'}`}>
           {navItems.map((item, index) => {
             const Icon = item.icon;
             return (
@@ -78,15 +76,23 @@ const BottomNavigation = () => {
                 key={index}
                 to={item.path}
                 aria-current={item.active ? 'page' : undefined}
-                className="relative flex min-w-0 flex-col items-center gap-[3px] select-none transition-all duration-200 active:scale-90"
+                className="press relative flex min-w-0 flex-col items-center gap-1 rounded-lg px-1 py-1 text-center select-none"
               >
-                {/* Icon pill */}
-                <div className={`relative flex items-center justify-center rounded-xl transition-all duration-300 ${
+                {item.active && (
+                  <motion.span
+                    aria-hidden="true"
+                    className="absolute inset-x-1 top-0 h-8 rounded-lg bg-plum-700 dark:bg-plum-600"
+                    initial={reduceMotion ? false : { opacity: 0, scale: 0.92 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ duration: 0.18, ease: 'easeOut' }}
+                  />
+                )}
+                <div className={`relative flex h-8 items-center justify-center px-3 ${
                   item.active
-                    ? 'bg-gradient-to-b from-plum-700 to-plum-600 text-white shadow-[0_6px_20px_rgba(75,30,62,0.45)] px-4 py-[9px]'
-                    : 'text-brown-300 dark:text-white/38 px-3 py-[9px] hover:bg-plum-50 dark:hover:bg-dm-card-2/60 hover:text-plum-600 dark:hover:text-plum-300'
+                    ? 'text-white'
+                    : 'text-brown-400 dark:text-white/45'
                 }`}>
-                  <Icon size={item.active ? 20 : 19} />
+                  <Icon size={19} />
 
                   {/* Cart badge */}
                   {item.badge != null && (
@@ -96,21 +102,13 @@ const BottomNavigation = () => {
                   )}
                 </div>
 
-                {/* Label */}
-                <span className={`w-full truncate text-center leading-none transition-all duration-200 ${
+                <span className={`relative w-full truncate leading-none transition-colors duration-200 ${
                   item.active
                     ? 'text-[10px] font-bold text-plum-700 dark:text-plum-200'
-                    : 'text-[9.5px] font-medium text-brown-300/80 dark:text-white/28'
+                    : 'text-[10px] font-medium text-brown-400 dark:text-white/45'
                 }`}>
                   {item.label}
                 </span>
-
-                {/* Gold glow dot — always in DOM for layout stability; only visible when active */}
-                <span className={`w-[4.5px] h-[4.5px] rounded-full transition-all duration-300 ${
-                  item.active
-                    ? 'bg-gold-500 shadow-[0_0_8px_rgba(201,148,58,0.9)] scale-100 opacity-100'
-                    : 'bg-transparent scale-0 opacity-0'
-                }`} />
               </Link>
             );
           })}

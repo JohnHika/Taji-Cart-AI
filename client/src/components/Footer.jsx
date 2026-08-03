@@ -109,7 +109,7 @@ const Footer = () => {
   const year = new Date().getFullYear();
 
   return (
-    <footer className="border-t border-brown-200/80 bg-gradient-to-br from-ivory via-white to-blush-50 pb-20 lg:pb-0 transition-colors dark:border-dm-border dark:from-dm-surface dark:via-dm-card dark:to-dm-card-2">
+    <footer className="border-t border-brown-200/80 bg-gradient-to-br from-ivory via-white to-blush-50 pb-36 lg:pb-0 transition-colors dark:border-dm-border dark:from-dm-surface dark:via-dm-card dark:to-dm-card-2">
       {/* ── Animated CTA Banner ── */}
       <div className="pt-8 sm:pt-10">
         <FooterBanner />
