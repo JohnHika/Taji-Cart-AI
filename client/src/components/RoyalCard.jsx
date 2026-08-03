@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { motion, useReducedMotion } from 'framer-motion';
 import Barcode from 'react-barcode';
 import toast from 'react-hot-toast';
 import { FaCrown, FaGift, FaInfoCircle, FaPercent, FaSpinner, FaTruck, FaUserPlus } from 'react-icons/fa';
@@ -6,6 +7,7 @@ import QRCode from 'react-qr-code';
 import { useSelector } from 'react-redux';
 import { Link } from 'react-router-dom';
 import Axios from '../utils/Axios';
+import { getRoyalCardMotion } from '../utils/royalCardMotion';
 
 /**
  * Premium Royal Card component with credit-card inspired luxury design.
@@ -13,6 +15,8 @@ import Axios from '../utils/Axios';
  */
 const RoyalCard = () => {
   const user = useSelector(state => state.user);
+  const reduceMotion = useReducedMotion();
+  const cardMotion = getRoyalCardMotion(reduceMotion);
   const [cardData, setCardData] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [viewMode, setViewMode] = useState('barcode');
@@ -299,11 +303,19 @@ const RoyalCard = () => {
       {/* Everything inside #loyalty-card-print is what actually prints — see .print-card-only in index.css */}
       <div id="loyalty-card-print">
       {/* Main Card */}
-      <div className={`relative aspect-[1.586/1] rounded-2xl overflow-hidden bg-gradient-to-br ${tierColors.bg} shadow-2xl`}>
+      <motion.div
+        className={`relative aspect-[1.586/1] overflow-hidden rounded-2xl bg-gradient-to-br ${tierColors.bg} shadow-card`}
+        {...cardMotion}
+        transition={{ duration: 0.3, ease: 'easeOut' }}
+      >
         {/* Gold shimmer effect for Gold/Platinum tiers */}
-        {tierColors.shimmer && (
-          <div 
-            className="absolute inset-0 opacity-30 pointer-events-none animate-gold-shimmer"
+        {tierColors.shimmer && !reduceMotion && (
+          <motion.div
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-0 opacity-30"
+            initial={{ x: '-110%' }}
+            animate={{ x: '110%' }}
+            transition={{ duration: 1.15, delay: 0.2, ease: 'easeOut' }}
             style={{
               background: 'linear-gradient(105deg, transparent 40%, rgba(201, 148, 58, 0.4) 45%, rgba(232, 196, 120, 0.5) 50%, rgba(201, 148, 58, 0.4) 55%, transparent 60%)',
               backgroundSize: '200% 100%'
@@ -399,7 +411,7 @@ const RoyalCard = () => {
             </span>
           </div>
         )}
-      </div>
+      </motion.div>
 
       {/* View toggle & barcode/QR section */}
       <div className="mt-4 bg-white dark:bg-dm-card rounded-2xl border border-brown-100 dark:border-dm-border shadow-card overflow-hidden">
