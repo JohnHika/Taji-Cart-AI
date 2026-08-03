@@ -12,6 +12,7 @@ import PWAInstallBanner from '../components/PWAInstallBanner';
 import TrustStrip from '../components/TrustStrip';
 import UserActiveCampaigns from '../components/UserActiveCampaigns';
 import Axios from '../utils/Axios';
+import { getProductNavigationOptions } from '../utils/productRouteScroll';
 import { valideURLConvert } from '../utils/valideURLConvert';
 
 const emptyHomeCatalog = {
@@ -212,6 +213,7 @@ const Home = () => {
                     <Link
                       key={`trending-${product._id || product.name}`}
                       to={productUrl}
+                      {...getProductNavigationOptions()}
                       className="group relative shrink-0 overflow-hidden rounded-lg bg-ivory shadow-sm dark:bg-dm-card-2"
                       style={{ width: '110px', height: '130px' }}
                     >

@@ -1,6 +1,7 @@
 import PropTypes from 'prop-types';
 import { Link } from 'react-router-dom';
 import { nawiriBrand } from '../config/brand';
+import { getProductNavigationOptions } from '../utils/productRouteScroll';
 import { valideURLConvert } from '../utils/valideURLConvert';
 
 const isRealImage = (url = '') =>
@@ -48,6 +49,7 @@ const HeroBanner = ({ bestSellers = [], bannerProducts = [] }) => {
           <div className="mt-5 flex flex-wrap items-center gap-3">
             <Link
               to={shopNowTo}
+              {...getProductNavigationOptions()}
               className="inline-flex min-h-[44px] items-center justify-center rounded-full bg-gold-500 px-6 py-2.5 text-sm font-bold text-charcoal transition-transform hover:bg-gold-400 active:scale-[0.98]"
             >
               Shop featured

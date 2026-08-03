@@ -5,6 +5,7 @@ import { Link } from 'react-router-dom';
 import { DisplayPriceInShillings } from '../utils/DisplayPriceInShillings';
 import { pricewithDiscount } from '../utils/PriceWithDiscount';
 import { getRatingSummary, getStockPresentation } from '../utils/productCardPresentation';
+import { getProductNavigationOptions } from '../utils/productRouteScroll';
 import { valideURLConvert } from '../utils/valideURLConvert';
 import AddToCartButton from './AddToCartButton';
 import WatermarkedImage from './WatermarkedImage';
@@ -36,7 +37,7 @@ const CardProduct = ({ data }) => {
       transition={{ duration: 0.28, ease: 'easeOut' }}
       whileHover={reduceMotion ? undefined : { y: -3 }}
     >
-      <Link to={productUrl} className="block" aria-label={`View ${data.name}`}>
+      <Link to={productUrl} {...getProductNavigationOptions()} className="block" aria-label={`View ${data.name}`}>
         <WatermarkedImage
           src={data.image?.[0]}
           alt={data.name}
@@ -49,6 +50,7 @@ const CardProduct = ({ data }) => {
       <div className="flex flex-1 flex-col p-2.5 sm:p-3">
         <Link
           to={productUrl}
+          {...getProductNavigationOptions()}
           className="line-clamp-2 min-h-[2.5em] text-xs font-semibold leading-snug text-charcoal transition-colors hover:text-plum-700 dark:text-white dark:hover:text-plum-200 sm:text-sm"
           title={data.name}
         >
