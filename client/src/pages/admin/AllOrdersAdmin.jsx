@@ -28,6 +28,7 @@ import { buildApiUrl } from '../../common/apiBaseUrl';
 import useCriteriaGate from '../../hooks/useCriteriaGate';
 import useMobile from '../../hooks/useMobile';
 import Axios from '../../utils/Axios';
+import { getOrderActionHint } from '../../utils/orderManagementPresentation';
 
 // Simple date formatter function as fallback if date-fns is not available
 const formatDate = (dateString) => {
@@ -877,7 +878,7 @@ const AllOrdersAdmin = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [activeTab, setActiveTab] = useState('all');
-  const [showStatistics, setShowStatistics] = useState(true);
+  const [showStatistics, setShowStatistics] = useState(() => !isCompactLayout);
   const [dateScope, setDateScope] = useState('day');
   const [selectedDay, setSelectedDay] = useState(() => new Date().toISOString().split('T')[0]);
   const [selectedMonth, setSelectedMonth] = useState(() => new Date().toISOString().slice(0, 7));
@@ -899,6 +900,10 @@ const AllOrdersAdmin = () => {
 
   useEffect(() => {
     setViewMode(isCompactLayout ? 'grid' : 'table');
+  }, [isCompactLayout]);
+
+  useEffect(() => {
+    if (isCompactLayout) setShowStatistics(false);
   }, [isCompactLayout]);
 
   const allOrders = useMemo(() => {
@@ -1251,7 +1256,7 @@ const AllOrdersAdmin = () => {
       {/* Order Filters, Search and View Toggle */}
       <div className="mb-6 flex flex-col gap-4">
         {/* Filter tabs */}
-        <div className="flex flex-wrap gap-2 pb-1">
+        <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
           {statusTabs.map((tab) => (
             <button
               key={tab.key}
@@ -1273,7 +1278,7 @@ const AllOrdersAdmin = () => {
         {/* Search and Controls Row */}
         <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-[auto_180px_minmax(0,1fr)_auto] md:items-center lg:items-center">
           {/* View Toggle */}
-          <div className="flex items-center gap-2 self-start">
+          <div className="hidden items-center gap-2 self-start lg:flex">
             <button
               onClick={() => setViewMode('table')}
               disabled={isCompactLayout}
@@ -1480,6 +1485,9 @@ const AllOrdersAdmin = () => {
                       <div className="text-xs text-brown-400 dark:text-white/40">
                         {format(new Date(order.saleDate || order.createdAt), 'dd MMM yyyy')} • {format(new Date(order.saleDate || order.createdAt), 'HH:mm')}
                       </div>
+                      <p className="mt-2 text-xs font-medium text-plum-700 dark:text-plum-300">
+                        {getOrderActionHint(order)}
+                      </p>
                     </div>
 
                     <div className="text-right">
@@ -1516,12 +1524,13 @@ const AllOrdersAdmin = () => {
                   </div>
                 </div>
 
-                <div className="mt-auto border-t border-brown-100 bg-ivory px-4 py-3 dark:border-dm-border dark:bg-dm-card-2 flex justify-end">
+                <div className="mt-auto flex border-t border-brown-100 bg-ivory px-4 py-3 dark:border-dm-border dark:bg-dm-card-2">
                   <button 
-                    className="rounded-xl bg-plum-100 px-3 py-1.5 text-sm font-medium text-plum-700 hover:bg-plum-200 dark:bg-plum-900/30 dark:text-plum-200 dark:hover:bg-plum-800/60"
+                    className="w-full rounded-xl bg-plum-100 px-3 py-2 text-sm font-semibold text-plum-700 transition-colors hover:bg-plum-200 dark:bg-plum-900/30 dark:text-plum-200 dark:hover:bg-plum-800/60"
                     onClick={(e) => { e.stopPropagation(); setSelectedOrder(order); }}
+                    aria-label={`Open order ${order.orderId || order._id?.substring(order._id.length - 8)}`}
                   >
-                    View Details
+                    Open order
                   </button>
                 </div>
               </div>
