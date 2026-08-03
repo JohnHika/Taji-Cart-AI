@@ -21,6 +21,7 @@ import { fetchWishlist } from './store/wishlistSlice';
 import Axios from './utils/Axios';
 import { clearAuthStorage, getStoredAccessToken } from './utils/authStorage';
 import fetchUserDetails from './utils/fetchUserDetails';
+import { getPOSOverflowClass } from './utils/posLayout';
 
 // Error fallback component
 function ErrorFallback({ error }) {
@@ -301,7 +302,7 @@ function App() {
         <ScrollRestoration />
         {isDashboardShell && !isPOSPage && <DashboardMobileHeader />}
         {showStoreChrome && <Header />}
-        <main className='min-h-[78vh] max-w-full overflow-x-hidden'>
+        <main className={`min-h-[78vh] max-w-full ${getPOSOverflowClass(isPOSPage)}`}>
           {/* Add suspense to catch lazy-loaded component errors */}
           <Suspense fallback={<div className="p-5 text-center">Loading...</div>}>
             <Outlet key={location.pathname} />

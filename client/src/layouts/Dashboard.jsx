@@ -4,6 +4,7 @@ import { Outlet, useLocation } from 'react-router-dom'
 import AdminMenu from '../components/AdminMenu'
 import UserMenu from '../components/UserMenu'
 import isadmin from '../utils/isAdmin'
+import { getPOSOverflowClass } from '../utils/posLayout'
 
 const Dashboard = () => {
   const user = useSelector(state => state.user)
@@ -33,7 +34,7 @@ const Dashboard = () => {
                 )}
 
                 {/**right for content */}
-                <div className={`min-w-0 max-w-full overflow-x-hidden bg-white dark:bg-dm-card ${isPOSFullScreen ? 'min-h-[calc(100vh-0px)]' : 'min-h-[75vh] pb-24 lg:h-full lg:min-h-0 lg:overflow-y-auto lg:overscroll-contain lg:pb-6'}`}>
+                <div className={`min-w-0 max-w-full ${getPOSOverflowClass(isPOSFullScreen)} bg-white dark:bg-dm-card ${isPOSFullScreen ? 'min-h-[calc(100vh-0px)]' : 'min-h-[75vh] pb-24 lg:h-full lg:min-h-0 lg:overflow-y-auto lg:overscroll-contain lg:pb-6'}`}>
                     <Outlet/>
                 </div>
         </div>
