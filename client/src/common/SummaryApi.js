@@ -206,10 +206,18 @@ const SummaryApi = {
         method: 'get'
     },
     getAllProducts: {
-        url: `${baseURL}/api/product/get`,
+        url: `${baseURL}/api/product/admin/all`,
         method: 'POST',
         data: {
         }
+    },
+    getCatalogQuality: {
+        url: `${baseURL}/api/product/admin/catalog-quality`,
+        method: 'GET'
+    },
+    updateCatalogQuality: {
+        url: `${baseURL}/api/product/admin/catalog-quality`,
+        method: 'PUT'
     },
     getUserRoyalCard: {
         url: `${baseURL}/api/loyalty/card`,

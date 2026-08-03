@@ -1,6 +1,7 @@
 import mongoose from "mongoose";
 import ProductModel from "../models/product.model.js";
 import Sale from "../models/sale.model.js";
+import { getCustomerProductFilter } from './catalogQuality.controller.js';
 
 const normalizeScanValue = (value) => {
     if (value === null || value === undefined) {
@@ -133,9 +134,8 @@ export const createProductController = async(request,response)=>{
 export const getProductController = async (req, res) => {
   try {
     console.log("Product fetch request received:", req.body);
-    
-    // Your existing code
-    const products = await ProductModel.find();
+
+    const products = await ProductModel.find(await getCustomerProductFilter());
     
     console.log(`Found ${products.length} products`);
     res.status(200).json({ success: true, data: products });
@@ -277,7 +277,9 @@ const mergeHomeSubcategoryShelves = (shelves = []) => {
 
 export const getHomeCatalogController = async (request, response) => {
     try {
+        const customerProductFilter = await getCustomerProductFilter();
         const inventoryProducts = await ProductModel.find({
+            ...customerProductFilter,
             stock: { $gt: 0 }
         })
             .sort({ createdAt: -1 })
@@ -370,6 +372,7 @@ export const getHomeCatalogController = async (request, response) => {
         const topSellingIds = topSellingStats.map((item) => item._id).filter(Boolean);
         const topSellingProducts = topSellingIds.length
             ? await ProductModel.find({
+                ...customerProductFilter,
                 _id: { $in: topSellingIds },
                 stock: { $gt: 0 }
             }).populate('category subCategory')
@@ -438,6 +441,7 @@ export const getHomeCatalogController = async (request, response) => {
 export const getProductByCategory = async(request,response)=>{
     try {
         const { id } = request.body 
+        const customerProductFilter = await getCustomerProductFilter();
 
         if(!id){
             return response.status(400).json({
@@ -458,6 +462,7 @@ export const getProductByCategory = async(request,response)=>{
         try {
             // First attempt with standard query
             const product = await ProductModel.find({ 
+                ...customerProductFilter,
                 category : { $in : categoryIds }
             }).limit(15);
             
@@ -468,6 +473,7 @@ export const getProductByCategory = async(request,response)=>{
                 console.log("No products found with direct lookup. Trying with string conversion...");
                 
                 const productAlt = await ProductModel.find({ 
+                    ...customerProductFilter,
                     category : { $in : categoryIds.map(id => String(id)) }
                 }).limit(15);
                 
@@ -493,6 +499,7 @@ export const getProductByCategory = async(request,response)=>{
                     let productText = [];
                     try {
                         productText = await ProductModel.find({
+                            ...customerProductFilter,
                             $text: { $search: categoryIdStr }
                         }).limit(15);
                         
@@ -514,7 +521,7 @@ export const getProductByCategory = async(request,response)=>{
                     // Note: This is inefficient but may help in emergency situations
                     console.log("Attempting memory-based filtering as last resort");
                     try {
-                        const allProducts = await ProductModel.find().limit(100);
+                        const allProducts = await ProductModel.find(customerProductFilter).limit(100);
                         
                         // Do client-side filtering to find matching products
                         const matchingProducts = allProducts.filter(product => {
@@ -566,6 +573,7 @@ export const getProductByCategory = async(request,response)=>{
                 // Fallback to a simpler query without $in operator
                 console.log("Trying with direct category lookup...");
                 const singleIdProduct = await ProductModel.find({ 
+                    ...customerProductFilter,
                     category: categoryIds[0] 
                 }).limit(15);
                 
@@ -602,6 +610,7 @@ export const getProductByCategory = async(request,response)=>{
 export const getProductByCategoryAndSubCategory = async(request,response)=>{
     try {
         const { categoryId, subCategoryId, page, limit } = request.body;
+        const customerProductFilter = await getCustomerProductFilter();
         
         console.log("Received request with parameters:", { categoryId, subCategoryId, page, limit });
 
@@ -627,6 +636,7 @@ export const getProductByCategoryAndSubCategory = async(request,response)=>{
 
         // Build query - only include valid MongoDB ObjectIDs
         const query = {
+            ...customerProductFilter,
             category: { $in: categoryIdArray.filter(id => mongoose.Types.ObjectId.isValid(id)) },
             subCategory: { $in: subCategoryIdArray.filter(id => mongoose.Types.ObjectId.isValid(id)) }
         };
@@ -665,6 +675,7 @@ export const getProductByCategoryAndSubCategory = async(request,response)=>{
 export const getProductDetailsController = async (request, response) => {
   try {
     const { productId } = request.body;
+    const customerProductFilter = await getCustomerProductFilter();
     
     if (!productId) {
       return response.status(400).json({
@@ -680,7 +691,7 @@ export const getProductDetailsController = async (request, response) => {
       });
     }
 
-    const product = await ProductModel.findById(productId)
+    const product = await ProductModel.findOne({ _id: productId, ...customerProductFilter })
       .populate('ratings.userId', 'name');
     
     if (!product) {
@@ -712,7 +723,7 @@ export const getProductDetailsController = async (request, response) => {
     }
 
     // Fetch all color siblings: same handle, same length
-    const siblingFilter = { handle: product.handle };
+    const siblingFilter = { ...customerProductFilter, handle: product.handle };
     const productLength = product.variants?.length;
     if (productLength && productLength !== 'N/A') {
       siblingFilter['variants.length'] = productLength;
@@ -904,6 +915,7 @@ export const deleteProductDetails = async(request,response)=>{
 export const searchProduct = async(request,response)=>{
     try {
         let { search, page , limit } = request.body 
+        const customerProductFilter = await getCustomerProductFilter();
 
         if(!page){
             page = 1
@@ -912,12 +924,15 @@ export const searchProduct = async(request,response)=>{
             limit  = 10
         }
 
-        const query = search ? {
-            name : {
-                $regex : search.trim(),
-                $options : 'i'
-            }
-        } : {}
+        const query = {
+            ...customerProductFilter,
+            ...(search ? {
+                name: {
+                    $regex: search.trim(),
+                    $options: 'i'
+                }
+            } : {})
+        }
 
         const skip = ( page - 1) * limit
 
@@ -1014,6 +1029,7 @@ export const rateProduct = async (req, res) => {
 export const getProductByIdController = async (request, response) => {
     try {
         const { id } = request.params;
+        const customerProductFilter = await getCustomerProductFilter();
         if (!id) {
             return response.status(400).json({ success: false, message: 'Product ID is required' });
         }
@@ -1022,7 +1038,7 @@ export const getProductByIdController = async (request, response) => {
             return response.status(400).json({ success: false, message: 'Invalid product ID format' });
         }
 
-        const product = await ProductModel.findById(id);
+        const product = await ProductModel.findOne({ _id: id, ...customerProductFilter });
         if (!product) {
             return response.status(404).json({ success: false, message: 'Product not found' });
         }

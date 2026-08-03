@@ -6,6 +6,7 @@
 import mongoose from 'mongoose';
 import LoyaltyCard from '../models/loyaltycard.model.js';
 import Product from '../models/product.model.js';
+import { getCustomerProductFilter } from '../controllers/catalogQuality.controller.js';
 import User from '../models/user.model.js';
 import { getProduct, searchProducts } from './databaseQuery.js';
 
@@ -710,7 +711,7 @@ export const getTrendingProductsForChat = async (limit = 5) => {
   try {
     // Since we don't have access to the data collector, we'll use a workaround
     // Get popular products based on stock (assumption: low stock = high demand)
-    const trendingProducts = await Product.find({ stock: { $gt: 0 } })
+    const trendingProducts = await Product.find({ ...(await getCustomerProductFilter()), stock: { $gt: 0 } })
       .sort({ stock: 1 }) // Lower stock might indicate higher demand
       .limit(limit)
       .select('name price description stock image category')
@@ -805,7 +806,7 @@ export const getComplementaryProducts = async (productId, limit = 3) => {
     }
     
     // Get product details to find its category
-    const product = await Product.findById(productId)
+    const product = await Product.findOne({ _id: productId, ...(await getCustomerProductFilter()) })
       .select('name category')
       .lean();
     
@@ -815,6 +816,7 @@ export const getComplementaryProducts = async (productId, limit = 3) => {
     
     // Find products in the same category
     const complementary = await Product.find({
+      ...(await getCustomerProductFilter()),
       _id: { $ne: productId },
       category: { $in: product.category }
     })
@@ -914,7 +916,7 @@ export const getCartInfoForChat = async (userId) => {
     
     // Get product details
     const productIds = userCartItems.map(item => item.productId);
-    const productDetails = await Product.find({ _id: { $in: productIds } })
+    const productDetails = await Product.find({ _id: { $in: productIds }, ...(await getCustomerProductFilter()) })
       .select('name price description stock image category')
       .lean();
     
@@ -944,6 +946,7 @@ export const getCartInfoForChat = async (userId) => {
     
     // Find related products from the same categories
     const relatedProducts = await Product.find({
+      ...(await getCustomerProductFilter()),
       _id: { $nin: productIds },
       category: { $in: categories }
     })

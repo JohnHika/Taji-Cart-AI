@@ -8,6 +8,7 @@ import {
     FaClipboardList,
     FaCog,
     FaCrown,
+    FaEyeSlash,
     FaGift,
     FaHistory,
     FaLayerGroup,
@@ -142,6 +143,7 @@ const DashboardSidebar = ({ userRole, isStaff }) => {
             <MenuItem to="/dashboard/subcategory" icon={FaLayerGroup} label="Sub Category" />
             <MenuItem to="/dashboard/upload-product" icon={FaUpload} label="Upload Product" />
             <MenuItem to="/dashboard/product" icon={FaBoxOpen} label="Products" />
+            <MenuItem to="/dashboard/catalog-quality" icon={FaEyeSlash} label="Catalog Quality" />
             <MenuItem to="/dashboard/loyalty-program-admin" icon={FaCrown} label="Loyalty Program" />
             <MenuItem to="/dashboard/admin-community-perks" icon={FaGift} label="Manage Perks" />
             <MenuItem to="/dashboard/pickup-management" icon={FaStore} label="Pickup Management" />

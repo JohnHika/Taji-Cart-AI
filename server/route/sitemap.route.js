@@ -2,6 +2,7 @@ import express from 'express';
 import CategoryModel from '../models/category.model.js';
 import SubCategoryModel from '../models/subCategory.model.js';
 import ProductModel from '../models/product.model.js';
+import { getCustomerProductFilter } from '../controllers/catalogQuality.controller.js';
 
 const router = express.Router();
 
@@ -20,10 +21,11 @@ router.get('/', async (req, res) => {
   try {
     const BASE = 'https://nawirihairke.com';
 
+    const customerProductFilter = await getCustomerProductFilter();
     const [categories, subcategories, products] = await Promise.all([
       CategoryModel.find({}, '_id name').lean(),
       SubCategoryModel.find({}, '_id name category').lean(),
-      ProductModel.find({ publish: true }, '_id name category').lean(),
+      ProductModel.find(customerProductFilter, '_id name category').lean(),
     ]);
 
     const staticUrls = [

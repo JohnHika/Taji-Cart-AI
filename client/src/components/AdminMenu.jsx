@@ -8,6 +8,7 @@ import {
   FaClipboardList,
   FaCog,
   FaCrown,
+  FaEyeSlash,
   FaExclamationCircle,
   FaGift,
   FaHistory,
@@ -181,6 +182,7 @@ const AdminMenu = ({ close, forLightPanel = false }) => {
         <MenuLink to="/dashboard/subcategory" icon={FaLayerGroup} label="Sub category" />
         <MenuLink to="/dashboard/upload-product" icon={FaUpload} label="Upload product" />
         <MenuLink to="/dashboard/product" icon={FaBoxOpen} label="Product" />
+        <MenuLink to="/dashboard/catalog-quality" icon={FaEyeSlash} label="Catalog quality" />
 
         <p className={sectionClass}>Marketing & community</p>
         <MenuLink to="/dashboard/loyalty-program-admin" icon={FaCrown} label="Loyalty program" />

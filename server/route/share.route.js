@@ -1,6 +1,7 @@
 import express from 'express';
 import ProductModel from '../models/product.model.js';
 import CategoryModel from '../models/category.model.js';
+import { getCustomerProductFilter } from '../controllers/catalogQuality.controller.js';
 
 const router = express.Router();
 const SITE_URL = 'https://nawirihairke.com';
@@ -49,7 +50,7 @@ const renderSharePage = ({ title, description, image, redirectTo }) => `<!doctyp
 
 router.get('/product/:productId', async (req, res) => {
   try {
-    const product = await ProductModel.findById(req.params.productId).lean();
+    const product = await ProductModel.findOne({ _id: req.params.productId, ...(await getCustomerProductFilter()) }).lean();
     if (!product) {
       return res.redirect(302, SITE_URL);
     }
@@ -80,7 +81,7 @@ router.get('/product/:productId', async (req, res) => {
 router.get('/bot/product/:slugId', async (req, res) => {
   try {
     const id = req.params.slugId.split('-').pop();
-    const product = await ProductModel.findById(id).lean();
+    const product = await ProductModel.findOne({ _id: id, ...(await getCustomerProductFilter()) }).lean();
     if (!product) {
       return res.status(404).send('Not found');
     }

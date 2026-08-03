@@ -43,6 +43,7 @@ const DashboardHome                 = lazyWithRetry(() => import('../pages/Dashb
 const DashboardCart                 = lazyWithRetry(() => import('../pages/DashboardCart'));
 const DashboardCheckout             = lazyWithRetry(() => import('../pages/DashboardCheckout'));
 const UploadProduct                 = lazyWithRetry(() => import('../pages/UploadProduct'));
+const CatalogQuality                = lazyWithRetry(() => import('../pages/CatalogQuality'));
 const CategoryPage                  = lazyWithRetry(() => import('../pages/CategoryPage'));
 const AllOrdersAdmin                = lazyWithRetry(() => import('../pages/admin/AllOrdersAdmin'));
 const LoyaltyProgramAdmin           = lazyWithRetry(() => import('../pages/admin/LoyaltyProgramAdmin'));
@@ -201,6 +202,7 @@ const router = createBrowserRouter([
           { path: 'checkout', element: S(DashboardCheckout) },
           { path: 'upload-product',         element: <PrivateRoute requireAdmin={true}>{S(UploadProduct)}</PrivateRoute> },
           { path: 'product',                element: <PrivateRoute requireAdmin={true}>{S(ProductPage)}</PrivateRoute> },
+          { path: 'catalog-quality',        element: <PrivateRoute requireAdmin={true}>{S(CatalogQuality)}</PrivateRoute> },
           { path: 'category',               element: <PrivateRoute requireAdmin={true}>{S(CategoryPage)}</PrivateRoute> },
           { path: 'subcategory',            element: <PrivateRoute requireAdmin={true}>{S(SubCategoryPage)}</PrivateRoute> },
           { path: 'allorders',              element: <PrivateRoute requireAdmin={true}>{S(AllOrdersAdmin)}</PrivateRoute> },
