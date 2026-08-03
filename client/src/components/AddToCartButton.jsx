@@ -17,7 +17,7 @@ const buildVariantKey = (variant = {}) =>
         laceSpecification: variant?.laceSpecification || ''
     })
 
-const AddToCartButton = ({ data, product: productProp, cartData, selectedVariant, sku, showText = true }) => {
+const AddToCartButton = ({ data, product: productProp, cartData, selectedVariant, sku, showText = true, className = '' }) => {
     const dispatch = useDispatch()
     const { fetchCartItem, updateCartItem, deleteCartItem } = useGlobalContext()
     const [loading, setLoading] = useState(false)
@@ -335,7 +335,7 @@ const AddToCartButton = ({ data, product: productProp, cartData, selectedVariant
                             hasValidPrice
                                 ? 'bg-gold-500 hover:bg-gold-400 active:bg-gold-600 text-charcoal hover:shadow-md ring-gold-300/50'
                                 : 'bg-brown-100 text-brown-500 dark:bg-dm-border dark:text-white/55 ring-brown-200/60 cursor-not-allowed'
-                        }`}
+                        } ${className}`}
                     >
                         {loading ? <Loading /> : hasValidPrice ? (showText ? 'Add to Cart' : '+') : 'Pricing soon'}
                     </button>

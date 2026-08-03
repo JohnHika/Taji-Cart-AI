@@ -1,8 +1,8 @@
 const CardLoading = () => {
   return (
     <div className="flex w-[150px] flex-col overflow-hidden rounded-lg border border-brown-200 bg-white dark:border-dm-border dark:bg-dm-card sm:w-[172px] md:w-[192px] lg:w-[212px]">
-      {/* Image skeleton 3:4 ratio */}
-      <div className="aspect-[3/4] w-full bg-shimmer" />
+      {/* Compact mobile image skeleton; desktop retains the portrait ratio. */}
+      <div className="aspect-square w-full bg-shimmer xs:aspect-[4/5] sm:aspect-[3/4]" />
 
       {/* Body skeleton */}
       <div className="flex flex-col gap-2 p-2.5 sm:p-3">

@@ -1,3 +1,3 @@
 export const getProductNavigationOptions = () => ({
-  preventScrollReset: true,
+  preventScrollReset: false,
 });

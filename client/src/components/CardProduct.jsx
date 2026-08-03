@@ -30,7 +30,7 @@ const CardProduct = ({ data }) => {
 
   return (
     <motion.article
-      className="group flex h-full w-[154px] flex-col overflow-hidden rounded-card border border-brown-200 bg-white shadow-sm dark:border-dm-border dark:bg-dm-card sm:w-[176px] md:w-[196px] lg:w-[216px]"
+      className="group relative flex w-[154px] flex-col overflow-hidden rounded-card border border-brown-200 bg-white shadow-sm dark:border-dm-border dark:bg-dm-card sm:w-[176px] md:w-[196px] lg:w-[216px]"
       initial={reduceMotion ? false : { opacity: 0, y: 10 }}
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true, amount: 0.2 }}
@@ -41,23 +41,27 @@ const CardProduct = ({ data }) => {
         <WatermarkedImage
           src={data.image?.[0]}
           alt={data.name}
-          className="aspect-[3/4] w-full overflow-hidden bg-ivory dark:bg-dm-card-2"
-          imgClassName="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.03]"
+          className="aspect-square w-full overflow-hidden bg-ivory dark:bg-dm-card-2 xs:aspect-[4/5] sm:aspect-[3/4]"
+          imgClassName={`h-full w-full object-cover ${reduceMotion ? '' : 'transition-transform duration-300 group-hover:scale-[1.03]'}`}
           watermarkClassName="bottom-1.5 right-1.5 w-[18%] max-w-[44px] opacity-70"
         />
       </Link>
+      <WishlistButton
+        productId={data._id}
+        className="absolute right-2 top-2 h-9 w-9 border border-brown-100/80 dark:border-dm-border"
+      />
 
-      <div className="flex flex-1 flex-col p-2.5 sm:p-3">
+      <div className="p-2 sm:p-3">
         <Link
           to={productUrl}
           {...getProductNavigationOptions()}
-          className="line-clamp-2 min-h-[2.5em] text-xs font-semibold leading-snug text-charcoal transition-colors hover:text-plum-700 dark:text-white dark:hover:text-plum-200 sm:text-sm"
+          className="line-clamp-2 min-h-[2.4em] text-[11px] font-semibold leading-snug text-charcoal transition-colors hover:text-plum-700 dark:text-white dark:hover:text-plum-200 sm:text-sm"
           title={data.name}
         >
           {data.name}
         </Link>
 
-        <div className="mt-1.5 flex min-h-7 items-center justify-between gap-2">
+        <div className="mt-1 flex min-h-4 items-center">
           {rating ? (
             <span className="inline-flex min-w-0 items-center gap-1 text-[11px] text-brown-500 dark:text-white/55" title={rating.label}>
               <FaStar className="shrink-0 text-gold-500" size={12} aria-hidden="true" />
@@ -67,15 +71,14 @@ const CardProduct = ({ data }) => {
           ) : (
             <span className="text-[11px] text-brown-400 dark:text-white/40">No ratings yet</span>
           )}
-          <WishlistButton productId={data._id} className="h-8 w-8 shrink-0 border border-brown-100 dark:border-dm-border" />
         </div>
 
-        <div className="mt-1 flex min-h-4 items-center justify-between gap-2 text-[11px]">
+        <div className="mt-0.5 flex min-h-4 items-center justify-between gap-2 text-[10px] sm:text-[11px]">
           <span className="truncate text-brown-400 dark:text-white/40">{unitName || 'Hair product'}</span>
           <span className={`shrink-0 font-semibold ${stockTone}`}>{stock.label}</span>
         </div>
 
-        <div className="mt-auto border-t border-brown-100 pt-2 dark:border-dm-border">
+        <div className="mt-1.5 border-t border-brown-100 pt-1.5 dark:border-dm-border sm:mt-2 sm:pt-2">
           <div className="flex min-w-0 flex-wrap items-baseline justify-between gap-x-2 gap-y-1">
             {hasValidPrice ? (
               <div className="min-w-0">
@@ -97,9 +100,9 @@ const CardProduct = ({ data }) => {
           </div>
 
           {hasValidPrice && stock.tone !== 'unavailable' ? (
-            <div className="mt-2 flex w-full gap-2">
+            <div className="mt-1.5 flex w-full gap-1.5 sm:mt-2 sm:gap-2">
               <div className="min-w-0 flex-1">
-                <AddToCartButton data={data} />
+                <AddToCartButton data={data} className="min-h-10" />
               </div>
               <WhatsAppOrderButton product={data} className="h-10 w-10 shrink-0 rounded-lg" />
             </div>
