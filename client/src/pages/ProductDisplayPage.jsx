@@ -16,6 +16,7 @@ import Axios from '../utils/Axios'
 import AxiosToastError from '../utils/AxiosToastError'
 import { DisplayPriceInShillings } from '../utils/DisplayPriceInShillings'
 import { pricewithDiscount } from '../utils/PriceWithDiscount'
+import { getProductRouteScrollPosition } from '../utils/productRouteScroll'
 import { valideURLConvert } from '../utils/valideURLConvert'
 import WatermarkedImage from '../components/WatermarkedImage'
 
@@ -190,6 +191,10 @@ const ProductDisplayPage = () => {
   useEffect(() => {
     if (productId) fetchProductDetails();
     else setError('Invalid product URL');
+  }, [productId]);
+
+  useEffect(() => {
+    window.scrollTo(getProductRouteScrollPosition());
   }, [productId]);
 
   if (loading) {
