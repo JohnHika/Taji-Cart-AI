@@ -23,6 +23,7 @@ import {
 import { markRewardAsUsed, processOrderContribution } from './communitycampaign.controller.js'; // Add this import
 import { nawiriBrand } from "../utils/brand.js";
 import { renderOrderNoticeEmail } from "../utils/emailTemplates.js";
+import { getOrderIdentifierQuery } from "../utils/orderIdentifier.js";
 
 // Add this helper function to better log objects
 const inspectObject = (obj) => util.inspect(obj, {depth: 3, colors: true});
@@ -1332,7 +1333,16 @@ export async function updateOrderStatus(request, response) {
       });
     }
     
-    const order = await OrderModel.findById(id);
+    const orderQuery = getOrderIdentifierQuery(id);
+
+    if (!orderQuery) {
+      return response.status(400).json({
+        message: "Order ID is required",
+        success: false
+      });
+    }
+
+    const order = await OrderModel.findOne(orderQuery);
     
     if (!order) {
       return response.status(404).json({
