@@ -335,36 +335,47 @@ const SalesCounter = () => {
 
       {/* Cart drawer */}
       {showCart && (
-        <div className="fixed inset-0 z-40 flex flex-col bg-black/50">
+        <div
+          className="fixed inset-0 z-40 flex flex-col bg-black/50 sm:items-end"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="sales-counter-basket-title"
+        >
           <div
             className="flex-1"
             onClick={() => setShowCart(false)}
           />
-          <div className="bg-white dark:bg-dm-card w-full max-h-[85vh] rounded-t-2xl flex flex-col animate-slide-up">
-            <div className="p-4 border-b border-brown-100 dark:border-dm-border flex items-center justify-between">
-              <h2 className="text-lg font-bold flex items-center gap-2">
-                <FaShoppingBasket /> Basket ({cart.reduce((s, i) => s + i.quantity, 0)})
-              </h2>
+          <div className="flex w-full max-h-[86dvh] flex-col rounded-t-2xl bg-white shadow-2xl animate-slide-up dark:bg-dm-card sm:h-full sm:max-h-none sm:max-w-xl sm:rounded-l-2xl sm:rounded-tr-none">
+            <div className="flex items-center justify-between border-b border-brown-100 p-4 dark:border-dm-border">
+              <div>
+                <h2 id="sales-counter-basket-title" className="flex items-center gap-2 text-lg font-bold">
+                  <FaShoppingBasket /> Current basket
+                </h2>
+                <p className="mt-0.5 text-xs text-brown-500 dark:text-white/50">
+                  {cart.reduce((sum, item) => sum + item.quantity, 0)} item{cart.reduce((sum, item) => sum + item.quantity, 0) === 1 ? '' : 's'} · {cart.length} product{cart.length === 1 ? '' : 's'}
+                </p>
+              </div>
               <button
                 onClick={() => setShowCart(false)}
-                className="p-2 rounded-full hover:bg-brown-100 dark:hover:bg-dm-border"
+                className="inline-flex h-10 w-10 items-center justify-center rounded-full text-brown-600 transition-colors hover:bg-brown-100 dark:text-white/70 dark:hover:bg-dm-border"
+                aria-label="Close basket"
               >
                 ✕
               </button>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-4 space-y-3">
+            <div className="flex-1 space-y-4 overflow-y-auto p-4">
               {cart.length === 0 ? (
-                <p className="text-center text-brown-500 dark:text-white/50 py-8">
-                  Your basket is empty.
-                </p>
+                <div className="rounded-xl border border-dashed border-brown-200 px-4 py-10 text-center text-sm text-brown-500 dark:border-dm-border dark:text-white/50">
+                  Your basket is empty. Add products from the counter to begin a sale.
+                </div>
               ) : (
                 cart.map((item) => (
                   <div
                     key={item._id}
-                    className="flex items-center gap-3 bg-plum-50/50 dark:bg-dm-card-2 rounded-lg p-3"
+                    className="grid grid-cols-[3rem_minmax(0,1fr)] gap-3 rounded-xl border border-brown-100 bg-plum-50/40 p-3 shadow-sm dark:border-dm-border dark:bg-dm-card-2"
                   >
-                    <div className="w-12 h-12 rounded bg-white dark:bg-dm-border flex items-center justify-center flex-shrink-0">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-white dark:bg-dm-border">
                       {item.image ? (
                         <img
                           src={item.image}
@@ -375,33 +386,47 @@ const SalesCounter = () => {
                         <span>🛍️</span>
                       )}
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium truncate">{item.name}</p>
-                      <p className="text-xs text-brown-500 dark:text-white/50">
+                    <div className="min-w-0">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-semibold">{item.name}</p>
+                          <p className="text-xs text-brown-500 dark:text-white/50">
                         {DisplayPriceInShillings(item.price)} each
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-2">
+                          </p>
+                        </div>
+                        <button
+                          onClick={() => removeItem(item._id)}
+                          className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-red-600 transition-colors hover:bg-red-50 dark:hover:bg-red-950/30"
+                          aria-label={`Remove ${item.name} from basket`}
+                        >
+                          <FaTrash size={14} />
+                        </button>
+                      </div>
+                      <div className="mt-2 flex items-center justify-between gap-3">
+                        <p className="text-sm font-bold tabular-nums text-plum-700 dark:text-gold-300">
+                          {DisplayPriceInShillings(item.price * item.quantity)}
+                        </p>
+                        <div className="flex items-center rounded-lg border border-brown-200 bg-white p-0.5 dark:border-dm-border dark:bg-dm-card">
                       <button
                         onClick={() => updateQty(item._id, -1)}
-                        className="w-8 h-8 rounded-full bg-white dark:bg-dm-border border border-brown-200 dark:border-dm-border flex items-center justify-center"
+                        className="inline-flex h-9 w-9 items-center justify-center rounded-md text-brown-700 transition-colors hover:bg-brown-100 dark:text-white/70 dark:hover:bg-dm-border"
+                        aria-label={`Decrease ${item.name} quantity`}
                       >
                         <FaMinus size={12} />
                       </button>
-                      <span className="w-6 text-center font-semibold">{item.quantity}</span>
+                      <span className="w-8 text-center text-sm font-bold tabular-nums" aria-label={`${item.quantity} ${item.name}`}>
+                        {item.quantity}
+                      </span>
                       <button
                         onClick={() => updateQty(item._id, 1)}
-                        className="w-8 h-8 rounded-full bg-gold-500 text-white flex items-center justify-center"
+                        className="inline-flex h-9 w-9 items-center justify-center rounded-md bg-gold-500 text-white transition-colors hover:bg-gold-600"
+                        aria-label={`Increase ${item.name} quantity`}
                       >
                         <FaPlus size={12} />
                       </button>
+                        </div>
+                      </div>
                     </div>
-                    <button
-                      onClick={() => removeItem(item._id)}
-                      className="text-red-500 p-2"
-                    >
-                      <FaTrash size={14} />
-                    </button>
                   </div>
                 ))
               )}
