@@ -13,11 +13,14 @@ import ProductModel from '../models/product.model.js';
 import CartProductModel from '../models/cartproduct.model.js';
 import UserModel from '../models/user.model.js';
 import NotificationModel from '../models/notification.model.js';
+import DeliveryZoneModel from '../models/deliveryzone.model.js';
 import { normalizeKenyanPhone, isValidAmount, amountsMatch } from '../utils/jengaValidation.js';
 import {
   DEFAULT_DELIVERY_CHARGE,
   extractCoordinatesFromPayload,
   getCbdFootDeliveryStatus,
+  getDeliveryModeFromPayload,
+  isBikeDeliveryMode,
 } from '../utils/cbdDelivery.js';
 
 // buildValidatedOrderPricing / pricewithDiscount live in order.controller.js but
@@ -101,9 +104,9 @@ export const initiateJengaPayment = async (request, response) => {
       pickup_location,
       pickup_instructions,
       phoneNumber,
-      deliveryCharge: requestedDeliveryCharge,
     } = request.body;
 
+    const deliveryMode = getDeliveryModeFromPayload(request.body);
     const customerLocation = extractCoordinatesFromPayload(request.body);
 
     const normalizedPhone = normalizeKenyanPhone(phoneNumber);
@@ -132,9 +135,34 @@ export const initiateJengaPayment = async (request, response) => {
       }
     }
 
+    let deliveryZone = null;
+    if (fulfillment_type === 'delivery' && isBikeDeliveryMode(deliveryMode)) {
+      const zoneId = request.body.deliveryZoneId;
+      if (!zoneId || !mongoose.Types.ObjectId.isValid(String(zoneId))) {
+        return response.status(400).json({
+          message: 'Please select a delivery zone for bike delivery.',
+          error: true,
+          success: false,
+          code: 'INVALID_DELIVERY_ZONE',
+        });
+      }
+      deliveryZone = await DeliveryZoneModel.findOne({ _id: zoneId, isActive: true });
+      if (!deliveryZone) {
+        return response.status(400).json({
+          message: 'Selected delivery zone is no longer available. Please pick another zone.',
+          error: true,
+          success: false,
+          code: 'INVALID_DELIVERY_ZONE',
+        });
+      }
+    }
+
     const { normalizedItems, subTotalAmt } = await priceItems(list_items);
+    // Never trust a client-supplied deliveryCharge — recompute from the
+    // authoritative zone fare or the flat default, same as the other
+    // order-creation paths in order.controller.js.
     const deliveryCharge = fulfillment_type === 'delivery'
-      ? Number(requestedDeliveryCharge || DEFAULT_DELIVERY_CHARGE)
+      ? (deliveryZone ? deliveryZone.fare : DEFAULT_DELIVERY_CHARGE)
       : 0;
     const totalAmt = roundMoney(subTotalAmt + deliveryCharge);
 
@@ -157,6 +185,9 @@ export const initiateJengaPayment = async (request, response) => {
       delivery_address: fulfillment_type === 'delivery' ? addressId : null,
       fulfillment_type,
       delivery_mode: deliveryMode || 'standard',
+      delivery_zone: deliveryZone ? deliveryZone._id : undefined,
+      delivery_zone_name: deliveryZone ? deliveryZone.name : '',
+      delivery_zone_fare: deliveryZone ? deliveryZone.fare : undefined,
       customer_location: customerLocation || undefined,
       deliveryInstructions: request.body.deliveryInstructions || '',
       pickup_location: pickup_location || '',

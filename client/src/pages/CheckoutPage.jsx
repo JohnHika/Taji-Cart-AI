@@ -54,6 +54,9 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
   const [deliveryInstructions, setDeliveryInstructions] = useState(location.state?.deliveryInstructions || '');
   const [showLocationModal, setShowLocationModal] = useState(false);
   const [locationLoading, setLocationLoading] = useState(false);
+  const [deliveryZones, setDeliveryZones] = useState([]);
+  const [deliveryZonesLoading, setDeliveryZonesLoading] = useState(false);
+  const [deliveryZoneId, setDeliveryZoneId] = useState(location.state?.deliveryZoneId || '');
   
   const addressList = useSelector(state => state.addresses.addressList);
   const [selectAddress, setSelectAddress] = useState(null); // Changed from 0 to null to ensure validation
@@ -79,15 +82,17 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
   // For pickup: need a pickup location
   const isPaymentEnabled = 
     (fulfillmentMethod === 'delivery' 
-      && selectAddress !== null 
-      && addressList[selectAddress] 
+      && selectAddress !== null
+      && addressList[selectAddress]
       && addressList[selectAddress].status
-      && customerLocation
-      && (deliveryMode !== 'foot' || footDeliveryEligibility.eligible)) ||
+      && (deliveryMode === 'bike' || customerLocation)
+      && (deliveryMode !== 'foot' || footDeliveryEligibility.eligible)
+      && (deliveryMode !== 'bike' || deliveryZoneId)) ||
     (fulfillmentMethod === 'pickup' && pickupLocation);
 
   // For foot delivery, only allow addresses whose saved coordinates are within Nairobi CBD.
-  // Standard delivery can use any active address.
+  // Bike (zone-fare) and standard delivery can use any active address —
+  // the bike rider covers named zones rather than a GPS radius.
   const eligibleAddressIndexes = useMemo(() => {
     if (deliveryMode !== 'foot') {
       return addressList.map((_, i) => i).filter(i => addressList[i]?.status);
@@ -100,6 +105,46 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
       });
   }, [addressList, deliveryMode]);
 
+  // Fetch delivery zones once bike mode is selected (cached across re-selection).
+  useEffect(() => {
+    if (deliveryMode !== 'bike' || deliveryZones.length > 0) {
+      return;
+    }
+
+    const fetchZones = async () => {
+      try {
+        setDeliveryZonesLoading(true);
+        const response = await Axios({ ...SummaryApi.getDeliveryZones });
+        if (response.data.success) {
+          setDeliveryZones(response.data.data || []);
+        }
+      } catch (error) {
+        AxiosToastError(error);
+      } finally {
+        setDeliveryZonesLoading(false);
+      }
+    };
+
+    fetchZones();
+  }, [deliveryMode, deliveryZones.length]);
+
+  const selectedDeliveryZone = useMemo(
+    () => deliveryZones.find((zone) => zone._id === deliveryZoneId) || null,
+    [deliveryZones, deliveryZoneId]
+  );
+
+  // Group zones by corridor, matching the fare chart's section layout.
+  const zonesByCorridor = useMemo(() => {
+    const groups = new Map();
+    deliveryZones.forEach((zone) => {
+      if (!groups.has(zone.corridor)) {
+        groups.set(zone.corridor, []);
+      }
+      groups.get(zone.corridor).push(zone);
+    });
+    return Array.from(groups.entries()).sort(([a], [b]) => a.localeCompare(b));
+  }, [deliveryZones]);
+
   // If the currently selected address is not eligible for the chosen delivery mode, clear it.
   useEffect(() => {
     if (selectAddress !== null && !eligibleAddressIndexes.includes(selectAddress)) {
@@ -111,7 +156,11 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
   const [checkoutAction, setCheckoutAction] = useState('');
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState('cash'); // 'cash' | 'jenga'
 
-  const deliveryCharge = fulfillmentMethod === 'delivery' ? DEFAULT_DELIVERY_CHARGE : 0;
+  // Display only — the server always recomputes this from the authoritative
+  // zone fare or the flat default, never trusting a client-supplied amount.
+  const deliveryCharge = fulfillmentMethod === 'delivery'
+    ? (deliveryMode === 'bike' && selectedDeliveryZone ? selectedDeliveryZone.fare : DEFAULT_DELIVERY_CHARGE)
+    : 0;
 
   useEffect(() => {
     // Clear address error when address is selected
@@ -237,13 +286,18 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
         return false;
       }
 
-      if (!customerLocation) {
+      if (deliveryMode === 'bike' && !deliveryZoneId) {
+        toast.error('Please select your delivery zone.');
+        return false;
+      }
+
+      if (deliveryMode !== 'bike' && !customerLocation) {
         toast.error('Delivery requires your live location within Nairobi CBD.');
         setShowLocationModal(true);
         return false;
       }
 
-      if (!deliveryInstructions.trim()) {
+      if (deliveryMode !== 'bike' && !deliveryInstructions.trim()) {
         toast.error('Please enter exact delivery instructions so the rider can find you.');
         setShowLocationModal(true);
         return false;
@@ -287,6 +341,7 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
             communityDiscountAmount: selectedReward && selectedReward.type === 'discount' ? communityDiscount : 0,
             fulfillment_type: fulfillmentMethod,
             delivery_mode: fulfillmentMethod === 'delivery' ? deliveryMode : 'standard',
+            deliveryZoneId: fulfillmentMethod === 'delivery' && deliveryMode === 'bike' ? deliveryZoneId : undefined,
             customerLocation,
             deliveryInstructions,
             pickup_location: pickupLocation,
@@ -440,7 +495,9 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
                 <div className="bg-plum-50 dark:bg-plum-900/30 border border-plum-200 dark:border-plum-700 text-plum-800 dark:text-plum-200 px-4 py-2 rounded-card mb-4 text-sm">
                   {deliveryMode === 'foot'
                     ? `Foot delivery is only available for addresses within Nairobi CBD (${NAIROBI_CBD_RADIUS_KM}km radius).`
-                    : 'Select an address to enable payment options.'}
+                    : deliveryMode === 'bike'
+                      ? 'Select an address and your delivery zone to enable payment options.'
+                      : 'Select an address to enable payment options.'}
                 </div>
               )}
               <div className='bg-white dark:bg-dm-card p-2 grid gap-4 rounded shadow transition-colors duration-200'>
@@ -510,7 +567,7 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
 
               <div className="mt-4 p-3 bg-white dark:bg-dm-card rounded shadow border border-brown-100 dark:border-dm-border">
               <p className="text-sm font-semibold dark:text-white mb-2">Delivery Type</p>
-              <div className="grid grid-cols-2 gap-2 text-xs">
+              <div className="grid grid-cols-3 gap-2 text-xs">
                 <button
                   type="button"
                   onClick={() => { setDeliveryMode('standard'); }}
@@ -525,9 +582,43 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
                 >
                   Foot (CBD)
                 </button>
+                <button
+                  type="button"
+                  onClick={() => { setDeliveryMode('bike'); }}
+                  className={`px-2 py-2 rounded ${deliveryMode === 'bike' ? 'bg-plum-700 text-white' : 'bg-plum-100 dark:bg-plum-900/30 dark:text-white/80'}`}
+                >
+                  Bike (Zone)
+                </button>
               </div>
 
-              {fulfillmentMethod === 'delivery' && (
+              {fulfillmentMethod === 'delivery' && deliveryMode === 'bike' && (
+                <div className="mt-2 space-y-1">
+                  <select
+                    value={deliveryZoneId}
+                    onChange={(e) => setDeliveryZoneId(e.target.value)}
+                    className="w-full text-xs px-2 py-2 rounded border border-brown-200 dark:border-dm-border bg-ivory dark:bg-dm-surface text-charcoal dark:text-white/80"
+                    disabled={deliveryZonesLoading}
+                  >
+                    <option value=''>{deliveryZonesLoading ? 'Loading zones...' : 'Select your zone'}</option>
+                    {zonesByCorridor.map(([corridor, zones]) => (
+                      <optgroup key={corridor} label={corridor}>
+                        {zones.map((zone) => (
+                          <option key={zone._id} value={zone._id}>
+                            {zone.name} — KES {zone.fare.toLocaleString()}
+                          </option>
+                        ))}
+                      </optgroup>
+                    ))}
+                  </select>
+                  <p className="text-[11px] text-brown-500 dark:text-white/55">
+                    {selectedDeliveryZone
+                      ? `Fare for ${selectedDeliveryZone.name}: KES ${selectedDeliveryZone.fare.toLocaleString()}`
+                      : 'Pick the zone closest to your delivery address.'}
+                  </p>
+                </div>
+              )}
+
+              {fulfillmentMethod === 'delivery' && deliveryMode !== 'bike' && (
                 <div className="mt-2 space-y-1">
                   <button
                     type="button"
@@ -734,6 +825,8 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
                   pickup_instructions={pickupInstructions}
                   deliveryCharge={deliveryCharge}
                   deliveryInstructions={deliveryInstructions}
+                  deliveryMode={deliveryMode}
+                  deliveryZoneId={deliveryZoneId}
                   onSuccess={handleJengaPaymentSuccess}
                   onError={handleJengaPaymentError}
                 />
@@ -772,7 +865,9 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
             <div className="bg-plum-50 dark:bg-plum-900/20 border border-plum-200 dark:border-plum-700/40 text-plum-700 dark:text-plum-300 px-4 py-2 rounded-card mb-4 text-sm">
               {deliveryMode === 'foot'
                 ? `Foot delivery is only available for addresses within Nairobi CBD (${NAIROBI_CBD_RADIUS_KM}km radius).`
-                : 'Select an address to enable payment options.'}
+                : deliveryMode === 'bike'
+                  ? 'Select an address and your delivery zone to enable payment options.'
+                  : 'Select an address to enable payment options.'}
             </div>
           )}
           <div className='grid gap-3 mb-4'>
@@ -839,7 +934,7 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
           <div className='bg-white dark:bg-dm-card p-4 rounded-card border border-brown-100 dark:border-dm-border mb-4 transition-colors duration-200'>
           <p className='text-sm font-semibold text-charcoal dark:text-white mb-3'>Delivery Type</p>
 
-          <div className='grid sm:grid-cols-2 gap-3'>
+          <div className='grid sm:grid-cols-3 gap-3'>
             <label className={`cursor-pointer rounded-card border-2 p-3 transition-all ${
               deliveryMode === 'standard'
                 ? 'border-plum-600 bg-plum-50 dark:border-plum-400 dark:bg-plum-900/20'
@@ -873,10 +968,56 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
               <p className='font-semibold text-charcoal dark:text-white'>Delivery by Foot</p>
               <p className='text-xs text-brown-500 dark:text-white/50 mt-1'>Only within Nairobi CBD ({NAIROBI_CBD_RADIUS_KM}km radius).</p>
             </label>
+
+            <label className={`cursor-pointer rounded-card border-2 p-3 transition-all ${
+              deliveryMode === 'bike'
+                ? 'border-plum-600 bg-plum-50 dark:border-plum-400 dark:bg-plum-900/20'
+                : 'border-brown-100 dark:border-dm-border'
+            }`}>
+              <input
+                type='radio'
+                name='delivery_mode'
+                value='bike'
+                checked={deliveryMode === 'bike'}
+                onChange={() => setDeliveryMode('bike')}
+                className='hidden'
+              />
+              <p className='font-semibold text-charcoal dark:text-white'>Bike Delivery</p>
+              <p className='text-xs text-brown-500 dark:text-white/50 mt-1'>Flat fare by zone, wider Nairobi coverage.</p>
+            </label>
           </div>
 
-          {/* Location capture required for every delivery order */}
-          {fulfillmentMethod === 'delivery' && (
+          {/* Bike delivery: zone picker instead of GPS/CBD-radius eligibility */}
+          {fulfillmentMethod === 'delivery' && deliveryMode === 'bike' && (
+            <div className='mt-3 space-y-2'>
+              <label className='block text-sm font-semibold text-charcoal dark:text-white'>Select your zone</label>
+              <select
+                value={deliveryZoneId}
+                onChange={(e) => setDeliveryZoneId(e.target.value)}
+                disabled={deliveryZonesLoading}
+                className='w-full text-sm border border-brown-200 dark:border-dm-border rounded-card px-3 py-2 bg-ivory dark:bg-dm-surface text-charcoal dark:text-white/80 focus:outline-none focus:border-plum-500 dark:focus:border-plum-400'
+              >
+                <option value=''>{deliveryZonesLoading ? 'Loading zones...' : 'Select your zone'}</option>
+                {zonesByCorridor.map(([corridor, zones]) => (
+                  <optgroup key={corridor} label={corridor}>
+                    {zones.map((zone) => (
+                      <option key={zone._id} value={zone._id}>
+                        {zone.name} — KES {zone.fare.toLocaleString()}
+                      </option>
+                    ))}
+                  </optgroup>
+                ))}
+              </select>
+              <p className='text-xs text-brown-500 dark:text-white/50'>
+                {selectedDeliveryZone
+                  ? `Fare for ${selectedDeliveryZone.name}: KES ${selectedDeliveryZone.fare.toLocaleString()}`
+                  : 'Pick the zone closest to your delivery address — the rider bills a flat fare per zone.'}
+              </p>
+            </div>
+          )}
+
+          {/* Location capture required for standard/foot delivery */}
+          {fulfillmentMethod === 'delivery' && deliveryMode !== 'bike' && (
             <div className='mt-3 space-y-2'>
               <button
                 type='button'

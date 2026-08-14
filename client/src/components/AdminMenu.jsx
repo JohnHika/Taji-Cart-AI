@@ -16,6 +16,7 @@ import {
   FaLayerGroup,
   FaListAlt,
   FaMapMarkerAlt,
+  FaRoute,
   FaShoppingBag,
   FaSignOutAlt,
   FaStore,
@@ -179,6 +180,7 @@ const AdminMenu = ({ close, forLightPanel = false }) => {
 
         <p className={sectionClass}>Products & categories</p>
         <MenuLink to="/dashboard/category" icon={FaListAlt} label="Category" />
+        <MenuLink to="/dashboard/delivery-zones" icon={FaRoute} label="Delivery Zones" />
         <MenuLink to="/dashboard/subcategory" icon={FaLayerGroup} label="Sub category" />
         <MenuLink to="/dashboard/upload-product" icon={FaUpload} label="Upload product" />
         <MenuLink to="/dashboard/product" icon={FaBoxOpen} label="Product" />

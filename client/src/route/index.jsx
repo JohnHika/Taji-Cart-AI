@@ -45,6 +45,7 @@ const DashboardCheckout             = lazyWithRetry(() => import('../pages/Dashb
 const UploadProduct                 = lazyWithRetry(() => import('../pages/UploadProduct'));
 const CatalogQuality                = lazyWithRetry(() => import('../pages/CatalogQuality'));
 const CategoryPage                  = lazyWithRetry(() => import('../pages/CategoryPage'));
+const DeliveryZonesPage             = lazyWithRetry(() => import('../pages/DeliveryZonesPage'));
 const AllOrdersAdmin                = lazyWithRetry(() => import('../pages/admin/AllOrdersAdmin'));
 const LoyaltyProgramAdmin           = lazyWithRetry(() => import('../pages/admin/LoyaltyProgramAdmin'));
 const UsersAdmin                    = lazyWithRetry(() => import('../pages/admin/UsersAdmin'));
@@ -204,6 +205,7 @@ const router = createBrowserRouter([
           { path: 'product',                element: <PrivateRoute requireAdmin={true}>{S(ProductPage)}</PrivateRoute> },
           { path: 'catalog-quality',        element: <PrivateRoute requireAdmin={true}>{S(CatalogQuality)}</PrivateRoute> },
           { path: 'category',               element: <PrivateRoute requireAdmin={true}>{S(CategoryPage)}</PrivateRoute> },
+          { path: 'delivery-zones',         element: <PrivateRoute requireAdmin={true}>{S(DeliveryZonesPage)}</PrivateRoute> },
           { path: 'subcategory',            element: <PrivateRoute requireAdmin={true}>{S(SubCategoryPage)}</PrivateRoute> },
           { path: 'allorders',              element: <PrivateRoute requireAdmin={true}>{S(AllOrdersAdmin)}</PrivateRoute> },
           { path: 'loyalty-program-admin',  element: <PrivateRoute requireAdmin={true}>{S(LoyaltyProgramAdmin)}</PrivateRoute> },

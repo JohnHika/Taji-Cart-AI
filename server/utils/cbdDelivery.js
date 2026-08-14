@@ -21,6 +21,14 @@ export const isFootDeliveryMode = (value) => {
   return normalized === 'foot' || normalized === 'walking' || normalized === 'walker';
 };
 
+export const isBikeDeliveryMode = (value) => {
+  if (typeof value !== 'string') {
+    return false;
+  }
+
+  return value.trim().toLowerCase() === 'bike';
+};
+
 export const getDeliveryModeFromPayload = (payload = {}) => {
   return (
     payload.delivery_mode ||

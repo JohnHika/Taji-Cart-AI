@@ -105,6 +105,22 @@ const SummaryApi = {
         url: `${baseURL}/api/subcategory/update`,
         method: 'put'
     },
+    addDeliveryZone: {
+        url: `${baseURL}/api/delivery-zones/add`,
+        method: 'post'
+    },
+    getDeliveryZones: {
+        url: `${baseURL}/api/delivery-zones/get`,
+        method: 'get'
+    },
+    updateDeliveryZone: {
+        url: `${baseURL}/api/delivery-zones/update`,
+        method: 'put'
+    },
+    deleteDeliveryZone: {
+        url: `${baseURL}/api/delivery-zones/delete`,
+        method: 'delete'
+    },
     deleteSubCategory: {
         url: `${baseURL}/api/subcategory/delete`,
         method: 'delete'

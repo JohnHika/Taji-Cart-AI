@@ -13,11 +13,13 @@ import UserRewardModel from "../models/userreward.model.js";
 import UserModel from "../models/user.model.js";
 import AddressModel from "../models/address.model.js";
 import { getIO } from '../socket/socket.js'; // Add this import
+import DeliveryZoneModel from "../models/deliveryzone.model.js";
 import {
   DEFAULT_DELIVERY_CHARGE,
   extractCoordinatesFromPayload,
   getCbdFootDeliveryStatus,
   getDeliveryModeFromPayload,
+  isBikeDeliveryMode,
   isFootDeliveryMode,
 } from '../utils/cbdDelivery.js';
 import { markRewardAsUsed, processOrderContribution } from './communitycampaign.controller.js'; // Add this import
@@ -70,6 +72,22 @@ export const pricewithDiscount = (price, dis = 0, royalDiscount = 0) => {
   const royalDiscountAmount = Math.round((priceAfterProductDiscount * loyaltyDiscount) / 100);
 
   return Math.max(0, priceAfterProductDiscount - royalDiscountAmount);
+};
+
+// Bike (zone-fare) delivery never trusts a client-supplied amount — the
+// fare is always looked up server-side from the active DeliveryZone doc.
+const resolveBikeDeliveryZone = async (deliveryZoneId) => {
+  if (!deliveryZoneId || !mongoose.Types.ObjectId.isValid(String(deliveryZoneId))) {
+    return { zone: null, error: 'Please select a delivery zone for bike delivery.' };
+  }
+
+  const zone = await DeliveryZoneModel.findOne({ _id: deliveryZoneId, isActive: true });
+
+  if (!zone) {
+    return { zone: null, error: 'Selected delivery zone is no longer available. Please pick another zone.' };
+  }
+
+  return { zone, error: null };
 };
 
 const getValidatedCommunityReward = async ({ userId, communityRewardId, communityDiscountAmount }) => {
@@ -332,8 +350,24 @@ export async function checkoutController(request, response) {
             }
         }
         
-        const deliveryCharge = fulfillment_type === 'delivery' ? DEFAULT_DELIVERY_CHARGE : 0;
-        
+        let deliveryZone = null;
+        if (fulfillment_type === 'delivery' && isBikeDeliveryMode(deliveryMode)) {
+            const zoneResult = await resolveBikeDeliveryZone(request.body.deliveryZoneId);
+            if (!zoneResult.zone) {
+                return response.status(400).json({
+                    message: zoneResult.error,
+                    error: true,
+                    success: false,
+                    code: 'INVALID_DELIVERY_ZONE',
+                });
+            }
+            deliveryZone = zoneResult.zone;
+        }
+
+        const deliveryCharge = fulfillment_type === 'delivery'
+            ? (deliveryZone ? deliveryZone.fare : DEFAULT_DELIVERY_CHARGE)
+            : 0;
+
         const {
             normalizedItems,
             subTotalAmt,
@@ -350,7 +384,7 @@ export async function checkoutController(request, response) {
             communityDiscountAmount,
             deliveryCharge,
         });
-        
+
         // All items in one checkout share the same orderId so reports can
         // deduplicate by orderId and avoid counting the total multiple times.
         const sharedOrderId = `ORD-${new mongoose.Types.ObjectId()}`;
@@ -370,13 +404,16 @@ export async function checkoutController(request, response) {
             pickup_location: pickup_location || '',
             pickup_instructions: pickup_instructions || '',
             delivery_mode: deliveryMode || 'standard',
+            delivery_zone: deliveryZone ? deliveryZone._id : undefined,
+            delivery_zone_name: deliveryZone ? deliveryZone.name : '',
+            delivery_zone_fare: deliveryZone ? deliveryZone.fare : undefined,
             customer_location: customerLocation || undefined,
             deliveryInstructions: request.body.deliveryInstructions || '',
             subTotalAmt: subTotalAmt,
             deliveryCharge: deliveryCharge,
             totalAmt: totalAmt,
         }));
-        
+
         const generatedOrder = await OrderModel.insertMany(payload);
 
         // Atomically reduce stock for each item, then flag low-stock items
@@ -538,7 +575,23 @@ export async function CashOnDeliveryOrderController(request, response) {
           }
         }
 
-        const deliveryCharge = fulfillment_type === 'delivery' ? DEFAULT_DELIVERY_CHARGE : 0;
+        let deliveryZone = null;
+        if (fulfillment_type === 'delivery' && isBikeDeliveryMode(deliveryMode)) {
+            const zoneResult = await resolveBikeDeliveryZone(request.body.deliveryZoneId);
+            if (!zoneResult.zone) {
+                return response.status(400).json({
+                    message: zoneResult.error,
+                    error: true,
+                    success: false,
+                    code: 'INVALID_DELIVERY_ZONE',
+                });
+            }
+            deliveryZone = zoneResult.zone;
+        }
+
+        const deliveryCharge = fulfillment_type === 'delivery'
+            ? (deliveryZone ? deliveryZone.fare : DEFAULT_DELIVERY_CHARGE)
+            : 0;
 
         const {
             normalizedItems,
@@ -562,8 +615,8 @@ export async function CashOnDeliveryOrderController(request, response) {
             return Math.random().toString(36).substring(2, 8).toUpperCase();
         };
 
-        const pickupVerificationCode = fulfillment_type === 'pickup' 
-            ? generateVerificationCode() 
+        const pickupVerificationCode = fulfillment_type === 'pickup'
+            ? generateVerificationCode()
             : "";
 
         // All items in one checkout share the same orderId so reports can
@@ -585,6 +638,9 @@ export async function CashOnDeliveryOrderController(request, response) {
             pickup_location: pickup_location || '',
             pickup_instructions: pickup_instructions || '',
             delivery_mode: deliveryMode || 'standard',
+            delivery_zone: deliveryZone ? deliveryZone._id : undefined,
+            delivery_zone_name: deliveryZone ? deliveryZone.name : '',
+            delivery_zone_fare: deliveryZone ? deliveryZone.fare : undefined,
             customer_location: customerLocation || undefined,
             deliveryInstructions: request.body.deliveryInstructions || '',
             pickupVerificationCode: pickupVerificationCode,
@@ -782,14 +838,6 @@ export async function guestCheckoutController(request, response) {
             })
         }
 
-        const deliveryCharge = fulfillment_type === 'delivery' ? DEFAULT_DELIVERY_CHARGE : 0;
-
-        const {
-            normalizedItems,
-            subTotalAmt,
-            totalAmt,
-        } = await buildValidatedOrderPricing({ items, deliveryCharge })
-
         // Validate delivery location is within Nairobi CBD radius for foot delivery only
         if (fulfillment_type === 'delivery' && deliveryMode === 'foot') {
           const cbdStatus = getCbdFootDeliveryStatus(customerLocation)
@@ -813,6 +861,30 @@ export async function guestCheckoutController(request, response) {
           }
         }
 
+        let deliveryZone = null;
+        if (fulfillment_type === 'delivery' && isBikeDeliveryMode(deliveryMode)) {
+            const zoneResult = await resolveBikeDeliveryZone(request.body.deliveryZoneId);
+            if (!zoneResult.zone) {
+                return response.status(400).json({
+                    message: zoneResult.error,
+                    error: true,
+                    success: false,
+                    code: 'INVALID_DELIVERY_ZONE',
+                });
+            }
+            deliveryZone = zoneResult.zone;
+        }
+
+        const deliveryCharge = fulfillment_type === 'delivery'
+            ? (deliveryZone ? deliveryZone.fare : DEFAULT_DELIVERY_CHARGE)
+            : 0;
+
+        const {
+            normalizedItems,
+            subTotalAmt,
+            totalAmt,
+        } = await buildValidatedOrderPricing({ items, deliveryCharge })
+
         const generateVerificationCode = () => {
             return Math.random().toString(36).substring(2, 8).toUpperCase()
         }
@@ -833,6 +905,9 @@ export async function guestCheckoutController(request, response) {
             guestShipping: guestShipping || {},
             fulfillment_type,
             delivery_mode: deliveryMode || 'standard',
+            delivery_zone: deliveryZone ? deliveryZone._id : undefined,
+            delivery_zone_name: deliveryZone ? deliveryZone.name : '',
+            delivery_zone_fare: deliveryZone ? deliveryZone.fare : undefined,
             pickup_location,
             customer_location: customerLocation || undefined,
             deliveryInstructions: request.body.deliveryInstructions || '',

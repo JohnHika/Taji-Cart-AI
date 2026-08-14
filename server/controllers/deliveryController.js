@@ -6,7 +6,22 @@ import { default as Order, default as OrderModel } from '../models/order.model.j
 import User from '../models/user.model.js';
 import { emitNewDeliveryAssigned, emitOrderStatusUpdated, getIO } from '../socket/socket.js';
 import { nawiriBrand } from '../utils/brand.js';
-import { isFootDeliveryMode } from '../utils/cbdDelivery.js';
+import { isBikeDeliveryMode, isFootDeliveryMode } from '../utils/cbdDelivery.js';
+
+// Resolves the driver-facing delivery mode label, including zone info for
+// bike (zone-fare) deliveries so riders know which flat fare applies.
+const formatDeliveryModeForDriver = (order) => {
+  if (isBikeDeliveryMode(order.delivery_mode)) {
+    return {
+      deliveryMode: 'bike',
+      deliveryZoneName: order.delivery_zone_name || '',
+      deliveryZoneFare: order.delivery_zone_fare ?? null,
+    };
+  }
+  return {
+    deliveryMode: isFootDeliveryMode(order.delivery_mode) ? 'foot' : 'standard',
+  };
+};
 import { buildRiderCallMessage, notifyCustomerRiderWillCall } from '../utils/deliveryRiderCall.js';
 import { renderOrderNoticeEmail } from '../utils/emailTemplates.js';
 
@@ -648,7 +663,7 @@ const formatAvailableDeliveryOrder = (order) => ({
   items: formatDeliveryItems(order),
   total: order.totalAmt || order.total || 0,
   paymentStatus: order.payment_status || order.paymentStatus || 'unknown',
-  deliveryMode: isFootDeliveryMode(order.delivery_mode) ? 'foot' : 'standard',
+  ...formatDeliveryModeForDriver(order),
   createdAt: order.createdAt,
   updatedAt: order.updatedAt,
   dispatchedAt: order.dispatchInfo?.dispatchedAt || null
@@ -827,7 +842,7 @@ export const getActiveOrders = async (req, res) => {
             coordinates: order.delivery_address?.coordinates || null,
             deliveryNotes: order.delivery_address?.deliveryInstructions || '',
             total: order.totalAmt,
-            deliveryMode: isFootDeliveryMode(order.delivery_mode) ? 'foot' : 'standard',
+            ...formatDeliveryModeForDriver(order),
             createdAt: order.createdAt,
             currentLocation: order.currentLocation || null,
             estimatedDeliveryTime: order.estimatedDeliveryTime

@@ -140,6 +140,7 @@ const DashboardSidebar = ({ userRole, isStaff }) => {
             <MenuItem to="/dashboard/users-admin" icon={FaUsers} label="User Management" />
             <MenuItem to="/dashboard/staff/dashboard" icon={FaUserTie} label="Staff Dashboard" />
             <MenuItem to="/dashboard/category" icon={FaListAlt} label="Category" />
+            <MenuItem to="/dashboard/delivery-zones" icon={FaMapMarkedAlt} label="Delivery Zones" />
             <MenuItem to="/dashboard/subcategory" icon={FaLayerGroup} label="Sub Category" />
             <MenuItem to="/dashboard/upload-product" icon={FaUpload} label="Upload Product" />
             <MenuItem to="/dashboard/product" icon={FaBoxOpen} label="Products" />

@@ -72,8 +72,22 @@ const orderSchema = new mongoose.Schema({
     },
     delivery_mode: {
         type: String,
-        enum: ['standard', 'foot', 'walking', 'walker', ''],
+        enum: ['standard', 'foot', 'bike', 'walking', 'walker', ''],
         default: 'standard'
+    },
+    // Zone reference + snapshot for bike (zone-fare) delivery. Snapshotting
+    // name/fare keeps historical orders readable even if the zone is later
+    // renamed, re-priced, or deactivated.
+    delivery_zone: {
+        type: mongoose.Schema.ObjectId,
+        ref: 'deliveryZone'
+    },
+    delivery_zone_name: {
+        type: String,
+        default: ''
+    },
+    delivery_zone_fare: {
+        type: Number
     },
     customer_location: {
         lat: Number,
