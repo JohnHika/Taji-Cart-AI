@@ -121,6 +121,22 @@ const SummaryApi = {
         url: `${baseURL}/api/delivery-zones/delete`,
         method: 'delete'
     },
+    addSaccoOperator: {
+        url: `${baseURL}/api/sacco-operators/add`,
+        method: 'post'
+    },
+    getSaccoOperators: {
+        url: `${baseURL}/api/sacco-operators/get`,
+        method: 'get'
+    },
+    updateSaccoOperator: {
+        url: `${baseURL}/api/sacco-operators/update`,
+        method: 'put'
+    },
+    deleteSaccoOperator: {
+        url: `${baseURL}/api/sacco-operators/delete`,
+        method: 'delete'
+    },
     deleteSubCategory: {
         url: `${baseURL}/api/subcategory/delete`,
         method: 'delete'

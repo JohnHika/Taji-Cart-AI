@@ -7,6 +7,12 @@ const FOOT_DELIVERY_CBD_RADIUS_KM = Number(process.env.FOOT_DELIVERY_CBD_RADIUS_
 
 export const DEFAULT_DELIVERY_CHARGE = Number(process.env.DEFAULT_DELIVERY_CHARGE || 100); // KES
 
+// Flat fee for the shop -> SACCO/coach terminal leg only. The SACCO/coach
+// operator's own parcel fee (shop-to-terminal is ours, terminal-to-destination
+// is theirs) is separate and relayed by phone once the rider is at the
+// terminal — it is never collected through this app.
+export const SACCO_TERMINAL_DROPOFF_CHARGE = Number(process.env.SACCO_TERMINAL_DROPOFF_CHARGE || 100); // KES
+
 const normalizeCoordinate = (value) => {
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : null;

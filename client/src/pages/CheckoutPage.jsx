@@ -21,7 +21,7 @@ import { clearCartItems } from '../store/cartProduct';
 import Axios from '../utils/Axios';
 import AxiosToastError from '../utils/AxiosToastError';
 import { getStoredAccessToken } from '../utils/authStorage';
-import { DEFAULT_DELIVERY_CHARGE, formatDistanceKm, getFootDeliveryEligibility, isWithinCbdRadius, NAIROBI_CBD_RADIUS_KM } from '../utils/cbdDelivery';
+import { DEFAULT_DELIVERY_CHARGE, formatDistanceKm, getFootDeliveryEligibility, isWithinCbdRadius, NAIROBI_CBD_RADIUS_KM, SACCO_TERMINAL_DROPOFF_CHARGE } from '../utils/cbdDelivery';
 import { DisplayPriceInShillings } from '../utils/DisplayPriceInShillings';
 import { Link } from 'react-router-dom';
 
@@ -48,6 +48,12 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
   );
   const [pickupInstructions, setPickupInstructions] = useState(
     location.state?.pickupInstructions || location.state?.pickup_instructions || ''
+  );
+  const [saccoOperatorId, setSaccoOperatorId] = useState(
+    location.state?.saccoOperatorId || location.state?.sacco_operator_id || ''
+  );
+  const [saccoDestinationTown, setSaccoDestinationTown] = useState(
+    location.state?.saccoDestinationTown || location.state?.sacco_destination_town || ''
   );
   const [deliveryMode, setDeliveryMode] = useState(location.state?.delivery_mode || 'standard');
   const [customerLocation, setCustomerLocation] = useState(location.state?.customerLocation || null);
@@ -80,15 +86,16 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
   // Check if payments should be enabled
   // For delivery: need a selected address
   // For pickup: need a pickup location
-  const isPaymentEnabled = 
-    (fulfillmentMethod === 'delivery' 
+  const isPaymentEnabled =
+    (fulfillmentMethod === 'delivery'
       && selectAddress !== null
       && addressList[selectAddress]
       && addressList[selectAddress].status
       && (deliveryMode === 'bike' || customerLocation)
       && (deliveryMode !== 'foot' || footDeliveryEligibility.eligible)
       && (deliveryMode !== 'bike' || deliveryZoneId)) ||
-    (fulfillmentMethod === 'pickup' && pickupLocation);
+    (fulfillmentMethod === 'pickup' && pickupLocation) ||
+    (fulfillmentMethod === 'sacco_pickup' && saccoOperatorId && saccoDestinationTown);
 
   // For foot delivery, only allow addresses whose saved coordinates are within Nairobi CBD.
   // Bike (zone-fare) and standard delivery can use any active address —
@@ -145,6 +152,37 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
     return Array.from(groups.entries()).sort(([a], [b]) => a.localeCompare(b));
   }, [deliveryZones]);
 
+  // Fetch SACCO/coach operators once that fulfillment method is selected (cached across re-selection).
+  const [saccoOperators, setSaccoOperators] = useState([]);
+  const [saccoOperatorsLoading, setSaccoOperatorsLoading] = useState(false);
+
+  useEffect(() => {
+    if (fulfillmentMethod !== 'sacco_pickup' || saccoOperators.length > 0) {
+      return;
+    }
+
+    const fetchSaccoOperators = async () => {
+      try {
+        setSaccoOperatorsLoading(true);
+        const response = await Axios({ ...SummaryApi.getSaccoOperators });
+        if (response.data.success) {
+          setSaccoOperators(response.data.data || []);
+        }
+      } catch (error) {
+        AxiosToastError(error);
+      } finally {
+        setSaccoOperatorsLoading(false);
+      }
+    };
+
+    fetchSaccoOperators();
+  }, [fulfillmentMethod, saccoOperators.length]);
+
+  const selectedSaccoOperator = useMemo(
+    () => saccoOperators.find((op) => op._id === saccoOperatorId) || null,
+    [saccoOperators, saccoOperatorId]
+  );
+
   // If the currently selected address is not eligible for the chosen delivery mode, clear it.
   useEffect(() => {
     if (selectAddress !== null && !eligibleAddressIndexes.includes(selectAddress)) {
@@ -160,7 +198,9 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
   // zone fare or the flat default, never trusting a client-supplied amount.
   const deliveryCharge = fulfillmentMethod === 'delivery'
     ? (deliveryMode === 'bike' && selectedDeliveryZone ? selectedDeliveryZone.fare : DEFAULT_DELIVERY_CHARGE)
-    : 0;
+    : fulfillmentMethod === 'sacco_pickup'
+      ? SACCO_TERMINAL_DROPOFF_CHARGE
+      : 0;
 
   useEffect(() => {
     // Clear address error when address is selected
@@ -313,6 +353,9 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
     } else if (fulfillmentMethod === 'pickup' && !pickupLocation) {
       toast.error('Please select a pickup location');
       return false;
+    } else if (fulfillmentMethod === 'sacco_pickup' && (!saccoOperatorId || !saccoDestinationTown)) {
+      toast.error('Please select a SACCO/bus operator and destination town');
+      return false;
     }
     return true;
   };
@@ -345,7 +388,9 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
             customerLocation,
             deliveryInstructions,
             pickup_location: pickupLocation,
-            pickup_instructions: pickupInstructions
+            pickup_instructions: pickupInstructions,
+            saccoOperatorId: fulfillmentMethod === 'sacco_pickup' ? saccoOperatorId : undefined,
+            saccoDestinationTown: fulfillmentMethod === 'sacco_pickup' ? saccoDestinationTown : undefined
           },
           requestLockKey: `checkout:cash:${checkoutScope}`
         });
@@ -841,15 +886,38 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
   }
 
   // Update UI based on fulfillment method
+  const fulfillmentToggle = (
+    <div className="mb-4 grid grid-cols-3 rounded-card overflow-hidden border border-brown-100 dark:border-dm-border text-xs sm:text-sm font-semibold">
+      <button
+        type="button"
+        onClick={() => setFulfillmentMethod('delivery')}
+        className={`py-2.5 transition-colors ${fulfillmentMethod === 'delivery' ? 'bg-plum-700 text-white' : 'bg-white dark:bg-dm-card text-charcoal dark:text-white/70 hover:bg-plum-50 dark:hover:bg-plum-900/20'}`}
+      >
+        🚚 Delivery
+      </button>
+      <button
+        type="button"
+        onClick={() => { setFulfillmentMethod('pickup'); setPickupLocation(''); }}
+        className={`py-2.5 transition-colors ${fulfillmentMethod === 'pickup' ? 'bg-plum-700 text-white' : 'bg-white dark:bg-dm-card text-charcoal dark:text-white/70 hover:bg-plum-50 dark:hover:bg-plum-900/20'}`}
+      >
+        🏪 Pickup
+      </button>
+      <button
+        type="button"
+        onClick={() => setFulfillmentMethod('sacco_pickup')}
+        className={`py-2.5 transition-colors ${fulfillmentMethod === 'sacco_pickup' ? 'bg-plum-700 text-white' : 'bg-white dark:bg-dm-card text-charcoal dark:text-white/70 hover:bg-plum-50 dark:hover:bg-plum-900/20'}`}
+      >
+        🚌 SACCO/Bus
+      </button>
+    </div>
+  );
+
   const renderAddressOrPickupSection = () => {
     if (fulfillmentMethod === 'delivery') {
       return (
         <>
           {/* Fulfillment method toggle */}
-          <div className="mb-4 grid grid-cols-2 rounded-card overflow-hidden border border-brown-100 dark:border-dm-border text-sm font-semibold">
-            <button type="button" onClick={() => setFulfillmentMethod('delivery')} className="py-2.5 bg-plum-700 text-white">🚚 Delivery</button>
-            <button type="button" onClick={() => { setFulfillmentMethod('pickup'); setPickupLocation(''); }} className="py-2.5 bg-white dark:bg-dm-card text-charcoal dark:text-white/70 hover:bg-plum-50 dark:hover:bg-plum-900/20 transition-colors">🏪 Pickup</button>
-          </div>
+          {fulfillmentToggle}
           <h3 className='text-lg font-semibold text-charcoal dark:text-white mb-3'>Delivery Address</h3>
           {!hasActiveAddresses && (
             <div className="bg-gold-100 dark:bg-gold-600/10 border border-gold-300 dark:border-gold-600/30 text-gold-700 dark:text-gold-300 px-4 py-2 rounded-card mb-4 text-sm">
@@ -1040,14 +1108,11 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
           </div>
         </>
       );
-    } else {
+    } else if (fulfillmentMethod === 'pickup') {
       return (
         <>
           {/* Fulfillment method toggle */}
-          <div className="mb-4 grid grid-cols-2 rounded-card overflow-hidden border border-brown-100 dark:border-dm-border text-sm font-semibold">
-            <button type="button" onClick={() => setFulfillmentMethod('delivery')} className="py-2.5 bg-white dark:bg-dm-card text-charcoal dark:text-white/70 hover:bg-plum-50 dark:hover:bg-plum-900/20 transition-colors">🚚 Delivery</button>
-            <button type="button" onClick={() => setFulfillmentMethod('pickup')} className="py-2.5 bg-plum-700 text-white">🏪 Pickup</button>
-          </div>
+          {fulfillmentToggle}
           <h3 className='text-lg font-semibold text-charcoal dark:text-white mb-3'>Select Pickup Location</h3>
           {!pickupLocation && (
             <div className="bg-gold-100 dark:bg-gold-600/10 border border-gold-300 dark:border-gold-600/30 text-gold-700 dark:text-gold-300 px-4 py-2 rounded-card mb-4 text-sm">
@@ -1087,6 +1152,74 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
               rows={2}
               className="w-full text-sm border border-brown-200 dark:border-dm-border rounded-card px-3 py-2 bg-ivory dark:bg-dm-surface text-charcoal dark:text-white/80 placeholder-brown-300 dark:placeholder-white/30 focus:outline-none focus:border-plum-500 dark:focus:border-plum-400 resize-none"
             />
+          </div>
+        </>
+      );
+    } else {
+      return (
+        <>
+          {/* Fulfillment method toggle */}
+          {fulfillmentToggle}
+          <h3 className='text-lg font-semibold text-charcoal dark:text-white mb-3'>Send via SACCO / Bus</h3>
+          <div className="bg-plum-50 dark:bg-plum-900/20 border border-plum-200 dark:border-plum-700/40 text-plum-700 dark:text-plum-300 px-4 py-3 rounded-card mb-3 text-sm space-y-1.5 leading-relaxed">
+            <p>
+              <span className="font-semibold">KES {SACCO_TERMINAL_DROPOFF_CHARGE}</span> covers our rider
+              taking your order from the shop to the operator&apos;s Nairobi terminal — pay that as part of this order.
+            </p>
+            <p>
+              Once the rider is at the terminal, they&apos;ll <span className="font-semibold">call you</span> to
+              confirm drop-off. The SACCO/bus operator charges their own separate fee to carry your parcel to{' '}
+              {saccoDestinationTown || 'your destination town'} — you or your receiver pay that directly to them,
+              not through this app.
+            </p>
+          </div>
+          {(!saccoOperatorId || !saccoDestinationTown) && (
+            <div className="bg-gold-100 dark:bg-gold-600/10 border border-gold-300 dark:border-gold-600/30 text-gold-700 dark:text-gold-300 px-4 py-2 rounded-card mb-4 text-sm">
+              Please select an operator and destination town to proceed with payment.
+            </div>
+          )}
+          <div className='bg-white dark:bg-dm-card p-4 rounded-card border border-brown-100 dark:border-dm-border mb-4 transition-colors duration-200 space-y-3'>
+            <div>
+              <label className="block text-sm font-semibold text-charcoal dark:text-white mb-2">SACCO / bus operator</label>
+              <select
+                value={saccoOperatorId}
+                onChange={(e) => setSaccoOperatorId(e.target.value)}
+                className="w-full text-sm border border-brown-200 dark:border-dm-border rounded-card px-3 py-2 bg-ivory dark:bg-dm-surface text-charcoal dark:text-white/80"
+                disabled={saccoOperatorsLoading}
+              >
+                <option value=''>{saccoOperatorsLoading ? 'Loading operators...' : 'Select an operator'}</option>
+                {saccoOperators.map((operator) => (
+                  <option key={operator._id} value={operator._id}>
+                    {operator.name}{operator.isCrossBorder ? ' (cross-border)' : ''}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {selectedSaccoOperator && (
+              <div className="text-xs text-brown-500 dark:text-white/55 bg-brown-50 dark:bg-dm-surface rounded-card p-3 space-y-1">
+                {selectedSaccoOperator.nairobiTerminal && (
+                  <p><span className="font-semibold">Terminal:</span> {selectedSaccoOperator.nairobiTerminal}</p>
+                )}
+                {selectedSaccoOperator.contactPhone && (
+                  <p><span className="font-semibold">Contact:</span> {selectedSaccoOperator.contactPhone}</p>
+                )}
+                {selectedSaccoOperator.destinationsServed?.length > 0 && (
+                  <p><span className="font-semibold">Serves:</span> {selectedSaccoOperator.destinationsServed.join(', ')}</p>
+                )}
+              </div>
+            )}
+
+            <div>
+              <label className="block text-sm font-semibold text-charcoal dark:text-white mb-2">Destination town</label>
+              <input
+                type="text"
+                value={saccoDestinationTown}
+                onChange={(e) => setSaccoDestinationTown(e.target.value)}
+                placeholder="e.g. Nyeri, Kisumu, Dar es Salaam"
+                className="w-full text-sm border border-brown-200 dark:border-dm-border rounded-card px-3 py-2 bg-ivory dark:bg-dm-surface text-charcoal dark:text-white/80 placeholder-brown-300 dark:placeholder-white/30 focus:outline-none focus:border-plum-500 dark:focus:border-plum-400"
+              />
+            </div>
           </div>
         </>
       );
@@ -1287,8 +1420,12 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
                 onClick={handleCashOnDelivery}
                 disabled={!isPaymentEnabled || isCheckoutBusy}
               >
-                <span>{checkoutAction === 'cash' ? 'Placing order...' : `Cash on ${fulfillmentMethod === 'delivery' ? 'Delivery' : 'Pickup'}`}</span>
-                {!isPaymentEnabled && <span className="text-xs font-normal opacity-60">{fulfillmentMethod === 'delivery' ? 'Select address first' : 'Select pickup location'}</span>}
+                <span>{checkoutAction === 'cash' ? 'Placing order...' : `${fulfillmentMethod === 'sacco_pickup' ? 'Place Order —' : 'Cash on'} ${fulfillmentMethod === 'delivery' ? 'Delivery' : fulfillmentMethod === 'pickup' ? 'Pickup' : 'Pay at SACCO terminal'}`}</span>
+                {!isPaymentEnabled && (
+                  <span className="text-xs font-normal opacity-60">
+                    {fulfillmentMethod === 'delivery' ? 'Select address first' : fulfillmentMethod === 'pickup' ? 'Select pickup location' : 'Select operator and destination'}
+                  </span>
+                )}
               </button>
             )}
 
@@ -1302,6 +1439,8 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
                 fulfillment_type={fulfillmentMethod}
                 pickup_location={pickupLocation}
                 pickup_instructions={pickupInstructions}
+                saccoOperatorId={fulfillmentMethod === 'sacco_pickup' ? saccoOperatorId : undefined}
+                saccoDestinationTown={fulfillmentMethod === 'sacco_pickup' ? saccoDestinationTown : undefined}
                 deliveryCharge={deliveryCharge}
                 deliveryInstructions={deliveryInstructions}
                 onSuccess={handleJengaPaymentSuccess}

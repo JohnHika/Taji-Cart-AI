@@ -14,6 +14,7 @@ import UserModel from "../models/user.model.js";
 import AddressModel from "../models/address.model.js";
 import { getIO } from '../socket/socket.js'; // Add this import
 import DeliveryZoneModel from "../models/deliveryzone.model.js";
+import SaccoOperatorModel from "../models/saccooperator.model.js";
 import {
   DEFAULT_DELIVERY_CHARGE,
   extractCoordinatesFromPayload,
@@ -21,6 +22,7 @@ import {
   getDeliveryModeFromPayload,
   isBikeDeliveryMode,
   isFootDeliveryMode,
+  SACCO_TERMINAL_DROPOFF_CHARGE,
 } from '../utils/cbdDelivery.js';
 import { markRewardAsUsed, processOrderContribution } from './communitycampaign.controller.js'; // Add this import
 import { nawiriBrand } from "../utils/brand.js";
@@ -526,6 +528,8 @@ export async function CashOnDeliveryOrderController(request, response) {
             fulfillment_type = 'delivery',
             pickup_location,
             pickup_instructions,
+            saccoOperatorId,
+            saccoDestinationTown,
             usePoints = false,
             pointsUsed = 0,
             communityRewardId = null,
@@ -550,6 +554,34 @@ export async function CashOnDeliveryOrderController(request, response) {
                 error: true,
                 success: false
             });
+        }
+
+        let saccoOperator = null;
+        if (fulfillment_type === 'sacco_pickup') {
+            if (!saccoOperatorId || !mongoose.Types.ObjectId.isValid(String(saccoOperatorId))) {
+                return response.status(400).json({
+                    message: "Please select a SACCO/coach operator",
+                    error: true,
+                    success: false,
+                    code: 'INVALID_SACCO_OPERATOR',
+                });
+            }
+            if (!saccoDestinationTown) {
+                return response.status(400).json({
+                    message: "Please enter the destination town",
+                    error: true,
+                    success: false
+                });
+            }
+            saccoOperator = await SaccoOperatorModel.findOne({ _id: saccoOperatorId, isActive: true });
+            if (!saccoOperator) {
+                return response.status(400).json({
+                    message: "Selected operator is no longer available. Please pick another.",
+                    error: true,
+                    success: false,
+                    code: 'INVALID_SACCO_OPERATOR',
+                });
+            }
         }
 
         // Validate delivery location is within Nairobi CBD radius for foot delivery only
@@ -591,7 +623,9 @@ export async function CashOnDeliveryOrderController(request, response) {
 
         const deliveryCharge = fulfillment_type === 'delivery'
             ? (deliveryZone ? deliveryZone.fare : DEFAULT_DELIVERY_CHARGE)
-            : 0;
+            : fulfillment_type === 'sacco_pickup'
+                ? SACCO_TERMINAL_DROPOFF_CHARGE
+                : 0;
 
         const {
             normalizedItems,
@@ -632,7 +666,7 @@ export async function CashOnDeliveryOrderController(request, response) {
                 image: el.productId.image
             },
             paymentId: "",
-            payment_status: "CASH ON DELIVERY",
+            payment_status: fulfillment_type === 'sacco_pickup' ? "PAY AT SACCO TERMINAL" : "CASH ON DELIVERY",
             delivery_address: fulfillment_type === 'delivery' ? addressId : null,
             fulfillment_type: fulfillment_type || 'delivery',
             pickup_location: pickup_location || '',
@@ -644,6 +678,9 @@ export async function CashOnDeliveryOrderController(request, response) {
             customer_location: customerLocation || undefined,
             deliveryInstructions: request.body.deliveryInstructions || '',
             pickupVerificationCode: pickupVerificationCode,
+            sacco_operator: saccoOperator ? saccoOperator._id : undefined,
+            sacco_operator_name: saccoOperator ? saccoOperator.name : '',
+            sacco_destination_town: fulfillment_type === 'sacco_pickup' ? saccoDestinationTown : '',
             subTotalAmt: subTotalAmt,
             deliveryCharge: deliveryCharge,
             totalAmt: totalAmt,
@@ -710,9 +747,11 @@ export async function CashOnDeliveryOrderController(request, response) {
         const orderNotification = {
             type: 'order_placed',
             title: 'Order Placed Successfully',
-            message: fulfillment_type === 'delivery' 
-                ? 'Your order has been placed and will be delivered soon.' 
-                : `Your order has been placed. You can pick it up at ${pickup_location}. Your verification code is ${pickupVerificationCode}`,
+            message: fulfillment_type === 'delivery'
+                ? 'Your order has been placed and will be delivered soon.'
+                : fulfillment_type === 'sacco_pickup'
+                    ? `Your order has been placed. Our rider will drop it at ${saccoOperator?.name}'s terminal for ${saccoDestinationTown} and call you when they arrive. ${saccoOperator?.name} will then tell you their own fee to carry it onward.`
+                    : `Your order has been placed. You can pick it up at ${pickup_location}. Your verification code is ${pickupVerificationCode}`,
             isRead: false,
             userId: userId
         };
@@ -723,10 +762,16 @@ export async function CashOnDeliveryOrderController(request, response) {
             try {
                 await sendOrderLifecycleEmail({
                     user: customer,
-                    title: fulfillment_type === 'pickup' ? 'Your pickup order is ready to track' : 'Your order has been placed',
+                    title: fulfillment_type === 'pickup'
+                        ? 'Your pickup order is ready to track'
+                        : fulfillment_type === 'sacco_pickup'
+                            ? 'Your order is headed to your SACCO terminal'
+                            : 'Your order has been placed',
                     intro: fulfillment_type === 'pickup'
                         ? `Your order is confirmed for pickup at ${pickup_location}. Keep the verification code below ready when collecting it.`
-                        : 'Thank you for shopping with Nawiri Hair Kenya. Your order is confirmed and our team is preparing it now.',
+                        : fulfillment_type === 'sacco_pickup'
+                            ? `Our rider is taking your order to ${saccoOperator?.name}'s Nairobi terminal for ${saccoDestinationTown} (KES ${SACCO_TERMINAL_DROPOFF_CHARGE} shop-to-terminal fee, already included in your total). They'll call you once they're at the terminal to confirm drop-off — ${saccoOperator?.name} will then tell you their own separate fee to carry it onward, which you or your receiver pay directly to them.`
+                            : 'Thank you for shopping with Nawiri Hair Kenya. Your order is confirmed and our team is preparing it now.',
                     orderId: payload[0].orderId,
                     totalAmt,
                     fulfillmentType: fulfillment_type || 'delivery',
@@ -815,7 +860,7 @@ export async function trackGuestOrderController(request, response) {
 // Guest Checkout Controller - allows users to purchase without logging in
 export async function guestCheckoutController(request, response) {
     try {
-  const { items, guestEmail, guestPhone, guestShipping, fulfillment_type = 'delivery', pickup_location = '' } = request.body
+  const { items, guestEmail, guestPhone, guestShipping, fulfillment_type = 'delivery', pickup_location = '', saccoOperatorId, saccoDestinationTown } = request.body
     const deliveryMode = getDeliveryModeFromPayload(request.body)
     const customerLocation = extractCoordinatesFromPayload(request.body)
 
@@ -826,6 +871,27 @@ export async function guestCheckoutController(request, response) {
                 error: true,
                 success: false
             })
+        }
+
+        let saccoOperator = null;
+        if (fulfillment_type === 'sacco_pickup') {
+            if (!saccoOperatorId || !mongoose.Types.ObjectId.isValid(String(saccoOperatorId)) || !saccoDestinationTown) {
+                return response.status(400).json({
+                    message: "Please select a SACCO/coach operator and destination town",
+                    error: true,
+                    success: false,
+                    code: 'INVALID_SACCO_OPERATOR',
+                })
+            }
+            saccoOperator = await SaccoOperatorModel.findOne({ _id: saccoOperatorId, isActive: true })
+            if (!saccoOperator) {
+                return response.status(400).json({
+                    message: "Selected operator is no longer available. Please pick another.",
+                    error: true,
+                    success: false,
+                    code: 'INVALID_SACCO_OPERATOR',
+                })
+            }
         }
 
         // Validate email format
@@ -877,7 +943,9 @@ export async function guestCheckoutController(request, response) {
 
         const deliveryCharge = fulfillment_type === 'delivery'
             ? (deliveryZone ? deliveryZone.fare : DEFAULT_DELIVERY_CHARGE)
-            : 0;
+            : fulfillment_type === 'sacco_pickup'
+                ? SACCO_TERMINAL_DROPOFF_CHARGE
+                : 0;
 
         const {
             normalizedItems,
@@ -911,6 +979,10 @@ export async function guestCheckoutController(request, response) {
             pickup_location,
             customer_location: customerLocation || undefined,
             deliveryInstructions: request.body.deliveryInstructions || '',
+            sacco_operator: saccoOperator ? saccoOperator._id : undefined,
+            sacco_operator_name: saccoOperator ? saccoOperator.name : '',
+            sacco_destination_town: fulfillment_type === 'sacco_pickup' ? saccoDestinationTown : '',
+            payment_status: fulfillment_type === 'sacco_pickup' ? 'PAY AT SACCO TERMINAL' : '',
             product_details: {
                 name: normalizedItems.map(item => item.productId?.name || item.name || 'Product').join(', '),
                 image: normalizedItems[0]?.productId?.image || []

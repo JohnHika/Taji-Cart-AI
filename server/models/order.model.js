@@ -55,7 +55,7 @@ const orderSchema = new mongoose.Schema({
     },
     fulfillment_type: {
         type: String,
-        enum: ['delivery', 'pickup'],
+        enum: ['delivery', 'pickup', 'sacco_pickup'],
         default: 'delivery'
     },
     deliveryInstructions: {
@@ -69,6 +69,22 @@ const orderSchema = new mongoose.Schema({
     pickup_instructions: {
         type: String,
         default: ""
+    },
+    // Snapshot of the chosen SACCO/coach operator for fulfillment_type
+    // 'sacco_pickup' — recorded by name (not a hard ref) since the operator
+    // list is reference data staff may edit or retire over time, and past
+    // orders should stay readable regardless.
+    sacco_operator: {
+        type: mongoose.Schema.ObjectId,
+        ref: 'saccoOperator'
+    },
+    sacco_operator_name: {
+        type: String,
+        default: ''
+    },
+    sacco_destination_town: {
+        type: String,
+        default: ''
     },
     delivery_mode: {
         type: String,

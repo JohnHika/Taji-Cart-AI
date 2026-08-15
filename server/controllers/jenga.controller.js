@@ -14,6 +14,7 @@ import CartProductModel from '../models/cartproduct.model.js';
 import UserModel from '../models/user.model.js';
 import NotificationModel from '../models/notification.model.js';
 import DeliveryZoneModel from '../models/deliveryzone.model.js';
+import SaccoOperatorModel from '../models/saccooperator.model.js';
 import { normalizeKenyanPhone, isValidAmount, amountsMatch } from '../utils/jengaValidation.js';
 import {
   DEFAULT_DELIVERY_CHARGE,
@@ -21,6 +22,7 @@ import {
   getCbdFootDeliveryStatus,
   getDeliveryModeFromPayload,
   isBikeDeliveryMode,
+  SACCO_TERMINAL_DROPOFF_CHARGE,
 } from '../utils/cbdDelivery.js';
 
 // buildValidatedOrderPricing / pricewithDiscount live in order.controller.js but
@@ -103,6 +105,8 @@ export const initiateJengaPayment = async (request, response) => {
       fulfillment_type = 'delivery',
       pickup_location,
       pickup_instructions,
+      saccoOperatorId,
+      saccoDestinationTown,
       phoneNumber,
     } = request.body;
 
@@ -123,6 +127,27 @@ export const initiateJengaPayment = async (request, response) => {
     }
     if (fulfillment_type === 'pickup' && !pickup_location) {
       return response.status(400).json({ message: 'Pickup location is required for pickup orders', error: true, success: false });
+    }
+
+    let saccoOperator = null;
+    if (fulfillment_type === 'sacco_pickup') {
+      if (!saccoOperatorId || !mongoose.Types.ObjectId.isValid(String(saccoOperatorId)) || !saccoDestinationTown) {
+        return response.status(400).json({
+          message: 'Please select a SACCO/coach operator and destination town',
+          error: true,
+          success: false,
+          code: 'INVALID_SACCO_OPERATOR',
+        });
+      }
+      saccoOperator = await SaccoOperatorModel.findOne({ _id: saccoOperatorId, isActive: true });
+      if (!saccoOperator) {
+        return response.status(400).json({
+          message: 'Selected operator is no longer available. Please pick another.',
+          error: true,
+          success: false,
+          code: 'INVALID_SACCO_OPERATOR',
+        });
+      }
     }
 
     if (fulfillment_type === 'delivery' && deliveryMode === 'foot') {
@@ -163,7 +188,9 @@ export const initiateJengaPayment = async (request, response) => {
     // order-creation paths in order.controller.js.
     const deliveryCharge = fulfillment_type === 'delivery'
       ? (deliveryZone ? deliveryZone.fare : DEFAULT_DELIVERY_CHARGE)
-      : 0;
+      : fulfillment_type === 'sacco_pickup'
+        ? SACCO_TERMINAL_DROPOFF_CHARGE
+        : 0;
     const totalAmt = roundMoney(subTotalAmt + deliveryCharge);
 
     if (!isValidAmount(totalAmt)) {
@@ -192,6 +219,9 @@ export const initiateJengaPayment = async (request, response) => {
       deliveryInstructions: request.body.deliveryInstructions || '',
       pickup_location: pickup_location || '',
       pickup_instructions: pickup_instructions || '',
+      sacco_operator: saccoOperator ? saccoOperator._id : undefined,
+      sacco_operator_name: saccoOperator ? saccoOperator.name : '',
+      sacco_destination_town: fulfillment_type === 'sacco_pickup' ? saccoDestinationTown : '',
       subTotalAmt,
       deliveryCharge,
       totalAmt,
