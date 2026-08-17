@@ -239,20 +239,20 @@ const SalesCounter = () => {
   };
 
   const filteredProducts = useMemo(() => {
-    const s = search.trim().toLowerCase();
+    // Split into words so "hair extension" matches a product named
+    // "Extension Hair 20 inch" — every word must appear somewhere in the
+    // searchable text, in any order, instead of requiring one exact phrase.
+    const searchWords = search.trim().toLowerCase().split(/\s+/).filter(Boolean);
     return products.filter((p) => {
       if (!p.price || p.price <= 0) return false; // skip products without a price
-      const matchesSearch =
-        !s ||
-        p.name?.toLowerCase().includes(s) ||
-        p.sku?.toLowerCase().includes(s) ||
-        p.barcode?.toLowerCase().includes(s);
-      const catId =
-        typeof p.category === 'string'
-          ? p.category
-          : p.category?._id || p.categoryId;
+      const haystack = [p.name, p.sku, p.barcode].filter(Boolean).join(' ').toLowerCase();
+      const matchesSearch = searchWords.every((word) => haystack.includes(word));
+
+      const categoryIds = Array.isArray(p.category)
+        ? p.category.map((c) => (typeof c === 'string' ? c : c?._id)).filter(Boolean)
+        : [typeof p.category === 'string' ? p.category : p.category?._id, p.categoryId].filter(Boolean);
       const matchesCategory =
-        selectedCategory === 'all' || catId === selectedCategory;
+        selectedCategory === 'all' || categoryIds.includes(selectedCategory);
       return matchesSearch && matchesCategory;
     });
   }, [products, search, selectedCategory]);
