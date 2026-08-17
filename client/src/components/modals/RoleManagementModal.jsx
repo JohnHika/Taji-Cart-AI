@@ -9,6 +9,82 @@ const VEHICLE_TYPES = [
   ['on_foot', 'On foot (CBD)'],
 ];
 
+const STAFF_PERMISSION_GROUPS = [
+  {
+    label: 'Sales counter',
+    permissions: [
+      ['pos.open_counter', 'Open counter and create sales'], ['pos.view_own_sales', 'View own sales'],
+      ['pos.view_all_sales', 'View all sales'], ['pos.view_analytics', 'View sales analytics'],
+      ['receipt.reprint', 'View and reprint receipts'], ['sales.export', 'Export sales'],
+    ],
+  },
+  {
+    label: 'Customers & loyalty',
+    permissions: [
+      ['customer.search', 'Search customers'], ['customer.view_contact', 'View customer contact details'],
+      ['loyalty.scan', 'Scan loyalty cards'],
+    ],
+  },
+  {
+    label: 'Pickup',
+    permissions: [
+      ['pickup.view_queue', 'View pickup queue'], ['pickup.verify_code', 'Verify pickup codes'],
+      ['pickup.complete', 'Complete pickup handovers'], ['pickup.view_history', 'View pickup history'],
+    ],
+  },
+  {
+    label: 'Delivery',
+    permissions: [
+      ['delivery.view', 'View delivery operations'], ['delivery.dispatch', 'Dispatch orders'],
+      ['delivery.assign_driver', 'Assign drivers'], ['delivery.manage_drivers', 'Manage driver availability'],
+      ['delivery.view_history', 'View delivery history'], ['delivery.export', 'Export deliveries'],
+    ],
+  },
+  {
+    label: 'Orders',
+    permissions: [
+      ['order.view', 'View operational orders'], ['order.update_status', 'Update order status'],
+    ],
+  },
+];
+
+// One-click starting points for common staff jobs, so an admin doesn't have
+// to know what each of the 20 checkboxes means to set someone up correctly.
+// Selecting a preset replaces the current tick list; individual boxes can
+// still be adjusted afterwards.
+const PERMISSION_PRESETS = [
+  {
+    id: 'cashier',
+    label: 'Cashier',
+    description: 'Run the sales counter: ring up sales, view their own sales, reprint receipts, scan loyalty cards.',
+    permissions: ['pos.open_counter', 'pos.view_own_sales', 'receipt.reprint', 'loyalty.scan', 'customer.search'],
+  },
+  {
+    id: 'front_desk',
+    label: 'Front desk / pickup',
+    description: 'Handle customer pickups: view the pickup queue, verify codes, complete handovers, look up customers.',
+    permissions: ['pickup.view_queue', 'pickup.verify_code', 'pickup.complete', 'pickup.view_history', 'customer.search', 'customer.view_contact'],
+  },
+  {
+    id: 'delivery_coordinator',
+    label: 'Delivery coordinator',
+    description: 'Manage deliveries: dispatch orders, assign drivers, track delivery history and operational orders.',
+    permissions: ['delivery.view', 'delivery.dispatch', 'delivery.assign_driver', 'delivery.manage_drivers', 'delivery.view_history', 'order.view', 'order.update_status'],
+  },
+  {
+    id: 'supervisor',
+    label: 'Supervisor',
+    description: 'Everything a cashier and delivery coordinator can do, plus sales analytics, viewing all sales, and exports.',
+    permissions: [
+      'pos.open_counter', 'pos.view_all_sales', 'pos.view_analytics', 'receipt.reprint', 'sales.export',
+      'customer.search', 'customer.view_contact', 'loyalty.scan',
+      'pickup.view_queue', 'pickup.verify_code', 'pickup.complete', 'pickup.view_history',
+      'delivery.view', 'delivery.dispatch', 'delivery.assign_driver', 'delivery.manage_drivers', 'delivery.view_history', 'delivery.export',
+      'order.view', 'order.update_status',
+    ],
+  },
+];
+
 const RoleManagementModal = ({ isOpen, onClose, user, onSave }) => {
   const [role, setRole] = useState('customer');
   const [extraPermissions, setExtraPermissions] = useState([]);
@@ -147,29 +223,46 @@ const RoleManagementModal = ({ isOpen, onClose, user, onSave }) => {
           {role === 'staff' && (
             <div className="mb-6 border-t border-brown-100 dark:border-dm-border pt-4">
               <p className="text-sm font-medium text-charcoal dark:text-white mb-2">Additional permissions</p>
-              <p className="text-xs text-brown-500 dark:text-white/50 mb-3">All staff keep their standard access. Tick only the extra actions this person may perform.</p>
-              {[
-                ['pos.open_counter', 'Open counter and create sales'], ['pos.view_own_sales', 'View own sales'],
-                ['pos.view_all_sales', 'View all sales'], ['pos.view_analytics', 'View sales analytics'],
-                ['receipt.reprint', 'View and reprint receipts'], ['customer.search', 'Search customers'],
-                ['customer.view_contact', 'View customer contact details'], ['loyalty.scan', 'Scan loyalty cards'],
-                ['pickup.view_queue', 'View pickup queue'], ['pickup.verify_code', 'Verify pickup codes'],
-                ['pickup.complete', 'Complete pickup handovers'], ['pickup.view_history', 'View pickup history'],
-                ['delivery.view', 'View delivery operations'], ['delivery.dispatch', 'Dispatch orders'],
-                ['delivery.assign_driver', 'Assign drivers'], ['delivery.manage_drivers', 'Manage driver availability'],
-                ['delivery.view_history', 'View delivery history'], ['order.view', 'View operational orders'],
-                ['order.update_status', 'Update order status'], ['sales.export', 'Export sales'], ['delivery.export', 'Export deliveries']
-              ].map(([permission, label]) => (
-                <label key={permission} className="flex items-center gap-2 py-1.5 text-sm text-charcoal dark:text-white/70">
-                  <input
-                    type="checkbox"
-                    checked={extraPermissions.includes(permission)}
-                    onChange={(event) => setExtraPermissions((current) => event.target.checked
-                      ? [...new Set([...current, permission])]
-                      : current.filter((value) => value !== permission))}
-                  />
-                  {label}
-                </label>
+              <p className="text-xs text-brown-500 dark:text-white/50 mb-3">All staff keep their standard access. Not sure what to pick? Choose a starting point below, then fine-tune with the checkboxes if needed.</p>
+
+              <div className="mb-4 grid grid-cols-2 gap-2">
+                {PERMISSION_PRESETS.map((preset) => (
+                  <button
+                    key={preset.id}
+                    type="button"
+                    title={preset.description}
+                    onClick={() => setExtraPermissions(preset.permissions)}
+                    className="text-left px-3 py-2 rounded-lg border border-brown-200 dark:border-dm-border hover:bg-ivory dark:hover:bg-dm-card-2 transition-colors"
+                  >
+                    <span className="block text-sm font-medium text-charcoal dark:text-white">{preset.label}</span>
+                    <span className="block text-xs text-brown-500 dark:text-white/50 mt-0.5">{preset.description}</span>
+                  </button>
+                ))}
+              </div>
+              <button
+                type="button"
+                onClick={() => setExtraPermissions([])}
+                className="mb-4 text-xs text-brown-500 dark:text-white/50 underline hover:text-charcoal dark:hover:text-white"
+              >
+                Clear all permissions
+              </button>
+
+              {STAFF_PERMISSION_GROUPS.map((group) => (
+                <div key={group.label} className="mb-3">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-brown-400 dark:text-white/40 mb-1">{group.label}</p>
+                  {group.permissions.map(([permission, label]) => (
+                    <label key={permission} className="flex items-center gap-2 py-1.5 text-sm text-charcoal dark:text-white/70">
+                      <input
+                        type="checkbox"
+                        checked={extraPermissions.includes(permission)}
+                        onChange={(event) => setExtraPermissions((current) => event.target.checked
+                          ? [...new Set([...current, permission])]
+                          : current.filter((value) => value !== permission))}
+                      />
+                      {label}
+                    </label>
+                  ))}
+                </div>
               ))}
             </div>
           )}

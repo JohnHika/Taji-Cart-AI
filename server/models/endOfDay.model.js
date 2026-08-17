@@ -29,6 +29,27 @@ const endOfDaySchema = new mongoose.Schema({
       total: { type: Number, default: 0 },
       cashTotal: { type: Number, default: 0 },
       count: { type: Number, default: 0 }
+    }],
+    // Per-cashier rollup so the report can conclude with "who sold what".
+    cashierBreakdown: [{
+      cashier: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+      cashierName: { type: String, default: '' },
+      saleCount: { type: Number, default: 0 },
+      total: { type: Number, default: 0 }
+    }],
+    // Point-in-time snapshot of every sale included in this close, frozen at
+    // close time (not re-queried later) so the report stays stable even if a
+    // sale is later voided or a proof image expires. proofImageUrls carries
+    // any Equity payment-proof URLs for that sale, embedded as thumbnails in
+    // the PDF.
+    transactions: [{
+      saleNumber: { type: String, required: true },
+      saleDate: { type: Date, required: true },
+      cashierName: { type: String, default: '' },
+      itemsSummary: { type: String, default: '' },
+      paymentMethod: { type: String, default: '' },
+      total: { type: Number, default: 0 },
+      proofImageUrls: [{ type: String }]
     }]
   },
   isReset: {
@@ -47,6 +68,17 @@ const endOfDaySchema = new mongoose.Schema({
   },
   resetReason: {
     type: String
+  },
+  // Equity payment-proof images referenced in this close's transaction
+  // snapshot are deleted from Cloudinary once this passes (set at close
+  // time to closedAt + 3.5 days). Days that are never closed never get this
+  // set, so their proofs are never auto-deleted.
+  proofDeletionDueAt: {
+    type: Date
+  },
+  proofImagesDeleted: {
+    type: Boolean,
+    default: false
   }
 }, {
   timestamps: true
@@ -59,6 +91,9 @@ endOfDaySchema.index(
   { date: 1, branch: 1 },
   { unique: true, partialFilterExpression: { isReset: false } }
 );
+
+// Lets the cleanup sweep efficiently find due, not-yet-processed closes.
+endOfDaySchema.index({ proofDeletionDueAt: 1, proofImagesDeleted: 1 });
 
 const EndOfDay = mongoose.model('endOfDay', endOfDaySchema);
 

@@ -276,7 +276,7 @@ const POSDashboard = () => {
       } else {
         toast('This day has already been closed — downloading the existing report.', { icon: 'ℹ️' });
       }
-      downloadEndOfDayReport(eod);
+      await downloadEndOfDayReport(eod);
     } catch (error) {
       AxiosToastError(error);
     } finally {

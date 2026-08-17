@@ -6,6 +6,8 @@ import EndOfDay from '../models/endOfDay.model.js';
 import auth from '../middleware/auth.js';
 import Staff from '../middleware/Staff.js';
 import { requireStaffPermission } from '../middleware/requireStaffPermission.js';
+import { hasStaffPermission } from '../utils/staffPermissions.js';
+import { sendCsv } from '../utils/csv.js';
 import axios from 'axios';
 import { getAuthToken, MPESA_STK_URL } from '../config/mpesa.js';
 import MpesaPayment from '../models/mpesaPayment.model.js';
@@ -134,7 +136,7 @@ router.post('/mpesa/stk-push', auth, Staff, requireStaffPermission('pos.open_cou
 });
 
 // Get all sales for staff
-router.get('/sales', auth, Staff, requireStaffPermission('pos.view_all_sales'), async (req, res) => {
+router.get('/sales', auth, Staff, requireStaffPermission(['pos.view_own_sales', 'pos.view_all_sales']), async (req, res) => {
   try {
     const { startDate, endDate, cashier } = req.query;
     const page = Math.max(1, parseInt(req.query.page || 1, 10));
@@ -158,10 +160,12 @@ router.get('/sales', auth, Staff, requireStaffPermission('pos.view_all_sales'), 
       filter.cashier = cashier;
     }
     
-    // If user is staff (not admin), only show their sales
+    // Staff who only hold pos.view_own_sales (not pos.view_all_sales) are
+    // scoped to their own sales regardless of the isAdmin/role check below.
     const userRole = (req.user && req.user.role) || req.userRole || 'user';
     const isAdmin = (req.user && req.user.isAdmin === true) || req.isAdmin === true || userRole === 'admin';
-    if (userRole === 'staff' && !isAdmin && req.user && req.user._id) {
+    const canViewAll = isAdmin || hasStaffPermission(req.user, 'pos.view_all_sales');
+    if (!canViewAll && req.user && req.user._id) {
       filter.cashier = req.user._id;
     }
     
@@ -189,6 +193,58 @@ router.get('/sales', auth, Staff, requireStaffPermission('pos.view_all_sales'), 
     });
   } catch (error) {
     console.error('GET /api/pos/sales error:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+});
+
+// CSV export of sales for staff (gated by sales.export)
+router.get('/sales/export', auth, Staff, requireStaffPermission('sales.export'), async (req, res) => {
+  try {
+    const { startDate, endDate, cashier } = req.query;
+
+    let filter = {};
+    if (startDate || endDate) {
+      filter.saleDate = {};
+      if (startDate) filter.saleDate.$gte = new Date(startDate);
+      if (endDate) filter.saleDate.$lte = new Date(endDate);
+    }
+    if (cashier) {
+      filter.cashier = cashier;
+    }
+
+    const userRole = (req.user && req.user.role) || req.userRole || 'user';
+    const isAdmin = (req.user && req.user.isAdmin === true) || req.isAdmin === true || userRole === 'admin';
+    const canViewAll = isAdmin || hasStaffPermission(req.user, 'pos.view_all_sales');
+    if (!canViewAll && req.user && req.user._id) {
+      filter.cashier = req.user._id;
+    }
+
+    const sales = await Sale.find(filter)
+      .populate('customer', 'name email')
+      .populate('cashier', 'name')
+      .sort({ saleDate: -1 })
+      .limit(5000)
+      .select('saleNumber saleDate customer customerName total paymentMethod cashier cashierName branch isVoided fulfillment_type');
+
+    const headers = ['Sale #', 'Date', 'Customer', 'Cashier', 'Branch', 'Fulfillment', 'Payment', 'Total', 'Voided'];
+    const rows = sales.map((sale) => [
+      sale.saleNumber,
+      sale.saleDate instanceof Date ? sale.saleDate.toISOString() : sale.saleDate,
+      sale.customer?.name || sale.customerName || 'Walk-in',
+      sale.cashier?.name || sale.cashierName || '',
+      sale.branch || '',
+      sale.fulfillment_type || '',
+      sale.paymentMethod || '',
+      sale.total,
+      sale.isVoided ? 'Yes' : 'No'
+    ]);
+
+    return sendCsv(res, 'sales.csv', headers, rows);
+  } catch (error) {
+    console.error('GET /api/pos/sales/export error:', error);
     res.status(500).json({
       success: false,
       message: error.message
@@ -1069,6 +1125,41 @@ router.post('/eod/close', auth, Staff, requireStaffPermission('pos.open_counter'
       { $project: { _id: 0, hour: '$_id', total: 1, cashTotal: 1, count: 1 } }
     ]);
 
+    const cashierBreakdown = await Sale.aggregate([
+      { $match: filter },
+      {
+        $group: {
+          _id: '$cashier',
+          cashierName: { $first: '$cashierName' },
+          saleCount: { $sum: 1 },
+          total: { $sum: '$total' }
+        }
+      },
+      { $sort: { total: -1 } },
+      { $project: { _id: 0, cashier: '$_id', cashierName: 1, saleCount: 1, total: 1 } }
+    ]);
+
+    // Full per-sale snapshot, frozen at close time, for the detailed report —
+    // includes each Equity/Split payment's proof image so it can be embedded
+    // as a thumbnail next to the transaction row.
+    const sales = await Sale.find(filter).sort({ saleDate: 1 }).lean();
+    const transactions = sales.map((sale) => ({
+      saleNumber: sale.saleNumber,
+      saleDate: sale.saleDate,
+      cashierName: sale.cashierName || '',
+      itemsSummary: (sale.items || [])
+        .map((item) => `${item.quantity}x ${item.name}`)
+        .join(', '),
+      paymentMethod: sale.paymentMethod,
+      total: sale.total,
+      proofImageUrls: (sale.payments || [])
+        .map((payment) => payment.proofImageUrl)
+        .filter(Boolean)
+    }));
+
+    const PROOF_RETENTION_DAYS = 3.5;
+    const proofDeletionDueAt = new Date(Date.now() + PROOF_RETENTION_DAYS * 24 * 60 * 60 * 1000);
+
     const eod = await EndOfDay.create({
       date,
       branch,
@@ -1080,8 +1171,11 @@ router.post('/eod/close', auth, Staff, requireStaffPermission('pos.open_counter'
         equitySales: totals?.equitySales || 0,
         splitSales: totals?.splitSales || 0,
         transactionCount: totals?.transactionCount || 0,
-        hourlyBreakdown
-      }
+        hourlyBreakdown,
+        cashierBreakdown,
+        transactions
+      },
+      proofDeletionDueAt
     });
 
     res.status(201).json({ success: true, data: eod });

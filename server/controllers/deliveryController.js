@@ -7,6 +7,7 @@ import User from '../models/user.model.js';
 import { emitNewDeliveryAssigned, emitOrderStatusUpdated, getIO } from '../socket/socket.js';
 import { nawiriBrand } from '../utils/brand.js';
 import { isBikeDeliveryMode, isFootDeliveryMode } from '../utils/cbdDelivery.js';
+import { sendCsv } from '../utils/csv.js';
 
 // Resolves the driver-facing delivery mode label, including zone info for
 // bike (zone-fare) deliveries so riders know which flat fare applies.
@@ -1132,12 +1133,8 @@ export const exportDeliveryHistory = async (req, res) => {
         amount: order.totalAmt
     }));
     
-    const csvEscape = (value) => {
-      const text = value == null ? '' : String(value);
-      return /[",\r\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
-    };
     const headers = ['Order ID', 'Created At', 'Delivered At', 'Customer Name', 'Customer Phone', 'Delivery Address', 'Status', 'Amount'];
-    const csv = [headers, ...exportData.map((row) => [
+    const rows = exportData.map((row) => [
       row.orderId,
       row.createdAt instanceof Date ? row.createdAt.toISOString() : row.createdAt,
       row.deliveredAt instanceof Date ? row.deliveredAt.toISOString() : row.deliveredAt,
@@ -1146,13 +1143,9 @@ export const exportDeliveryHistory = async (req, res) => {
       row.deliveryAddress,
       row.status,
       row.amount
-    ])]
-      .map((row) => row.map(csvEscape).join(','))
-      .join('\r\n');
+    ]);
 
-    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
-    res.setHeader('Content-Disposition', 'attachment; filename="delivery-history.csv"');
-    return res.status(200).send(`\uFEFF${csv}`);
+    return sendCsv(res, 'delivery-history.csv', headers, rows);
   } catch (error) {
     console.error('Error exporting delivery history:', error);
     return res.status(500).json({
@@ -2318,6 +2311,58 @@ export const getCompletedDeliveriesForStaff = async (req, res) => {
     return res.status(500).json({
       success: false,
       message: 'Error fetching completed deliveries',
+      error: error.message
+    });
+  }
+};
+
+// CSV export of completed deliveries for staff/admin (gated by delivery.export)
+export const exportCompletedDeliveriesForStaff = async (req, res) => {
+  try {
+    const { startDate, endDate } = req.query;
+    const query = buildDeliveryQuery({
+      status: 'delivered'
+    });
+
+    if (startDate || endDate) {
+      query.deliveredAt = {};
+      if (startDate) query.deliveredAt.$gte = new Date(startDate);
+      if (endDate) query.deliveredAt.$lte = new Date(endDate);
+    }
+
+    const orders = await Order.find(query)
+      .populate('userId', 'name email mobile phone')
+      .populate('delivery_address')
+      .populate({
+        path: 'deliveryPersonnel',
+        populate: {
+          path: 'userId',
+          select: 'name email mobile phone'
+        }
+      })
+      .sort({ deliveredAt: -1, updatedAt: -1 })
+      .limit(1000);
+
+    const formatted = collapseOrderLines(orders).map(formatStaffDeliveryOrder);
+
+    const headers = ['Order ID', 'Status', 'Customer Name', 'Customer Phone', 'Delivery Address', 'Driver', 'Total', 'Delivered At'];
+    const rows = formatted.map((order) => [
+      order.orderId,
+      order.status,
+      order.customer?.name || '',
+      order.customer?.phone || '',
+      [order.deliveryAddress?.street, order.deliveryAddress?.city].filter(Boolean).join(', '),
+      order.driver?.name || '',
+      order.total,
+      order.deliveredAt instanceof Date ? order.deliveredAt.toISOString() : order.deliveredAt
+    ]);
+
+    return sendCsv(res, 'completed-deliveries.csv', headers, rows);
+  } catch (error) {
+    console.error('Error exporting completed deliveries for staff:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Error exporting completed deliveries',
       error: error.message
     });
   }

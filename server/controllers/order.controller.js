@@ -1349,14 +1349,8 @@ const updateLoyaltyPoints = async (userId, orderAmount, orderId) => {
  */
 export async function getAllOrdersAdmin(request, response) {
   try {
-    // This endpoint should only be accessible by admins
-    if (!request.isAdmin && request.userRole !== 'admin') {
-      console.log(`Admin orders access denied: isAdmin=${request.isAdmin}, userRole=${request.userRole}`);
-      return response.status(403).json({
-        message: "Access denied. Admin privileges required.",
-        success: false
-      });
-    }
+    // Access control (admin, or staff granted order.view) is enforced by the
+    // route middleware (adminOrStaff + requireStaffPermission) before this runs.
 
     // Handle filtering by fulfillment type
     const { fulfillment_type, status } = request.query;
@@ -1448,7 +1442,7 @@ export async function getAllOrdersAdmin(request, response) {
 }
 
 /**
- * Update order status (admin only)
+ * Update order status (admin, or staff granted order.update_status)
  */
 export async function updateOrderStatus(request, response) {
   try {

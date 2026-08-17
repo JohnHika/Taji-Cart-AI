@@ -6,6 +6,7 @@ import mongoose from 'mongoose';
 import app from './app.js';
 import { startKeepalive } from './keepalive.js';
 import { initializeSocket } from './socket/socket.js';
+import { startProofImageCleanupSchedule } from './utils/proofImageCleanup.js';
 
 dotenv.config();
 
@@ -16,6 +17,17 @@ initializeSocket(server);
 
 let connectionCheckInterval;
 let retrying = false;
+let proofCleanupScheduleStarted = false;
+
+// Guard against starting the sweep before Mongoose has actually finished
+// connecting — server.listen()'s callback can fire before the separate
+// mongoose.connect() call resolves, and the interval-based DB connection
+// check below only starts polling once listen() has already fired.
+mongoose.connection.on('connected', () => {
+    if (proofCleanupScheduleStarted) return;
+    proofCleanupScheduleStarted = true;
+    startProofImageCleanupSchedule();
+});
 
 server.listen(PORT, () => {
     retrying = false;
