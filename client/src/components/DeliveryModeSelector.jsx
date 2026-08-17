@@ -16,7 +16,11 @@ import { DisplayPriceInShillings } from '../utils/DisplayPriceInShillings';
 // onFeeChange(fee) — called whenever the computed preview fee changes, so the
 //   parent can fold it into its own totals. This is a PREVIEW ONLY; the
 //   server always recomputes the authoritative charge on submit.
-const DeliveryModeSelector = ({ value, onChange, onFeeChange }) => {
+// onDetailsChange({ zoneName, saccoOperatorName }) — optional; called with the
+//   resolved human-readable names whenever the selected zone/operator
+//   changes, for callers that need to display or transmit the name (not just
+//   the id) without a server round-trip, e.g. the WhatsApp order message.
+const DeliveryModeSelector = ({ value, onChange, onFeeChange, onDetailsChange }) => {
   const [zones, setZones] = useState([]);
   const [zonesLoading, setZonesLoading] = useState(false);
   const [saccoOperators, setSaccoOperators] = useState([]);
@@ -79,6 +83,13 @@ const DeliveryModeSelector = ({ value, onChange, onFeeChange }) => {
   useEffect(() => {
     onFeeChange?.(previewFee);
   }, [previewFee, onFeeChange]);
+
+  useEffect(() => {
+    onDetailsChange?.({
+      zoneName: selectedZone?.name || '',
+      saccoOperatorName: selectedSaccoOperator?.name || '',
+    });
+  }, [selectedZone, selectedSaccoOperator, onDetailsChange]);
 
   const setMode = (mode) => onChange({ ...value, mode });
 

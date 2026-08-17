@@ -8,12 +8,32 @@ export const formatWhatsAppOrderAmount = (amount) => {
   return `KSh ${amountFormatter.format(safeAmount)}`;
 };
 
+// deliveryDetails describes which delivery mode was picked via the shared
+// DeliveryModeSelector (client/src/components/DeliveryModeSelector.jsx):
+// { mode: 'standard'|'bike'|'sacco', zoneName, saccoOperatorName, saccoDestinationTown }
+const describeDeliveryMode = (deliveryDetails) => {
+  if (!deliveryDetails) return null;
+  if (deliveryDetails.mode === 'bike') {
+    return deliveryDetails.zoneName
+      ? `Bike delivery — ${deliveryDetails.zoneName} zone`
+      : 'Bike delivery — zone to be confirmed';
+  }
+  if (deliveryDetails.mode === 'sacco') {
+    const operator = deliveryDetails.saccoOperatorName || 'operator to be confirmed';
+    const town = deliveryDetails.saccoDestinationTown || 'destination to be confirmed';
+    return `SACCO/bus parcel — ${operator} to ${town}`;
+  }
+  return 'Standard delivery';
+};
+
 export const buildWhatsAppOrderMessage = ({
   items = [],
   customerName = '',
   customerPhone = '',
   fulfillmentMethod = 'pickup',
   deliveryLocation = '',
+  deliveryDetails = null,
+  deliveryFee = 0,
   note = '',
 } = {}) => {
   if (!Array.isArray(items) || items.length === 0) {
@@ -25,14 +45,13 @@ export const buildWhatsAppOrderMessage = ({
     quantity: Math.max(1, Number(item.quantity) || 1),
     price: Math.max(0, Number(item.price) || 0),
   }));
-  const orderEstimate = normalizedItems.reduce(
+  const itemsTotal = normalizedItems.reduce(
     (sum, item) => sum + item.price * item.quantity,
     0
   );
   const isDelivery = fulfillmentMethod === 'delivery';
-  const deliverySummary = isDelivery
-    ? (deliveryLocation.trim() || 'Delivery location to be confirmed')
-    : 'Pickup at store';
+  const resolvedDeliveryFee = isDelivery ? Math.max(0, Number(deliveryFee) || 0) : 0;
+  const orderEstimate = itemsTotal + resolvedDeliveryFee;
 
   const itemLines = normalizedItems.flatMap((item, index) => [
     `${index + 1}. ${item.name || 'Product'}`,
@@ -43,16 +62,25 @@ export const buildWhatsAppOrderMessage = ({
     '',
   ]);
 
+  const deliveryLines = isDelivery
+    ? [
+        `Delivery mode: ${describeDeliveryMode(deliveryDetails) || 'Standard delivery'}`,
+        `Delivery fee: ${formatWhatsAppOrderAmount(resolvedDeliveryFee)}`,
+        `Delivery location: ${deliveryLocation.trim() || 'To be confirmed'}`,
+      ]
+    : ['Delivery: Pickup at store'];
+
   return [
     'Hello Nawiri Hair,',
     '',
     'I would like to place this order:',
     '',
     ...itemLines,
+    `Items subtotal: ${formatWhatsAppOrderAmount(itemsTotal)}`,
+    ...deliveryLines,
     `Order estimate: ${formatWhatsAppOrderAmount(orderEstimate)}`,
     `Customer: ${customerName.trim() || 'Walk-in customer'}`,
     `Phone: ${customerPhone.trim() || 'Not provided'}`,
-    `Delivery: ${deliverySummary}`,
     ...(note.trim() ? [`Notes: ${note.trim()}`] : []),
     '',
     'Please confirm the order, payment instructions, and delivery details. Thank you.',

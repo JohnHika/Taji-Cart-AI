@@ -7,6 +7,7 @@ import { nawiriBrand } from '../config/brand';
 import { useGlobalContext } from '../provider/GlobalProvider';
 import { useWhatsAppOrder } from '../provider/WhatsAppOrderProvider';
 import { shouldRenderMobileCartSummary } from '../utils/mobileShell';
+import DeliveryModeSelector from './DeliveryModeSelector';
 import {
   buildWhatsAppOrderMessage,
   createWhatsAppOrderUrl,
@@ -30,6 +31,9 @@ const WhatsAppOrderWidget = () => {
   const [customerPhone, setCustomerPhone] = useState('');
   const [fulfillmentMethod, setFulfillmentMethod] = useState('pickup');
   const [deliveryLocation, setDeliveryLocation] = useState('');
+  const [deliveryDetails, setDeliveryDetails] = useState({ mode: 'standard', zoneId: '', saccoOperatorId: '', saccoDestinationTown: '' });
+  const [deliveryFee, setDeliveryFee] = useState(0);
+  const [resolvedDeliveryNames, setResolvedDeliveryNames] = useState({ zoneName: '', saccoOperatorName: '' });
   const [note, setNote] = useState('');
   const cartSummaryVisible = shouldRenderMobileCartSummary({
     isAuthenticated: Boolean(user?._id),
@@ -37,10 +41,11 @@ const WhatsAppOrderWidget = () => {
     pathname: location.pathname,
   });
 
-  const orderTotal = useMemo(
+  const itemsTotal = useMemo(
     () => items.reduce((sum, item) => sum + item.price * item.quantity, 0),
     [items]
   );
+  const orderTotal = fulfillmentMethod === 'delivery' ? itemsTotal + deliveryFee : itemsTotal;
 
   useEffect(() => {
     if (isOpen && items.length === 0) {
@@ -53,9 +58,19 @@ const WhatsAppOrderWidget = () => {
       toast.error('Enter your name and phone number.');
       return;
     }
-    if (fulfillmentMethod === 'delivery' && !deliveryLocation.trim()) {
-      toast.error('Enter your delivery location.');
-      return;
+    if (fulfillmentMethod === 'delivery') {
+      if (!deliveryLocation.trim()) {
+        toast.error('Enter your delivery location.');
+        return;
+      }
+      if (deliveryDetails.mode === 'bike' && !deliveryDetails.zoneId) {
+        toast.error('Select a delivery zone.');
+        return;
+      }
+      if (deliveryDetails.mode === 'sacco' && (!deliveryDetails.saccoOperatorId || !deliveryDetails.saccoDestinationTown.trim())) {
+        toast.error('Select a SACCO/coach operator and destination town.');
+        return;
+      }
     }
 
     try {
@@ -65,6 +80,13 @@ const WhatsAppOrderWidget = () => {
         customerPhone,
         fulfillmentMethod,
         deliveryLocation,
+        deliveryDetails: {
+          mode: deliveryDetails.mode,
+          zoneName: resolvedDeliveryNames.zoneName,
+          saccoOperatorName: resolvedDeliveryNames.saccoOperatorName,
+          saccoDestinationTown: deliveryDetails.saccoDestinationTown,
+        },
+        deliveryFee,
         note,
       });
       window.open(
@@ -186,7 +208,17 @@ const WhatsAppOrderWidget = () => {
 
               <div className="rounded-xl border border-brown-100 bg-plum-50/40 p-3 dark:border-dm-border dark:bg-dm-card-2">
                 <div className="flex items-center justify-between text-sm">
-                  <span className="text-brown-600 dark:text-white/60">Order estimate ({itemCount} items)</span>
+                  <span className="text-brown-600 dark:text-white/60">Items ({itemCount})</span>
+                  <span className="font-semibold">{formatWhatsAppOrderAmount(itemsTotal)}</span>
+                </div>
+                {fulfillmentMethod === 'delivery' && (
+                  <div className="mt-1 flex items-center justify-between text-sm">
+                    <span className="text-brown-600 dark:text-white/60">Delivery fee</span>
+                    <span className="font-semibold">{formatWhatsAppOrderAmount(deliveryFee)}</span>
+                  </div>
+                )}
+                <div className="mt-1 flex items-center justify-between border-t border-brown-200 pt-1 text-sm dark:border-dm-border">
+                  <span className="font-semibold text-brown-600 dark:text-white/60">Order estimate</span>
                   <span className="font-bold text-plum-700 dark:text-gold-300">
                     {formatWhatsAppOrderAmount(orderTotal)}
                   </span>
@@ -236,13 +268,21 @@ const WhatsAppOrderWidget = () => {
                   </button>
                 </div>
                 {fulfillmentMethod === 'delivery' && (
-                  <textarea
-                    value={deliveryLocation}
-                    onChange={(event) => setDeliveryLocation(event.target.value)}
-                    placeholder="Delivery location *"
-                    rows={2}
-                    className="w-full resize-none rounded-lg border border-brown-200 bg-white px-3 py-2 text-sm dark:border-dm-border dark:bg-dm-card-2"
-                  />
+                  <>
+                    <DeliveryModeSelector
+                      value={deliveryDetails}
+                      onChange={setDeliveryDetails}
+                      onFeeChange={setDeliveryFee}
+                      onDetailsChange={setResolvedDeliveryNames}
+                    />
+                    <textarea
+                      value={deliveryLocation}
+                      onChange={(event) => setDeliveryLocation(event.target.value)}
+                      placeholder="Delivery location / landmark *"
+                      rows={2}
+                      className="w-full resize-none rounded-lg border border-brown-200 bg-white px-3 py-2 text-sm dark:border-dm-border dark:bg-dm-card-2"
+                    />
+                  </>
                 )}
                 <textarea
                   value={note}
@@ -267,6 +307,11 @@ const WhatsAppOrderWidget = () => {
                 onClick={() => {
                   clearItems();
                   setIsOpen(false);
+                  setFulfillmentMethod('pickup');
+                  setDeliveryLocation('');
+                  setDeliveryDetails({ mode: 'standard', zoneId: '', saccoOperatorId: '', saccoDestinationTown: '' });
+                  setDeliveryFee(0);
+                  setResolvedDeliveryNames({ zoneName: '', saccoOperatorName: '' });
                 }}
                 className="mt-2 w-full py-2 text-sm font-semibold text-brown-500 hover:text-red-600 dark:text-white/50"
               >

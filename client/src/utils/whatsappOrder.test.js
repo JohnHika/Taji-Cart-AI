@@ -15,6 +15,8 @@ test('builds a multi-item WhatsApp purchase message with customer and delivery d
     customerPhone: '0700000000',
     fulfillmentMethod: 'delivery',
     deliveryLocation: 'Westlands, Nairobi',
+    deliveryDetails: { mode: 'bike', zoneName: 'Westlands' },
+    deliveryFee: 300,
     note: 'Please pack #4.',
   });
 
@@ -22,9 +24,12 @@ test('builds a multi-item WhatsApp purchase message with customer and delivery d
   assert.match(message, /1\. PASSION TWIST 24INCH - #4/);
   assert.match(message, /Product code: PT24-4/);
   assert.match(message, /Qty: 2/);
-  assert.match(message, /Order estimate: KSh 2,100\.00/);
+  assert.match(message, /Items subtotal: KSh 2,100\.00/);
+  assert.match(message, /Delivery mode: Bike delivery — Westlands zone/);
+  assert.match(message, /Delivery fee: KSh 300\.00/);
+  assert.match(message, /Delivery location: Westlands, Nairobi/);
+  assert.match(message, /Order estimate: KSh 2,400\.00/);
   assert.match(message, /Customer: Amina/);
-  assert.match(message, /Delivery: Westlands, Nairobi/);
   assert.match(message, /Notes: Please pack #4\./);
 });
 
