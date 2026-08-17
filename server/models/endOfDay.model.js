@@ -50,6 +50,21 @@ const endOfDaySchema = new mongoose.Schema({
       paymentMethod: { type: String, default: '' },
       total: { type: Number, default: 0 },
       proofImageUrls: [{ type: String }]
+    }],
+    // Every return/exchange requested on this trading day, whatever its
+    // current status — so a customer bringing hair back is visible in the
+    // report even if it's still "awaiting hair" or gets completed later.
+    exchangeCount: { type: Number, default: 0 },
+    exchanges: [{
+      exchangeNumber: { type: String, required: true },
+      requestedAt: { type: Date, required: true },
+      sourceNumber: { type: String, default: '' },
+      customerName: { type: String, default: '' },
+      returnedItemSummary: { type: String, default: '' },
+      replacementItemSummary: { type: String, default: '' },
+      priceDifference: { type: Number, default: 0 },
+      status: { type: String, default: '' },
+      requestedByName: { type: String, default: '' }
     }]
   },
   isReset: {

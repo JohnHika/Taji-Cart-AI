@@ -4,6 +4,7 @@ import User from '../models/user.model.js';
 import Product from '../models/product.model.js';
 import EndOfDay from '../models/endOfDay.model.js';
 import HeldSale from '../models/heldSale.model.js';
+import Exchange from '../models/exchange.model.js';
 import auth from '../middleware/auth.js';
 import Staff from '../middleware/Staff.js';
 import { admin } from '../middleware/Admin.js';
@@ -1247,6 +1248,26 @@ router.post('/eod/close', auth, Staff, requireStaffPermission('pos.open_counter'
         .filter(Boolean)
     }));
 
+    // Every return/exchange requested this trading day, whatever it's since
+    // moved on to (still awaiting hair, completed, even cancelled) — a
+    // customer bringing hair back is real activity for the day, not just
+    // completed swaps.
+    const dayExchanges = await Exchange.find({
+      branch,
+      createdAt: { $gte: startOfDay, $lte: endOfDay }
+    }).sort({ createdAt: 1 }).lean();
+    const exchanges = dayExchanges.map((ex) => ({
+      exchangeNumber: ex.exchangeNumber,
+      requestedAt: ex.createdAt,
+      sourceNumber: ex.sourceNumber,
+      customerName: ex.customerName || '',
+      returnedItemSummary: `${ex.returnedItem.quantity}x ${ex.returnedItem.name}`,
+      replacementItemSummary: `${ex.replacementItem.quantity}x ${ex.replacementItem.name}`,
+      priceDifference: ex.priceDifference,
+      status: ex.status,
+      requestedByName: ex.requestedByName || ''
+    }));
+
     const PROOF_RETENTION_DAYS = 3.5;
     const proofDeletionDueAt = new Date(Date.now() + PROOF_RETENTION_DAYS * 24 * 60 * 60 * 1000);
 
@@ -1263,7 +1284,9 @@ router.post('/eod/close', auth, Staff, requireStaffPermission('pos.open_counter'
         transactionCount: totals?.transactionCount || 0,
         hourlyBreakdown,
         cashierBreakdown,
-        transactions
+        transactions,
+        exchangeCount: exchanges.length,
+        exchanges
       },
       proofDeletionDueAt
     });

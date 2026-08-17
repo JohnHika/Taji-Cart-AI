@@ -30,6 +30,14 @@ const paymentMethodLabel = (method) => {
   return method || 'N/A';
 };
 
+const exchangeStatusLabel = (status) => {
+  if (status === 'requested') return 'Awaiting hair';
+  if (status === 'hair_received') return 'Ready to complete';
+  if (status === 'completed') return 'Completed';
+  if (status === 'cancelled') return 'Cancelled';
+  return status || 'Unknown';
+};
+
 // Fetches a proof image and converts it to a JPEG data URL jsPDF can embed.
 // Draws through a canvas so any source format (png/webp/jpg) normalizes to
 // one jsPDF handles reliably. Returns null on any failure (missing image,
@@ -66,7 +74,9 @@ const fetchImageAsDataUrl = (url) =>
 //     totalSales, cashSales, equitySales, splitSales, transactionCount,
 //     hourlyBreakdown: [{ hour, total, cashTotal, count }],
 //     cashierBreakdown: [{ cashierName, saleCount, total }],
-//     transactions: [{ saleNumber, saleDate, cashierName, itemsSummary, paymentMethod, total, proofImageUrls }]
+//     transactions: [{ saleNumber, saleDate, cashierName, itemsSummary, paymentMethod, total, proofImageUrls }],
+//     exchangeCount, exchanges: [{ exchangeNumber, requestedAt, sourceNumber, customerName,
+//       returnedItemSummary, replacementItemSummary, priceDifference, status, requestedByName }]
 //   }
 // }
 export const downloadEndOfDayReport = async (eod) => {
@@ -239,6 +249,34 @@ export const downloadEndOfDayReport = async (eod) => {
       doc.text(`${missingProofCount} proof image(s) could not be loaded for this report.`, left, y);
       y += 10;
     }
+  }
+
+  // --- Returns & exchanges requested this trading day ---
+  const exchanges = summary.exchanges || [];
+  if (exchanges.length > 0) {
+    ensureSpace(20);
+    drawSectionTitle(`Returns & exchanges (${exchanges.length})`);
+    autoTable(doc, {
+      startY: y,
+      head: [['Exchange #', 'Ref sale/order', 'Customer', 'Returned', 'Replacement', 'Owed', 'Status', 'By']],
+      body: exchanges.map((ex) => [
+        ex.exchangeNumber,
+        ex.sourceNumber || '',
+        ex.customerName || 'N/A',
+        ex.returnedItemSummary || '',
+        ex.replacementItemSummary || '',
+        ex.priceDifference > 0 ? DisplayPriceInShillings(ex.priceDifference) : '—',
+        exchangeStatusLabel(ex.status),
+        ex.requestedByName || '',
+      ]),
+      theme: 'striped',
+      headStyles: { fillColor: PLUM, textColor: 255, fontStyle: 'bold', fontSize: 8.5 },
+      bodyStyles: { fontSize: 7.5, textColor: [26, 15, 20] },
+      alternateRowStyles: { fillColor: [250, 248, 245] },
+      columnStyles: { 5: { halign: 'right' } },
+      margin: { left, right: 18 },
+    });
+    y = (doc.lastAutoTable?.finalY || y) + 12;
   }
 
   // --- Conclusion: payment totals + grand total ---

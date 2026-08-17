@@ -400,6 +400,13 @@ const POSDashboard = () => {
               <FaShoppingCart className="mr-2" />
               Open Sales Counter
             </button>
+            <button
+              onClick={() => navigate('/dashboard/returns-exchanges')}
+              className="px-5 py-2.5 bg-white text-plum-700 border border-plum-200 rounded-pill hover:bg-plum-50 transition-colors flex items-center justify-center font-semibold shadow-sm dark:bg-dm-card dark:border-dm-border dark:text-plum-300 dark:hover:bg-dm-card-2"
+            >
+              <FaUndo className="mr-2" />
+              Returns & Exchanges
+            </button>
           </div>
         </div>
       </div>

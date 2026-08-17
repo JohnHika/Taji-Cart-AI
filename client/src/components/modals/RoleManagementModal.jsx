@@ -46,6 +46,12 @@ const STAFF_PERMISSION_GROUPS = [
       ['order.view', 'View operational orders'], ['order.update_status', 'Update order status'],
     ],
   },
+  {
+    label: 'Returns & exchanges',
+    permissions: [
+      ['exchange.manage', 'Process returns and exchanges'],
+    ],
+  },
 ];
 
 // One-click starting points for common staff jobs, so an admin doesn't have
@@ -77,13 +83,13 @@ const PERMISSION_PRESETS = [
   {
     id: 'supervisor',
     label: 'Supervisor',
-    description: 'Everything a cashier and delivery coordinator can do, plus sales analytics, viewing all sales, and exports.',
+    description: 'Everything a cashier and delivery coordinator can do, plus sales analytics, viewing all sales, exports, and returns/exchanges.',
     permissions: [
       'pos.open_counter', 'pos.view_all_sales', 'pos.view_analytics', 'receipt.reprint', 'sales.export',
       'customer.search', 'customer.view_contact', 'loyalty.scan',
       'pickup.view_queue', 'pickup.verify_code', 'pickup.complete', 'pickup.view_history',
       'delivery.view', 'delivery.dispatch', 'delivery.assign_driver', 'delivery.manage_drivers', 'delivery.view_history', 'delivery.export',
-      'order.view', 'order.update_status',
+      'order.view', 'order.update_status', 'exchange.manage',
     ],
   },
 ];
