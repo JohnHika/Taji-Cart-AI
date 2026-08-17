@@ -770,6 +770,12 @@ router.put('/sale/:id/void', auth, async (req, res) => {
   }
 });
 
+const dateStringToDayBounds = (dateStr) => {
+  const startOfDay = new Date(`${dateStr}T00:00:00.000`);
+  const endOfDay = new Date(`${dateStr}T23:59:59.999`);
+  return { startOfDay, endOfDay };
+};
+
 // Get sales analytics
 router.get('/analytics', auth, Staff, requireStaffPermission('pos.view_analytics'), async (req, res) => {
   try {
@@ -777,8 +783,14 @@ router.get('/analytics', auth, Staff, requireStaffPermission('pos.view_analytics
     
     let dateFilter = {};
     const now = new Date();
-    
+
     switch (period) {
+      case 'today': {
+        const todayStr = now.toISOString().split('T')[0];
+        const { startOfDay } = dateStringToDayBounds(todayStr);
+        dateFilter = { $gte: startOfDay, $lte: now };
+        break;
+      }
       case '24h':
         dateFilter = {
           $gte: new Date(now.getTime() - 24 * 60 * 60 * 1000)
@@ -1023,12 +1035,6 @@ router.get('/admin/statistics', auth, async (req, res) => {
 });
 
 // ─── End of Day ──────────────────────────────────────────────────────────────
-
-const dateStringToDayBounds = (dateStr) => {
-  const startOfDay = new Date(`${dateStr}T00:00:00.000`);
-  const endOfDay = new Date(`${dateStr}T23:59:59.999`);
-  return { startOfDay, endOfDay };
-};
 
 // Get the EOD record for a date (branch defaults to the current user's branch).
 // Returns null (not 404) when the day hasn't been closed yet, so the client

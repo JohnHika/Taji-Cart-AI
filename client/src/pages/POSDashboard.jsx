@@ -189,7 +189,7 @@ const POSDashboard = () => {
   const [showReceiptModal, setShowReceiptModal] = useState(false);
   const [selectedSale, setSelectedSale] = useState(null);
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
-  const [analyticsPeriod, setAnalyticsPeriod] = useState('7d');
+  const [analyticsPeriod, setAnalyticsPeriod] = useState('today');
   const [eodStatus, setEodStatus] = useState(null);
   const [eodLoading, setEodLoading] = useState(false);
   const [showResetEodModal, setShowResetEodModal] = useState(false);
@@ -359,6 +359,7 @@ const POSDashboard = () => {
     .sort((a, b) => (b.totalSales || 0) - (a.totalSales || 0))
     .slice(0, 4);
   const analyticsPeriodLabel = {
+    today: 'today',
     '24h': 'last 24 hours',
     '7d': 'last 7 days',
     '30d': 'last 30 days',
@@ -508,7 +509,7 @@ const POSDashboard = () => {
             </div>
 
             <div className="flex flex-wrap gap-2">
-              {['24h', '7d', '30d', '90d'].map(period => (
+              {['today', '24h', '7d', '30d', '90d'].map(period => (
                 <button
                   key={period}
                   onClick={() => setAnalyticsPeriod(period)}
@@ -518,7 +519,8 @@ const POSDashboard = () => {
                       : 'bg-brown-100 dark:bg-dm-card-2 text-charcoal dark:text-white/55 hover:bg-brown-200 dark:hover:bg-dm-border'
                   }`}
                 >
-                  {period === '24h' ? '24 Hours' : 
+                  {period === 'today' ? 'Today' :
+                   period === '24h' ? '24 Hours' :
                    period === '7d' ? '7 Days' :
                    period === '30d' ? '30 Days' : '90 Days'}
                 </button>

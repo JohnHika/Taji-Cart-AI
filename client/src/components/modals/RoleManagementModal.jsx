@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { FaTimes, FaTruck, FaUser, FaUserShield } from 'react-icons/fa';
+import { FaCheck, FaTimes, FaTruck, FaUser, FaUserShield } from 'react-icons/fa';
 
 const VEHICLE_TYPES = [
   ['motorcycle', 'Motorcycle'],
@@ -50,8 +50,11 @@ const STAFF_PERMISSION_GROUPS = [
 
 // One-click starting points for common staff jobs, so an admin doesn't have
 // to know what each of the 20 checkboxes means to set someone up correctly.
-// Selecting a preset replaces the current tick list; individual boxes can
-// still be adjusted afterwards.
+// Presets are additive toggles, not a single choice — a person can be a
+// Cashier AND a Delivery coordinator AND a Supervisor at once. Clicking an
+// active preset removes only the permissions unique to it (nothing another
+// still-active preset also needs); individual checkboxes remain adjustable
+// on top at any time.
 const PERMISSION_PRESETS = [
   {
     id: 'cashier',
@@ -222,48 +225,88 @@ const RoleManagementModal = ({ isOpen, onClose, user, onSave }) => {
           )}
           {role === 'staff' && (
             <div className="mb-6 border-t border-brown-100 dark:border-dm-border pt-4">
-              <p className="text-sm font-medium text-charcoal dark:text-white mb-2">Additional permissions</p>
-              <p className="text-xs text-brown-500 dark:text-white/50 mb-3">All staff keep their standard access. Not sure what to pick? Choose a starting point below, then fine-tune with the checkboxes if needed.</p>
+              <p className="text-sm font-medium text-charcoal dark:text-white mb-1">Additional permissions</p>
+              <p className="text-xs text-brown-500 dark:text-white/50 mb-3">
+                All staff keep their standard access. Tap a job below to add its permissions — jobs stack, so someone can be a Cashier and a Supervisor at once. Fine-tune with the checkboxes underneath.
+              </p>
 
-              <div className="mb-4 grid grid-cols-2 gap-2">
-                {PERMISSION_PRESETS.map((preset) => (
-                  <button
-                    key={preset.id}
-                    type="button"
-                    title={preset.description}
-                    onClick={() => setExtraPermissions(preset.permissions)}
-                    className="text-left px-3 py-2 rounded-lg border border-brown-200 dark:border-dm-border hover:bg-ivory dark:hover:bg-dm-card-2 transition-colors"
-                  >
-                    <span className="block text-sm font-medium text-charcoal dark:text-white">{preset.label}</span>
-                    <span className="block text-xs text-brown-500 dark:text-white/50 mt-0.5">{preset.description}</span>
-                  </button>
+              <div className="mb-4 grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {PERMISSION_PRESETS.map((preset) => {
+                  const isActive = preset.permissions.every((permission) => extraPermissions.includes(permission));
+                  return (
+                    <button
+                      key={preset.id}
+                      type="button"
+                      title={preset.description}
+                      aria-pressed={isActive}
+                      onClick={() => setExtraPermissions((current) => {
+                        if (isActive) {
+                          // Only drop permissions this preset owns that no OTHER
+                          // active preset still needs, so stacked jobs don't
+                          // clobber each other when one is turned off.
+                          const stillNeeded = new Set(
+                            PERMISSION_PRESETS
+                              .filter((other) => other.id !== preset.id && other.permissions.every((p) => current.includes(p)))
+                              .flatMap((other) => other.permissions)
+                          );
+                          return current.filter((p) => !preset.permissions.includes(p) || stillNeeded.has(p));
+                        }
+                        return [...new Set([...current, ...preset.permissions])];
+                      })}
+                      className={`relative text-left px-3 py-2.5 rounded-lg border transition-colors ${
+                        isActive
+                          ? 'border-plum-500 bg-plum-50 dark:bg-plum-900/20 dark:border-plum-400'
+                          : 'border-brown-200 dark:border-dm-border hover:bg-ivory dark:hover:bg-dm-card-2'
+                      }`}
+                    >
+                      <span className="flex items-center gap-1.5">
+                        <span className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-full border ${
+                          isActive ? 'bg-plum-600 border-plum-600 text-white' : 'border-brown-300 dark:border-dm-border'
+                        }`}>
+                          {isActive && <FaCheck size={9} />}
+                        </span>
+                        <span className="text-sm font-medium text-charcoal dark:text-white">{preset.label}</span>
+                      </span>
+                      <span className="block text-xs text-brown-500 dark:text-white/50 mt-1 leading-snug">{preset.description}</span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-xs text-brown-500 dark:text-white/50">
+                  {extraPermissions.length} permission{extraPermissions.length === 1 ? '' : 's'} selected
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setExtraPermissions([])}
+                  className="text-xs text-brown-500 dark:text-white/50 underline hover:text-charcoal dark:hover:text-white"
+                >
+                  Clear all
+                </button>
+              </div>
+
+              <div className="space-y-3">
+                {STAFF_PERMISSION_GROUPS.map((group) => (
+                  <div key={group.label} className="rounded-lg border border-brown-100 dark:border-dm-border p-3">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-brown-400 dark:text-white/40 mb-1.5">{group.label}</p>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-3">
+                      {group.permissions.map(([permission, label]) => (
+                        <label key={permission} className="flex items-center gap-2 py-1 text-sm text-charcoal dark:text-white/70 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={extraPermissions.includes(permission)}
+                            onChange={(event) => setExtraPermissions((current) => event.target.checked
+                              ? [...new Set([...current, permission])]
+                              : current.filter((value) => value !== permission))}
+                          />
+                          {label}
+                        </label>
+                      ))}
+                    </div>
+                  </div>
                 ))}
               </div>
-              <button
-                type="button"
-                onClick={() => setExtraPermissions([])}
-                className="mb-4 text-xs text-brown-500 dark:text-white/50 underline hover:text-charcoal dark:hover:text-white"
-              >
-                Clear all permissions
-              </button>
-
-              {STAFF_PERMISSION_GROUPS.map((group) => (
-                <div key={group.label} className="mb-3">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-brown-400 dark:text-white/40 mb-1">{group.label}</p>
-                  {group.permissions.map(([permission, label]) => (
-                    <label key={permission} className="flex items-center gap-2 py-1.5 text-sm text-charcoal dark:text-white/70">
-                      <input
-                        type="checkbox"
-                        checked={extraPermissions.includes(permission)}
-                        onChange={(event) => setExtraPermissions((current) => event.target.checked
-                          ? [...new Set([...current, permission])]
-                          : current.filter((value) => value !== permission))}
-                      />
-                      {label}
-                    </label>
-                  ))}
-                </div>
-              ))}
             </div>
           )}
           </div>
