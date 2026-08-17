@@ -8,6 +8,7 @@ export const STAFF_GRANTABLE_PERMISSIONS = [
   { id: 'pos.view_own_sales', label: 'View own sales' },
   { id: 'pos.view_all_sales', label: 'View all sales and receipt details' },
   { id: 'pos.view_analytics', label: 'View sales analytics and daily summaries' },
+  { id: 'pos.close_eod', label: 'Close and download end-of-day reports' },
   { id: 'receipt.reprint', label: 'View and reprint receipts' },
   { id: 'customer.search', label: 'Search customers' },
   { id: 'customer.view_contact', label: 'View customer contact details' },

@@ -16,6 +16,7 @@ const STAFF_PERMISSION_GROUPS = [
       ['pos.open_counter', 'Open counter and create sales'], ['pos.view_own_sales', 'View own sales'],
       ['pos.view_all_sales', 'View all sales'], ['pos.view_analytics', 'View sales analytics'],
       ['receipt.reprint', 'View and reprint receipts'], ['sales.export', 'Export sales'],
+      ['pos.close_eod', 'Close and download end-of-day reports'],
     ],
   },
   {

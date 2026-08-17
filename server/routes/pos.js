@@ -144,7 +144,10 @@ router.get('/sales', auth, Staff, requireStaffPermission(['pos.view_own_sales', 
   try {
     const { startDate, endDate, cashier } = req.query;
     const page = Math.max(1, parseInt(req.query.page || 1, 10));
-    const limit = Math.max(1, Math.min(100, parseInt(req.query.limit || 20, 10)));
+    // Raised from 100 so a staff member's full day of sales can be pulled
+    // in one request for the Sales Hub's "Recent Sales" list, which is no
+    // longer capped to a fixed count.
+    const limit = Math.max(1, Math.min(1000, parseInt(req.query.limit || 20, 10)));
     const includeItemsParam = req.query.includeItems;
     const includeItems = (typeof includeItemsParam === 'string')
       ? ['1', 'true', 'yes', 'on'].includes(includeItemsParam.toLowerCase())
@@ -1183,8 +1186,10 @@ router.get('/eod/:date', auth, Staff, requireStaffPermission('pos.open_counter')
 // Close out a calendar day: aggregate the day's sales into an hourly
 // breakdown + payment-method totals, and persist it as the EOD record.
 // One active close per (date, branch) — a second attempt is rejected (409)
-// unless the prior close was reset by an admin first.
-router.post('/eod/close', auth, Staff, requireStaffPermission('pos.open_counter'), async (req, res) => {
+// unless the prior close was reset by an admin first. Gated by its own
+// permission (separate from pos.open_counter) so counter access doesn't
+// automatically include closing the day — an admin must grant it explicitly.
+router.post('/eod/close', auth, Staff, requireStaffPermission('pos.close_eod'), async (req, res) => {
   try {
     const { date } = req.body;
     if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {

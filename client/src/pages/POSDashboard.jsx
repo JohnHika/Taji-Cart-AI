@@ -180,6 +180,9 @@ const POSDashboard = () => {
   );
   const canAccessSalesTools = isStaff(user);
   const canResetEndOfDay = isAdmin(user);
+  // Closing EOD is its own opt-in permission, separate from counter access —
+  // no staff member can do it until an admin explicitly grants pos.close_eod.
+  const canCloseEndOfDay = isAdmin(user) || (user?.staffPermissions || []).includes('pos.close_eod');
 
   const [loading, setLoading] = useState(true);
   const [dailySummary, setDailySummary] = useState(null);
@@ -329,11 +332,16 @@ const POSDashboard = () => {
 
   const loadRecentSales = async () => {
     try {
+      // Scoped to the selected day (not just "the last 10 ever") — the
+      // server already restricts non-view_all_sales staff to their own
+      // sales, so this ends up being "everything I sold on this day."
+      const startDate = `${selectedDate}T00:00:00.000Z`;
+      const endDate = `${selectedDate}T23:59:59.999Z`;
       const response = await Axios({
-        url: '/api/pos/sales?limit=10&includeItems=true',
+        url: `/api/pos/sales?limit=500&includeItems=true&startDate=${startDate}&endDate=${endDate}`,
         method: 'GET'
       });
-      
+
       if (response.data.success) {
         setRecentSales(response.data.data);
       }
@@ -431,15 +439,25 @@ const POSDashboard = () => {
                   className="bg-transparent text-sm font-medium text-charcoal outline-none dark:text-white"
                 />
               </div>
-              <button
-                type="button"
-                onClick={closeEndOfDay}
-                disabled={eodLoading}
-                className="flex items-center gap-2 rounded-xl bg-plum-700 px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-plum-800 disabled:opacity-60"
-              >
-                <FaFileInvoiceDollar />
-                {eodLoading ? 'Working…' : eodStatus ? 'Download EOD report' : 'Close & download EOD'}
-              </button>
+              {canCloseEndOfDay ? (
+                <button
+                  type="button"
+                  onClick={closeEndOfDay}
+                  disabled={eodLoading}
+                  className="flex items-center gap-2 rounded-xl bg-plum-700 px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-plum-800 disabled:opacity-60"
+                >
+                  <FaFileInvoiceDollar />
+                  {eodLoading ? 'Working…' : eodStatus ? 'Download EOD report' : 'Close & download EOD'}
+                </button>
+              ) : (
+                <span
+                  title="Ask an admin to grant the 'Close and download end-of-day reports' permission"
+                  className="flex items-center gap-2 rounded-xl bg-brown-100 px-3 py-2 text-sm font-medium text-brown-400 dark:bg-dm-card-2 dark:text-white/40"
+                >
+                  <FaFileInvoiceDollar />
+                  Admin only
+                </span>
+              )}
               {eodStatus && canResetEndOfDay && (
                 <button
                   type="button"
@@ -725,7 +743,9 @@ const POSDashboard = () => {
             <h3 className="text-base font-bold text-charcoal dark:text-white tracking-tight">
             Recent Sales
             </h3>
-            <span className="text-xs text-brown-500 dark:text-white/45">Latest 10 counter sales</span>
+            <span className="text-xs text-brown-500 dark:text-white/45">
+              {recentSales.length} sale{recentSales.length === 1 ? '' : 's'} on {selectedDate}
+            </span>
           </div>
         <div className="space-y-3 md:hidden">
           {recentSales.map((sale) => (
