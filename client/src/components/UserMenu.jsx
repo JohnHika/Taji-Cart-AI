@@ -18,6 +18,7 @@ import {
   FaStar,
   FaTachometerAlt,
   FaTruck,
+  FaUndo,
   FaUser,
   FaUserTie
 } from 'react-icons/fa';
@@ -46,6 +47,7 @@ const UserMenu = ({ close, variant = 'dropdown' }) => {
   const isSidebar = variant === 'sidebar';
   const useSlimDashboardNav = showStaffFunctions || isDelivery;
   const hasLoyaltyAccess = Boolean(royalCardData);
+  const canManageExchanges = isAdmin || (user?.staffPermissions || []).includes('exchange.manage');
 
   const sectionClass = 'min-w-0 px-4 py-1 mt-3 mb-0.5 text-xs font-semibold uppercase tracking-[0.14em] leading-tight text-brown-500 dark:text-white/45 whitespace-normal break-words';
 
@@ -162,6 +164,9 @@ const UserMenu = ({ close, variant = 'dropdown' }) => {
                 <MenuLink to="/dashboard/staff/dashboard" icon={FaUserTie} label="Staff dashboard" />
                 <MenuLink to="/dashboard/sales-counter" icon={FaShoppingBag} label="Sales counter" />
                 <MenuLink to="/dashboard/sales-history" icon={FaHistory} label="Sales history" />
+                {canManageExchanges && (
+                  <MenuLink to="/dashboard/returns-exchanges" icon={FaUndo} label="Returns & exchanges" />
+                )}
                 <MenuLink to="/dashboard/staff/verify-pickup" icon={FaQrcode} label="Verify pickup" />
                 <MenuLink to="/dashboard/staff/pending-pickups" icon={FaBoxes} label="Pending pickups" />
                 <MenuLink to="/dashboard/staff/completed-verifications" icon={FaClipboardCheck} label="Verification history" />
