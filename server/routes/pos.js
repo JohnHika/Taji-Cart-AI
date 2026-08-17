@@ -14,6 +14,7 @@ import { getAuthToken, MPESA_STK_URL } from '../config/mpesa.js';
 import MpesaPayment from '../models/mpesaPayment.model.js';
 import SaccoOperatorModel from '../models/saccooperator.model.js';
 import { resolveBikeDeliveryZone, resolveDeliveryCharge } from '../utils/deliveryFee.js';
+import { getNextSequence } from '../models/counter.model.js';
 
 const router = express.Router();
 
@@ -522,19 +523,13 @@ router.post('/sale', auth, Staff, requireStaffPermission('pos.open_counter'), as
       item.total = Number(item.total || item.price * item.quantity);
     }
     
-    // Generate sale number
+    // Generate sale number. Uses an atomic per-day counter ($inc, not
+    // read-then-compute) so two sales created back-to-back — e.g. resuming a
+    // held sale right after finishing another, or two cashiers checking out
+    // at once — can never be handed the same number.
     const today = new Date();
     const dateStr = today.toISOString().slice(0, 10).replace(/-/g, '');
-    const lastSale = await Sale.findOne({
-      saleNumber: { $regex: `^${dateStr}` }
-    }).sort({ saleNumber: -1 });
-    
-    let nextNumber = 1;
-    if (lastSale) {
-      const lastNumber = parseInt(lastSale.saleNumber.slice(-4));
-      nextNumber = lastNumber + 1;
-    }
-    
+    const nextNumber = await getNextSequence(`sale-${dateStr}`);
     const saleNumber = `${dateStr}${nextNumber.toString().padStart(4, '0')}`;
     
     // Create sale record
