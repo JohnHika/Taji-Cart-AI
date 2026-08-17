@@ -39,14 +39,16 @@ export const searchTransactions = async (req, res) => {
       customerPhone: sale.customerPhone || '',
       total: sale.total,
       branch: sale.branch,
-      items: sale.items.map((item) => ({
-        product: item.product,
-        name: item.name,
-        sku: item.sku,
-        unitPrice: item.price,
-        quantity: item.quantity,
-        priceIsExact: true
-      }))
+      items: sale.items
+        .filter((item) => item.product)
+        .map((item) => ({
+          product: item.product,
+          name: item.name,
+          sku: item.sku,
+          unitPrice: item.price,
+          quantity: item.quantity,
+          priceIsExact: true
+        }))
     }));
 
     // Orders are one line-item per document sharing an orderId, and don't
@@ -72,6 +74,11 @@ export const searchTransactions = async (req, res) => {
 
     const orderGroups = new Map();
     for (const line of matchingOrders) {
+      // A guest/legacy order line with no real productId has nothing to
+      // restock or reference — skip it rather than offering an item that
+      // would fail (or worse, silently pass a bad ObjectId) once picked.
+      if (!line.productId) continue;
+
       if (!orderGroups.has(line.orderId)) {
         orderGroups.set(line.orderId, {
           sourceType: 'order',
@@ -92,6 +99,12 @@ export const searchTransactions = async (req, res) => {
         quantity: line.quantity || 1,
         priceIsExact: false
       });
+    }
+
+    // Orders where every line lacked a real product end up with an empty
+    // items array — drop those too, nothing on them can be exchanged.
+    for (const [orderId, order] of orderGroups) {
+      if (order.items.length === 0) orderGroups.delete(orderId);
     }
 
     // Fill in the stand-in unit price (current product price) for order items.
@@ -139,10 +152,19 @@ export const createExchange = async (req, res) => {
     if (!mongoose.Types.ObjectId.isValid(String(sourceId))) {
       return res.status(400).json({ success: false, message: 'Invalid source ID' });
     }
-    if (!returnedItem?.product || !returnedItem?.quantity || typeof returnedItem?.unitPrice !== 'number') {
+    if (
+      !returnedItem?.product ||
+      !mongoose.Types.ObjectId.isValid(String(returnedItem.product)) ||
+      !returnedItem?.quantity ||
+      typeof returnedItem?.unitPrice !== 'number'
+    ) {
       return res.status(400).json({ success: false, message: 'Returned item details are incomplete' });
     }
-    if (!replacementItem?.product || !replacementItem?.quantity) {
+    if (
+      !replacementItem?.product ||
+      !mongoose.Types.ObjectId.isValid(String(replacementItem.product)) ||
+      !replacementItem?.quantity
+    ) {
       return res.status(400).json({ success: false, message: 'Replacement item details are incomplete' });
     }
 
