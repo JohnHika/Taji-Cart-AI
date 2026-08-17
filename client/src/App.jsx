@@ -70,6 +70,7 @@ function App() {
   const categories = useSelector(state => state.product.allCategory);
   const isFetchingProductsRef = useRef(false);
   const lastVisibilityFetchRef = useRef(0);
+  const lastUserRefreshRef = useRef(0);
 
   // Product/category fetching function
   const fetchProductData = async () => {
@@ -229,6 +230,42 @@ function App() {
     document.addEventListener('visibilitychange', handleVisibilityChange);
     return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
   }, []);
+
+  // Re-fetch the logged-in user's own record (role/staffPermissions) so an
+  // admin granting/revoking a permission elsewhere takes effect without the
+  // affected staff member needing to log out and back in — the token
+  // auto-refresh alone only renews the JWT, it never re-reads permissions.
+  // Triggered whenever the tab becomes visible again, and after every
+  // background token refresh (for tabs that stay foregrounded a long time),
+  // sharing one 5-minute cooldown so it never fires more than that often.
+  useEffect(() => {
+    const refreshUserIfStale = async () => {
+      if (!getStoredAccessToken()) return;
+      const now = Date.now();
+      if (now - lastUserRefreshRef.current < 5 * 60 * 1000) return;
+      lastUserRefreshRef.current = now;
+
+      try {
+        const userDetails = await fetchUserDetails();
+        if (userDetails?.data) {
+          dispatch(setUserDetails(userDetails.data));
+        }
+      } catch (error) {
+        console.warn('Background user-details refresh failed:', error?.message);
+      }
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') refreshUserIfStale();
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('nawiri:token-refreshed', refreshUserIfStale);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('nawiri:token-refreshed', refreshUserIfStale);
+    };
+  }, [dispatch]);
 
 
   // Add a specific effect to handle dynamic routes

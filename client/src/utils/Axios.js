@@ -145,6 +145,14 @@ const refreshToken = async () => {
       });
       setupRefreshTimer();
 
+      // Lets App.jsx re-fetch the user's own record (role/staffPermissions
+      // can change server-side at any time, e.g. an admin grants a new
+      // permission) without needing to import Redux into this transport
+      // module — a plain DOM event keeps the layers decoupled.
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new Event('nawiri:token-refreshed'));
+      }
+
       console.log('Token refreshed successfully');
       return accessToken;
     }
