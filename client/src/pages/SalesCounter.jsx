@@ -44,6 +44,32 @@ const FULFILLMENT_TYPES = [
 const PAGE_SIZE = 24;
 const QUICK_PICKS_COUNT = 8;
 
+// An in-progress sale (cart + customer/payment fields) previously lived only
+// in memory, so a refresh — or a crash/reload while mid-sale — silently wiped
+// it with no way to recover. Sales Counter is a tab a cashier can realistically
+// leave open for a whole shift, so this snapshots the draft to sessionStorage
+// (scoped to this browser tab, matching how auth tokens are stored) on every
+// change and restores it on mount; resetSale() clears it once the sale is
+// actually held or completed.
+const DRAFT_STORAGE_KEY = 'nawiri:salesCounterDraft';
+
+const loadDraft = () => {
+  try {
+    const raw = sessionStorage.getItem(DRAFT_STORAGE_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+};
+
+const clearDraft = () => {
+  try {
+    sessionStorage.removeItem(DRAFT_STORAGE_KEY);
+  } catch {
+    // ignore
+  }
+};
+
 const SalesCounter = () => {
   const user = useSelector((state) => state.user);
   const navigate = useNavigate();
@@ -61,21 +87,23 @@ const SalesCounter = () => {
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
 
-  const [cart, setCart] = useState([]);
+  const restoredDraft = useRef(loadDraft()).current;
+
+  const [cart, setCart] = useState(() => restoredDraft?.cart || []);
   const [showCart, setShowCart] = useState(false);
-  const [fulfillmentType, setFulfillmentType] = useState('in_store');
-  const [deliveryDetails, setDeliveryDetails] = useState({ mode: 'standard', zoneId: '', saccoOperatorId: '', saccoDestinationTown: '' });
+  const [fulfillmentType, setFulfillmentType] = useState(() => restoredDraft?.fulfillmentType || 'in_store');
+  const [deliveryDetails, setDeliveryDetails] = useState(() => restoredDraft?.deliveryDetails || { mode: 'standard', zoneId: '', saccoOperatorId: '', saccoDestinationTown: '' });
   const [deliveryFeePreview, setDeliveryFeePreview] = useState(0);
-  const [paymentMethod, setPaymentMethod] = useState('cash');
-  const [amountTendered, setAmountTendered] = useState('');
-  const [splitCashAmount, setSplitCashAmount] = useState('');
-  const [equityProofUrl, setEquityProofUrl] = useState('');
+  const [paymentMethod, setPaymentMethod] = useState(() => restoredDraft?.paymentMethod || 'cash');
+  const [amountTendered, setAmountTendered] = useState(() => restoredDraft?.amountTendered || '');
+  const [splitCashAmount, setSplitCashAmount] = useState(() => restoredDraft?.splitCashAmount || '');
+  const [equityProofUrl, setEquityProofUrl] = useState(() => restoredDraft?.equityProofUrl || '');
   const [equityProofUploading, setEquityProofUploading] = useState(false);
-  const [equityApproved, setEquityApproved] = useState(false);
+  const [equityApproved, setEquityApproved] = useState(() => Boolean(restoredDraft?.equityApproved));
   const equityProofInputRef = useRef(null);
-  const [customerName, setCustomerName] = useState('');
-  const [customerPhone, setCustomerPhone] = useState('');
-  const [saleNote, setSaleNote] = useState('');
+  const [customerName, setCustomerName] = useState(() => restoredDraft?.customerName || '');
+  const [customerPhone, setCustomerPhone] = useState(() => restoredDraft?.customerPhone || '');
+  const [saleNote, setSaleNote] = useState(() => restoredDraft?.saleNote || '');
   const [submitting, setSubmitting] = useState(false);
   const [completedSale, setCompletedSale] = useState(null);
   const [qrCodeDataUrl, setQrCodeDataUrl] = useState('');
@@ -84,7 +112,7 @@ const SalesCounter = () => {
   const [showHeldSales, setShowHeldSales] = useState(false);
   const [holding, setHolding] = useState(false);
   const [resumingId, setResumingId] = useState(null);
-  const [activeHeldSaleId, setActiveHeldSaleId] = useState(null);
+  const [activeHeldSaleId, setActiveHeldSaleId] = useState(() => restoredDraft?.activeHeldSaleId || null);
   const isAdmin = Boolean(user?.isAdmin || user?.role === 'admin');
 
   // Redirect non-staff/non-admin away from the counter.
@@ -101,7 +129,40 @@ const SalesCounter = () => {
     loadProducts();
     loadCategories();
     loadHeldSales();
+    if (restoredDraft?.cart?.length) {
+      toast.success(`Restored your in-progress sale (${restoredDraft.cart.length} item${restoredDraft.cart.length === 1 ? '' : 's'}).`);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Snapshot the in-progress sale on every change so a refresh/crash can
+  // recover it. Cleared explicitly by resetSale() once the sale is held,
+  // completed, or the cashier abandons it.
+  useEffect(() => {
+    if (cart.length === 0) {
+      clearDraft();
+      return;
+    }
+    try {
+      sessionStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify({
+        cart,
+        fulfillmentType,
+        deliveryDetails,
+        paymentMethod,
+        amountTendered,
+        splitCashAmount,
+        equityProofUrl,
+        equityApproved,
+        customerName,
+        customerPhone,
+        saleNote,
+        activeHeldSaleId,
+      }));
+    } catch {
+      // sessionStorage unavailable (private browsing quota, etc.) — draft
+      // recovery just won't be available this session, sale flow still works.
+    }
+  }, [cart, fulfillmentType, deliveryDetails, paymentMethod, amountTendered, splitCashAmount, equityProofUrl, equityApproved, customerName, customerPhone, saleNote, activeHeldSaleId]);
 
   // Reset pagination whenever the filter changes so "Load more" starts fresh.
   useEffect(() => {
@@ -334,6 +395,7 @@ const SalesCounter = () => {
   const splitEquityAmount = Math.max(0, totals.total - (Number(splitCashAmount) || 0));
 
   const resetSale = () => {
+    clearDraft();
     setCart([]);
     setShowCart(false);
     setFulfillmentType('in_store');
