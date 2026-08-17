@@ -360,6 +360,19 @@ const SummaryApi = {
         url: `${baseURL}/api/pos/mpesa/stk-push`,
         method: 'POST'
     },
+    // End of Day — base URLs; callers append the date (and /reset) as needed
+    getEndOfDay: {
+        url: `${baseURL}/api/pos/eod`,
+        method: 'GET'
+    },
+    closeEndOfDay: {
+        url: `${baseURL}/api/pos/eod/close`,
+        method: 'POST'
+    },
+    resetEndOfDay: {
+        url: `${baseURL}/api/pos/eod`,
+        method: 'PUT'
+    },
     // Admin
     getUsers: {
         url: `${baseURL}/api/user/admin/users`,

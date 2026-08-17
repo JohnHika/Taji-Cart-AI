@@ -49,6 +49,46 @@ const saleSchema = new mongoose.Schema({
     type: String,
     default: ''
   },
+  fulfillment_type: {
+    type: String,
+    enum: ['in_store', 'pickup', 'delivery'],
+    default: 'in_store'
+  },
+  // Only meaningful when fulfillment_type === 'delivery'. Snapshots
+  // zone/SACCO name+fare (mirroring Order) so the sale stays readable even
+  // if the zone/operator is later renamed, re-priced, or deactivated.
+  delivery_mode: {
+    type: String,
+    enum: ['standard', 'bike', 'sacco', ''],
+    default: ''
+  },
+  delivery_zone: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'deliveryZone'
+  },
+  delivery_zone_name: {
+    type: String,
+    default: ''
+  },
+  delivery_zone_fare: {
+    type: Number
+  },
+  sacco_operator: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'saccoOperator'
+  },
+  sacco_operator_name: {
+    type: String,
+    default: ''
+  },
+  sacco_destination_town: {
+    type: String,
+    default: ''
+  },
+  deliveryCharge: {
+    type: Number,
+    default: 0
+  },
   subtotal: {
     type: Number,
     required: true
@@ -67,14 +107,18 @@ const saleSchema = new mongoose.Schema({
   },
   paymentMethod: {
     type: String,
-    enum: ['cash', 'card', 'mobile', 'split'],
+    enum: ['cash', 'equity', 'split'],
     required: true
   },
   payments: [{
-    method: { type: String, enum: ['cash', 'card', 'mobile'], required: true },
+    method: { type: String, enum: ['cash', 'equity'], required: true },
     amount: { type: Number, required: true },
     phone: { type: String },
-    checkoutRequestId: { type: String }
+    checkoutRequestId: { type: String },
+    proofImageUrl: { type: String },
+    approved: { type: Boolean, default: false },
+    approvedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    approvedAt: { type: Date }
   }],
   amountTendered: {
     type: Number,
@@ -154,10 +198,11 @@ saleSchema.virtual('totalItems').get(function() {
 saleSchema.pre('save', function(next) {
   // Calculate subtotal from items
   this.subtotal = this.items.reduce((sum, item) => sum + item.total, 0);
-  
-  // Calculate final total after discount plus tax
+
+  // Calculate final total after discount, tax, and delivery charge
   const taxVal = typeof this.tax === 'number' ? this.tax : 0;
-  this.total = Math.max(0, (this.subtotal - (this.discount || 0)) + taxVal);
+  const deliveryVal = typeof this.deliveryCharge === 'number' ? this.deliveryCharge : 0;
+  this.total = Math.max(0, (this.subtotal - (this.discount || 0)) + taxVal + deliveryVal);
   
   // Calculate change for cash payments; preserve provided values for split
   if (this.paymentMethod === 'cash') {
@@ -203,20 +248,20 @@ saleSchema.statics.getSummary = async function(startDate, endDate, cashier = nul
             $cond: [{ $eq: ['$paymentMethod', 'cash'] }, '$total', 0]
           }
         },
-        cardSales: {
+        equitySales: {
           $sum: {
-            $cond: [{ $eq: ['$paymentMethod', 'card'] }, '$total', 0]
+            $cond: [{ $eq: ['$paymentMethod', 'equity'] }, '$total', 0]
           }
         },
-        mobileSales: {
+        splitSales: {
           $sum: {
-            $cond: [{ $eq: ['$paymentMethod', 'mobile'] }, '$total', 0]
+            $cond: [{ $eq: ['$paymentMethod', 'split'] }, '$total', 0]
           }
         }
       }
     }
   ]);
-  
+
   return summary[0] || {
     totalSales: 0,
     totalTransactions: 0,
@@ -224,8 +269,8 @@ saleSchema.statics.getSummary = async function(startDate, endDate, cashier = nul
     totalItems: 0,
     totalDiscount: 0,
     cashSales: 0,
-    cardSales: 0,
-    mobileSales: 0
+    equitySales: 0,
+    splitSales: 0
   };
 };
 

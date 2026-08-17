@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { FaEdit, FaEye, FaFilter, FaPlus, FaSearch, FaSortAmountDown, FaSortAmountUp, FaTrash } from 'react-icons/fa';
 import { Link } from 'react-router-dom';
+import toast from 'react-hot-toast';
 import SummaryApi from '../common/SummaryApi';
 import ExportButton from '../components/ExportButton';
 import LoadingSpinner from '../components/LoadingSpinner';
@@ -55,6 +56,7 @@ const DashboardProduct = () => {
   const [filterCategory, setFilterCategory] = useState('');
   const [categories, setCategories] = useState([]);
   const [selectedProducts, setSelectedProducts] = useState([]);
+  const [exporting, setExporting] = useState(false);
   const [stats, setStats] = useState({
     total: 0,
     inStock: 0,
@@ -277,25 +279,22 @@ const DashboardProduct = () => {
     localStorage.setItem(PRODUCT_VIEW_PREFERENCE, newMode);
   };
 
-  const handleExport = (format) => {
-    const exportData = products.map(product => ({
-      name: product.name || '',
-      sku: product.sku || '',
-      price: product.price || 0,
-      stock: product.stock || 0,
-      unit: product.unit || '',
-      description: product.description || '',
-      category: product.category?.map(cat => cat?.name || '').join(', ') || '',
-      createdAt: product.createdAt ? new Date(product.createdAt).toLocaleString() : '',
-      updatedAt: product.updatedAt ? new Date(product.updatedAt).toLocaleString() : ''
-    }));
-    switch (format) {
-      case 'excel': exportToExcel(exportData, 'products'); break;
-      case 'csv':   exportToCSV(exportData, 'products'); break;
-      case 'pdf':   exportToPDF(exportData, 'products'); break;
-      case 'word':  exportToWord(exportData, 'products'); break;
-      case 'json':  exportToJSON(exportData, 'products'); break;
-      default: break;
+  const handleExport = async (format) => {
+    try {
+      setExporting(true);
+      switch (format) {
+        case 'excel': await exportToExcel(products, 'taji-cart-products'); break;
+        case 'csv':   exportToCSV(products, 'taji-cart-products'); break;
+        case 'pdf':   exportToPDF(products, 'taji-cart-products'); break;
+        case 'word':  exportToWord(products, 'taji-cart-products'); break;
+        case 'json':  exportToJSON(products, 'taji-cart-products'); break;
+        default: break;
+      }
+      toast.success(`Exported ${products.length} product${products.length === 1 ? '' : 's'} as ${format.toUpperCase()}`);
+    } catch (error) {
+      toast.error(error?.message || 'Export failed. Please try again.');
+    } finally {
+      setExporting(false);
     }
   };
 
@@ -314,7 +313,7 @@ const DashboardProduct = () => {
               {viewMode === 'table' ? 'Grid View' : 'Table View'}
             </button>
           )}
-          <ExportButton data={products} onExport={handleExport} />
+          <ExportButton data={products} onExport={handleExport} exporting={exporting} />
           <Link 
             to="/dashboard/upload-product" 
             className="bg-plum-700 hover:bg-plum-600 text-white px-3 sm:px-4 py-2 rounded-md flex items-center transition-colors duration-200"

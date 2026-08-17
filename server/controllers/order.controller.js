@@ -13,10 +13,8 @@ import UserRewardModel from "../models/userreward.model.js";
 import UserModel from "../models/user.model.js";
 import AddressModel from "../models/address.model.js";
 import { getIO } from '../socket/socket.js'; // Add this import
-import DeliveryZoneModel from "../models/deliveryzone.model.js";
 import SaccoOperatorModel from "../models/saccooperator.model.js";
 import {
-  DEFAULT_DELIVERY_CHARGE,
   extractCoordinatesFromPayload,
   getCbdFootDeliveryStatus,
   getDeliveryModeFromPayload,
@@ -24,6 +22,7 @@ import {
   isFootDeliveryMode,
   SACCO_TERMINAL_DROPOFF_CHARGE,
 } from '../utils/cbdDelivery.js';
+import { resolveBikeDeliveryZone, resolveDeliveryCharge } from '../utils/deliveryFee.js';
 import { markRewardAsUsed, processOrderContribution } from './communitycampaign.controller.js'; // Add this import
 import { nawiriBrand } from "../utils/brand.js";
 import { buildRiderCallMessage, notifyCustomerRiderWillCall } from "../utils/deliveryRiderCall.js";
@@ -74,22 +73,6 @@ export const pricewithDiscount = (price, dis = 0, royalDiscount = 0) => {
   const royalDiscountAmount = Math.round((priceAfterProductDiscount * loyaltyDiscount) / 100);
 
   return Math.max(0, priceAfterProductDiscount - royalDiscountAmount);
-};
-
-// Bike (zone-fare) delivery never trusts a client-supplied amount — the
-// fare is always looked up server-side from the active DeliveryZone doc.
-const resolveBikeDeliveryZone = async (deliveryZoneId) => {
-  if (!deliveryZoneId || !mongoose.Types.ObjectId.isValid(String(deliveryZoneId))) {
-    return { zone: null, error: 'Please select a delivery zone for bike delivery.' };
-  }
-
-  const zone = await DeliveryZoneModel.findOne({ _id: deliveryZoneId, isActive: true });
-
-  if (!zone) {
-    return { zone: null, error: 'Selected delivery zone is no longer available. Please pick another zone.' };
-  }
-
-  return { zone, error: null };
 };
 
 const getValidatedCommunityReward = async ({ userId, communityRewardId, communityDiscountAmount }) => {
@@ -366,9 +349,7 @@ export async function checkoutController(request, response) {
             deliveryZone = zoneResult.zone;
         }
 
-        const deliveryCharge = fulfillment_type === 'delivery'
-            ? (deliveryZone ? deliveryZone.fare : DEFAULT_DELIVERY_CHARGE)
-            : 0;
+        const deliveryCharge = resolveDeliveryCharge({ fulfillmentType: fulfillment_type, deliveryZone });
 
         const {
             normalizedItems,
@@ -621,11 +602,7 @@ export async function CashOnDeliveryOrderController(request, response) {
             deliveryZone = zoneResult.zone;
         }
 
-        const deliveryCharge = fulfillment_type === 'delivery'
-            ? (deliveryZone ? deliveryZone.fare : DEFAULT_DELIVERY_CHARGE)
-            : fulfillment_type === 'sacco_pickup'
-                ? SACCO_TERMINAL_DROPOFF_CHARGE
-                : 0;
+        const deliveryCharge = resolveDeliveryCharge({ fulfillmentType: fulfillment_type, deliveryZone });
 
         const {
             normalizedItems,
@@ -860,14 +837,17 @@ export async function trackGuestOrderController(request, response) {
 // Guest Checkout Controller - allows users to purchase without logging in
 export async function guestCheckoutController(request, response) {
     try {
-  const { items, guestEmail, guestPhone, guestShipping, fulfillment_type = 'delivery', pickup_location = '', saccoOperatorId, saccoDestinationTown } = request.body
+  const { items, guestEmail, guestPhone, guestShipping, fulfillment_type = 'delivery', pickup_location = '', saccoOperatorId, saccoDestinationTown, source = 'web' } = request.body
     const deliveryMode = getDeliveryModeFromPayload(request.body)
     const customerLocation = extractCoordinatesFromPayload(request.body)
 
-        // Validate required fields
-    if (!guestEmail || !items) {
+        // Validate required fields — a guest needs a way to be reached, either
+        // an email (the original web-checkout flow) or a phone number (e.g.
+        // staff transcribing a WhatsApp order, where customers give a phone
+        // but rarely an email).
+    if ((!guestEmail && !guestPhone) || !items) {
             return response.status(400).json({
-        message: "Email and items are required",
+        message: "An email or phone number, plus items, are required",
                 error: true,
                 success: false
             })
@@ -894,14 +874,17 @@ export async function guestCheckoutController(request, response) {
             }
         }
 
-        // Validate email format
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-        if (!emailRegex.test(guestEmail)) {
-            return response.status(400).json({
-                message: "Invalid email format",
-                error: true,
-                success: false
-            })
+        // Validate email format only when an email was actually provided —
+        // phone-only guests (e.g. WhatsApp orders) skip this check entirely.
+        if (guestEmail) {
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+            if (!emailRegex.test(guestEmail)) {
+                return response.status(400).json({
+                    message: "Invalid email format",
+                    error: true,
+                    success: false
+                })
+            }
         }
 
         // Validate delivery location is within Nairobi CBD radius for foot delivery only
@@ -941,11 +924,7 @@ export async function guestCheckoutController(request, response) {
             deliveryZone = zoneResult.zone;
         }
 
-        const deliveryCharge = fulfillment_type === 'delivery'
-            ? (deliveryZone ? deliveryZone.fare : DEFAULT_DELIVERY_CHARGE)
-            : fulfillment_type === 'sacco_pickup'
-                ? SACCO_TERMINAL_DROPOFF_CHARGE
-                : 0;
+        const deliveryCharge = resolveDeliveryCharge({ fulfillmentType: fulfillment_type, deliveryZone });
 
         const {
             normalizedItems,
@@ -963,7 +942,7 @@ export async function guestCheckoutController(request, response) {
         const orderId = `ORD-${Date.now()}-${Math.random().toString(36).substring(2, 5).toUpperCase()}`
 
         // Create the order
-        const normalizedGuestEmail = guestEmail.toLowerCase().trim()
+        const normalizedGuestEmail = guestEmail ? guestEmail.toLowerCase().trim() : ''
 
         const generatedOrder = await OrderModel.create({
             orderId,
@@ -971,6 +950,7 @@ export async function guestCheckoutController(request, response) {
             guestEmail: normalizedGuestEmail,
             guestPhone: guestPhone || '',
             guestShipping: guestShipping || {},
+            source: ['web', 'whatsapp'].includes(source) ? source : 'web',
             fulfillment_type,
             delivery_mode: deliveryMode || 'standard',
             delivery_zone: deliveryZone ? deliveryZone._id : undefined,
@@ -1009,8 +989,9 @@ export async function guestCheckoutController(request, response) {
             })
         }
 
-        // Send order confirmation email to guest
+        // Send order confirmation email to guest (skipped for phone-only guests)
         try {
+          if (guestEmail) {
             const customerName = guestShipping?.firstName || guestEmail.split('@')[0]
             await sendOrderLifecycleEmail({
                 user: {
@@ -1025,6 +1006,7 @@ export async function guestCheckoutController(request, response) {
                 pickupLocation: pickup_location,
                 verificationCode: pickupVerificationCode
             })
+          }
 
             // Also send admin notification
             await sendEmail({
@@ -1063,7 +1045,9 @@ export async function guestCheckoutController(request, response) {
         }
 
         return response.json({
-            message: "Guest order placed successfully! Check your email for confirmation.",
+            message: guestEmail
+                ? "Guest order placed successfully! Check your email for confirmation."
+                : "Order placed successfully!",
             error: false,
             success: true,
             data: {

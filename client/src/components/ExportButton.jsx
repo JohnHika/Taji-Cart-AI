@@ -1,9 +1,27 @@
-import React, { useState } from 'react';
-import { FaFileExcel, FaFilePdf, FaFileWord, FaFileCsv, FaFileCode } from 'react-icons/fa';
+import React, { useEffect, useRef, useState } from 'react';
+import { FaFileExcel, FaFilePdf, FaFileWord, FaFileCsv, FaFileCode, FaSpinner } from 'react-icons/fa';
 import { IoClose } from 'react-icons/io5';
 
-const ExportButton = ({ data, onExport }) => {
+const ExportButton = ({ data, onExport, exporting = false }) => {
   const [isOpen, setIsOpen] = useState(false);
+  const [pendingFormat, setPendingFormat] = useState(null);
+  const hasData = Array.isArray(data) && data.length > 0;
+  const containerRef = useRef(null);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleClickOutside = (event) => {
+      if (containerRef.current && !containerRef.current.contains(event.target)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [isOpen]);
+
+  useEffect(() => {
+    if (!exporting) setPendingFormat(null);
+  }, [exporting]);
 
   const exportOptions = [
     {
@@ -39,6 +57,8 @@ const ExportButton = ({ data, onExport }) => {
   ];
 
   const handleExport = (format) => {
+    if (!hasData || exporting) return;
+    setPendingFormat(format);
     if (onExport) {
       onExport(format);
     }
@@ -46,51 +66,65 @@ const ExportButton = ({ data, onExport }) => {
   };
 
   return (
-    <div className="relative">
+    <div className="relative" ref={containerRef}>
       <button
-        onClick={() => setIsOpen(!isOpen)}
-        className="bg-plum-600 text-white px-4 py-2 rounded-md hover:bg-plum-700 flex items-center gap-2 transition-colors shadow-sm hover:shadow-md"
+        onClick={() => setIsOpen((prev) => !prev)}
+        disabled={!hasData || exporting}
+        className="bg-plum-600 text-white px-4 py-2 rounded-md hover:bg-plum-700 flex items-center gap-2 transition-colors shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-plum-600 disabled:hover:shadow-sm"
       >
-        <span className="text-lg">📥</span>
-        <span className="font-medium">Export Data</span>
+        {exporting ? (
+          <FaSpinner className="animate-spin text-base" />
+        ) : (
+          <span className="text-lg leading-none">📥</span>
+        )}
+        <span className="font-medium">{exporting ? 'Exporting…' : 'Export Data'}</span>
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-64 bg-white dark:bg-dm-card rounded-md shadow-lg z-50 border border-plum-200 dark:border-dm-border">
-          <div className="p-4 border-b border-plum-100 dark:border-dm-border">
-            <div className="flex justify-between items-center mb-2">
+        <div className="absolute right-0 mt-2 w-72 bg-white dark:bg-dm-card rounded-lg shadow-xl z-50 border border-plum-200 dark:border-dm-border overflow-hidden animate-[fadeIn_0.12s_ease-out]">
+          <div className="p-4 border-b border-plum-100 dark:border-dm-border bg-gradient-to-r from-plum-50 to-white dark:from-dm-card-2 dark:to-dm-card">
+            <div className="flex justify-between items-center mb-1">
               <h3 className="font-semibold text-plum-800 dark:text-white">Export Options</h3>
               <button
                 onClick={() => setIsOpen(false)}
-                className="text-plum-400 hover:text-plum-600 dark:text-white/55 dark:hover:text-white"
+                className="text-plum-400 hover:text-plum-600 dark:text-white/55 dark:hover:text-white transition-colors"
+                aria-label="Close export menu"
               >
                 <IoClose size={20} />
               </button>
             </div>
             <p className="text-sm text-plum-600 dark:text-white/70">
-              Choose your desired export format
+              Choose a format to download your catalog
             </p>
           </div>
 
-          <div className="max-h-80 overflow-y-auto">
-            {exportOptions.map((option, index) => (
-              <button
-                key={index}
-                onClick={() => handleExport(option.format)}
-                className="w-full px-4 py-3 flex items-center gap-3 hover:bg-plum-50 dark:hover:bg-dm-card-2 transition-colors"
-              >
-                <div className="text-xl">{option.icon}</div>
-                <div className="flex-1 text-left">
-                  <div className="font-medium text-plum-800 dark:text-white">{option.name}</div>
-                  <div className="text-xs text-plum-500 dark:text-white/60">{option.description}</div>
-                </div>
-              </button>
-            ))}
+          <div className="max-h-80 overflow-y-auto divide-y divide-plum-50 dark:divide-dm-border/50">
+            {exportOptions.map((option) => {
+              const isPending = pendingFormat === option.format && exporting;
+              return (
+                <button
+                  key={option.format}
+                  onClick={() => handleExport(option.format)}
+                  disabled={exporting}
+                  className="w-full px-4 py-3 flex items-center gap-3 hover:bg-plum-50 dark:hover:bg-dm-card-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-left"
+                >
+                  <div className="text-xl w-6 flex justify-center shrink-0">
+                    {isPending ? <FaSpinner className="animate-spin text-plum-500" /> : option.icon}
+                  </div>
+                  <div className="flex-1 text-left">
+                    <div className="font-medium text-plum-800 dark:text-white">{option.name}</div>
+                    <div className="text-xs text-plum-500 dark:text-white/60">{option.description}</div>
+                  </div>
+                </button>
+              );
+            })}
           </div>
 
           <div className="p-3 border-t border-plum-100 dark:border-dm-border bg-plum-50 dark:bg-dm-card-2">
             <p className="text-xs text-plum-500 dark:text-white/60 text-center">
-              Exporting {data.length} products with all available data
+              {hasData
+                ? `${data.length} product${data.length === 1 ? '' : 's'} ready to export`
+                : 'No products to export yet'}
             </p>
           </div>
         </div>

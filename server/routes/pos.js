@@ -2,12 +2,15 @@ import express from 'express';
 import Sale from '../models/sale.model.js';
 import User from '../models/user.model.js';
 import Product from '../models/product.model.js';
+import EndOfDay from '../models/endOfDay.model.js';
 import auth from '../middleware/auth.js';
 import Staff from '../middleware/Staff.js';
 import { requireStaffPermission } from '../middleware/requireStaffPermission.js';
 import axios from 'axios';
 import { getAuthToken, MPESA_STK_URL } from '../config/mpesa.js';
 import MpesaPayment from '../models/mpesaPayment.model.js';
+import SaccoOperatorModel from '../models/saccooperator.model.js';
+import { resolveBikeDeliveryZone, resolveDeliveryCharge } from '../utils/deliveryFee.js';
 
 const router = express.Router();
 
@@ -255,9 +258,14 @@ router.post('/sale', auth, Staff, requireStaffPermission('pos.open_counter'), as
       customerName,
       customerPhone,
       payments,
-      note
+      note,
+      fulfillment_type,
+      delivery_mode,
+      deliveryZoneId,
+      saccoOperatorId,
+      saccoDestinationTown
     } = req.body;
-    
+
     // Validate required fields
     if (!items || items.length === 0) {
       return res.status(400).json({
@@ -265,13 +273,58 @@ router.post('/sale', auth, Staff, requireStaffPermission('pos.open_counter'), as
         message: 'Items are required'
       });
     }
-    
+
     if (!paymentMethod) {
       return res.status(400).json({
         success: false,
         message: 'Payment method is required'
       });
     }
+
+    // Delivery charge is always resolved server-side — the counter's on-screen
+    // total is a preview only, same trust rule as online checkout.
+    let deliveryZone = null;
+    let saccoOperator = null;
+    let deliveryCharge = 0;
+    const normalizedDeliveryMode = ['standard', 'bike', 'sacco'].includes(delivery_mode) ? delivery_mode : '';
+
+    if (fulfillment_type === 'delivery') {
+      if (normalizedDeliveryMode === 'bike') {
+        const zoneResult = await resolveBikeDeliveryZone(deliveryZoneId);
+        if (!zoneResult.zone) {
+          return res.status(400).json({ success: false, message: zoneResult.error });
+        }
+        deliveryZone = zoneResult.zone;
+        deliveryCharge = resolveDeliveryCharge({ fulfillmentType: 'delivery', deliveryZone });
+      } else if (normalizedDeliveryMode === 'sacco') {
+        if (!saccoOperatorId || !saccoDestinationTown) {
+          return res.status(400).json({ success: false, message: 'Select a SACCO/coach operator and destination town.' });
+        }
+        saccoOperator = await SaccoOperatorModel.findOne({ _id: saccoOperatorId, isActive: true });
+        if (!saccoOperator) {
+          return res.status(400).json({ success: false, message: 'Selected operator is no longer available. Please pick another.' });
+        }
+        deliveryCharge = resolveDeliveryCharge({ fulfillmentType: 'sacco_pickup' });
+      } else {
+        deliveryCharge = resolveDeliveryCharge({ fulfillmentType: 'delivery', deliveryZone: null });
+      }
+    }
+
+    // Any Equity payment row must carry proof (an uploaded SMS screenshot URL)
+    // and be explicitly approved by the cashier before the sale can be recorded.
+    // approvedBy/approvedAt are set server-side (never trusted from the client).
+    const equityRows = Array.isArray(payments) ? payments.filter(p => p.method === 'equity') : [];
+    const unprovenEquityRow = equityRows.find(p => !p.proofImageUrl || !p.approved);
+    if (unprovenEquityRow) {
+      return res.status(400).json({
+        success: false,
+        message: 'Each Equity payment requires an approved proof image before the sale can be completed'
+      });
+    }
+    equityRows.forEach((row) => {
+      row.approvedBy = req.user._id;
+      row.approvedAt = new Date();
+    });
 
     const normalizedItemsMap = new Map();
     for (const rawItem of items) {
@@ -382,6 +435,15 @@ router.post('/sale', auth, Staff, requireStaffPermission('pos.open_counter'), as
       customer: customer || null,
       customerName: customerName || '',
       customerPhone: customerPhone || '',
+      fulfillment_type: ['in_store', 'pickup', 'delivery'].includes(fulfillment_type) ? fulfillment_type : 'in_store',
+      delivery_mode: normalizedDeliveryMode,
+      delivery_zone: deliveryZone ? deliveryZone._id : undefined,
+      delivery_zone_name: deliveryZone ? deliveryZone.name : '',
+      delivery_zone_fare: deliveryZone ? deliveryZone.fare : undefined,
+      sacco_operator: saccoOperator ? saccoOperator._id : undefined,
+      sacco_operator_name: saccoOperator ? saccoOperator.name : '',
+      sacco_destination_town: saccoOperator ? saccoDestinationTown : '',
+      deliveryCharge,
   subtotal,
   discount: discount || 0,
   tax: typeof tax === 'number' ? tax : 0,
@@ -525,28 +587,28 @@ router.get('/summary/daily', auth, Staff, requireStaffPermission('pos.view_analy
               $cond: [{ $eq: ['$paymentMethod', 'cash'] }, '$total', 0]
             }
           },
-          cardSales: {
+          equitySales: {
             $sum: {
-              $cond: [{ $eq: ['$paymentMethod', 'card'] }, '$total', 0]
+              $cond: [{ $eq: ['$paymentMethod', 'equity'] }, '$total', 0]
             }
           },
-          mobileSales: {
+          splitSales: {
             $sum: {
-              $cond: [{ $eq: ['$paymentMethod', 'mobile'] }, '$total', 0]
+              $cond: [{ $eq: ['$paymentMethod', 'split'] }, '$total', 0]
             }
           }
         }
       }
     ]);
-    
+
     const summary = salesData[0] || {
       totalSales: 0,
       totalTransactions: 0,
       averageTransaction: 0,
       totalItems: 0,
       cashSales: 0,
-      cardSales: 0,
-      mobileSales: 0
+      equitySales: 0,
+      splitSales: 0
     };
     
     // Get top selling products for the day
@@ -901,6 +963,168 @@ router.get('/admin/statistics', auth, async (req, res) => {
       success: false,
       message: error.message
     });
+  }
+});
+
+// ─── End of Day ──────────────────────────────────────────────────────────────
+
+const dateStringToDayBounds = (dateStr) => {
+  const startOfDay = new Date(`${dateStr}T00:00:00.000`);
+  const endOfDay = new Date(`${dateStr}T23:59:59.999`);
+  return { startOfDay, endOfDay };
+};
+
+// Get the EOD record for a date (branch defaults to the current user's branch).
+// Returns null (not 404) when the day hasn't been closed yet, so the client
+// can distinguish "not closed" from a real error.
+router.get('/eod/:date', auth, Staff, requireStaffPermission('pos.open_counter'), async (req, res) => {
+  try {
+    const branch = req.user.staff_branch || 'Main Store';
+    const eod = await EndOfDay.findOne({ date: req.params.date, branch, isReset: false })
+      .populate('closedBy', 'name')
+      .sort({ createdAt: -1 });
+    res.json({ success: true, data: eod || null });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Close out a calendar day: aggregate the day's sales into an hourly
+// breakdown + payment-method totals, and persist it as the EOD record.
+// One active close per (date, branch) — a second attempt is rejected (409)
+// unless the prior close was reset by an admin first.
+router.post('/eod/close', auth, Staff, requireStaffPermission('pos.open_counter'), async (req, res) => {
+  try {
+    const { date } = req.body;
+    if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+      return res.status(400).json({ success: false, message: 'A date in YYYY-MM-DD format is required' });
+    }
+
+    const branch = req.user.staff_branch || 'Main Store';
+
+    const existing = await EndOfDay.findOne({ date, branch, isReset: false });
+    if (existing) {
+      return res.status(409).json({
+        success: false,
+        message: `${date} has already been closed for ${branch}. An admin must reset it before it can be closed again.`
+      });
+    }
+
+    const { startOfDay, endOfDay } = dateStringToDayBounds(date);
+    const filter = {
+      branch,
+      saleDate: { $gte: startOfDay, $lte: endOfDay },
+      isVoided: { $ne: true }
+    };
+
+    // Actual cash received per sale: for a plain 'cash' sale that's the sale
+    // total; for a 'split' sale it's just the cash row(s) inside `payments`
+    // (the till only physically receives that portion). This is what a
+    // cash-drawer reconciliation needs, not just sales tagged paymentMethod=cash.
+    const cashReceivedExpr = {
+      $cond: [
+        { $eq: ['$paymentMethod', 'cash'] },
+        '$total',
+        {
+          $cond: [
+            { $eq: ['$paymentMethod', 'split'] },
+            {
+              $reduce: {
+                input: { $filter: { input: { $ifNull: ['$payments', []] }, cond: { $eq: ['$$this.method', 'cash'] } } },
+                initialValue: 0,
+                in: { $add: ['$$value', '$$this.amount'] }
+              }
+            },
+            0
+          ]
+        }
+      ]
+    };
+
+    const [totals] = await Sale.aggregate([
+      { $match: filter },
+      {
+        $group: {
+          _id: null,
+          totalSales: { $sum: '$total' },
+          cashSales: { $sum: cashReceivedExpr },
+          equitySales: { $sum: { $cond: [{ $eq: ['$paymentMethod', 'equity'] }, '$total', 0] } },
+          splitSales: { $sum: { $cond: [{ $eq: ['$paymentMethod', 'split'] }, '$total', 0] } },
+          transactionCount: { $sum: 1 }
+        }
+      }
+    ]);
+
+    const hourlyBreakdown = await Sale.aggregate([
+      { $match: filter },
+      {
+        $group: {
+          _id: { $hour: '$saleDate' },
+          total: { $sum: '$total' },
+          cashTotal: { $sum: cashReceivedExpr },
+          count: { $sum: 1 }
+        }
+      },
+      { $sort: { '_id': 1 } },
+      { $project: { _id: 0, hour: '$_id', total: 1, cashTotal: 1, count: 1 } }
+    ]);
+
+    const eod = await EndOfDay.create({
+      date,
+      branch,
+      closedBy: req.user._id,
+      closedByName: req.user.name,
+      summary: {
+        totalSales: totals?.totalSales || 0,
+        cashSales: totals?.cashSales || 0,
+        equitySales: totals?.equitySales || 0,
+        splitSales: totals?.splitSales || 0,
+        transactionCount: totals?.transactionCount || 0,
+        hourlyBreakdown
+      }
+    });
+
+    res.status(201).json({ success: true, data: eod });
+  } catch (error) {
+    if (error?.code === 11000) {
+      return res.status(409).json({
+        success: false,
+        message: 'This day has already been closed. An admin must reset it before it can be closed again.'
+      });
+    }
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Admin-only: reset a closed EOD so it can be redone. The original record is
+// kept (isReset: true) for audit history rather than deleted.
+router.put('/eod/:date/reset', auth, async (req, res) => {
+  try {
+    if (!req.user.isAdmin && req.user.role !== 'admin') {
+      return res.status(403).json({ success: false, message: 'Only administrators can reset an end-of-day close' });
+    }
+
+    const { reason } = req.body;
+    if (!reason) {
+      return res.status(400).json({ success: false, message: 'A reset reason is required' });
+    }
+
+    const branch = req.user.staff_branch || 'Main Store';
+    const eod = await EndOfDay.findOne({ date: req.params.date, branch, isReset: false });
+    if (!eod) {
+      return res.status(404).json({ success: false, message: 'No active end-of-day close found for that date' });
+    }
+
+    eod.isReset = true;
+    eod.resetBy = req.user._id;
+    eod.resetByName = req.user.name;
+    eod.resetAt = new Date();
+    eod.resetReason = reason;
+    await eod.save();
+
+    res.json({ success: true, message: 'End-of-day close reset', data: eod });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
   }
 });
 

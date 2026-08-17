@@ -12,17 +12,17 @@ const BACKEND =
 export default defineConfig({
   plugins: [react()],
   optimizeDeps: {
-    include: ['xlsx'],
+    include: ['exceljs'],
   },
   build: {
     rollupOptions: {
       output: {
         manualChunks: {
-          'vendor-react':  ['react', 'react-dom', 'react-router-dom'],
-          'vendor-redux':  ['@reduxjs/toolkit', 'react-redux'],
-          'vendor-ui':     ['react-hot-toast', 'react-toastify'],
-          'vendor-axios':  ['axios'],
-          'vendor-xlsx':   ['xlsx'],
+          'vendor-react':   ['react', 'react-dom', 'react-router-dom'],
+          'vendor-redux':   ['@reduxjs/toolkit', 'react-redux'],
+          'vendor-ui':      ['react-hot-toast', 'react-toastify'],
+          'vendor-axios':   ['axios'],
+          'vendor-exceljs': ['exceljs'],
         },
       },
     },

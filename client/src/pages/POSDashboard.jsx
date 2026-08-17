@@ -5,19 +5,24 @@ import {
   FaCalendarAlt,
   FaChartBar,
   FaCreditCard,
+  FaFileInvoiceDollar,
   FaMoneyBillWave,
   FaDownload,
   FaReceipt,
   FaShoppingCart,
   FaTimes,
-  FaUser
+  FaUndo,
+  FaUser,
+  FaWhatsapp
 } from 'react-icons/fa';
 import { useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import LoadingSpinner from '../components/LoadingSpinner';
 import Axios from '../utils/Axios';
 import AxiosToastError from '../utils/AxiosToastError';
+import { downloadEndOfDayReport } from '../utils/eodReceipt';
 import { DisplayPriceInShillings } from '../utils/DisplayPriceInShillings';
+import isAdmin from '../utils/isAdmin';
 import isStaff from '../utils/isStaff';
 
 const getSaleSubtotal = (sale) => Number(
@@ -174,6 +179,7 @@ const POSDashboard = () => {
     localStorage.getItem('token')
   );
   const canAccessSalesTools = isStaff(user);
+  const canResetEndOfDay = isAdmin(user);
 
   const [loading, setLoading] = useState(true);
   const [dailySummary, setDailySummary] = useState(null);
@@ -184,6 +190,10 @@ const POSDashboard = () => {
   const [selectedSale, setSelectedSale] = useState(null);
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [analyticsPeriod, setAnalyticsPeriod] = useState('7d');
+  const [eodStatus, setEodStatus] = useState(null);
+  const [eodLoading, setEodLoading] = useState(false);
+  const [showResetEodModal, setShowResetEodModal] = useState(false);
+  const [resetReason, setResetReason] = useState('');
 
   // Wait for session hydration before deciding access, and allow admins to use sales tools.
   useEffect(() => {
@@ -211,7 +221,8 @@ const POSDashboard = () => {
       await Promise.all([
         loadDailySummary(),
         loadAnalytics(),
-        loadRecentSales()
+        loadRecentSales(),
+        loadEodStatus()
       ]);
     } catch (error) {
       AxiosToastError(error);
@@ -226,12 +237,73 @@ const POSDashboard = () => {
         url: `/api/pos/summary/daily?date=${selectedDate}`,
         method: 'GET'
       });
-      
+
       if (response.data.success) {
         setDailySummary(response.data.data);
       }
     } catch (error) {
       console.error('Error loading daily summary:', error);
+    }
+  };
+
+  const loadEodStatus = async () => {
+    try {
+      const response = await Axios({
+        url: `/api/pos/eod/${selectedDate}`,
+        method: 'GET'
+      });
+      if (response.data.success) {
+        setEodStatus(response.data.data);
+      }
+    } catch (error) {
+      console.error('Error loading end-of-day status:', error);
+    }
+  };
+
+  const closeEndOfDay = async () => {
+    try {
+      setEodLoading(true);
+      let eod = eodStatus;
+      if (!eod) {
+        const response = await Axios({
+          url: '/api/pos/eod/close',
+          method: 'POST',
+          data: { date: selectedDate }
+        });
+        eod = response.data.data;
+        setEodStatus(eod);
+        toast.success(`End of day closed for ${selectedDate}`);
+      } else {
+        toast('This day has already been closed — downloading the existing report.', { icon: 'ℹ️' });
+      }
+      downloadEndOfDayReport(eod);
+    } catch (error) {
+      AxiosToastError(error);
+    } finally {
+      setEodLoading(false);
+    }
+  };
+
+  const resetEndOfDay = async () => {
+    if (!resetReason.trim()) {
+      toast.error('Enter a reason for the reset.');
+      return;
+    }
+    try {
+      setEodLoading(true);
+      await Axios({
+        url: `/api/pos/eod/${selectedDate}/reset`,
+        method: 'PUT',
+        data: { reason: resetReason.trim() }
+      });
+      toast.success('End-of-day close reset. It can be closed again.');
+      setEodStatus(null);
+      setShowResetEodModal(false);
+      setResetReason('');
+    } catch (error) {
+      AxiosToastError(error);
+    } finally {
+      setEodLoading(false);
     }
   };
 
@@ -314,6 +386,13 @@ const POSDashboard = () => {
           </div>
           <div className="mt-4 sm:mt-0 flex flex-col sm:flex-row gap-3">
             <button
+              onClick={() => navigate('/dashboard/whatsapp-order')}
+              className="px-5 py-2.5 bg-green-600 text-white rounded-pill hover:bg-green-700 transition-colors flex items-center justify-center font-semibold shadow-sm"
+            >
+              <FaWhatsapp className="mr-2" />
+              New WhatsApp Order
+            </button>
+            <button
               onClick={() => navigate('/dashboard/sales-counter')}
               className="px-5 py-2.5 bg-plum-700 text-white rounded-pill hover:bg-plum-800 transition-colors flex items-center justify-center font-semibold shadow-sm"
             >
@@ -334,16 +413,41 @@ const POSDashboard = () => {
               </p>
             </div>
 
-            <div className="flex items-center gap-2 rounded-xl border border-brown-200 bg-ivory px-3 py-2 dark:border-dm-border dark:bg-dm-card-2">
-              <FaCalendarAlt className="text-brown-400" />
-              <input
-                type="date"
-                value={selectedDate}
-                onChange={(e) => setSelectedDate(e.target.value)}
-                className="bg-transparent text-sm font-medium text-charcoal outline-none dark:text-white"
-              />
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="flex items-center gap-2 rounded-xl border border-brown-200 bg-ivory px-3 py-2 dark:border-dm-border dark:bg-dm-card-2">
+                <FaCalendarAlt className="text-brown-400" />
+                <input
+                  type="date"
+                  value={selectedDate}
+                  onChange={(e) => setSelectedDate(e.target.value)}
+                  className="bg-transparent text-sm font-medium text-charcoal outline-none dark:text-white"
+                />
+              </div>
+              <button
+                type="button"
+                onClick={closeEndOfDay}
+                disabled={eodLoading}
+                className="flex items-center gap-2 rounded-xl bg-plum-700 px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-plum-800 disabled:opacity-60"
+              >
+                <FaFileInvoiceDollar />
+                {eodLoading ? 'Working…' : eodStatus ? 'Download EOD report' : 'Close & download EOD'}
+              </button>
+              {eodStatus && canResetEndOfDay && (
+                <button
+                  type="button"
+                  onClick={() => setShowResetEodModal(true)}
+                  className="flex items-center gap-2 rounded-xl border border-red-200 px-3 py-2 text-sm font-semibold text-red-600 transition-colors hover:bg-red-50 dark:border-red-900/40 dark:hover:bg-red-950/20"
+                >
+                  <FaUndo /> Reset EOD
+                </button>
+              )}
             </div>
           </div>
+          {eodStatus && (
+            <p className="mb-4 text-xs text-brown-500 dark:text-white/45">
+              {selectedDate} was already closed by {eodStatus.closedByName || eodStatus.closedBy?.name || 'a staff member'}.
+            </p>
+          )}
 
           {dailySummary ? (
             <div className="grid grid-cols-2 gap-3 sm:gap-4">
@@ -481,15 +585,15 @@ const POSDashboard = () => {
                 </p>
               </div>
               <div className="rounded-2xl border border-brown-100 bg-ivory p-3 dark:border-dm-border dark:bg-dm-card-2 sm:p-4">
-                <p className="text-[10px] font-semibold uppercase tracking-wide text-brown-500 dark:text-white/40 sm:text-xs">Card</p>
+                <p className="text-[10px] font-semibold uppercase tracking-wide text-brown-500 dark:text-white/40 sm:text-xs">Equity</p>
                 <p className="mt-1 text-base font-black text-charcoal dark:text-white sm:mt-2 sm:text-lg">
-                  {DisplayPriceInShillings(dailySummary.summary.cardSales)}
+                  {DisplayPriceInShillings(dailySummary.summary.equitySales)}
                 </p>
               </div>
               <div className="rounded-2xl border border-brown-100 bg-ivory p-3 dark:border-dm-border dark:bg-dm-card-2 sm:p-4">
-                <p className="text-[10px] font-semibold uppercase tracking-wide text-brown-500 dark:text-white/40 sm:text-xs">M-Pesa</p>
+                <p className="text-[10px] font-semibold uppercase tracking-wide text-brown-500 dark:text-white/40 sm:text-xs">Split</p>
                 <p className="mt-1 text-base font-black text-charcoal dark:text-white sm:mt-2 sm:text-lg">
-                  {DisplayPriceInShillings(dailySummary.summary.mobileSales)}
+                  {DisplayPriceInShillings(dailySummary.summary.splitSales)}
                 </p>
               </div>
             </div>
@@ -643,7 +747,7 @@ const POSDashboard = () => {
               <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
                 <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-pill ${
                   sale.paymentMethod === 'cash' ? 'bg-plum-100 text-plum-700 dark:bg-plum-900/30 dark:text-plum-200' :
-                  sale.paymentMethod === 'card' ? 'bg-gold-100 text-gold-600 dark:bg-gold-900/20 dark:text-gold-300' :
+                  sale.paymentMethod === 'equity' ? 'bg-gold-100 text-gold-600 dark:bg-gold-900/20 dark:text-gold-300' :
                   'bg-blush-100 text-blush-500 dark:bg-blush-500/10 dark:text-blush-300'
                 }`}>
                   {sale.paymentMethod.charAt(0).toUpperCase() + sale.paymentMethod.slice(1)}
@@ -722,7 +826,7 @@ const POSDashboard = () => {
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
                       sale.paymentMethod === 'cash' ? 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400' :
-                      sale.paymentMethod === 'card' ? 'bg-gold-100 text-gold-800 dark:bg-gold-900/25 dark:text-gold-300' :
+                      sale.paymentMethod === 'equity' ? 'bg-gold-100 text-gold-800 dark:bg-gold-900/25 dark:text-gold-300' :
                       'bg-purple-100 text-purple-800 dark:bg-purple-900/20 dark:text-purple-400'
                     }`}>
                       {sale.paymentMethod.charAt(0).toUpperCase() + sale.paymentMethod.slice(1)}
@@ -753,6 +857,57 @@ const POSDashboard = () => {
           )}
         </div>
       </div>
+
+      {/* Reset End-of-Day Modal (admin only) */}
+      {showResetEodModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-charcoal/70 p-4 backdrop-blur-sm"
+          role="presentation"
+          onClick={() => setShowResetEodModal(false)}
+        >
+          <div
+            className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl dark:bg-dm-card"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="reset-eod-title"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <h4 id="reset-eod-title" className="text-lg font-bold text-charcoal dark:text-white">
+              Reset end-of-day for {selectedDate}?
+            </h4>
+            <p className="mt-2 text-sm text-brown-500 dark:text-white/50">
+              This allows the day to be closed again. The original close stays on record for audit purposes.
+            </p>
+            <label className="mt-4 block text-sm font-medium text-charcoal dark:text-white">
+              Reason for reset
+              <textarea
+                value={resetReason}
+                onChange={(e) => setResetReason(e.target.value)}
+                rows={3}
+                placeholder="e.g. Closed before the last two sales were entered"
+                className="mt-1 w-full resize-none rounded-lg border border-brown-200 bg-white px-3 py-2 text-sm dark:border-dm-border dark:bg-dm-card-2"
+              />
+            </label>
+            <div className="mt-5 flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => { setShowResetEodModal(false); setResetReason(''); }}
+                className="rounded-lg border border-brown-200 px-4 py-2 text-sm font-semibold text-brown-700 hover:bg-brown-50 dark:border-dm-border dark:text-white/70 dark:hover:bg-dm-card-2"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={resetEndOfDay}
+                disabled={eodLoading}
+                className="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-60"
+              >
+                {eodLoading ? 'Resetting…' : 'Reset'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Receipt Modal */}
       {showReceiptModal && selectedSale && (
@@ -850,7 +1005,7 @@ const POSDashboard = () => {
                     <div className="mt-3 space-y-1 text-xs text-brown-600 dark:text-white/55">
                       {selectedSale.payments.map((payment, index) => (
                         <div key={index} className="flex justify-between gap-3">
-                          <span className="capitalize">{payment.method === 'mobile' ? 'M-Pesa' : payment.method}</span>
+                          <span className="capitalize">{payment.method === 'equity' ? 'Equity' : payment.method}</span>
                           <span>{DisplayPriceInShillings(payment.amount)}</span>
                         </div>
                       ))}

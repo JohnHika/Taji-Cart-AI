@@ -33,6 +33,13 @@ const orderSchema = new mongoose.Schema({
         type: String,
         default: ""
     },
+    // How this order was placed. 'whatsapp' means staff transcribed it from a
+    // WhatsApp conversation on the customer's behalf (see guestCheckoutController).
+    source: {
+        type: String,
+        enum: ['web', 'whatsapp'],
+        default: 'web'
+    },
     delivery_address: {
         type: mongoose.Schema.ObjectId,
         ref: 'address'
