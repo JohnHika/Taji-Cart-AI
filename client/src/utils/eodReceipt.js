@@ -27,6 +27,7 @@ const paymentMethodLabel = (method) => {
   if (method === 'equity') return 'Equity';
   if (method === 'split') return 'Split';
   if (method === 'cash') return 'Cash';
+  if (method === 'text_forwarded') return 'Text Fwd';
   return method || 'N/A';
 };
 
@@ -71,10 +72,10 @@ const fetchImageAsDataUrl = (url) =>
 // eod: {
 //   date, branch, closedByName,
 //   summary: {
-//     totalSales, cashSales, equitySales, splitSales, transactionCount,
+//     totalSales, cashSales, equitySales, splitSales, textForwardedSales, transactionCount,
 //     hourlyBreakdown: [{ hour, total, cashTotal, count }],
 //     cashierBreakdown: [{ cashierName, saleCount, total }],
-//     transactions: [{ saleNumber, saleDate, cashierName, itemsSummary, paymentMethod, total, proofImageUrls }],
+//     transactions: [{ saleNumber, saleDate, cashierName, itemsSummary, paymentMethod, total, proofImageUrls, forwardedTexts }],
 //     exchangeCount, exchanges: [{ exchangeNumber, requestedAt, sourceNumber, customerName,
 //       returnedItemSummary, replacementItemSummary, priceDifference, status, requestedByName }]
 //   }
@@ -249,6 +250,29 @@ export const downloadEndOfDayReport = async (eod) => {
       doc.text(`${missingProofCount} proof image(s) could not be loaded for this report.`, left, y);
       y += 10;
     }
+
+    // --- Text Forwarded confirmation messages, in full (can't thumbnail text) ---
+    const forwardedEntries = transactions
+      .filter((t) => (t.forwardedTexts || []).length > 0)
+      .flatMap((t) => (t.forwardedTexts || []).map((text) => ({ saleNumber: t.saleNumber, text })));
+    if (forwardedEntries.length > 0) {
+      ensureSpace(14);
+      drawSectionTitle('Text Forwarded confirmations');
+      forwardedEntries.forEach(({ saleNumber, text }) => {
+        const wrapped = doc.splitTextToSize(text, right - left - 4);
+        ensureSpace(wrapped.length * 4 + 10);
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(8);
+        doc.setTextColor(...PLUM);
+        doc.text(saleNumber, left, y);
+        y += 5;
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(7.5);
+        doc.setTextColor(26, 15, 20);
+        doc.text(wrapped, left, y);
+        y += wrapped.length * 4 + 6;
+      });
+    }
   }
 
   // --- Returns & exchanges requested this trading day ---
@@ -287,6 +311,7 @@ export const downloadEndOfDayReport = async (eod) => {
     ['Cash received', summary.cashSales || 0],
     ['Equity sales', summary.equitySales || 0],
     ['Split sales', summary.splitSales || 0],
+    ['Text Forwarded sales', summary.textForwardedSales || 0],
   ];
   doc.setFontSize(9);
   rows.forEach(([label, value]) => {

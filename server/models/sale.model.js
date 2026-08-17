@@ -107,15 +107,20 @@ const saleSchema = new mongoose.Schema({
   },
   paymentMethod: {
     type: String,
-    enum: ['cash', 'equity', 'split'],
+    enum: ['cash', 'equity', 'split', 'text_forwarded'],
     required: true
   },
   payments: [{
-    method: { type: String, enum: ['cash', 'equity'], required: true },
+    method: { type: String, enum: ['cash', 'equity', 'text_forwarded'], required: true },
     amount: { type: Number, required: true },
     phone: { type: String },
     checkoutRequestId: { type: String },
     proofImageUrl: { type: String },
+    // Raw confirmation SMS text for a text_forwarded payment — the text
+    // equivalent of proofImageUrl, used when the customer's confirmation
+    // (e.g. an M-Pesa/bank SMS) was relayed to a staff member as text
+    // (forwarded by the admin, or copy-pasted) rather than a screenshot.
+    forwardedText: { type: String },
     approved: { type: Boolean, default: false },
     approvedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
     approvedAt: { type: Date }
@@ -257,6 +262,11 @@ saleSchema.statics.getSummary = async function(startDate, endDate, cashier = nul
           $sum: {
             $cond: [{ $eq: ['$paymentMethod', 'split'] }, '$total', 0]
           }
+        },
+        textForwardedSales: {
+          $sum: {
+            $cond: [{ $eq: ['$paymentMethod', 'text_forwarded'] }, '$total', 0]
+          }
         }
       }
     }
@@ -270,7 +280,8 @@ saleSchema.statics.getSummary = async function(startDate, endDate, cashier = nul
     totalDiscount: 0,
     cashSales: 0,
     equitySales: 0,
-    splitSales: 0
+    splitSales: 0,
+    textForwardedSales: 0
   };
 };
 

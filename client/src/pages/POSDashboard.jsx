@@ -586,7 +586,7 @@ const POSDashboard = () => {
               </h3>
               <span className="text-xs text-brown-500 dark:text-white/45">{selectedDate}</span>
             </div>
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
               <div className="rounded-2xl border border-brown-100 bg-ivory p-3 dark:border-dm-border dark:bg-dm-card-2 sm:p-4">
                 <p className="text-[10px] font-semibold uppercase tracking-wide text-brown-500 dark:text-white/40 sm:text-xs">Cash</p>
                 <p className="mt-1 text-base font-black text-charcoal dark:text-white sm:mt-2 sm:text-lg">
@@ -603,6 +603,12 @@ const POSDashboard = () => {
                 <p className="text-[10px] font-semibold uppercase tracking-wide text-brown-500 dark:text-white/40 sm:text-xs">Split</p>
                 <p className="mt-1 text-base font-black text-charcoal dark:text-white sm:mt-2 sm:text-lg">
                   {DisplayPriceInShillings(dailySummary.summary.splitSales)}
+                </p>
+              </div>
+              <div className="rounded-2xl border border-brown-100 bg-ivory p-3 dark:border-dm-border dark:bg-dm-card-2 sm:p-4">
+                <p className="text-[10px] font-semibold uppercase tracking-wide text-brown-500 dark:text-white/40 sm:text-xs">Text Fwd</p>
+                <p className="mt-1 text-base font-black text-charcoal dark:text-white sm:mt-2 sm:text-lg">
+                  {DisplayPriceInShillings(dailySummary.summary.textForwardedSales)}
                 </p>
               </div>
             </div>

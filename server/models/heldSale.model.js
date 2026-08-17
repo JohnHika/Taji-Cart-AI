@@ -39,13 +39,15 @@ const heldSaleSchema = new mongoose.Schema({
   },
   paymentMethod: {
     type: String,
-    enum: ['cash', 'equity', 'split'],
+    enum: ['cash', 'equity', 'split', 'text_forwarded'],
     default: 'cash'
   },
   amountTendered: { type: String, default: '' },
   splitCashAmount: { type: String, default: '' },
   equityProofUrl: { type: String, default: '' },
   equityApproved: { type: Boolean, default: false },
+  forwardedText: { type: String, default: '' },
+  forwardedTextApproved: { type: Boolean, default: false },
   branch: { type: String, default: 'Main Store' },
   heldBy: {
     type: mongoose.Schema.Types.ObjectId,

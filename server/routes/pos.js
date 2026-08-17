@@ -334,6 +334,8 @@ router.post('/held-sales', auth, Staff, requireStaffPermission('pos.open_counter
       splitCashAmount,
       equityProofUrl,
       equityApproved,
+      forwardedText,
+      forwardedTextApproved,
     } = req.body;
 
     if (!Array.isArray(cart) || cart.length === 0) {
@@ -355,6 +357,8 @@ router.post('/held-sales', auth, Staff, requireStaffPermission('pos.open_counter
       splitCashAmount: splitCashAmount || '',
       equityProofUrl: equityProofUrl || '',
       equityApproved: Boolean(equityApproved),
+      forwardedText: forwardedText || '',
+      forwardedTextApproved: Boolean(forwardedTextApproved),
       branch: req.user.staff_branch || 'Main Store',
       heldBy: req.user._id,
       heldByName: req.user.name,
@@ -469,6 +473,22 @@ router.post('/sale', auth, Staff, requireStaffPermission('pos.open_counter'), as
       });
     }
     equityRows.forEach((row) => {
+      row.approvedBy = req.user._id;
+      row.approvedAt = new Date();
+    });
+
+    // Same trust rule as Equity, but the proof is the raw confirmation SMS
+    // text (e.g. relayed by the admin) instead of a screenshot — must be
+    // present and explicitly approved before the sale can be recorded.
+    const textForwardedRows = Array.isArray(payments) ? payments.filter(p => p.method === 'text_forwarded') : [];
+    const unprovenTextRow = textForwardedRows.find(p => !p.forwardedText?.trim() || !p.approved);
+    if (unprovenTextRow) {
+      return res.status(400).json({
+        success: false,
+        message: 'Each Text Forwarded payment requires the pasted confirmation message and approval before the sale can be completed'
+      });
+    }
+    textForwardedRows.forEach((row) => {
       row.approvedBy = req.user._id;
       row.approvedAt = new Date();
     });
@@ -755,6 +775,11 @@ router.get('/summary/daily', auth, Staff, requireStaffPermission('pos.view_analy
             $sum: {
               $cond: [{ $eq: ['$paymentMethod', 'split'] }, '$total', 0]
             }
+          },
+          textForwardedSales: {
+            $sum: {
+              $cond: [{ $eq: ['$paymentMethod', 'text_forwarded'] }, '$total', 0]
+            }
           }
         }
       }
@@ -767,7 +792,8 @@ router.get('/summary/daily', auth, Staff, requireStaffPermission('pos.view_analy
       totalItems: 0,
       cashSales: 0,
       equitySales: 0,
-      splitSales: 0
+      splitSales: 0,
+      textForwardedSales: 0
     };
     
     // Get top selling products for the day
@@ -1215,6 +1241,7 @@ router.post('/eod/close', auth, Staff, requireStaffPermission('pos.open_counter'
           cashSales: { $sum: cashReceivedExpr },
           equitySales: { $sum: { $cond: [{ $eq: ['$paymentMethod', 'equity'] }, '$total', 0] } },
           splitSales: { $sum: { $cond: [{ $eq: ['$paymentMethod', 'split'] }, '$total', 0] } },
+          textForwardedSales: { $sum: { $cond: [{ $eq: ['$paymentMethod', 'text_forwarded'] }, '$total', 0] } },
           transactionCount: { $sum: 1 }
         }
       }
@@ -1249,8 +1276,9 @@ router.post('/eod/close', auth, Staff, requireStaffPermission('pos.open_counter'
     ]);
 
     // Full per-sale snapshot, frozen at close time, for the detailed report —
-    // includes each Equity/Split payment's proof image so it can be embedded
-    // as a thumbnail next to the transaction row.
+    // includes each Equity/Split payment's proof image, and each Text
+    // Forwarded payment's confirmation text, so both can be shown next to
+    // the transaction row.
     const sales = await Sale.find(filter).sort({ saleDate: 1 }).lean();
     const transactions = sales.map((sale) => ({
       saleNumber: sale.saleNumber,
@@ -1263,6 +1291,9 @@ router.post('/eod/close', auth, Staff, requireStaffPermission('pos.open_counter'
       total: sale.total,
       proofImageUrls: (sale.payments || [])
         .map((payment) => payment.proofImageUrl)
+        .filter(Boolean),
+      forwardedTexts: (sale.payments || [])
+        .map((payment) => payment.forwardedText)
         .filter(Boolean)
     }));
 
@@ -1299,6 +1330,7 @@ router.post('/eod/close', auth, Staff, requireStaffPermission('pos.open_counter'
         cashSales: totals?.cashSales || 0,
         equitySales: totals?.equitySales || 0,
         splitSales: totals?.splitSales || 0,
+        textForwardedSales: totals?.textForwardedSales || 0,
         transactionCount: totals?.transactionCount || 0,
         hourlyBreakdown,
         cashierBreakdown,

@@ -6,6 +6,7 @@ import {
   FaCamera,
   FaCheckCircle,
   FaClock,
+  FaCopy,
   FaMinus,
   FaPause,
   FaPlus,
@@ -33,6 +34,7 @@ const PAYMENT_METHODS = [
   { id: 'cash', label: 'Cash', color: 'bg-green-600' },
   { id: 'equity', label: 'Equity', color: 'bg-gold-600' },
   { id: 'split', label: 'Split', color: 'bg-plum-600' },
+  { id: 'text_forwarded', label: 'Text Forwarded', color: 'bg-blue-600' },
 ];
 
 const FULFILLMENT_TYPES = [
@@ -40,6 +42,9 @@ const FULFILLMENT_TYPES = [
   { id: 'pickup', label: 'Pickup Later' },
   { id: 'delivery', label: 'Delivery' },
 ];
+
+const paymentMethodLabel = (method) =>
+  PAYMENT_METHODS.find((m) => m.id === method)?.label || method || 'N/A';
 
 const PAGE_SIZE = 24;
 const QUICK_PICKS_COUNT = 8;
@@ -101,6 +106,8 @@ const SalesCounter = () => {
   const [equityProofUploading, setEquityProofUploading] = useState(false);
   const [equityApproved, setEquityApproved] = useState(() => Boolean(restoredDraft?.equityApproved));
   const equityProofInputRef = useRef(null);
+  const [forwardedText, setForwardedText] = useState(() => restoredDraft?.forwardedText || '');
+  const [forwardedTextApproved, setForwardedTextApproved] = useState(() => Boolean(restoredDraft?.forwardedTextApproved));
   const [customerName, setCustomerName] = useState(() => restoredDraft?.customerName || '');
   const [customerPhone, setCustomerPhone] = useState(() => restoredDraft?.customerPhone || '');
   const [saleNote, setSaleNote] = useState(() => restoredDraft?.saleNote || '');
@@ -153,6 +160,8 @@ const SalesCounter = () => {
         splitCashAmount,
         equityProofUrl,
         equityApproved,
+        forwardedText,
+        forwardedTextApproved,
         customerName,
         customerPhone,
         saleNote,
@@ -162,7 +171,7 @@ const SalesCounter = () => {
       // sessionStorage unavailable (private browsing quota, etc.) — draft
       // recovery just won't be available this session, sale flow still works.
     }
-  }, [cart, fulfillmentType, deliveryDetails, paymentMethod, amountTendered, splitCashAmount, equityProofUrl, equityApproved, customerName, customerPhone, saleNote, activeHeldSaleId]);
+  }, [cart, fulfillmentType, deliveryDetails, paymentMethod, amountTendered, splitCashAmount, equityProofUrl, equityApproved, forwardedText, forwardedTextApproved, customerName, customerPhone, saleNote, activeHeldSaleId]);
 
   // Reset pagination whenever the filter changes so "Load more" starts fresh.
   useEffect(() => {
@@ -240,6 +249,8 @@ const SalesCounter = () => {
           splitCashAmount,
           equityProofUrl,
           equityApproved,
+          forwardedText,
+          forwardedTextApproved,
         },
       });
       if (res.data.success) {
@@ -277,6 +288,8 @@ const SalesCounter = () => {
       setSplitCashAmount(heldSale.splitCashAmount || '');
       setEquityProofUrl(heldSale.equityProofUrl || '');
       setEquityApproved(Boolean(heldSale.equityApproved));
+      setForwardedText(heldSale.forwardedText || '');
+      setForwardedTextApproved(Boolean(heldSale.forwardedTextApproved));
       setActiveHeldSaleId(heldSale._id);
       setShowHeldSales(false);
       setShowCart(true);
@@ -406,6 +419,8 @@ const SalesCounter = () => {
     setSplitCashAmount('');
     setEquityProofUrl('');
     setEquityApproved(false);
+    setForwardedText('');
+    setForwardedTextApproved(false);
     setCustomerName('');
     setCustomerPhone('');
     setSaleNote('');
@@ -453,6 +468,19 @@ const SalesCounter = () => {
     setEquityApproved(false);
   };
 
+  // Lets the admin (who received the confirmation SMS on their own phone)
+  // copy it back out — e.g. to forward on to whichever staff member needs
+  // to hand it to, or to paste into a WhatsApp message for the record.
+  const copyForwardedText = async () => {
+    if (!forwardedText.trim()) return;
+    try {
+      await navigator.clipboard.writeText(forwardedText);
+      toast.success('Message copied');
+    } catch {
+      toast.error('Could not copy — copy it manually instead.');
+    }
+  };
+
   const completeSale = async () => {
     if (cart.length === 0) {
       toast.error('Add at least one product to the basket.');
@@ -464,6 +492,10 @@ const SalesCounter = () => {
     }
     if ((paymentMethod === 'equity' || paymentMethod === 'split') && (!equityProofUrl || !equityApproved)) {
       toast.error('Attach and approve the Equity confirmation photo before charging.');
+      return;
+    }
+    if (paymentMethod === 'text_forwarded' && (!forwardedText.trim() || !forwardedTextApproved)) {
+      toast.error('Paste and approve the forwarded confirmation message before charging.');
       return;
     }
     if (paymentMethod === 'split' && (Number(splitCashAmount) || 0) <= 0) {
@@ -486,6 +518,8 @@ const SalesCounter = () => {
       payments.push({ method: 'cash', amount: totals.total });
     } else if (paymentMethod === 'equity') {
       payments.push({ method: 'equity', amount: totals.total, proofImageUrl: equityProofUrl, approved: true });
+    } else if (paymentMethod === 'text_forwarded') {
+      payments.push({ method: 'text_forwarded', amount: totals.total, forwardedText, approved: true });
     } else if (paymentMethod === 'split') {
       payments.push({ method: 'cash', amount: Number(splitCashAmount) || 0 });
       payments.push({ method: 'equity', amount: splitEquityAmount, proofImageUrl: equityProofUrl, approved: true });
@@ -928,6 +962,55 @@ const SalesCounter = () => {
                 )}
               </div>
             )}
+
+            {/* Text Forwarded: paste the confirmation SMS text (e.g. relayed
+                by the admin from their own phone) + cashier approval */}
+            {paymentMethod === 'text_forwarded' && (
+              <div className="pt-2">
+                <div className="flex items-center justify-between">
+                  <label className="text-sm font-medium">Forwarded confirmation message</label>
+                  {forwardedText.trim() && (
+                    <button
+                      type="button"
+                      onClick={copyForwardedText}
+                      className="flex items-center gap-1 text-xs font-medium text-plum-700 hover:text-plum-800 dark:text-plum-300"
+                    >
+                      <FaCopy size={11} /> Copy
+                    </button>
+                  )}
+                </div>
+                <textarea
+                  value={forwardedText}
+                  onChange={(e) => {
+                    setForwardedText(e.target.value);
+                    setForwardedTextApproved(false);
+                  }}
+                  placeholder="Paste the M-Pesa/bank confirmation message forwarded to you here…"
+                  rows={4}
+                  className="w-full mt-1 px-3 py-2 rounded-lg border border-brown-200 dark:border-dm-border bg-white dark:bg-dm-card-2 text-sm resize-none"
+                />
+                {forwardedText.trim() && (
+                  <div className="mt-2 space-y-2">
+                    <label className="flex items-start gap-2.5 rounded-lg border border-brown-100 bg-white p-2.5 text-sm dark:border-dm-border dark:bg-dm-card-2">
+                      <input
+                        type="checkbox"
+                        checked={forwardedTextApproved}
+                        onChange={(e) => setForwardedTextApproved(e.target.checked)}
+                        className="mt-0.5 h-5 w-5 shrink-0 accent-plum-700"
+                      />
+                      <span className="text-brown-700 dark:text-white/70">
+                        I confirm this forwarded message is genuine — approve payment
+                      </span>
+                    </label>
+                    {forwardedTextApproved && (
+                      <p className="flex items-center gap-1.5 text-xs font-medium text-green-600">
+                        <FaCheckCircle /> Approved by {user.name}
+                      </p>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
           </>
         )}
       </div>
@@ -967,7 +1050,8 @@ const SalesCounter = () => {
             disabled={
               cart.length === 0 ||
               submitting ||
-              ((paymentMethod === 'equity' || paymentMethod === 'split') && (!equityProofUrl || !equityApproved))
+              ((paymentMethod === 'equity' || paymentMethod === 'split') && (!equityProofUrl || !equityApproved)) ||
+              (paymentMethod === 'text_forwarded' && (!forwardedText.trim() || !forwardedTextApproved))
             }
             className="flex-1 min-h-[48px] bg-gold-500 hover:bg-gold-600 active:scale-[0.98] disabled:bg-brown-300 disabled:active:scale-100 text-white font-bold py-3 rounded-xl flex items-center justify-center gap-2 transition-all"
           >
@@ -1273,7 +1357,7 @@ const SalesCounter = () => {
               </div>
               <div className="flex justify-between">
                 <span>Paid via</span>
-                <span className="capitalize">{completedSale.paymentMethod}</span>
+                <span>{paymentMethodLabel(completedSale.paymentMethod)}</span>
               </div>
               {completedSale.change > 0 && (
                 <div className="flex justify-between">
@@ -1461,7 +1545,7 @@ const SalesCounter = () => {
                 <div className="sc-section-title">Payment Details</div>
                 <div className="sc-totals-row">
                   <span>Method:</span>
-                  <span style={{ textTransform: 'capitalize' }}>{completedSale.paymentMethod}</span>
+                  <span>{paymentMethodLabel(completedSale.paymentMethod)}</span>
                 </div>
                 {completedSale.paymentMethod === 'split' && Array.isArray(completedSale.payments) &&
                   completedSale.payments.map((payment, idx) => (

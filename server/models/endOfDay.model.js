@@ -23,6 +23,7 @@ const endOfDaySchema = new mongoose.Schema({
     cashSales: { type: Number, default: 0 },
     equitySales: { type: Number, default: 0 },
     splitSales: { type: Number, default: 0 },
+    textForwardedSales: { type: Number, default: 0 },
     transactionCount: { type: Number, default: 0 },
     hourlyBreakdown: [{
       hour: { type: Number, required: true }, // 0-23
@@ -49,7 +50,10 @@ const endOfDaySchema = new mongoose.Schema({
       itemsSummary: { type: String, default: '' },
       paymentMethod: { type: String, default: '' },
       total: { type: Number, default: 0 },
-      proofImageUrls: [{ type: String }]
+      proofImageUrls: [{ type: String }],
+      // Text-forwarded confirmation text (M-Pesa/bank SMS relayed as text
+      // rather than a screenshot) — the text equivalent of proofImageUrls.
+      forwardedTexts: [{ type: String }]
     }],
     // Every return/exchange requested on this trading day, whatever its
     // current status — so a customer bringing hair back is visible in the
