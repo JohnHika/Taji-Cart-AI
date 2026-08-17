@@ -17,6 +17,7 @@ import MpesaPayment from '../models/mpesaPayment.model.js';
 import SaccoOperatorModel from '../models/saccooperator.model.js';
 import { resolveBikeDeliveryZone, resolveDeliveryCharge } from '../utils/deliveryFee.js';
 import { getNextSequence } from '../models/counter.model.js';
+import generatePickupCode from '../utils/generatePickupCode.js';
 
 const router = express.Router();
 
@@ -330,6 +331,7 @@ router.post('/held-sales', auth, Staff, requireStaffPermission('pos.open_counter
       customerName,
       customerPhone,
       saleNote,
+      deliveryNote,
       fulfillmentType,
       deliveryDetails,
       paymentMethod,
@@ -353,6 +355,7 @@ router.post('/held-sales', auth, Staff, requireStaffPermission('pos.open_counter
       customerName: customerName || '',
       customerPhone: customerPhone || '',
       saleNote: saleNote || '',
+      deliveryNote: deliveryNote || '',
       fulfillmentType: fulfillmentType || 'in_store',
       deliveryDetails: deliveryDetails || {},
       paymentMethod: paymentMethod || 'cash',
@@ -611,13 +614,23 @@ router.post('/sale', auth, Staff, requireStaffPermission('pos.open_counter'), as
       reservedStock.push({ product: item.product, quantity: item.quantity });
     }
 
+    const normalizedFulfillmentType = ['in_store', 'pickup', 'delivery'].includes(fulfillment_type) ? fulfillment_type : 'in_store';
+    // A pickup/delivery sale is paid for now but handed over later — track
+    // it so it doesn't disappear from view the moment checkout finishes.
+    const fulfillmentStatus =
+      normalizedFulfillmentType === 'pickup' ? 'awaiting_pickup' :
+      normalizedFulfillmentType === 'delivery' ? 'awaiting_delivery' : 'n/a';
+
     const sale = new Sale({
       saleNumber,
       items: normalizedItems,
       customer: customer || null,
       customerName: customerName || '',
       customerPhone: customerPhone || '',
-      fulfillment_type: ['in_store', 'pickup', 'delivery'].includes(fulfillment_type) ? fulfillment_type : 'in_store',
+      fulfillment_type: normalizedFulfillmentType,
+      fulfillmentStatus,
+      pickupCode: normalizedFulfillmentType === 'pickup' ? generatePickupCode() : '',
+      deliveryNote: normalizedFulfillmentType === 'delivery' ? String(req.body.deliveryNote || '').slice(0, 500) : '',
       delivery_mode: normalizedDeliveryMode,
       delivery_zone: deliveryZone ? deliveryZone._id : undefined,
       delivery_zone_name: deliveryZone ? deliveryZone.name : '',
@@ -899,6 +912,185 @@ router.put('/sale/:id/void', auth, async (req, res) => {
       success: false,
       message: error.message
     });
+  }
+});
+
+// ─── Sales Counter fulfillment (pickup/delivery handover for counter sales) ─
+//
+// A Sale rung up at the counter with fulfillment_type 'pickup' or 'delivery'
+// is paid for immediately but handed over later — this is a separate queue
+// from the online-order pickup/delivery systems (Sale and Order are distinct
+// collections with no link between them), gated by its own permission so a
+// cashier isn't automatically able to action every pending handover just by
+// having counter access.
+
+// List counter sales still awaiting pickup or delivery. Any staff member
+// with the permission can see and action any pending sale — deliberately no
+// restriction against the original cashier completing their own sale later,
+// since in practice the handover almost always happens on a different shift
+// or day than the sale itself.
+router.get('/pending-fulfillment', auth, Staff, requireStaffPermission('pos.manage_fulfillment'), async (req, res) => {
+  try {
+    const branch = req.user.staff_branch || 'Main Store';
+    const { type } = req.query; // optional: 'pickup' | 'delivery'
+
+    const filter = {
+      branch,
+      isVoided: { $ne: true },
+      fulfillmentStatus: type === 'pickup'
+        ? 'awaiting_pickup'
+        : type === 'delivery'
+          ? 'awaiting_delivery'
+          : { $in: ['awaiting_pickup', 'awaiting_delivery'] }
+    };
+
+    const sales = await Sale.find(filter)
+      .select('saleNumber saleDate customerName customerPhone items total fulfillment_type fulfillmentStatus pickupCode deliveryNote delivery_mode delivery_zone_name sacco_operator_name sacco_destination_town cashierName')
+      .sort({ saleDate: 1 })
+      .lean();
+
+    res.json({ success: true, data: sales });
+  } catch (error) {
+    console.error('GET /api/pos/pending-fulfillment error:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// History of counter sales that have completed their pickup/delivery cycle
+// (or were cancelled before handover) — mirrors the online pickup system's
+// verification-history view.
+router.get('/fulfillment-history', auth, Staff, requireStaffPermission('pos.manage_fulfillment'), async (req, res) => {
+  try {
+    const branch = req.user.staff_branch || 'Main Store';
+    const sales = await Sale.find({
+      branch,
+      fulfillmentStatus: { $in: ['picked_up', 'dispatched', 'delivered', 'cancelled'] }
+    })
+      .select('saleNumber saleDate customerName customerPhone total fulfillment_type fulfillmentStatus fulfilledByName fulfilledAt')
+      .sort({ fulfilledAt: -1 })
+      .limit(200)
+      .lean();
+
+    res.json({ success: true, data: sales });
+  } catch (error) {
+    console.error('GET /api/pos/fulfillment-history error:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Mark a pickup sale as handed over. Requires the pickup code shown on the
+// customer's receipt, same trust model as the online pickup-verification flow.
+router.put('/sale/:id/complete-pickup', auth, Staff, requireStaffPermission('pos.manage_fulfillment'), async (req, res) => {
+  try {
+    const { pickupCode } = req.body;
+    const sale = await Sale.findById(req.params.id);
+    if (!sale) {
+      return res.status(404).json({ success: false, message: 'Sale not found' });
+    }
+    if (sale.fulfillment_type !== 'pickup') {
+      return res.status(400).json({ success: false, message: 'This sale is not a pickup order' });
+    }
+    if (sale.fulfillmentStatus !== 'awaiting_pickup') {
+      return res.status(409).json({ success: false, message: `This sale is already ${sale.fulfillmentStatus.replace('_', ' ')}` });
+    }
+    if (!pickupCode || pickupCode.trim().toUpperCase() !== sale.pickupCode) {
+      return res.status(400).json({ success: false, message: 'Pickup code does not match' });
+    }
+
+    sale.fulfillmentStatus = 'picked_up';
+    sale.fulfilledBy = req.user._id;
+    sale.fulfilledByName = req.user.name;
+    sale.fulfilledAt = new Date();
+    sale.auditTrail.push({ action: 'pickup_completed', by: req.user._id, byName: req.user.name });
+    await sale.save();
+
+    res.json({ success: true, data: sale });
+  } catch (error) {
+    console.error('PUT /api/pos/sale/:id/complete-pickup error:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Mark a delivery sale as dispatched (handed to a rider/SACCO/etc.) — a
+// lighter-weight status step than the full driver-assignment workflow Orders
+// get, since counter deliveries are typically arranged informally by staff.
+router.put('/sale/:id/dispatch', auth, Staff, requireStaffPermission('pos.manage_fulfillment'), async (req, res) => {
+  try {
+    const sale = await Sale.findById(req.params.id);
+    if (!sale) {
+      return res.status(404).json({ success: false, message: 'Sale not found' });
+    }
+    if (sale.fulfillment_type !== 'delivery') {
+      return res.status(400).json({ success: false, message: 'This sale is not a delivery order' });
+    }
+    if (sale.fulfillmentStatus !== 'awaiting_delivery') {
+      return res.status(409).json({ success: false, message: `This sale is already ${sale.fulfillmentStatus.replace('_', ' ')}` });
+    }
+
+    sale.fulfillmentStatus = 'dispatched';
+    sale.auditTrail.push({ action: 'dispatched', by: req.user._id, byName: req.user.name });
+    await sale.save();
+
+    res.json({ success: true, data: sale });
+  } catch (error) {
+    console.error('PUT /api/pos/sale/:id/dispatch error:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Mark a dispatched delivery sale as delivered — the final step.
+router.put('/sale/:id/deliver', auth, Staff, requireStaffPermission('pos.manage_fulfillment'), async (req, res) => {
+  try {
+    const sale = await Sale.findById(req.params.id);
+    if (!sale) {
+      return res.status(404).json({ success: false, message: 'Sale not found' });
+    }
+    if (sale.fulfillment_type !== 'delivery') {
+      return res.status(400).json({ success: false, message: 'This sale is not a delivery order' });
+    }
+    if (!['awaiting_delivery', 'dispatched'].includes(sale.fulfillmentStatus)) {
+      return res.status(409).json({ success: false, message: `This sale is already ${sale.fulfillmentStatus.replace('_', ' ')}` });
+    }
+
+    sale.fulfillmentStatus = 'delivered';
+    sale.fulfilledBy = req.user._id;
+    sale.fulfilledByName = req.user.name;
+    sale.fulfilledAt = new Date();
+    sale.auditTrail.push({ action: 'delivered', by: req.user._id, byName: req.user.name });
+    await sale.save();
+
+    res.json({ success: true, data: sale });
+  } catch (error) {
+    console.error('PUT /api/pos/sale/:id/deliver error:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Cancel a pending pickup/delivery — e.g. the customer never returned, or
+// the arrangement fell through. Does not touch stock/payment; this only
+// tracks the handover, unlike a void which reverses the whole sale.
+router.put('/sale/:id/cancel-fulfillment', auth, Staff, requireStaffPermission('pos.manage_fulfillment'), async (req, res) => {
+  try {
+    const { reason } = req.body;
+    const sale = await Sale.findById(req.params.id);
+    if (!sale) {
+      return res.status(404).json({ success: false, message: 'Sale not found' });
+    }
+    if (!['awaiting_pickup', 'awaiting_delivery', 'dispatched'].includes(sale.fulfillmentStatus)) {
+      return res.status(409).json({ success: false, message: `This sale is already ${sale.fulfillmentStatus.replace('_', ' ')}` });
+    }
+
+    sale.fulfillmentStatus = 'cancelled';
+    sale.fulfilledBy = req.user._id;
+    sale.fulfilledByName = req.user.name;
+    sale.fulfilledAt = new Date();
+    sale.auditTrail.push({ action: 'fulfillment_cancelled', by: req.user._id, byName: req.user.name, meta: { reason: reason || '' } });
+    await sale.save();
+
+    res.json({ success: true, data: sale });
+  } catch (error) {
+    console.error('PUT /api/pos/sale/:id/cancel-fulfillment error:', error);
+    res.status(500).json({ success: false, message: error.message });
   }
 });
 

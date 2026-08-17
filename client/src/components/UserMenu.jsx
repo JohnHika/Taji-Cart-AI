@@ -48,6 +48,7 @@ const UserMenu = ({ close, variant = 'dropdown' }) => {
   const useSlimDashboardNav = showStaffFunctions || isDelivery;
   const hasLoyaltyAccess = Boolean(royalCardData);
   const canManageExchanges = isAdmin || (user?.staffPermissions || []).includes('exchange.manage');
+  const canManageCounterFulfillment = isAdmin || (user?.staffPermissions || []).includes('pos.manage_fulfillment');
 
   const sectionClass = 'min-w-0 px-4 py-1 mt-3 mb-0.5 text-xs font-semibold uppercase tracking-[0.14em] leading-tight text-brown-500 dark:text-white/45 whitespace-normal break-words';
 
@@ -171,6 +172,9 @@ const UserMenu = ({ close, variant = 'dropdown' }) => {
                 <MenuLink to="/dashboard/staff/pending-pickups" icon={FaBoxes} label="Pending pickups" />
                 <MenuLink to="/dashboard/staff/completed-verifications" icon={FaClipboardCheck} label="Verification history" />
                 <MenuLink to="/dashboard/staff/delivery" icon={FaCog} label="Delivery management" />
+                {canManageCounterFulfillment && (
+                  <MenuLink to="/dashboard/staff/counter-fulfillment" icon={FaTruck} label="Sales counter deliveries" />
+                )}
               </>
             )}
 

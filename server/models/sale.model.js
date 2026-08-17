@@ -89,6 +89,39 @@ const saleSchema = new mongoose.Schema({
     type: Number,
     default: 0
   },
+  // Tracks a counter sale through to actual handover once fulfillment_type
+  // is 'pickup' or 'delivery' — previously a Sale had no lifecycle beyond
+  // checkout, so a customer who paid at the counter for later pickup/delivery
+  // fell into a gap no staff page could see. 'n/a' covers in_store sales,
+  // which are handed over immediately at checkout and need no tracking.
+  fulfillmentStatus: {
+    type: String,
+    enum: ['n/a', 'awaiting_pickup', 'awaiting_delivery', 'picked_up', 'dispatched', 'delivered', 'cancelled'],
+    default: 'n/a'
+  },
+  // Short code the customer is given on the receipt for a pickup sale,
+  // mirroring Order.pickupCode — shown back to staff at handover time.
+  pickupCode: {
+    type: String,
+    default: ''
+  },
+  // Free text staff can capture about the delivery arrangement made with
+  // the customer at checkout (e.g. "wants it delivered tomorrow afternoon").
+  deliveryNote: {
+    type: String,
+    default: ''
+  },
+  fulfilledBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
+  },
+  fulfilledByName: {
+    type: String,
+    default: ''
+  },
+  fulfilledAt: {
+    type: Date
+  },
   subtotal: {
     type: Number,
     required: true
@@ -193,6 +226,7 @@ saleSchema.index({ saleDate: -1 });
 saleSchema.index({ cashier: 1, saleDate: -1 });
 saleSchema.index({ customer: 1, saleDate: -1 });
 saleSchema.index({ branch: 1, saleDate: -1 });
+saleSchema.index({ branch: 1, fulfillmentStatus: 1 });
 
 // Virtual for calculating total items
 saleSchema.virtual('totalItems').get(function() {

@@ -26,6 +26,7 @@ const heldSaleSchema = new mongoose.Schema({
   customerName: { type: String, default: '' },
   customerPhone: { type: String, default: '' },
   saleNote: { type: String, default: '' },
+  deliveryNote: { type: String, default: '' },
   fulfillmentType: {
     type: String,
     enum: ['in_store', 'pickup', 'delivery'],

@@ -111,6 +111,7 @@ const SalesCounter = () => {
   const [customerName, setCustomerName] = useState(() => restoredDraft?.customerName || '');
   const [customerPhone, setCustomerPhone] = useState(() => restoredDraft?.customerPhone || '');
   const [saleNote, setSaleNote] = useState(() => restoredDraft?.saleNote || '');
+  const [deliveryNote, setDeliveryNote] = useState(() => restoredDraft?.deliveryNote || '');
   const [submitting, setSubmitting] = useState(false);
   const [completedSale, setCompletedSale] = useState(null);
   const [qrCodeDataUrl, setQrCodeDataUrl] = useState('');
@@ -165,13 +166,14 @@ const SalesCounter = () => {
         customerName,
         customerPhone,
         saleNote,
+        deliveryNote,
         activeHeldSaleId,
       }));
     } catch {
       // sessionStorage unavailable (private browsing quota, etc.) — draft
       // recovery just won't be available this session, sale flow still works.
     }
-  }, [cart, fulfillmentType, deliveryDetails, paymentMethod, amountTendered, splitCashAmount, equityProofUrl, equityApproved, forwardedText, forwardedTextApproved, customerName, customerPhone, saleNote, activeHeldSaleId]);
+  }, [cart, fulfillmentType, deliveryDetails, paymentMethod, amountTendered, splitCashAmount, equityProofUrl, equityApproved, forwardedText, forwardedTextApproved, customerName, customerPhone, saleNote, deliveryNote, activeHeldSaleId]);
 
   // Reset pagination whenever the filter changes so "Load more" starts fresh.
   useEffect(() => {
@@ -242,6 +244,7 @@ const SalesCounter = () => {
           customerName,
           customerPhone,
           saleNote,
+          deliveryNote,
           fulfillmentType,
           deliveryDetails,
           paymentMethod,
@@ -281,6 +284,7 @@ const SalesCounter = () => {
       setCustomerName(heldSale.customerName || '');
       setCustomerPhone(heldSale.customerPhone || '');
       setSaleNote(heldSale.saleNote || '');
+      setDeliveryNote(heldSale.deliveryNote || '');
       setFulfillmentType(heldSale.fulfillmentType || 'in_store');
       setDeliveryDetails(heldSale.deliveryDetails || { mode: 'standard', zoneId: '', saccoOperatorId: '', saccoDestinationTown: '' });
       setPaymentMethod(heldSale.paymentMethod || 'cash');
@@ -424,6 +428,7 @@ const SalesCounter = () => {
     setCustomerName('');
     setCustomerPhone('');
     setSaleNote('');
+    setDeliveryNote('');
     setCompletedSale(null);
     setQrCodeDataUrl('');
     setShowFullReceipt(false);
@@ -548,6 +553,7 @@ const SalesCounter = () => {
         deliveryZoneId: fulfillmentType === 'delivery' && deliveryDetails.mode === 'bike' ? deliveryDetails.zoneId : undefined,
         saccoOperatorId: fulfillmentType === 'delivery' && deliveryDetails.mode === 'sacco' ? deliveryDetails.saccoOperatorId : undefined,
         saccoDestinationTown: fulfillmentType === 'delivery' && deliveryDetails.mode === 'sacco' ? deliveryDetails.saccoDestinationTown.trim() : undefined,
+        deliveryNote: fulfillmentType === 'delivery' ? deliveryNote.trim() : undefined,
         subtotal: totals.subtotal,
         discount: 0,
         tax: totals.tax,
@@ -747,6 +753,19 @@ const SalesCounter = () => {
               onChange={setDeliveryDetails}
               onFeeChange={setDeliveryFeePreview}
             />
+            <div className="mt-3">
+              <label className="text-sm font-medium">Delivery arrangement note</label>
+              <textarea
+                value={deliveryNote}
+                onChange={(e) => setDeliveryNote(e.target.value)}
+                placeholder="e.g. Customer wants it delivered tomorrow afternoon, call before arriving…"
+                rows={2}
+                className="mt-1 w-full resize-none rounded-lg border border-brown-200 bg-white px-3 py-2 text-sm dark:border-dm-border dark:bg-dm-card-2"
+              />
+              <p className="mt-1 text-xs text-brown-400 dark:text-white/40">
+                Shown to whoever dispatches this on Sales Counter Deliveries.
+              </p>
+            </div>
           </div>
         )}
 
@@ -1355,6 +1374,12 @@ const SalesCounter = () => {
                 <span>Order type</span>
                 <span className="capitalize">{fulfillmentLabel}</span>
               </div>
+              {completedSale.fulfillment_type === 'pickup' && completedSale.pickupCode && (
+                <div className="flex justify-between">
+                  <span>Pickup code</span>
+                  <span className="font-mono font-bold text-plum-700 dark:text-plum-300">{completedSale.pickupCode}</span>
+                </div>
+              )}
               <div className="flex justify-between">
                 <span>Paid via</span>
                 <span>{paymentMethodLabel(completedSale.paymentMethod)}</span>
@@ -1562,6 +1587,18 @@ const SalesCounter = () => {
                   </div>
                 )}
               </div>
+
+              {completedSale.fulfillment_type === 'pickup' && completedSale.pickupCode && (
+                <div className="sc-receipt-section">
+                  <div className="sc-section-title">Pickup Code</div>
+                  <div style={{ textAlign: 'center', fontSize: '16px', fontWeight: 'bold', letterSpacing: '2px', padding: '4px 0' }}>
+                    {completedSale.pickupCode}
+                  </div>
+                  <div style={{ textAlign: 'center', fontSize: '7px', color: '#718096' }}>
+                    Bring this code when you come to collect your order
+                  </div>
+                </div>
+              )}
 
               <div className="sc-receipt-section">
                 <div className="sc-section-title">Transaction Verification</div>

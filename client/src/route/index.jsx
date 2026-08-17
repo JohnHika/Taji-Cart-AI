@@ -71,6 +71,7 @@ const ActiveDeliveriesManagement    = lazyWithRetry(() => import('../pages/staff
 const CompletedDeliveriesManagement = lazyWithRetry(() => import('../pages/staff/DeliveryManagement/CompletedDeliveries'));
 const DriversManagement             = lazyWithRetry(() => import('../pages/staff/DeliveryManagement/DriversManagement'));
 const PendingPickups                = lazyWithRetry(() => import('../pages/staff/PendingPickups'));
+const SalesCounterFulfillment       = lazyWithRetry(() => import('../pages/staff/SalesCounterFulfillment'));
 const VerificationHistory           = lazyWithRetry(() => import('../pages/staff/VerificationHistory'));
 const VerificationSuccess           = lazyWithRetry(() => import('../pages/staff/VerificationSuccess'));
 const VerifyPickup                  = lazyWithRetry(() => import('../pages/staff/VerifyPickup'));
@@ -229,6 +230,7 @@ const router = createBrowserRouter([
           { path: 'staff',                       element: <PrivateRoute requireStaff={true}>{S(StaffDashboard)}</PrivateRoute> },
           { path: 'staff/dashboard',             element: <PrivateRoute requireStaff={true}>{S(StaffDashboard)}</PrivateRoute> },
           { path: 'staff/pending-pickups',       element: <PrivateRoute requireStaff={true}>{S(PendingPickups)}</PrivateRoute> },
+          { path: 'staff/counter-fulfillment',   element: <PrivateRoute requireStaff={true}>{S(SalesCounterFulfillment)}</PrivateRoute> },
           { path: 'staff/verify-pickup',         element: <PrivateRoute requireStaff={true}>{S(VerifyPickup)}</PrivateRoute> },
           { path: 'staff/completed-verifications', element: <PrivateRoute requireStaff={true}>{S(VerificationHistory)}</PrivateRoute> },
           { path: 'staff/verification-success',  element: <PrivateRoute requireStaff={true}>{S(VerificationSuccess)}</PrivateRoute> },

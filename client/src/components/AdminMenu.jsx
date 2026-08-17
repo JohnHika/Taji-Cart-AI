@@ -206,6 +206,7 @@ const AdminMenu = ({ close, forLightPanel = false }) => {
         <MenuLink to="/dashboard/staff/verify-pickup" icon={FaCheck} label="Verify pickup" />
         <MenuLink to="/dashboard/staff/completed-verifications" icon={FaHistory} label="Verification history" />
         <MenuLink to="/dashboard/staff/delivery" icon={FaCog} label="Delivery management" />
+        <MenuLink to="/dashboard/staff/counter-fulfillment" icon={FaTruck} label="Sales counter deliveries" />
 
         <p className={sectionClass}>Support</p>
         <button
