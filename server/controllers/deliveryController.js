@@ -25,6 +25,7 @@ const formatDeliveryModeForDriver = (order) => {
 };
 import { buildRiderCallMessage, notifyCustomerRiderWillCall } from '../utils/deliveryRiderCall.js';
 import { renderOrderNoticeEmail } from '../utils/emailTemplates.js';
+import { getOrderIdentifierQuery } from '../utils/orderIdentifier.js';
 
 const DELIVERY_DRIVER_CAPACITY = 3;
 const DISPATCH_CONFLICT_STATUSES = ['dispatched', 'driver_assigned', 'out_for_delivery', 'nearby', 'delivered', 'cancelled'];
@@ -439,7 +440,10 @@ const getAssignableDriverQuery = ({ requireVerified = false, requireOnline = fal
 };
 
 const findAssignmentFailure = async (orderId) => {
-  const order = await Order.findById(orderId).select('status fulfillment_type deliveryMethod deliveryPersonnel');
+  const orderQuery = getOrderIdentifierQuery(orderId);
+  const order = orderQuery
+    ? await Order.findOne(orderQuery).select('status fulfillment_type deliveryMethod deliveryPersonnel')
+    : null;
 
   if (!order) {
     return {
@@ -567,9 +571,17 @@ const assignOrderToDriver = async ({
 }) => {
   const estimatedDelivery = buildEstimatedDeliveryTime();
 
+  // Accepts either a real Mongo _id or the human-readable orderId string —
+  // callers include the admin All Orders page, which sources its identifier
+  // from an aggregation grouped by orderId (so its "_id" is that string).
+  const orderQuery = getOrderIdentifierQuery(orderId);
+  if (!orderQuery) {
+    return { ok: false, status: 400, message: 'Invalid order ID' };
+  }
+
   const order = await Order.findOneAndUpdate(
     {
-      _id: orderId,
+      ...orderQuery,
       status: 'dispatched',
       $and: [DELIVERY_ORDER_FILTER, isUnassignedDeliveryOrderFilter]
     },
@@ -1661,13 +1673,19 @@ export const dispatchOrder = async (req, res) => {
       });
     }
 
-    if (!mongoose.isValidObjectId(orderId)) {
+    // Accepts either a real Mongo _id or the human-readable orderId string —
+    // callers like the admin All Orders page source their identifier from an
+    // aggregation grouped by orderId, so its "_id" field is that string, not
+    // a real ObjectId.
+    const orderQuery = getOrderIdentifierQuery(orderId);
+
+    if (!orderQuery) {
       return res.status(400).json({
         success: false,
         message: 'Invalid order ID'
       });
     }
-    
+
     // Get staff information for the record
     const staff = await User.findById(staffId).select('name email');
     
@@ -1683,7 +1701,7 @@ export const dispatchOrder = async (req, res) => {
 
     const order = await Order.findOneAndUpdate(
       {
-        _id: orderId,
+        ...orderQuery,
         $or: [
           { fulfillment_type: 'delivery' },
           { deliveryMethod: 'delivery' }
@@ -1715,7 +1733,7 @@ export const dispatchOrder = async (req, res) => {
     );
 
     if (!order) {
-      const existingOrder = await Order.findById(orderId).select('status fulfillment_type deliveryMethod');
+      const existingOrder = await Order.findOne(orderQuery).select('status fulfillment_type deliveryMethod');
 
       if (!existingOrder) {
         return res.status(404).json({
@@ -1914,8 +1932,19 @@ export const manuallyAssignDriver = async (req, res) => {
         message: 'Order ID and Driver ID are required'
       });
     }
-    
-    const order = await Order.findById(orderId).select('status fulfillment_type deliveryMethod deliveryPersonnel');
+
+    // Accepts either a real Mongo _id or the human-readable orderId string —
+    // see the matching comment in dispatchOrder above.
+    const orderQuery = getOrderIdentifierQuery(orderId);
+
+    if (!orderQuery) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid order ID'
+      });
+    }
+
+    const order = await Order.findOne(orderQuery).select('status fulfillment_type deliveryMethod deliveryPersonnel');
 
     if (!order) {
       return res.status(404).json({

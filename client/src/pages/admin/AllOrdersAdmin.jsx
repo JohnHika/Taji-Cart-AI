@@ -42,6 +42,7 @@ const OrderDetailModal = ({ order, onClose, onStatusChange, onDispatchStateSync 
   const [selectedDriver, setSelectedDriver] = useState('');
   const [loadingDrivers, setLoadingDrivers] = useState(false);
   const [dispatchingOrder, setDispatchingOrder] = useState(false);
+  const [changingStatus, setChangingStatus] = useState(false);
   const { ensureCriteria, gateModal } = useCriteriaGate();
   
   // Fetch available drivers when the order is in shipped status
@@ -62,11 +63,11 @@ const OrderDetailModal = ({ order, onClose, onStatusChange, onDispatchStateSync 
       if (response.data.success) {
         setAvailableDrivers(response.data.data || []);
       } else {
-        toast.error('Failed to load available drivers');
+        toast.error(response.data.message || 'Failed to load available drivers');
       }
     } catch (error) {
       console.error('Error fetching available drivers:', error);
-      toast.error('Failed to load available drivers');
+      toast.error(error?.response?.data?.message || 'Failed to load available drivers');
     } finally {
       setLoadingDrivers(false);
     }
@@ -129,7 +130,7 @@ const OrderDetailModal = ({ order, onClose, onStatusChange, onDispatchStateSync 
     }
   };
   
-  const handleStatusChange = (e) => {
+  const handleStatusChange = async (e) => {
     const newStatus = e.target.value;
     const riderCallConfirmed = newStatus === 'nearby';
 
@@ -137,7 +138,12 @@ const OrderDetailModal = ({ order, onClose, onStatusChange, onDispatchStateSync 
       return;
     }
 
-    onStatusChange(order._id, newStatus, { riderCallConfirmed });
+    setChangingStatus(true);
+    try {
+      await onStatusChange(order._id, newStatus, { riderCallConfirmed });
+    } finally {
+      setChangingStatus(false);
+    }
   };
 
   if (!order) return null;
@@ -153,7 +159,7 @@ const OrderDetailModal = ({ order, onClose, onStatusChange, onDispatchStateSync 
       <div className="bg-white dark:bg-dm-card rounded-card border border-brown-100 dark:border-dm-border max-w-4xl w-full max-h-[92dvh] overflow-y-auto shadow-xl">
         <div className="flex items-start justify-between gap-3 p-4 sm:p-6 border-b border-brown-100 dark:border-dm-border">
           <h2 className="text-base sm:text-xl font-bold text-charcoal dark:text-white">
-            Order: {order.orderId || order._id.substring(order._id.length - 8)}
+            Order: {order.orderId || order._id?.substring(order._id.length - 8)}
           </h2>
           <button
             onClick={onClose}
@@ -191,11 +197,12 @@ const OrderDetailModal = ({ order, onClose, onStatusChange, onDispatchStateSync 
               </div>
             </div>
             
-            {order.status !== 'delivered' && order.status !== 'cancelled' && (
+            {order.status !== 'delivered' && order.status !== 'cancelled' && order.status !== 'POS' && (
               <select
-                className="w-full sm:w-auto border border-brown-200 dark:border-dm-border p-2 rounded-lg bg-white dark:bg-dm-card text-charcoal dark:text-white text-sm"
+                className="w-full sm:w-auto border border-brown-200 dark:border-dm-border p-2 rounded-lg bg-white dark:bg-dm-card text-charcoal dark:text-white text-sm disabled:opacity-60"
                 value={order.status}
                 onChange={handleStatusChange}
+                disabled={changingStatus}
               >
                 <option value="pending">Pending</option>
                 <option value="processing">Processing</option>
@@ -949,11 +956,11 @@ const AllOrdersAdmin = () => {
       if (response.data.success) {
         setOnlineOrders(response.data.data || []);
       } else {
-        toast.error('Failed to load orders');
+        toast.error(response.data.message || 'Failed to load orders');
       }
     } catch (error) {
       console.error('Error fetching orders:', error);
-      toast.error('Failed to load orders');
+      toast.error(error?.response?.data?.message || 'Failed to load orders');
     } finally {
       setLoading(false);
     }
@@ -1034,7 +1041,7 @@ const AllOrdersAdmin = () => {
         method: 'PUT',
         data: { status, ...options }
       });
-      
+
       if (response.data.success) {
         toast.success('Order status updated successfully');
         patchOrderState(orderId, { status });
@@ -1043,7 +1050,17 @@ const AllOrdersAdmin = () => {
       }
     } catch (error) {
       console.error('Error updating order status:', error);
-      toast.error('Failed to update order status');
+      if (error?.response?.status === 404) {
+        // The order no longer exists server-side — most likely this list is
+        // stale (e.g. loaded before the order was deleted elsewhere). Drop it
+        // from the visible list so it can't be clicked again, and tell the
+        // admin plainly rather than the generic failure message.
+        toast.error('This order no longer exists. Refresh the page to see the current list.');
+        setOnlineOrders((prevOrders) => prevOrders.filter((order) => order._id !== orderId));
+        setSelectedOrder((current) => (current && current._id === orderId ? null : current));
+      } else {
+        toast.error(error?.response?.data?.message || 'Failed to update order status');
+      }
     }
   };
   
@@ -1120,6 +1137,16 @@ const AllOrdersAdmin = () => {
   const indexOfFirstOrder = indexOfLastOrder - ordersPerPage;
   const currentOrders = filteredOrders.slice(indexOfFirstOrder, indexOfLastOrder);
   const totalPages = Math.ceil(filteredOrders.length / ordersPerPage);
+
+  // If the list shrinks (filter change, a stale order removed after a 404,
+  // a refresh with fewer results) and currentPage now points past the end,
+  // snap back to the last real page instead of leaving the admin stranded
+  // on a blank page with no visible way back.
+  useEffect(() => {
+    if (totalPages > 0 && currentPage > totalPages) {
+      setCurrentPage(totalPages);
+    }
+  }, [currentPage, totalPages]);
   
   const renderStatusBadge = (status) => {
     const statusColor = getStatusColor(status);
