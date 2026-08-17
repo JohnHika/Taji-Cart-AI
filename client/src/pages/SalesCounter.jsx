@@ -219,10 +219,13 @@ const SalesCounter = () => {
     }
   };
 
-  const discardHeldSale = async (id) => {
+  const discardHeldSale = async (heldSaleToDiscard) => {
+    if (!window.confirm(`Discard "${heldSaleToDiscard.label || 'this held sale'}"? This can't be undone.`)) {
+      return;
+    }
     try {
-      await Axios({ url: `/api/pos/held-sales/${id}`, method: 'DELETE' });
-      setHeldSales((prev) => prev.filter((h) => h._id !== id));
+      await Axios({ url: `/api/pos/held-sales/${heldSaleToDiscard._id}`, method: 'DELETE' });
+      setHeldSales((prev) => prev.filter((h) => h._id !== heldSaleToDiscard._id));
       toast.success('Held sale discarded');
     } catch (err) {
       AxiosToastError(err);
@@ -458,44 +461,52 @@ const SalesCounter = () => {
     FULFILLMENT_TYPES.find((f) => f.id === (completedSale?.fulfillment_type || 'in_store'))?.label ||
     'In-Store';
 
-  const renderProductCard = (p) => (
-    <div
-      key={p._id}
-      className="bg-white dark:bg-dm-card rounded-lg border border-brown-100 dark:border-dm-border overflow-hidden"
-    >
-      <button
-        type="button"
-        onClick={() => addToCart(p)}
-        className="block w-full text-left active:scale-[0.98] transition-transform"
+  const renderProductCard = (p) => {
+    const inCartQty = cart.find((i) => i._id === p._id)?.quantity || 0;
+    return (
+      <div
+        key={p._id}
+        className="relative bg-white dark:bg-dm-card rounded-lg border border-brown-100 dark:border-dm-border overflow-hidden"
       >
-        <div className="aspect-square bg-plum-50 dark:bg-dm-card-2 flex items-center justify-center">
-          {p.image ? (
-            <img
-              src={p.image}
-              alt={p.name}
-              className="w-full h-full object-cover"
-              loading="lazy"
-            />
-          ) : (
-            <span className="text-2xl">🛍️</span>
-          )}
-        </div>
-        <div className="px-2 pt-2">
-          <p className="text-xs font-semibold line-clamp-2 min-h-[2rem]">{p.name}</p>
-          <p className="mt-1 text-plum-700 dark:text-plum-300 font-bold text-sm">
-            {DisplayPriceInShillings(p.price)}
-          </p>
-        </div>
-      </button>
-      <button
-        type="button"
-        onClick={() => addToCart(p)}
-        className="mt-2 flex w-full items-center justify-center gap-1.5 bg-green-600 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-green-700"
-      >
-        <FaPlus size={9} /> Add to cart
-      </button>
-    </div>
-  );
+        {inCartQty > 0 && (
+          <span className="absolute left-1.5 top-1.5 z-10 inline-flex h-5 min-w-[20px] items-center justify-center rounded-full bg-plum-700 px-1 text-[11px] font-bold text-white shadow-sm">
+            {inCartQty}
+          </span>
+        )}
+        <button
+          type="button"
+          onClick={() => addToCart(p)}
+          className="block w-full text-left active:scale-[0.97] transition-transform"
+        >
+          <div className="aspect-square bg-plum-50 dark:bg-dm-card-2 flex items-center justify-center">
+            {p.image?.[0] ? (
+              <img
+                src={p.image[0]}
+                alt={p.name}
+                className="w-full h-full object-cover"
+                loading="lazy"
+              />
+            ) : (
+              <span className="text-2xl">🛍️</span>
+            )}
+          </div>
+          <div className="px-2 pt-1.5">
+            <p className="text-xs font-semibold leading-snug line-clamp-2 min-h-[2rem]">{p.name}</p>
+            <p className="mt-0.5 text-plum-700 dark:text-plum-300 font-bold text-sm">
+              {DisplayPriceInShillings(p.price)}
+            </p>
+          </div>
+        </button>
+        <button
+          type="button"
+          onClick={() => addToCart(p)}
+          className="mt-1.5 flex min-h-[36px] w-full items-center justify-center gap-1.5 bg-green-600 text-xs font-semibold text-white transition-colors hover:bg-green-700 active:bg-green-800"
+        >
+          <FaPlus size={10} /> Add
+        </button>
+      </div>
+    );
+  };
 
   const categoryPills = (
     <>
@@ -534,7 +545,7 @@ const SalesCounter = () => {
             key={f.id}
             type="button"
             onClick={() => setFulfillmentType(f.id)}
-            className={`rounded-full px-2 py-1.5 text-xs font-semibold transition-colors ${
+            className={`min-h-[44px] rounded-full px-2 text-xs font-semibold transition-colors active:scale-[0.97] ${
               fulfillmentType === f.id
                 ? 'bg-plum-700 text-white'
                 : 'bg-brown-100 text-brown-700 dark:bg-dm-border dark:text-white/70'
@@ -567,9 +578,9 @@ const SalesCounter = () => {
               className="grid grid-cols-[3rem_minmax(0,1fr)] gap-3 rounded-xl border border-brown-100 bg-plum-50/40 p-3 shadow-sm dark:border-dm-border dark:bg-dm-card-2"
             >
               <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-white dark:bg-dm-border">
-                {item.image ? (
+                {item.image?.[0] ? (
                   <img
-                    src={item.image}
+                    src={item.image[0]}
                     alt={item.name}
                     className="w-full h-full object-cover rounded"
                   />
@@ -664,7 +675,7 @@ const SalesCounter = () => {
                       setAmountTendered(m.id === 'cash' ? '' : totals.total.toFixed(2));
                       if (m.id !== 'split') setSplitCashAmount('');
                     }}
-                    className={`py-2 rounded-lg text-sm font-medium text-white transition-opacity ${m.color} ${
+                    className={`min-h-[44px] rounded-lg text-sm font-medium text-white transition-opacity active:scale-[0.97] ${m.color} ${
                       paymentMethod === m.id ? 'opacity-100 ring-2 ring-offset-1 ring-gold-400' : 'opacity-70'
                     }`}
                   >
@@ -748,12 +759,12 @@ const SalesCounter = () => {
                         <FaTimes size={12} />
                       </button>
                     </div>
-                    <label className="flex items-start gap-2 text-sm">
+                    <label className="flex items-start gap-2.5 rounded-lg border border-brown-100 bg-white p-2.5 text-sm dark:border-dm-border dark:bg-dm-card-2">
                       <input
                         type="checkbox"
                         checked={equityApproved}
                         onChange={(e) => setEquityApproved(e.target.checked)}
-                        className="mt-0.5"
+                        className="mt-0.5 h-5 w-5 shrink-0 accent-plum-700"
                       />
                       <span className="text-brown-700 dark:text-white/70">
                         I confirm this Equity payment SMS is genuine — approve payment
@@ -797,7 +808,7 @@ const SalesCounter = () => {
             onClick={holdSale}
             disabled={cart.length === 0 || holding || submitting}
             title="Park this sale to serve another customer, and resume it later"
-            className="shrink-0 bg-white border border-brown-300 hover:bg-brown-50 disabled:opacity-50 disabled:hover:bg-white text-brown-700 font-bold py-3 px-4 rounded-xl flex items-center justify-center gap-2 transition-colors dark:bg-dm-card dark:border-dm-border dark:text-white/80 dark:hover:bg-dm-card-2"
+            className="shrink-0 min-h-[48px] bg-white border border-brown-300 hover:bg-brown-50 active:scale-[0.97] disabled:opacity-50 disabled:hover:bg-white disabled:active:scale-100 text-brown-700 font-bold py-3 px-4 rounded-xl flex items-center justify-center gap-2 transition-all dark:bg-dm-card dark:border-dm-border dark:text-white/80 dark:hover:bg-dm-card-2"
           >
             <FaPause size={13} />
             {holding ? '…' : 'Hold'}
@@ -809,7 +820,7 @@ const SalesCounter = () => {
               submitting ||
               ((paymentMethod === 'equity' || paymentMethod === 'split') && (!equityProofUrl || !equityApproved))
             }
-            className="flex-1 bg-gold-500 hover:bg-gold-600 disabled:bg-brown-300 text-white font-bold py-3 rounded-xl flex items-center justify-center gap-2 transition-colors"
+            className="flex-1 min-h-[48px] bg-gold-500 hover:bg-gold-600 active:scale-[0.98] disabled:bg-brown-300 disabled:active:scale-100 text-white font-bold py-3 rounded-xl flex items-center justify-center gap-2 transition-all"
           >
             {submitting ? 'Processing…' : `Charge ${DisplayPriceInShillings(totals.total)}`}
           </button>
@@ -836,34 +847,32 @@ const SalesCounter = () => {
         <div className="flex-1">
           {/* Fixed top chrome: back/title, search, categories — stays pinned regardless of scroll depth */}
           <div ref={mobileHeaderRef} className="fixed inset-x-0 top-0 z-40 border-b border-brown-100 bg-white shadow-sm dark:border-dm-border dark:bg-dm-card">
-            <div className="flex items-center justify-between gap-3 px-3 pb-2 pt-3">
-              <div className="flex min-w-0 items-center gap-2">
+            <div className="flex items-center justify-between gap-2 px-3 pb-2 pt-3">
+              <div className="flex min-w-0 flex-1 items-center gap-2">
                 <button
                   type="button"
                   onClick={() => navigate('/dashboard/pos-dashboard')}
-                  className="inline-flex shrink-0 items-center gap-1.5 rounded-xl border border-brown-200 px-2.5 py-2 text-xs font-semibold text-brown-700 transition-colors hover:border-plum-300 hover:bg-plum-50 hover:text-plum-700 dark:border-dm-border dark:text-white/70 dark:hover:bg-dm-card-2"
+                  className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-brown-200 text-brown-700 transition-colors active:scale-[0.95] hover:border-plum-300 hover:bg-plum-50 hover:text-plum-700 dark:border-dm-border dark:text-white/70 dark:hover:bg-dm-card-2"
                   aria-label="Back to Sales Hub"
                 >
-                  <FaArrowLeft size={12} />
-                  <span>Back</span>
+                  <FaArrowLeft size={14} />
                 </button>
-                <div className="min-w-0">
+                <div className="min-w-0 flex-1">
                   <h1 className="truncate text-base font-bold leading-tight text-charcoal dark:text-white">Sales Counter</h1>
                   <p className="truncate text-[11px] text-brown-500 dark:text-white/50">
-                    {itemCount} items · {DisplayPriceInShillings(totals.total)}
+                    {itemCount} item{itemCount === 1 ? '' : 's'} · {DisplayPriceInShillings(totals.total)}
                   </p>
                 </div>
               </div>
               <button
                 type="button"
                 onClick={() => setShowHeldSales(true)}
-                className="relative inline-flex shrink-0 items-center gap-1.5 rounded-xl border border-brown-200 px-2.5 py-2 text-xs font-semibold text-brown-700 transition-colors hover:border-gold-400 hover:bg-gold-50 hover:text-gold-700 dark:border-dm-border dark:text-white/70 dark:hover:bg-dm-card-2"
-                aria-label="Held sales"
+                className="relative inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-brown-200 text-brown-700 transition-colors active:scale-[0.95] hover:border-gold-400 hover:bg-gold-50 hover:text-gold-700 dark:border-dm-border dark:text-white/70 dark:hover:bg-dm-card-2"
+                aria-label={`Held sales${heldSales.length > 0 ? ` (${heldSales.length})` : ''}`}
               >
-                <FaClock size={12} />
-                <span>Held</span>
+                <FaClock size={16} />
                 {heldSales.length > 0 && (
-                  <span className="inline-flex h-4 min-w-[16px] items-center justify-center rounded-full bg-gold-500 px-1 text-[10px] font-bold text-white">
+                  <span className="absolute -right-1 -top-1 inline-flex h-4 min-w-[16px] items-center justify-center rounded-full bg-gold-500 px-1 text-[10px] font-bold text-white ring-2 ring-white dark:ring-dm-card">
                     {heldSales.length}
                   </span>
                 )}
@@ -1185,15 +1194,16 @@ const SalesCounter = () => {
                         <button
                           onClick={() => resumeHeldSale(held)}
                           disabled={resumingId === held._id}
-                          className="flex-1 rounded-lg bg-plum-700 py-2 text-xs font-semibold text-white transition-colors hover:bg-plum-800 disabled:opacity-60"
+                          className="flex-1 min-h-[44px] rounded-lg bg-plum-700 text-xs font-semibold text-white transition-colors active:scale-[0.98] hover:bg-plum-800 disabled:opacity-60"
                         >
                           {resumingId === held._id ? 'Resuming…' : 'Resume'}
                         </button>
                         <button
-                          onClick={() => discardHeldSale(held._id)}
-                          className="rounded-lg border border-red-200 px-3 py-2 text-xs font-semibold text-red-600 transition-colors hover:bg-red-50 dark:border-red-900/40 dark:hover:bg-red-950/30"
+                          onClick={() => discardHeldSale(held)}
+                          aria-label={`Discard ${held.label || 'held sale'}`}
+                          className="min-h-[44px] min-w-[44px] rounded-lg border border-red-200 px-3 text-xs font-semibold text-red-600 transition-colors active:scale-[0.97] hover:bg-red-50 dark:border-red-900/40 dark:hover:bg-red-950/30"
                         >
-                          <FaTrash size={11} />
+                          <FaTrash size={13} />
                         </button>
                       </div>
                     </div>
