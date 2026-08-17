@@ -498,13 +498,37 @@ const SalesCounter = () => {
             </p>
           </div>
         </button>
-        <button
-          type="button"
-          onClick={() => addToCart(p)}
-          className="mt-1.5 flex min-h-[36px] w-full items-center justify-center gap-1.5 bg-green-600 text-xs font-semibold text-white transition-colors hover:bg-green-700 active:bg-green-800"
-        >
-          <FaPlus size={10} /> Add
-        </button>
+        {inCartQty > 0 ? (
+          <div className="mt-1.5 flex min-h-[36px] items-center justify-between bg-plum-50 dark:bg-dm-card-2">
+            <button
+              type="button"
+              onClick={() => updateQty(p._id, -1)}
+              className="flex h-full min-h-[36px] flex-1 items-center justify-center text-plum-700 transition-colors hover:bg-plum-100 active:bg-plum-200 dark:text-plum-300 dark:hover:bg-dm-border"
+              aria-label={`Decrease ${p.name} quantity`}
+            >
+              <FaMinus size={11} />
+            </button>
+            <span className="min-w-[1.75rem] text-center text-sm font-bold tabular-nums text-plum-700 dark:text-plum-300">
+              {inCartQty}
+            </span>
+            <button
+              type="button"
+              onClick={() => addToCart(p)}
+              className="flex h-full min-h-[36px] flex-1 items-center justify-center text-plum-700 transition-colors hover:bg-plum-100 active:bg-plum-200 dark:text-plum-300 dark:hover:bg-dm-border"
+              aria-label={`Increase ${p.name} quantity`}
+            >
+              <FaPlus size={11} />
+            </button>
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={() => addToCart(p)}
+            className="mt-1.5 flex min-h-[36px] w-full items-center justify-center gap-1.5 bg-green-600 text-xs font-semibold text-white transition-colors hover:bg-green-700 active:bg-green-800"
+          >
+            <FaPlus size={10} /> Add
+          </button>
+        )}
       </div>
     );
   };
