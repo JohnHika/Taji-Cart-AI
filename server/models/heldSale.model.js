@@ -18,7 +18,9 @@ const heldSaleSchema = new mongoose.Schema({
     name: { type: String, required: true },
     sku: { type: String, default: '' },
     price: { type: Number, required: true },
-    image: { type: String, default: '' },
+    // Mirrors product.model.js's `image` field, which is an array of URLs —
+    // cart items carry it through unchanged from the product document.
+    image: { type: Array, default: [] },
     quantity: { type: Number, required: true, min: 1 }
   }],
   customerName: { type: String, default: '' },
