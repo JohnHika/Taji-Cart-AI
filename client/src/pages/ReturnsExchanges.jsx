@@ -91,6 +91,19 @@ const ReturnsExchanges = () => {
     loadExchanges(statusFilter);
   }, [statusFilter]);
 
+  // Loads a browsable list of recent transactions as soon as the page opens
+  // (no term = most recent sales/orders), then re-runs on every keystroke,
+  // debounced, so staff can either scroll a live list or narrow it down —
+  // never forced to know/type an exact receipt number.
+  useEffect(() => {
+    if (selectedTransaction) return;
+    const timer = setTimeout(() => {
+      runSearch();
+    }, searchTerm ? 300 : 0);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchTerm, selectedTransaction]);
+
   const loadProducts = async () => {
     try {
       setLoadingProducts(true);
@@ -104,7 +117,6 @@ const ReturnsExchanges = () => {
   };
 
   const runSearch = async () => {
-    if (!searchTerm.trim()) return;
     try {
       setSearching(true);
       const res = await Axios({ url: '/api/exchanges/search', method: 'GET', params: { term: searchTerm.trim() } });
@@ -328,35 +340,33 @@ const ReturnsExchanges = () => {
         {!selectedTransaction && (
           <div className="rounded-2xl border border-brown-100 bg-white p-4 dark:border-dm-border dark:bg-dm-card">
             <h2 className="mb-1 text-sm font-bold uppercase tracking-wide text-brown-500 dark:text-white/50">
-              Step 1 — Find the original sale
+              Step 1 — Pick the original sale
             </h2>
             <p className="mb-3 text-sm text-brown-500 dark:text-white/50">
-              Search by receipt/order number, or the customer&apos;s name or phone.
+              Browse recent sales and orders below, or narrow it down by receipt/order number, customer name or phone.
             </p>
-            <div className="flex gap-2">
-              <div className="relative flex-1">
-                <FaSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-brown-400 text-sm" />
-                <input
-                  type="text"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && runSearch()}
-                  placeholder="Receipt number, order number, name or phone..."
-                  className="w-full min-h-[44px] pl-9 pr-4 py-2 rounded-lg border border-brown-200 dark:border-dm-border bg-plum-50/50 dark:bg-dm-card-2 text-sm focus:outline-none focus:border-plum-500"
-                />
-              </div>
-              <button
-                type="button"
-                onClick={runSearch}
-                disabled={searching || !searchTerm.trim()}
-                className="min-h-[44px] rounded-lg bg-plum-700 px-5 text-sm font-semibold text-white transition-colors hover:bg-plum-800 disabled:opacity-50"
-              >
-                {searching ? 'Searching…' : 'Search'}
-              </button>
+            <div className="relative">
+              <FaSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-brown-400 text-sm" />
+              <input
+                type="text"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder="Filter by receipt number, order number, name or phone..."
+                className="w-full min-h-[44px] pl-9 pr-4 py-2 rounded-lg border border-brown-200 dark:border-dm-border bg-plum-50/50 dark:bg-dm-card-2 text-sm focus:outline-none focus:border-plum-500"
+              />
             </div>
+
+            {searching && searchResults.length === 0 && (
+              <div className="flex justify-center py-8"><LoadingSpinner /></div>
+            )}
 
             {searchResults.length > 0 && (
               <div className="mt-4 space-y-2">
+                {!searchTerm && (
+                  <p className="text-xs font-semibold uppercase tracking-wide text-brown-400 dark:text-white/40">
+                    Most recent
+                  </p>
+                )}
                 {searchResults.map((t) => (
                   <button
                     key={`${t.sourceType}-${t.sourceId}`}
@@ -380,9 +390,11 @@ const ReturnsExchanges = () => {
                 ))}
               </div>
             )}
-            {searchResults.length === 0 && searchTerm && !searching && (
+            {searchResults.length === 0 && !searching && (
               <p className="mt-4 text-sm text-brown-400 dark:text-white/40">
-                Press Search or Enter to look up transactions matching &quot;{searchTerm}&quot;.
+                {searchTerm
+                  ? `No sales or orders match "${searchTerm}".`
+                  : 'No recent sales or orders yet.'}
               </p>
             )}
           </div>

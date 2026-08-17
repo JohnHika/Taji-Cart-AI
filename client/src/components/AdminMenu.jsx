@@ -23,6 +23,7 @@ import {
   FaTachometerAlt,
   FaTrophy,
   FaTruck,
+  FaUndo,
   FaUpload,
   FaUser,
   FaUsers,
@@ -177,6 +178,7 @@ const AdminMenu = ({ close, forLightPanel = false }) => {
         <MenuLink to="/dashboard/sales-counter" icon={FaCashRegister} label="Sales counter" />
         <MenuLink to="/dashboard/sales-hub" icon={FaStore} label="Sales hub" />
         <MenuLink to="/dashboard/sales-history" icon={FaHistory} label="Sales history" />
+        <MenuLink to="/dashboard/returns-exchanges" icon={FaUndo} label="Returns & exchanges" />
 
         <p className={sectionClass}>Products & categories</p>
         <MenuLink to="/dashboard/category" icon={FaListAlt} label="Category" />

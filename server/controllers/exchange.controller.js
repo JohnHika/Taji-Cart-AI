@@ -5,29 +5,29 @@ import OrderModel from '../models/order.model.js';
 import ProductModel from '../models/product.model.js';
 import { getNextSequence } from '../models/counter.model.js';
 
-// Search completed POS sales and online orders by receipt/order number or
-// customer name/phone, so staff can find the original transaction to start
-// an exchange against. Returns a normalized shape covering both sources.
+// Lists completed POS sales and online orders for staff to pick from —
+// either the most recent ones (no term, so there's always something to
+// browse without needing to know/type a receipt number), or filtered by
+// receipt/order number or customer name/phone when a term is given.
+// Returns a normalized shape covering both sources.
 export const searchTransactions = async (req, res) => {
   try {
     const term = String(req.query.term || '').trim();
-    if (!term) {
-      return res.json({ success: true, data: [] });
-    }
+    const regex = term ? new RegExp(term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i') : null;
 
-    const regex = new RegExp(term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
-
-    const sales = await Sale.find({
-      isVoided: { $ne: true },
-      $or: [
+    const saleFilter = { isVoided: { $ne: true } };
+    if (regex) {
+      saleFilter.$or = [
         { saleNumber: regex },
         { customerName: regex },
         { customerPhone: regex }
-      ]
-    })
+      ];
+    }
+
+    const sales = await Sale.find(saleFilter)
       .select('saleNumber saleDate customerName customerPhone items total cashierName branch')
       .sort({ saleDate: -1 })
-      .limit(20)
+      .limit(term ? 20 : 15)
       .lean();
 
     const saleResults = sales.map((sale) => ({
@@ -52,18 +52,22 @@ export const searchTransactions = async (req, res) => {
     // Orders are one line-item per document sharing an orderId, and don't
     // store a per-line price — only the aggregate live below via the
     // product's current price as a stand-in (see model comment).
-    const matchingOrders = await OrderModel.find({
-      $or: [
-        { orderId: regex },
-        { guestPhone: regex },
-        { 'guestShipping.name': regex },
-        { 'guestShipping.phone': regex }
-      ]
-    })
+    const orderFilter = regex
+      ? {
+          $or: [
+            { orderId: regex },
+            { guestPhone: regex },
+            { 'guestShipping.name': regex },
+            { 'guestShipping.phone': regex }
+          ]
+        }
+      : {};
+
+    const matchingOrders = await OrderModel.find(orderFilter)
       .populate('userId', 'name mobile phone')
       .select('orderId productId product_details quantity totalAmt createdAt userId guestShipping guestPhone status')
       .sort({ createdAt: -1 })
-      .limit(60)
+      .limit(term ? 60 : 45)
       .lean();
 
     const orderGroups = new Map();
