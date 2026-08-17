@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
+import QRCode from 'qrcode';
 import {
   FaArrowLeft,
   FaCamera,
@@ -8,6 +9,7 @@ import {
   FaMinus,
   FaPause,
   FaPlus,
+  FaPrint,
   FaSearch,
   FaShoppingBasket,
   FaTimes,
@@ -25,6 +27,7 @@ import AxiosToastError from '../utils/AxiosToastError';
 import uploadImage from '../utils/UploadImage';
 import { DisplayPriceInShillings } from '../utils/DisplayPriceInShillings';
 import { calculateSalesCounterTotals } from '../utils/salesCounterTotals';
+import { nawiriBrand } from '../config/brand';
 
 const PAYMENT_METHODS = [
   { id: 'cash', label: 'Cash', color: 'bg-green-600' },
@@ -75,6 +78,8 @@ const SalesCounter = () => {
   const [saleNote, setSaleNote] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [completedSale, setCompletedSale] = useState(null);
+  const [qrCodeDataUrl, setQrCodeDataUrl] = useState('');
+  const [showFullReceipt, setShowFullReceipt] = useState(false);
   const [heldSales, setHeldSales] = useState([]);
   const [showHeldSales, setShowHeldSales] = useState(false);
   const [holding, setHolding] = useState(false);
@@ -326,7 +331,23 @@ const SalesCounter = () => {
     setCustomerPhone('');
     setSaleNote('');
     setCompletedSale(null);
+    setQrCodeDataUrl('');
+    setShowFullReceipt(false);
     setActiveHeldSaleId(null);
+  };
+
+  const generateReceiptQrCode = async (sale) => {
+    try {
+      const verificationUrl = `${nawiriBrand.websiteUrl}/verify?txn=${sale.saleNumber}&date=${new Date(sale.saleDate).toISOString().slice(0, 10)}&amount=${sale.total}`;
+      const qrDataUrl = await QRCode.toDataURL(verificationUrl, {
+        width: 200,
+        margin: 1,
+        color: { dark: '#000000', light: '#FFFFFF' },
+      });
+      setQrCodeDataUrl(qrDataUrl);
+    } catch (err) {
+      console.error('Error generating receipt QR code:', err);
+    }
   };
 
   const handleEquityProofSelected = async (e) => {
@@ -418,6 +439,7 @@ const SalesCounter = () => {
         discount: 0,
         tax: totals.tax,
         total: totals.total,
+        deliveryCharge,
         paymentMethod,
         payments,
         amountTendered: amountTenderedTotal,
@@ -435,7 +457,9 @@ const SalesCounter = () => {
       });
 
       if (res.data.success) {
-        setCompletedSale({ ...saleData, saleNumber: res.data.saleNumber });
+        const finishedSale = { ...saleData, saleNumber: res.data.saleNumber };
+        setCompletedSale(finishedSale);
+        generateReceiptQrCode(finishedSale);
         toast.success(`Sale ${res.data.saleNumber} completed`);
         if (activeHeldSaleId) {
           Axios({ url: `/api/pos/held-sales/${activeHeldSaleId}`, method: 'DELETE' }).catch(() => {});
@@ -1158,12 +1182,285 @@ const SalesCounter = () => {
                 </div>
               )}
             </div>
-            <button
-              onClick={resetSale}
-              className="w-full bg-plum-700 text-white font-bold py-3 rounded-xl"
-            >
-              New Sale
-            </button>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setShowFullReceipt(true)}
+                className="flex-1 flex items-center justify-center gap-2 border border-brown-200 dark:border-dm-border text-charcoal dark:text-white/80 font-semibold py-3 rounded-xl transition-colors hover:bg-brown-50 dark:hover:bg-dm-card-2"
+              >
+                <FaPrint size={14} /> Print Receipt
+              </button>
+              <button
+                onClick={resetSale}
+                className="flex-1 bg-plum-700 text-white font-bold py-3 rounded-xl"
+              >
+                New Sale
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Full printable receipt (thermal 80mm) */}
+      {completedSale && showFullReceipt && (
+        <div className="fixed inset-0 z-[60] bg-black/70 flex items-center justify-center p-4">
+          <style>{`
+            @page { size: 80mm auto; margin: 0; }
+            @media print {
+              html, body { background: #fff !important; margin: 0 !important; padding: 0 !important; }
+              body * { visibility: hidden !important; }
+              #sales-counter-receipt-print, #sales-counter-receipt-print * { visibility: visible !important; }
+              #sales-counter-receipt-print {
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 80mm !important;
+                font-family: 'Poppins', sans-serif !important;
+                background: white !important;
+                color: black !important;
+              }
+              .no-print { display: none !important; }
+              * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+              .sc-receipt-header { background: #8b5cf6 !important; color: white !important; }
+              .sc-thank-you { background: #8b5cf6 !important; color: white !important; }
+              .sc-policies-box { background: #f8fafc !important; border-color: #e2e8f0 !important; }
+              .sc-transaction-id { background: #f7fafc !important; border-color: #cbd5e0 !important; }
+              .sc-qr-code { background: white !important; border-color: #e2e8f0 !important; }
+            }
+            .sc-receipt-container { font-family: 'Poppins', sans-serif; line-height: 1.4; color: #2d3748; }
+            .sc-receipt-header {
+              text-align: center; padding: 8px 0;
+              background: linear-gradient(135deg, #8b5cf6 0%, #ec4899 50%, #f59e0b 100%);
+              color: white; margin-bottom: 8px; border-radius: 4px;
+            }
+            .sc-receipt-section { margin-bottom: 8px; padding-bottom: 6px; border-bottom: 1px solid #e2e8f0; }
+            .sc-receipt-section:last-child { border-bottom: none; }
+            .sc-section-title {
+              font-weight: 600; font-size: 11px; color: #8b5cf6; margin-bottom: 4px;
+              text-transform: uppercase; letter-spacing: 0.5px;
+            }
+            .sc-store-info { text-align: center; font-size: 9px; color: #4a5568; }
+            .sc-logo-container { text-align: center; margin-bottom: 6px; }
+            .sc-brand-tagline { font-size: 8px; color: #f59e0b; font-weight: 300; font-style: italic; }
+            .sc-item-row { display: flex; justify-content: space-between; font-size: 9px; margin-bottom: 2px; }
+            .sc-totals-row { display: flex; justify-content: space-between; font-size: 9px; margin-bottom: 2px; }
+            .sc-total-final {
+              font-weight: 700; font-size: 11px; color: #8b5cf6;
+              border-top: 2px solid #8b5cf6; padding-top: 4px; margin-top: 4px;
+            }
+            .sc-footer-info { text-align: center; font-size: 8px; color: #718096; margin-top: 8px; }
+            .sc-divider {
+              height: 1px; background: linear-gradient(90deg, transparent 0%, #e2e8f0 50%, transparent 100%); margin: 6px 0;
+            }
+            .sc-transaction-id {
+              text-align: center; font-family: 'Courier New', monospace; font-size: 8px;
+              background: #f7fafc; border: 1px dashed #cbd5e0; padding: 4px; margin: 6px 0; border-radius: 2px;
+            }
+            .sc-thank-you {
+              background: linear-gradient(135deg, #8b5cf6 0%, #ec4899 100%); color: white;
+              padding: 8px; border-radius: 6px; text-align: center; font-size: 9px; margin: 8px 0;
+            }
+            .sc-qr-code {
+              width: 60px; height: 60px; margin: 6px auto; border-radius: 4px; border: 1px solid #e2e8f0;
+              background: white; display: flex; align-items: center; justify-content: center;
+            }
+            .sc-qr-code img { width: 100%; height: 100%; object-fit: contain; }
+            .sc-policies-box {
+              background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 4px; padding: 6px; margin: 6px 0;
+              font-size: 8px; color: #4a5568;
+            }
+            .sc-policy-item { display: flex; align-items: flex-start; gap: 4px; margin-bottom: 3px; }
+            .sc-policy-item:last-child { margin-bottom: 0; }
+          `}</style>
+          <div className="bg-white dark:bg-dm-card w-full max-w-sm rounded-2xl p-4 shadow-2xl max-h-[92dvh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-3 no-print">
+              <h3 className="text-base font-semibold text-charcoal dark:text-white">Receipt</h3>
+              <button
+                onClick={() => setShowFullReceipt(false)}
+                className="text-brown-300 hover:text-charcoal dark:text-white/40 dark:hover:text-white transition-colors"
+                aria-label="Close receipt"
+              >
+                <FaTimes />
+              </button>
+            </div>
+
+            <div id="sales-counter-receipt-print" className="sc-receipt-container">
+              <div className="sc-logo-container">
+                <img
+                  src={nawiriBrand.logo}
+                  alt="Nawiri Hair"
+                  style={{ width: '80px', height: '80px', objectFit: 'contain', filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.1))' }}
+                />
+                <div className="sc-receipt-header">
+                  <div style={{ fontSize: '14px', fontWeight: '700', marginBottom: '2px' }}>NAWIRI HAIR</div>
+                  <div className="sc-brand-tagline">Your Beauty, Our Pride</div>
+                </div>
+              </div>
+
+              <div className="sc-receipt-section">
+                <div className="sc-section-title">Store Information</div>
+                <div className="sc-store-info">
+                  <div>{user?.staff_branch || 'Main Store'}, {nawiriBrand.locationShort}</div>
+                  <div>Tel: {nawiriBrand.phoneDisplay}</div>
+                  <div>Receipt No: {completedSale.saleNumber}</div>
+                  <div>{new Date(completedSale.saleDate).toLocaleString('en-KE', { hour12: true })}</div>
+                  <div>Cashier: {completedSale.cashierName}</div>
+                </div>
+              </div>
+
+              <div className="sc-receipt-section">
+                <div className="sc-section-title">Customer Information</div>
+                <div className="sc-store-info">
+                  <div style={{ fontWeight: '500' }}>{completedSale.customerName || 'Valued Customer'}</div>
+                  {completedSale.customerPhone && (
+                    <div>Contact: {completedSale.customerPhone}</div>
+                  )}
+                </div>
+              </div>
+
+              <div className="sc-divider" />
+
+              <div className="sc-receipt-section">
+                <div className="sc-section-title">Purchase Details</div>
+                {completedSale.items.map((item, idx) => (
+                  <div key={idx} className="sc-item-row">
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontWeight: '500' }}>{item.quantity} x {item.name}</div>
+                      <div style={{ fontSize: '8px', color: '#718096' }}>@ {DisplayPriceInShillings(item.price)} each</div>
+                      {item.sku && (
+                        <div style={{ fontSize: '8px', color: '#718096' }}>Barcode: {item.sku}</div>
+                      )}
+                    </div>
+                    <div style={{ fontWeight: '600' }}>{DisplayPriceInShillings(item.total)}</div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="sc-divider" />
+
+              <div className="sc-receipt-section">
+                <div className="sc-section-title">Summary</div>
+                <div className="sc-totals-row">
+                  <span>Subtotal:</span>
+                  <span>{DisplayPriceInShillings(completedSale.subtotal)}</span>
+                </div>
+                {completedSale.deliveryCharge > 0 && (
+                  <div className="sc-totals-row">
+                    <span>Delivery fee:</span>
+                    <span>{DisplayPriceInShillings(completedSale.deliveryCharge)}</span>
+                  </div>
+                )}
+                <div className="sc-totals-row sc-total-final">
+                  <span>TOTAL:</span>
+                  <span>{DisplayPriceInShillings(completedSale.total)}</span>
+                </div>
+              </div>
+
+              <div className="sc-divider" />
+
+              <div className="sc-receipt-section">
+                <div className="sc-section-title">Payment Details</div>
+                <div className="sc-totals-row">
+                  <span>Method:</span>
+                  <span style={{ textTransform: 'capitalize' }}>{completedSale.paymentMethod}</span>
+                </div>
+                {completedSale.paymentMethod === 'split' && Array.isArray(completedSale.payments) &&
+                  completedSale.payments.map((payment, idx) => (
+                    <div key={idx} className="sc-totals-row" style={{ fontSize: '8px', marginLeft: '8px' }}>
+                      <span style={{ textTransform: 'capitalize' }}>{payment.method}:</span>
+                      <span>{DisplayPriceInShillings(payment.amount)}</span>
+                    </div>
+                  ))
+                }
+                {completedSale.change > 0 && (
+                  <div className="sc-totals-row" style={{ color: '#10b981' }}>
+                    <span>Change Given:</span>
+                    <span>{DisplayPriceInShillings(completedSale.change)}</span>
+                  </div>
+                )}
+              </div>
+
+              <div className="sc-receipt-section">
+                <div className="sc-section-title">Transaction Verification</div>
+                <div className="sc-transaction-id">
+                  <div>Transaction ID: NWR-{completedSale.saleNumber}</div>
+                  <div style={{ fontSize: '7px', color: '#718096', marginTop: '2px' }}>
+                    {new Date(completedSale.saleDate).toISOString().slice(0, 19)}Z
+                  </div>
+                </div>
+                <div className="sc-qr-code">
+                  {qrCodeDataUrl ? (
+                    <img src={qrCodeDataUrl} alt="Verification QR Code" />
+                  ) : (
+                    <div style={{ fontSize: '8px', color: '#718096' }}>Loading QR...</div>
+                  )}
+                </div>
+                <div style={{ textAlign: 'center', fontSize: '7px', color: '#718096' }}>
+                  Scan to verify transaction or visit {nawiriBrand.websiteUrl.replace(/^https?:\/\//, '')}
+                </div>
+              </div>
+
+              {completedSale.note && (
+                <div className="sc-receipt-section">
+                  <div className="sc-section-title">Order Note</div>
+                  <div style={{ fontSize: '8px', color: '#4a5568', fontStyle: 'italic' }}>{completedSale.note}</div>
+                </div>
+              )}
+
+              <div className="sc-divider" />
+
+              <div className="sc-policies-box">
+                <div className="sc-policy-item">
+                  <span>•</span>
+                  <span>
+                    <strong>Exchanges only, no cash refunds.</strong> Wrong colour/type? Bring the hair back unused
+                    and we will exchange it. Same-type swaps are free; upgrading to a pricier item means paying the
+                    difference. Your replacement is dispatched only once we receive the original hair back.
+                  </span>
+                </div>
+                <div className="sc-policy-item">
+                  <span>•</span>
+                  <span>Please keep this receipt — it is required for any exchange.</span>
+                </div>
+                <div className="sc-policy-item">
+                  <span>•</span>
+                  <span>Customer Support: {nawiriBrand.phoneDisplay}</span>
+                </div>
+              </div>
+
+              <div className="sc-thank-you">
+                <div style={{ fontWeight: '600', marginBottom: '4px' }}>
+                  Thank you, {completedSale.customerName || 'valued customer'}!
+                </div>
+                <div style={{ fontSize: '8px' }}>
+                  We appreciate your trust in Nawiri Hair. Your beauty is our pride, and we look forward to serving you again.
+                </div>
+              </div>
+
+              <div className="sc-footer-info">
+                <div style={{ marginBottom: '4px' }}>
+                  <div>{nawiriBrand.email}</div>
+                  <div>{nawiriBrand.websiteUrl.replace(/^https?:\/\//, '')}</div>
+                </div>
+                <div style={{ fontSize: '7px', color: '#a0aec0', marginTop: '4px' }}>
+                  Receipt generated on {new Date().toLocaleDateString('en-KE')}
+                </div>
+              </div>
+            </div>
+
+            <div className="flex gap-2 mt-4 no-print">
+              <button
+                onClick={() => window.print()}
+                className="flex-1 px-4 py-2 border border-brown-200 dark:border-dm-border rounded-pill text-charcoal dark:text-white/70 hover:bg-blush-50 dark:hover:bg-dm-card-2 flex items-center justify-center gap-2 transition-colors"
+              >
+                <FaPrint size={14} /> Print
+              </button>
+              <button
+                onClick={() => setShowFullReceipt(false)}
+                className="flex-1 px-4 py-2 bg-gold-500 hover:bg-gold-400 text-charcoal font-semibold rounded-pill transition-colors"
+              >
+                Done
+              </button>
+            </div>
           </div>
         </div>
       )}
