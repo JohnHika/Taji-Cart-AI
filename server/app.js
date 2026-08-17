@@ -41,14 +41,18 @@ import supportRouter from './route/support.route.js';
 // ── Controllers used directly on admin routes ───────────────────────────────
 import {
     getBenefitRanges,
+    getLoyaltyAccessListController,
     getLoyaltyCards,
+    getLoyaltyProgramSettingsController,
     getLoyaltyStats,
     getTierThresholds,
     getUserLoyaltyCard,
     recalculateAllTiers,
     refreshUserPoints,
     requestSecurityCode,
+    setUserLoyaltyAccessController,
     updateBenefitRanges,
+    updateLoyaltyProgramSettingsController,
     updateTierThresholds,
 } from './controllers/loyalty.controller.js';
 import { searchUsers } from './controllers/user.controller.js';
@@ -170,6 +174,10 @@ app.put('/api/admin/loyalty/benefit-ranges', auth, admin, updateBenefitRanges);
 app.post('/api/admin/loyalty/refresh-points', auth, admin, refreshUserPoints);
 app.post('/api/loyalty/request-security-code', auth, admin, requestSecurityCode);
 app.post('/api/admin/loyalty/recalculate-tiers', auth, admin, recalculateAllTiers);
+app.get('/api/admin/loyalty/settings', auth, admin, getLoyaltyProgramSettingsController);
+app.put('/api/admin/loyalty/settings', auth, admin, updateLoyaltyProgramSettingsController);
+app.get('/api/admin/loyalty/access', auth, admin, getLoyaltyAccessListController);
+app.put('/api/admin/loyalty/access/:userId', auth, admin, setUserLoyaltyAccessController);
 app.get('/api/admin/users/search', auth, admin, searchUsers);
 app.get('/api/users/:userId/loyalty-card', auth, getUserLoyaltyCard);
 

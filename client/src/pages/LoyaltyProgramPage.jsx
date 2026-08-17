@@ -1,7 +1,9 @@
 import React from 'react';
 import { FaCrown, FaGift, FaPercent, FaStar } from 'react-icons/fa';
 import { Link } from 'react-router-dom';
+import { useSelector } from 'react-redux';
 import RoyalCard from '../components/RoyalCard';
+import { useGlobalContext } from '../provider/GlobalProvider';
 
 const perks = [
   { icon: FaPercent, title: 'Tier rewards', text: 'Earn points on every purchase and unlock Bronze, Silver, Gold, and Platinum benefits.' },
@@ -10,6 +12,25 @@ const perks = [
 ];
 
 const LoyaltyProgramPage = () => {
+  const user = useSelector(state => state.user);
+  const { royalCardData } = useGlobalContext();
+  const isLoggedIn = Boolean(user?._id);
+
+  // Loyalty program is off for this account — don't market a feature the
+  // customer can't actually use.
+  if (isLoggedIn && !royalCardData) {
+    return (
+      <section className="bg-ivory dark:bg-dm-surface min-h-screen transition-colors duration-200 flex items-center justify-center px-4">
+        <div className="max-w-md text-center">
+          <h1 className="font-display font-bold text-charcoal dark:text-white text-2xl mb-2">Loyalty program</h1>
+          <p className="text-brown-500 dark:text-white/55 text-sm">
+            The loyalty program isn't available on this account right now.
+          </p>
+        </div>
+      </section>
+    );
+  }
+
   return (
     <section className="bg-ivory dark:bg-dm-surface min-h-screen transition-colors duration-200">
       <div className="bg-gradient-to-br from-plum-900 via-plum-700 to-charcoal py-10 sm:py-14 px-4">

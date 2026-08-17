@@ -9,6 +9,7 @@ import Product from '../models/product.model.js';
 import { getCustomerProductFilter } from '../controllers/catalogQuality.controller.js';
 import User from '../models/user.model.js';
 import { getProduct, searchProducts } from './databaseQuery.js';
+import { hasLoyaltyAccess } from './loyaltySettings.js';
 
 // Memory cache for active conversations
 const conversationMemory = new Map();
@@ -498,7 +499,15 @@ export const processIntents = async (intents, sessionData, sessionId, user) => {
         
         return "Our loyalty program offers exclusive benefits to members. Sign in to check your loyalty status and points balance, or create an account to start earning rewards!";
       }
-      
+
+      const requestingUser = await User.findById(user.userId).select('loyaltyAccessGranted').lean();
+      if (!(await hasLoyaltyAccess(requestingUser))) {
+        saveConversationContext(sessionId, {
+          lastQuestionType: 'loyalty_unavailable'
+        });
+        return "We don't currently have a loyalty program running on this account. Keep an eye out for future promotions!";
+      }
+
       const userProfile = await getUserProfileForChat(user.userId);
       
       if (!userProfile) {
@@ -750,25 +759,28 @@ export const getUserProfileForChat = async (userId) => {
     
     // Get user details from MongoDB
     const user = await User.findById(userId)
-      .select('name email role isAdmin status')
+      .select('name email role isAdmin status loyaltyAccessGranted')
       .lean();
     
     if (!user) {
       return null;
     }
     
-    // Get loyalty card
-    const loyaltyCard = await LoyaltyCard.findOne({ userId })
-      .select('tier points cardNumber')
-      .lean();
-    
+    // Get loyalty card — only if this user actually has loyalty access;
+    // otherwise leave loyaltyInfo null so callers (greetings, loyalty-intent
+    // replies) treat the program as if it doesn't exist for them.
+    const userHasLoyaltyAccess = await hasLoyaltyAccess(user);
+    const loyaltyCard = userHasLoyaltyAccess
+      ? await LoyaltyCard.findOne({ userId }).select('tier points cardNumber').lean()
+      : null;
+
     return {
       ...user,
-      loyaltyInfo: loyaltyCard ? {
-        tier: loyaltyCard.tier,
-        points: loyaltyCard.points,
-        cardNumber: loyaltyCard.cardNumber
-      } : { tier: 'Basic', points: 0, cardNumber: null },
+      loyaltyInfo: userHasLoyaltyAccess
+        ? (loyaltyCard
+          ? { tier: loyaltyCard.tier, points: loyaltyCard.points, cardNumber: loyaltyCard.cardNumber }
+          : { tier: 'Basic', points: 0, cardNumber: null })
+        : null,
       preferences: {} // Empty preferences as we can't access user features
     };
   } catch (error) {

@@ -34,15 +34,18 @@ import { logout } from '../store/userSlice';
 import Axios from '../utils/Axios';
 import AxiosToastError from '../utils/AxiosToastError';
 import { clearAuthStorage } from '../utils/authStorage';
+import { useGlobalContext } from '../provider/GlobalProvider';
 
 const DashboardSidebar = ({ userRole, isStaff }) => {
   const user = useSelector(state => state.user);
   const location = useLocation();
   const dispatch = useDispatch();
   const navigate = useNavigate();
+  const { royalCardData } = useGlobalContext();
 
   const isAdmin = userRole === 'admin';
   const isDelivery = userRole === 'delivery';
+  const hasLoyaltyAccess = Boolean(royalCardData);
 
   const handleLogout = async () => {
     try {
@@ -129,7 +132,9 @@ const DashboardSidebar = ({ userRole, isStaff }) => {
         <MenuItem to="/dashboard/profile" icon={FaUser} label="My Profile" />
         <MenuItem to="/dashboard/myorders" icon={FaShoppingBag} label="My Orders" />
         <MenuItem to="/dashboard/address" icon={FaMapMarkerAlt} label="My Addresses" />
-        <MenuItem to="/dashboard/profile#royal" icon={FaCrown} label="Royal card" />
+        {hasLoyaltyAccess && (
+          <MenuItem to="/dashboard/profile#royal" icon={FaCrown} label="Royal card" />
+        )}
         <MenuItem to="/dashboard/community-perks" icon={FaTrophy} label="Community perks" />
         <MenuItem to="/dashboard/active-campaigns" icon={FaBullhorn} label="Active campaigns" />
 

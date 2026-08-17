@@ -1858,11 +1858,19 @@ export async function scanLoyaltyCard(req, res) {
 
     // Get the user details for this card
     const user = await UserModel.findById(loyaltyCard.userId)
-      .select('_id name email mobile avatar role');
+      .select('_id name email mobile avatar role loyaltyAccessGranted');
 
     if (!user) {
       return res.status(404).json({
         message: "Customer not found for this loyalty card",
+        success: false
+      });
+    }
+
+    const { hasLoyaltyAccess } = await import('../utils/loyaltySettings.js');
+    if (!(await hasLoyaltyAccess(user))) {
+      return res.status(404).json({
+        message: "Loyalty card not found. Please check the card number.",
         success: false
       });
     }

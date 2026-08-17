@@ -21,6 +21,7 @@ const RoyalCard = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [viewMode, setViewMode] = useState('barcode');
   const [fetchError, setFetchError] = useState(null);
+  const [hasAccess, setHasAccess] = useState(true);
   const [tierThresholds, setTierThresholds] = useState({
     bronzeThreshold: 500,
     silverThreshold: 1500,
@@ -61,7 +62,10 @@ const RoyalCard = () => {
         method: 'GET'
       });
 
-      if (response.data?.success) {
+      if (response.data?.hasAccess === false) {
+        setHasAccess(false);
+        setCardData(null);
+      } else if (response.data?.success) {
         setCardData(response.data.data);
       } else {
         setCardData({
@@ -188,6 +192,21 @@ const RoyalCard = () => {
         <FaSpinner className="w-8 h-8 text-gold-500 animate-spin" />
         <p className="text-sm font-playfair italic text-plum-500 dark:text-plum-300">
           Loading your card...
+        </p>
+      </div>
+    );
+  }
+
+  // Loyalty program is off for this account (globally disabled and not
+  // individually granted) — show nothing resembling a working card.
+  if (user?._id && !hasAccess) {
+    return (
+      <div className="w-full max-w-md mx-auto p-6 text-center bg-brown-50 dark:bg-dm-card-2 border border-brown-100 dark:border-dm-border rounded-2xl">
+        <h3 className="font-playfair text-lg text-charcoal dark:text-white mb-2">
+          Royal Card
+        </h3>
+        <p className="text-sm text-brown-500 dark:text-white/55">
+          The loyalty program isn't available on this account right now.
         </p>
       </div>
     );

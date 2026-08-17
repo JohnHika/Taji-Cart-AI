@@ -59,7 +59,7 @@ const GlobalProvider = ({ children }) => {
                 method: 'GET'
             });
 
-            if (response.data?.success) {
+            if (response.data?.success && response.data?.hasAccess !== false) {
                 const cardData = response.data.data;
                 setRoyalCardData(cardData);
 
@@ -67,6 +67,9 @@ const GlobalProvider = ({ children }) => {
                 const discount = getRoyalCardDiscount(cardData.tier);
                 setRoyalDiscount(discount);
                 console.log(`Applied Royal card discount: ${discount}% (${cardData.tier} tier)`);
+            } else {
+                setRoyalCardData(null);
+                setRoyalDiscount(0);
             }
         } catch (error) {
             console.error("Error fetching Royal card data:", error);

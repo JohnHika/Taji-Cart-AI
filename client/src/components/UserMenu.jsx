@@ -32,17 +32,20 @@ import AxiosToastError from '../utils/AxiosToastError';
 import { clearAuthStorage } from '../utils/authStorage';
 import isadmin from '../utils/isAdmin';
 import isStaff from '../utils/isStaff';
+import { useGlobalContext } from '../provider/GlobalProvider';
 
 const UserMenu = ({ close, variant = 'dropdown' }) => {
   const user = useSelector((state) => state.user);
   const location = useLocation();
   const dispatch = useDispatch();
   const navigate = useNavigate();
+  const { royalCardData } = useGlobalContext();
   const isAdmin = isadmin(user);
   const isDelivery = user?.role === 'delivery' || user?.isDelivery === true;
   const showStaffFunctions = isStaff(user) && !isAdmin;
   const isSidebar = variant === 'sidebar';
   const useSlimDashboardNav = showStaffFunctions || isDelivery;
+  const hasLoyaltyAccess = Boolean(royalCardData);
 
   const sectionClass = 'min-w-0 px-4 py-1 mt-3 mb-0.5 text-xs font-semibold uppercase tracking-[0.14em] leading-tight text-brown-500 dark:text-white/45 whitespace-normal break-words';
 
@@ -189,10 +192,14 @@ const UserMenu = ({ close, variant = 'dropdown' }) => {
             <MenuLink to="/dashboard/address" icon={FaMapMarkerAlt} label="My addresses" />
 
             <p className={sectionClass}>Rewards & community</p>
-            <MenuLink to="/dashboard/loyalty-program" icon={FaCrown} label="Loyalty program" />
+            {hasLoyaltyAccess && (
+              <MenuLink to="/dashboard/loyalty-program" icon={FaCrown} label="Loyalty program" />
+            )}
             <MenuLink to="/dashboard/community-perks" icon={FaGift} label="Community perks" />
             <MenuLink to="/dashboard/active-campaigns" icon={FaBullhorn} label="Active campaigns" />
-            <MenuLink to="/dashboard/profile#royal" icon={FaStar} label="Royal card" />
+            {hasLoyaltyAccess && (
+              <MenuLink to="/dashboard/profile#royal" icon={FaStar} label="Royal card" />
+            )}
           </>
         )}
 

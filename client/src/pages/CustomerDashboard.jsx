@@ -4,8 +4,9 @@ import { FiArrowRight } from 'react-icons/fi';
 import { useSelector } from 'react-redux';
 import { Link } from 'react-router-dom';
 import { nawiriBrand } from '../config/brand';
+import { useGlobalContext } from '../provider/GlobalProvider';
 
-const tiles = [
+const LOYALTY_TILES = [
   {
     to: '/dashboard/loyalty-program',
     icon: FaCrown,
@@ -13,6 +14,16 @@ const tiles = [
     text: 'Track your Royal Card tier, points, and member-only perks on every purchase.',
     accent: 'from-gold-500/20 to-gold-600/5 border-gold-500/30'
   },
+  {
+    to: '/dashboard/profile#royal',
+    icon: FaTrophy,
+    title: 'Royal card',
+    text: 'Your in-store code and tier — same card as under My profile.',
+    accent: 'from-plum-800/40 to-charcoal/20 border-plum-600/35'
+  }
+];
+
+const COMMUNITY_TILES = [
   {
     to: '/dashboard/community-perks',
     icon: FaGift,
@@ -26,20 +37,14 @@ const tiles = [
     title: 'Active challenges',
     text: 'See live campaigns and how close we are to the next community milestone.',
     accent: 'from-blush-200/30 to-plum-800/10 border-blush-300/30'
-  },
-  {
-    to: '/dashboard/profile#royal',
-    icon: FaTrophy,
-    title: 'Royal card',
-    text: 'Your in-store code and tier — same card as under My profile.',
-    accent: 'from-plum-800/40 to-charcoal/20 border-plum-600/35'
   }
 ];
 
 const CustomerDashboard = () => {
   const user = useSelector((s) => s.user);
-  const loyaltyPoints = useSelector((s) => s.product?.loyaltyPoints ?? 0);
-  const loyaltyClass = useSelector((s) => s.product?.loyaltyClass ?? 'Member');
+  const { royalCardData } = useGlobalContext();
+  const hasLoyaltyAccess = Boolean(royalCardData);
+  const tiles = hasLoyaltyAccess ? [...LOYALTY_TILES, ...COMMUNITY_TILES] : COMMUNITY_TILES;
 
   const firstName = (user?.name || 'there').trim().split(/\s+/)[0];
 
@@ -53,12 +58,14 @@ const CustomerDashboard = () => {
             Your hub for orders, rewards, and community benefits — minimal, clear, and all in one place.
           </p>
           <div className="mt-5 flex flex-wrap items-center gap-3">
-            <div className="rounded-full border border-white/20 bg-white/10 px-4 py-2 text-sm backdrop-blur-sm">
-              <span className="text-white/60">Loyalty · </span>
-              <span className="font-semibold text-gold-200">{loyaltyClass}</span>
-              <span className="mx-2 text-white/30">|</span>
-              <span className="text-white/80">{loyaltyPoints} pts</span>
-            </div>
+            {hasLoyaltyAccess && (
+              <div className="rounded-full border border-white/20 bg-white/10 px-4 py-2 text-sm backdrop-blur-sm">
+                <span className="text-white/60">Loyalty · </span>
+                <span className="font-semibold text-gold-200">{royalCardData?.tier || 'Member'}</span>
+                <span className="mx-2 text-white/30">|</span>
+                <span className="text-white/80">{royalCardData?.points || 0} pts</span>
+              </div>
+            )}
             <Link
               to="/dashboard/myorders"
               className="inline-flex items-center gap-2 rounded-full bg-gold-500 px-4 py-2 text-sm font-semibold text-charcoal transition hover:bg-gold-400"

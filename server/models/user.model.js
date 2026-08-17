@@ -112,6 +112,13 @@ const userSchema = new mongoose.Schema({
         changedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
         changedAt: { type: Date, default: Date.now }
     }],
+    // Exclusive access to the loyalty/Royal Card program for this individual
+    // customer, independent of the global LoyaltySettings master switch.
+    // See server/utils/loyaltySettings.js: hasLoyaltyAccess().
+    loyaltyAccessGranted: {
+        type: Boolean,
+        default: false
+    },
     googleId: {
         type: String,
         sparse: true,  // Allow null values but enforce uniqueness when present

@@ -1,11 +1,13 @@
 import mongoose from 'mongoose';
 import sendEmail from '../config/sendEmail.js';
 import LoyaltyCardModel from '../models/loyaltycard.model.js';
+import LoyaltySettingsModel from '../models/loyaltySettings.model.js';
 import LoyaltyThresholdModel from '../models/loyaltythreshold.model.js';
 import OrderModel from '../models/order.model.js';
 import UserModel from '../models/user.model.js';
 import { renderAccountNoticeEmail } from '../utils/emailTemplates.js';
 import { createSecurityCode, verifySecurityCode } from '../utils/securityUtils.js';
+import { getLoyaltySettings, hasLoyaltyAccess } from '../utils/loyaltySettings.js';
 
 // Generate a unique card number
 const generateCardNumber = () => {
@@ -51,7 +53,19 @@ export const getUserLoyaltyCard = async (req, res) => {
     const isAdmin = user.isAdmin === true || user.role === 'admin';
     console.log(`User ${user.name || userId} (${user.email}) - Admin status: ${isAdmin}`);
     console.log(`Admin check details: isAdmin property = ${user.isAdmin}, role = ${user.role}`);
-    
+
+    // The loyalty program is either off globally or on only for individually
+    // granted customers. When this user has no access, skip every bit of
+    // card creation/point recalculation below and tell the client plainly.
+    if (!(await hasLoyaltyAccess(user))) {
+      return res.status(200).json({
+        success: true,
+        hasAccess: false,
+        message: 'The loyalty program is not available on this account',
+        data: null
+      });
+    }
+
     // Check if user already has a loyalty card
     let loyaltyCard = await LoyaltyCardModel.findOne({ userId });
     
@@ -190,6 +204,7 @@ export const getUserLoyaltyCard = async (req, res) => {
     // Create a response object that properly reflects early access status
     const response = {
       success: true,
+      hasAccess: true,
       data: {
         ...loyaltyCard.toObject(),
         // Add formatted expiry date for better user experience
@@ -297,8 +312,16 @@ export const updateLoyaltyPoints = async (req, res) => {
       });
     }
     
+    const requestingUser = await UserModel.findById(userId).select('loyaltyAccessGranted').lean();
+    if (!(await hasLoyaltyAccess(requestingUser))) {
+      return res.status(403).json({
+        message: "The loyalty program is not available on this account",
+        success: false
+      });
+    }
+
     console.log(`Updating loyalty points for user ${userId}: ${points} points - ${reason || 'No reason provided'}`);
-    
+
     const loyaltyCard = await LoyaltyCardModel.findOne({ userId });
     if (!loyaltyCard) {
       console.log(`No loyalty card found for ${userId}, creating one`);
@@ -449,8 +472,16 @@ export const validateLoyaltyCard = async (req, res) => {
     const user = await UserModel.findById(loyaltyCard.userId, {
       name: 1,
       email: 1,
-      mobile: 1
+      mobile: 1,
+      loyaltyAccessGranted: 1
     });
+
+    if (!(await hasLoyaltyAccess(user))) {
+      return res.status(404).json({
+        message: "Invalid loyalty card",
+        success: false
+      });
+    }
     
     // Check if user is admin
     const isAdmin = user?.isAdmin === true || user?.role === 'admin';
@@ -1745,6 +1776,101 @@ export const recalculateAllTiers = async (req, res) => {
   }
 };
 
+/**
+ * Get the loyalty program's global on/off state (admin only)
+ */
+export const getLoyaltyProgramSettingsController = async (_req, res) => {
+  try {
+    const settings = await getLoyaltySettings();
+    return res.status(200).json({
+      success: true,
+      data: { enabled: settings.enabled }
+    });
+  } catch (error) {
+    console.error("Error fetching loyalty program settings:", error);
+    return res.status(500).json({ success: false, message: "Internal server error" });
+  }
+};
+
+/**
+ * Master switch for the loyalty program (admin only). When turned off, the
+ * feature disappears for every customer except those individually granted
+ * access via loyaltyAccessGranted.
+ */
+export const updateLoyaltyProgramSettingsController = async (req, res) => {
+  try {
+    const { enabled } = req.body;
+    if (typeof enabled !== 'boolean') {
+      return res.status(400).json({ success: false, message: "'enabled' must be true or false" });
+    }
+
+    const settings = await LoyaltySettingsModel.findOneAndUpdate(
+      { key: 'loyaltyProgram' },
+      { $set: { enabled } },
+      { new: true, upsert: true, setDefaultsOnInsert: true }
+    );
+
+    return res.status(200).json({
+      success: true,
+      message: enabled ? 'Loyalty program enabled' : 'Loyalty program disabled',
+      data: { enabled: settings.enabled }
+    });
+  } catch (error) {
+    console.error("Error updating loyalty program settings:", error);
+    return res.status(500).json({ success: false, message: "Internal server error" });
+  }
+};
+
+/**
+ * Grant or revoke one customer's exclusive access to the loyalty program,
+ * independent of the global master switch (admin only).
+ */
+export const setUserLoyaltyAccessController = async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { granted } = req.body;
+
+    if (typeof granted !== 'boolean') {
+      return res.status(400).json({ success: false, message: "'granted' must be true or false" });
+    }
+
+    const user = await UserModel.findByIdAndUpdate(
+      userId,
+      { $set: { loyaltyAccessGranted: granted } },
+      { new: true }
+    ).select('_id name email loyaltyAccessGranted');
+
+    if (!user) {
+      return res.status(404).json({ success: false, message: "User not found" });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: granted ? `Loyalty access granted to ${user.name}` : `Loyalty access revoked from ${user.name}`,
+      data: user
+    });
+  } catch (error) {
+    console.error("Error updating user loyalty access:", error);
+    return res.status(500).json({ success: false, message: "Internal server error" });
+  }
+};
+
+/**
+ * List customers with individually granted loyalty access (admin only).
+ */
+export const getLoyaltyAccessListController = async (_req, res) => {
+  try {
+    const users = await UserModel.find({ loyaltyAccessGranted: true })
+      .select('_id name email mobile loyaltyAccessGranted')
+      .sort({ name: 1 });
+
+    return res.status(200).json({ success: true, data: users });
+  } catch (error) {
+    console.error("Error listing loyalty access grants:", error);
+    return res.status(500).json({ success: false, message: "Internal server error" });
+  }
+};
+
 export default {
   getUserLoyaltyCard,
   updateLoyaltyPoints,
@@ -1760,5 +1886,9 @@ export default {
   refreshUserPoints,
   updateAllUserTiers,
   recalculateAllTiers,
-  updateLoyaltyCardTier
+  updateLoyaltyCardTier,
+  getLoyaltyProgramSettingsController,
+  updateLoyaltyProgramSettingsController,
+  setUserLoyaltyAccessController,
+  getLoyaltyAccessListController
 };

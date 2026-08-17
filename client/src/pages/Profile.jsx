@@ -13,6 +13,7 @@ import AxiosToastError from '../utils/AxiosToastError';
 import { clearAuthStorage } from '../utils/authStorage';
 import fetchUserDetails from '../utils/fetchUserDetails';
 import { getAccountTypeMeta, getEffectiveRole } from '../utils/userRole';
+import { useGlobalContext } from '../provider/GlobalProvider';
 
 const Profile = () => {
     const user = useSelector(state => state.user)
@@ -27,6 +28,8 @@ const Profile = () => {
     const dispatch = useDispatch()
     const navigate = useNavigate()
     const location = useLocation()
+    const { royalCardData } = useGlobalContext()
+    const hasLoyaltyAccess = Boolean(royalCardData)
 
     // File Upload states
     const [selectedFile, setSelectedFile] = useState(null)
@@ -324,16 +327,18 @@ const Profile = () => {
                 >
                     Security
                 </button>
-                <button
-                    onClick={() => setActiveTab('royal-card')}
-                    className={`shrink-0 py-3 px-4 font-medium text-sm sm:text-base transition-colors duration-200 ${
-                        activeTab === 'royal-card' 
-                        ? 'text-plum-700 dark:text-plum-400 border-b-2 border-plum-700 dark:border-plum-400' 
-                        : 'text-brown-500 dark:text-white/40 hover:text-plum-700 dark:hover:text-plum-400'
-                    }`}
-                >
-                    Royal Card
-                </button>
+                {hasLoyaltyAccess && (
+                    <button
+                        onClick={() => setActiveTab('royal-card')}
+                        className={`shrink-0 py-3 px-4 font-medium text-sm sm:text-base transition-colors duration-200 ${
+                            activeTab === 'royal-card'
+                            ? 'text-plum-700 dark:text-plum-400 border-b-2 border-plum-700 dark:border-plum-400'
+                            : 'text-brown-500 dark:text-white/40 hover:text-plum-700 dark:hover:text-plum-400'
+                        }`}
+                    >
+                        Royal Card
+                    </button>
+                )}
                 <button
                     onClick={() => setActiveTab('rewards')}
                     className={`shrink-0 py-3 px-4 font-medium text-sm sm:text-base transition-colors duration-200 ${

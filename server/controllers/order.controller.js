@@ -28,6 +28,7 @@ import { nawiriBrand } from "../utils/brand.js";
 import { buildRiderCallMessage, notifyCustomerRiderWillCall } from "../utils/deliveryRiderCall.js";
 import { renderOrderNoticeEmail } from "../utils/emailTemplates.js";
 import { getOrderIdentifierQuery } from "../utils/orderIdentifier.js";
+import { hasLoyaltyAccess } from "../utils/loyaltySettings.js";
 
 // Add this helper function to better log objects
 const inspectObject = (obj) => util.inspect(obj, {depth: 3, colors: true});
@@ -127,8 +128,11 @@ const buildValidatedOrderPricing = async ({
   let royalDiscount = 0;
 
   if (userId && mongoose.Types.ObjectId.isValid(String(userId))) {
-    loyaltyCard = await LoyaltyCardModel.findOne({ userId });
-    royalDiscount = getRoyalDiscountRate(loyaltyCard?.tier);
+    const orderingUser = await UserModel.findById(userId).select('loyaltyAccessGranted').lean();
+    if (await hasLoyaltyAccess(orderingUser)) {
+      loyaltyCard = await LoyaltyCardModel.findOne({ userId });
+      royalDiscount = getRoyalDiscountRate(loyaltyCard?.tier);
+    }
   }
 
   const uniqueProductIds = [...new Set(
@@ -1193,7 +1197,13 @@ const updateLoyaltyPoints = async (userId, orderAmount, orderId) => {
       console.log("Cannot update loyalty points: Invalid or null user ID");
       return;
     }
-    
+
+    const orderingUser = await UserModel.findById(userId).select('loyaltyAccessGranted').lean();
+    if (!(await hasLoyaltyAccess(orderingUser))) {
+      console.log(`Loyalty program disabled for user ${userId}: skipping points award`);
+      return;
+    }
+
     // Award 1 point per 100 spent
     const pointsToAward = Math.floor(orderAmount / 100);
     

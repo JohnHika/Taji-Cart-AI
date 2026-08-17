@@ -628,7 +628,7 @@ const GuestTeaserCard = ({ estimatedSavings = 0 }) => {
 const CheckoutRoyalCard = ({ compact = false, showTeaser = true }) => {
   const user = useSelector(state => state.user);
   const { royalCardData, royalDiscount, notDiscountTotalPrice, totalPrice } = useGlobalContext();
-  
+
   const isLoggedIn = Boolean(user?._id);
   const totalSaved = notDiscountTotalPrice - totalPrice;
 
@@ -637,10 +637,17 @@ const CheckoutRoyalCard = ({ compact = false, showTeaser = true }) => {
     return null;
   }
 
+  // Loyalty program is off for this logged-in account (GlobalProvider only
+  // populates royalCardData when the user actually has access) — show
+  // nothing rather than a fake zero-benefit member card.
+  if (isLoggedIn && !royalCardData) {
+    return null;
+  }
+
   return (
     <div className={`w-full ${compact ? 'max-w-[280px]' : 'max-w-[320px]'} mx-auto`}>
       {isLoggedIn ? (
-        <MemberCard 
+        <MemberCard
           user={user}
           royalCardData={royalCardData}
           royalDiscount={royalDiscount}
