@@ -3,6 +3,7 @@ import Sale from '../models/sale.model.js';
 import User from '../models/user.model.js';
 import Product from '../models/product.model.js';
 import EndOfDay from '../models/endOfDay.model.js';
+import HeldSale from '../models/heldSale.model.js';
 import auth from '../middleware/auth.js';
 import Staff from '../middleware/Staff.js';
 import { requireStaffPermission } from '../middleware/requireStaffPermission.js';
@@ -295,6 +296,82 @@ router.get('/admin/sales', auth, async (req, res) => {
   } catch (error) {
     console.error('GET /api/pos/admin/sales error:', error);
     return res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// ─── Held Sales (parked, not-yet-charged transactions) ──────────────────────
+
+// List held sales for this branch, newest first. Visible to any staff who
+// can open the counter, not just whoever created the hold, so a different
+// cashier can resume a customer's order.
+router.get('/held-sales', auth, Staff, requireStaffPermission('pos.open_counter'), async (req, res) => {
+  try {
+    const branch = req.user.staff_branch || 'Main Store';
+    const heldSales = await HeldSale.find({ branch }).sort({ createdAt: -1 });
+    res.json({ success: true, data: heldSales });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Park the current in-progress sale exactly as it stands on the counter.
+router.post('/held-sales', auth, Staff, requireStaffPermission('pos.open_counter'), async (req, res) => {
+  try {
+    const {
+      cart,
+      customerName,
+      customerPhone,
+      saleNote,
+      fulfillmentType,
+      deliveryDetails,
+      paymentMethod,
+      amountTendered,
+      splitCashAmount,
+      equityProofUrl,
+      equityApproved,
+    } = req.body;
+
+    if (!Array.isArray(cart) || cart.length === 0) {
+      return res.status(400).json({ success: false, message: 'Cannot hold an empty basket.' });
+    }
+
+    const label = customerName?.trim() || `Held sale · ${cart.length} item${cart.length === 1 ? '' : 's'}`;
+
+    const heldSale = await HeldSale.create({
+      label,
+      cart,
+      customerName: customerName || '',
+      customerPhone: customerPhone || '',
+      saleNote: saleNote || '',
+      fulfillmentType: fulfillmentType || 'in_store',
+      deliveryDetails: deliveryDetails || {},
+      paymentMethod: paymentMethod || 'cash',
+      amountTendered: amountTendered || '',
+      splitCashAmount: splitCashAmount || '',
+      equityProofUrl: equityProofUrl || '',
+      equityApproved: Boolean(equityApproved),
+      branch: req.user.staff_branch || 'Main Store',
+      heldBy: req.user._id,
+      heldByName: req.user.name,
+    });
+
+    res.json({ success: true, data: heldSale });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Discard a held sale — used both for an explicit "Discard" action and to
+// clean up the parked record once a cashier resumes and finishes it.
+router.delete('/held-sales/:id', auth, Staff, requireStaffPermission('pos.open_counter'), async (req, res) => {
+  try {
+    const deleted = await HeldSale.findByIdAndDelete(req.params.id);
+    if (!deleted) {
+      return res.status(404).json({ success: false, message: 'Held sale not found' });
+    }
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
   }
 });
 

@@ -4,7 +4,9 @@ import {
   FaArrowLeft,
   FaCamera,
   FaCheckCircle,
+  FaClock,
   FaMinus,
+  FaPause,
   FaPlus,
   FaSearch,
   FaShoppingBasket,
@@ -73,6 +75,11 @@ const SalesCounter = () => {
   const [saleNote, setSaleNote] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [completedSale, setCompletedSale] = useState(null);
+  const [heldSales, setHeldSales] = useState([]);
+  const [showHeldSales, setShowHeldSales] = useState(false);
+  const [holding, setHolding] = useState(false);
+  const [resumingId, setResumingId] = useState(null);
+  const [activeHeldSaleId, setActiveHeldSaleId] = useState(null);
 
   // Redirect non-staff/non-admin away from the counter.
   useEffect(() => {
@@ -87,6 +94,7 @@ const SalesCounter = () => {
   useEffect(() => {
     loadProducts();
     loadCategories();
+    loadHeldSales();
   }, []);
 
   // Reset pagination whenever the filter changes so "Load more" starts fresh.
@@ -129,6 +137,93 @@ const SalesCounter = () => {
     try {
       const res = await Axios({ ...SummaryApi.getCategory });
       if (res.data.success) setCategories(res.data.data || []);
+    } catch (err) {
+      AxiosToastError(err);
+    }
+  };
+
+  const loadHeldSales = async () => {
+    try {
+      const res = await Axios({ url: '/api/pos/held-sales', method: 'GET' });
+      if (res.data.success) setHeldSales(res.data.data || []);
+    } catch (err) {
+      AxiosToastError(err);
+    }
+  };
+
+  const holdSale = async () => {
+    if (cart.length === 0) {
+      toast.error('Add at least one product before holding this sale.');
+      return;
+    }
+    try {
+      setHolding(true);
+      const res = await Axios({
+        url: '/api/pos/held-sales',
+        method: 'POST',
+        data: {
+          cart,
+          customerName,
+          customerPhone,
+          saleNote,
+          fulfillmentType,
+          deliveryDetails,
+          paymentMethod,
+          amountTendered,
+          splitCashAmount,
+          equityProofUrl,
+          equityApproved,
+        },
+      });
+      if (res.data.success) {
+        // If this sale was itself a resumed hold, drop the original record
+        // instead of leaving a stale duplicate behind.
+        if (activeHeldSaleId) {
+          await Axios({ url: `/api/pos/held-sales/${activeHeldSaleId}`, method: 'DELETE' }).catch(() => {});
+        }
+        toast.success('Sale held. Resume it anytime from Held Sales.');
+        resetSale();
+        loadHeldSales();
+      }
+    } catch (err) {
+      AxiosToastError(err);
+    } finally {
+      setHolding(false);
+    }
+  };
+
+  const resumeHeldSale = async (heldSale) => {
+    if (cart.length > 0) {
+      toast.error('Finish, hold, or clear the current sale before resuming another.');
+      return;
+    }
+    try {
+      setResumingId(heldSale._id);
+      setCart(heldSale.cart || []);
+      setCustomerName(heldSale.customerName || '');
+      setCustomerPhone(heldSale.customerPhone || '');
+      setSaleNote(heldSale.saleNote || '');
+      setFulfillmentType(heldSale.fulfillmentType || 'in_store');
+      setDeliveryDetails(heldSale.deliveryDetails || { mode: 'standard', zoneId: '', saccoOperatorId: '', saccoDestinationTown: '' });
+      setPaymentMethod(heldSale.paymentMethod || 'cash');
+      setAmountTendered(heldSale.amountTendered || '');
+      setSplitCashAmount(heldSale.splitCashAmount || '');
+      setEquityProofUrl(heldSale.equityProofUrl || '');
+      setEquityApproved(Boolean(heldSale.equityApproved));
+      setActiveHeldSaleId(heldSale._id);
+      setShowHeldSales(false);
+      setShowCart(true);
+      toast.success(`Resumed ${heldSale.label || 'held sale'}`);
+    } finally {
+      setResumingId(null);
+    }
+  };
+
+  const discardHeldSale = async (id) => {
+    try {
+      await Axios({ url: `/api/pos/held-sales/${id}`, method: 'DELETE' });
+      setHeldSales((prev) => prev.filter((h) => h._id !== id));
+      toast.success('Held sale discarded');
     } catch (err) {
       AxiosToastError(err);
     }
@@ -227,6 +322,7 @@ const SalesCounter = () => {
     setCustomerPhone('');
     setSaleNote('');
     setCompletedSale(null);
+    setActiveHeldSaleId(null);
   };
 
   const handleEquityProofSelected = async (e) => {
@@ -337,6 +433,11 @@ const SalesCounter = () => {
       if (res.data.success) {
         setCompletedSale({ ...saleData, saleNumber: res.data.saleNumber });
         toast.success(`Sale ${res.data.saleNumber} completed`);
+        if (activeHeldSaleId) {
+          Axios({ url: `/api/pos/held-sales/${activeHeldSaleId}`, method: 'DELETE' }).catch(() => {});
+          setActiveHeldSaleId(null);
+          loadHeldSales();
+        }
       }
     } catch (err) {
       AxiosToastError(err);
@@ -691,17 +792,28 @@ const SalesCounter = () => {
             </span>
           </div>
         </div>
-        <button
-          onClick={completeSale}
-          disabled={
-            cart.length === 0 ||
-            submitting ||
-            ((paymentMethod === 'equity' || paymentMethod === 'split') && (!equityProofUrl || !equityApproved))
-          }
-          className="w-full bg-gold-500 hover:bg-gold-600 disabled:bg-brown-300 text-white font-bold py-3 rounded-xl flex items-center justify-center gap-2 transition-colors"
-        >
-          {submitting ? 'Processing…' : `Charge ${DisplayPriceInShillings(totals.total)}`}
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={holdSale}
+            disabled={cart.length === 0 || holding || submitting}
+            title="Park this sale to serve another customer, and resume it later"
+            className="shrink-0 bg-white border border-brown-300 hover:bg-brown-50 disabled:opacity-50 disabled:hover:bg-white text-brown-700 font-bold py-3 px-4 rounded-xl flex items-center justify-center gap-2 transition-colors dark:bg-dm-card dark:border-dm-border dark:text-white/80 dark:hover:bg-dm-card-2"
+          >
+            <FaPause size={13} />
+            {holding ? '…' : 'Hold'}
+          </button>
+          <button
+            onClick={completeSale}
+            disabled={
+              cart.length === 0 ||
+              submitting ||
+              ((paymentMethod === 'equity' || paymentMethod === 'split') && (!equityProofUrl || !equityApproved))
+            }
+            className="flex-1 bg-gold-500 hover:bg-gold-600 disabled:bg-brown-300 text-white font-bold py-3 rounded-xl flex items-center justify-center gap-2 transition-colors"
+          >
+            {submitting ? 'Processing…' : `Charge ${DisplayPriceInShillings(totals.total)}`}
+          </button>
+        </div>
       </div>
     </>
   );
@@ -742,6 +854,20 @@ const SalesCounter = () => {
                   </p>
                 </div>
               </div>
+              <button
+                type="button"
+                onClick={() => setShowHeldSales(true)}
+                className="relative inline-flex shrink-0 items-center gap-1.5 rounded-xl border border-brown-200 px-2.5 py-2 text-xs font-semibold text-brown-700 transition-colors hover:border-gold-400 hover:bg-gold-50 hover:text-gold-700 dark:border-dm-border dark:text-white/70 dark:hover:bg-dm-card-2"
+                aria-label="Held sales"
+              >
+                <FaClock size={12} />
+                <span>Held</span>
+                {heldSales.length > 0 && (
+                  <span className="inline-flex h-4 min-w-[16px] items-center justify-center rounded-full bg-gold-500 px-1 text-[10px] font-bold text-white">
+                    {heldSales.length}
+                  </span>
+                )}
+              </button>
             </div>
 
             {/* Search */}
@@ -844,6 +970,19 @@ const SalesCounter = () => {
                   </div>
                 </div>
               </div>
+              <button
+                type="button"
+                onClick={() => setShowHeldSales(true)}
+                className="relative inline-flex shrink-0 items-center gap-1.5 rounded-xl border border-brown-200 px-3 py-2 text-xs font-semibold text-brown-700 transition-colors hover:border-gold-400 hover:bg-gold-50 hover:text-gold-700 dark:border-dm-border dark:text-white/70 dark:hover:bg-dm-card-2"
+              >
+                <FaClock size={12} />
+                <span>Held Sales</span>
+                {heldSales.length > 0 && (
+                  <span className="inline-flex h-4 min-w-[16px] items-center justify-center rounded-full bg-gold-500 px-1 text-[10px] font-bold text-white">
+                    {heldSales.length}
+                  </span>
+                )}
+              </button>
             </div>
             <div className="flex items-center justify-between gap-3 border-t border-brown-100 px-3 py-2 text-xs dark:border-dm-border sm:px-4">
               <span className="font-semibold uppercase tracking-wide text-brown-400 dark:text-white/40">Current sale</span>
@@ -991,6 +1130,77 @@ const SalesCounter = () => {
             >
               New Sale
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Held sales panel */}
+      {showHeldSales && (
+        <div
+          className="fixed inset-0 z-50 flex flex-col bg-black/50"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="held-sales-title"
+        >
+          <div className="flex-1" onClick={() => setShowHeldSales(false)} />
+          <div className="flex max-h-[86dvh] w-full flex-col rounded-t-2xl bg-white shadow-2xl dark:bg-dm-card sm:mx-auto sm:max-h-[80vh] sm:max-w-md sm:rounded-2xl sm:my-auto">
+            <div className="flex items-center justify-between border-b border-brown-100 p-4 dark:border-dm-border">
+              <h2 id="held-sales-title" className="flex items-center gap-2 text-lg font-bold">
+                <FaClock /> Held Sales
+              </h2>
+              <button
+                onClick={() => setShowHeldSales(false)}
+                className="inline-flex h-10 w-10 items-center justify-center rounded-full text-brown-600 transition-colors hover:bg-brown-100 dark:text-white/70 dark:hover:bg-dm-border"
+                aria-label="Close held sales"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto p-4 space-y-3">
+              {heldSales.length === 0 ? (
+                <div className="rounded-xl border border-dashed border-brown-200 px-4 py-10 text-center text-sm text-brown-500 dark:border-dm-border dark:text-white/50">
+                  No held sales. Use the Hold button on a sale to park it here while you serve someone else.
+                </div>
+              ) : (
+                heldSales.map((held) => {
+                  const heldItemCount = (held.cart || []).reduce((sum, i) => sum + i.quantity, 0);
+                  const heldTotal = (held.cart || []).reduce((sum, i) => sum + i.price * i.quantity, 0);
+                  return (
+                    <div
+                      key={held._id}
+                      className="rounded-xl border border-brown-100 bg-plum-50/40 p-3 dark:border-dm-border dark:bg-dm-card-2"
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-semibold">{held.label || 'Held sale'}</p>
+                          <p className="text-xs text-brown-500 dark:text-white/50">
+                            {heldItemCount} item{heldItemCount === 1 ? '' : 's'} · {DisplayPriceInShillings(heldTotal)} · held by {held.heldByName}
+                          </p>
+                          <p className="text-[11px] text-brown-400 dark:text-white/40">
+                            {new Date(held.createdAt).toLocaleString()}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="mt-2 flex gap-2">
+                        <button
+                          onClick={() => resumeHeldSale(held)}
+                          disabled={resumingId === held._id}
+                          className="flex-1 rounded-lg bg-plum-700 py-2 text-xs font-semibold text-white transition-colors hover:bg-plum-800 disabled:opacity-60"
+                        >
+                          {resumingId === held._id ? 'Resuming…' : 'Resume'}
+                        </button>
+                        <button
+                          onClick={() => discardHeldSale(held._id)}
+                          className="rounded-lg border border-red-200 px-3 py-2 text-xs font-semibold text-red-600 transition-colors hover:bg-red-50 dark:border-red-900/40 dark:hover:bg-red-950/30"
+                        >
+                          <FaTrash size={11} />
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
           </div>
         </div>
       )}
