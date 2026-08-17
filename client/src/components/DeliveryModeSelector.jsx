@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import SummaryApi from '../common/SummaryApi';
 import Axios from '../utils/Axios';
 import AxiosToastError from '../utils/AxiosToastError';
-import { DEFAULT_DELIVERY_CHARGE, SACCO_TERMINAL_DROPOFF_CHARGE } from '../utils/cbdDelivery';
+import { DEFAULT_DELIVERY_CHARGE, NAIROBI_CBD_RADIUS_KM, SACCO_TERMINAL_DROPOFF_CHARGE } from '../utils/cbdDelivery';
 import { DisplayPriceInShillings } from '../utils/DisplayPriceInShillings';
 
 // Shared delivery-mode + fee picker for staff-facing order entry (Sales
@@ -94,7 +94,7 @@ const DeliveryModeSelector = ({ value, onChange, onFeeChange, onDetailsChange })
   const setMode = (mode) => onChange({ ...value, mode });
 
   const MODES = [
-    { id: 'standard', label: 'Standard Delivery', hint: `Flat fee, KSh ${DEFAULT_DELIVERY_CHARGE}` },
+    { id: 'standard', label: 'Standard Delivery', hint: `Flat fee, KSh ${DEFAULT_DELIVERY_CHARGE} — within Nairobi CBD (${NAIROBI_CBD_RADIUS_KM}km radius)` },
     { id: 'bike', label: 'Bike Delivery', hint: 'Zone-fare, wider coverage' },
     { id: 'sacco', label: 'SACCO / Bus Parcel', hint: `Shop-to-terminal, KSh ${SACCO_TERMINAL_DROPOFF_CHARGE}` },
   ];
