@@ -567,6 +567,10 @@ const SalesCounter = () => {
 
   const renderProductCard = (p) => {
     const inCartQty = cart.find((i) => i._id === p._id)?.quantity || 0;
+    // stock === null/undefined means untracked inventory — no badge shown for those.
+    const hasStockInfo = p.stock != null;
+    const isOutOfStock = hasStockInfo && p.stock <= 0;
+    const isLowStock = hasStockInfo && p.stock > 0 && p.stock <= 5;
     return (
       <div
         key={p._id}
@@ -577,12 +581,25 @@ const SalesCounter = () => {
             {inCartQty}
           </span>
         )}
+        {hasStockInfo && (
+          <span
+            className={`absolute right-1.5 top-1.5 z-10 inline-flex h-5 items-center justify-center rounded-full px-1.5 text-[10px] font-bold shadow-sm ${
+              isOutOfStock
+                ? 'bg-red-600 text-white'
+                : isLowStock
+                  ? 'bg-gold-500 text-white'
+                  : 'bg-white/90 text-charcoal dark:bg-dm-card-2/90 dark:text-white'
+            }`}
+          >
+            {isOutOfStock ? 'Out of stock' : `${p.stock} in stock`}
+          </span>
+        )}
         <button
           type="button"
           onClick={() => addToCart(p)}
           className="block w-full text-left active:scale-[0.97] transition-transform"
         >
-          <div className="aspect-square bg-plum-50 dark:bg-dm-card-2 flex items-center justify-center">
+          <div className={`aspect-square bg-plum-50 dark:bg-dm-card-2 flex items-center justify-center ${isOutOfStock ? 'opacity-50' : ''}`}>
             {p.image?.[0] ? (
               <img
                 src={p.image[0]}
@@ -622,6 +639,10 @@ const SalesCounter = () => {
             >
               <FaPlus size={11} />
             </button>
+          </div>
+        ) : isOutOfStock ? (
+          <div className="mt-1.5 flex min-h-[36px] w-full items-center justify-center bg-brown-100 dark:bg-dm-card-2 text-xs font-semibold text-brown-400 dark:text-white/40">
+            Out of stock
           </div>
         ) : (
           <button
