@@ -6,6 +6,7 @@ import EndOfDay from '../models/endOfDay.model.js';
 import HeldSale from '../models/heldSale.model.js';
 import auth from '../middleware/auth.js';
 import Staff from '../middleware/Staff.js';
+import { admin } from '../middleware/Admin.js';
 import { requireStaffPermission } from '../middleware/requireStaffPermission.js';
 import { hasStaffPermission } from '../utils/staffPermissions.js';
 import { sendCsv } from '../utils/csv.js';
@@ -302,13 +303,15 @@ router.get('/admin/sales', auth, async (req, res) => {
 
 // ─── Held Sales (parked, not-yet-charged transactions) ──────────────────────
 
-// List held sales for this branch, newest first. Visible to any staff who
-// can open the counter, not just whoever created the hold, so a different
-// cashier can resume a customer's order.
-router.get('/held-sales', auth, Staff, requireStaffPermission('pos.open_counter'), async (req, res) => {
+// List held sales for this branch, newest first. Admins see every held sale;
+// staff only see (and can only resume/discard) their own — they cannot
+// browse sales other cashiers have parked.
+router.get('/held-sales', auth, Staff, async (req, res) => {
   try {
     const branch = req.user.staff_branch || 'Main Store';
-    const heldSales = await HeldSale.find({ branch }).sort({ createdAt: -1 });
+    const isAdminUser = req.user.isAdmin === true || req.user.role === 'admin';
+    const filter = isAdminUser ? { branch } : { branch, heldBy: req.user._id };
+    const heldSales = await HeldSale.find(filter).sort({ createdAt: -1 });
     res.json({ success: true, data: heldSales });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -362,11 +365,20 @@ router.post('/held-sales', auth, Staff, requireStaffPermission('pos.open_counter
   }
 });
 
-// Discard a held sale — used both for an explicit "Discard" action and to
-// clean up the parked record once a cashier resumes and finishes it.
-router.delete('/held-sales/:id', auth, Staff, requireStaffPermission('pos.open_counter'), async (req, res) => {
+// Discard a held sale. Admins can discard any held sale (this is how the
+// admin-only Held Sales list lets someone clear a stale entry). Staff
+// cannot browse or discard other people's holds, but a staff member who
+// personally held a sale can still clean up that one record themselves —
+// e.g. the client auto-deletes it once they resume and complete or
+// re-hold it, without needing list/browse access.
+router.delete('/held-sales/:id', auth, Staff, async (req, res) => {
   try {
-    const deleted = await HeldSale.findByIdAndDelete(req.params.id);
+    const isAdminUser = req.user.isAdmin === true || req.user.role === 'admin';
+    const query = isAdminUser
+      ? { _id: req.params.id }
+      : { _id: req.params.id, heldBy: req.user._id };
+
+    const deleted = await HeldSale.findOneAndDelete(query);
     if (!deleted) {
       return res.status(404).json({ success: false, message: 'Held sale not found' });
     }

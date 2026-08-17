@@ -80,6 +80,7 @@ const SalesCounter = () => {
   const [holding, setHolding] = useState(false);
   const [resumingId, setResumingId] = useState(null);
   const [activeHeldSaleId, setActiveHeldSaleId] = useState(null);
+  const isAdmin = Boolean(user?.isAdmin || user?.role === 'admin');
 
   // Redirect non-staff/non-admin away from the counter.
   useEffect(() => {
@@ -556,17 +557,17 @@ const SalesCounter = () => {
         ))}
       </div>
 
-      {fulfillmentType === 'delivery' && (
-        <div className="border-b border-brown-100 p-4 dark:border-dm-border">
-          <DeliveryModeSelector
-            value={deliveryDetails}
-            onChange={setDeliveryDetails}
-            onFeeChange={setDeliveryFeePreview}
-          />
-        </div>
-      )}
-
       <div className="flex-1 space-y-4 overflow-y-auto p-4">
+        {fulfillmentType === 'delivery' && (
+          <div className="rounded-xl border border-brown-100 p-3 dark:border-dm-border">
+            <DeliveryModeSelector
+              value={deliveryDetails}
+              onChange={setDeliveryDetails}
+              onFeeChange={setDeliveryFeePreview}
+            />
+          </div>
+        )}
+
         {cart.length === 0 ? (
           <div className="rounded-xl border border-dashed border-brown-200 px-4 py-10 text-center text-sm text-brown-500 dark:border-dm-border dark:text-white/50">
             Your basket is empty. Add products from the counter to begin a sale.
@@ -1143,7 +1144,7 @@ const SalesCounter = () => {
         </div>
       )}
 
-      {/* Held sales panel */}
+      {/* Held sales panel — admins see everyone's; staff only see their own */}
       {showHeldSales && (
         <div
           className="fixed inset-0 z-50 flex flex-col bg-black/50"
@@ -1153,22 +1154,29 @@ const SalesCounter = () => {
         >
           <div className="flex-1" onClick={() => setShowHeldSales(false)} />
           <div className="flex max-h-[86dvh] w-full flex-col rounded-t-2xl bg-white shadow-2xl dark:bg-dm-card sm:mx-auto sm:max-h-[80vh] sm:max-w-md sm:rounded-2xl sm:my-auto">
-            <div className="flex items-center justify-between border-b border-brown-100 p-4 dark:border-dm-border">
-              <h2 id="held-sales-title" className="flex items-center gap-2 text-lg font-bold">
-                <FaClock /> Held Sales
-              </h2>
-              <button
-                onClick={() => setShowHeldSales(false)}
-                className="inline-flex h-10 w-10 items-center justify-center rounded-full text-brown-600 transition-colors hover:bg-brown-100 dark:text-white/70 dark:hover:bg-dm-border"
-                aria-label="Close held sales"
-              >
-                ✕
-              </button>
+            <div className="border-b border-brown-100 p-4 dark:border-dm-border">
+              <div className="flex items-center justify-between">
+                <h2 id="held-sales-title" className="flex items-center gap-2 text-lg font-bold">
+                  <FaClock /> Held Sales
+                </h2>
+                <button
+                  onClick={() => setShowHeldSales(false)}
+                  className="inline-flex h-10 w-10 items-center justify-center rounded-full text-brown-600 transition-colors hover:bg-brown-100 dark:text-white/70 dark:hover:bg-dm-border"
+                  aria-label="Close held sales"
+                >
+                  ✕
+                </button>
+              </div>
+              <p className="mt-0.5 text-xs text-brown-500 dark:text-white/50">
+                {isAdmin ? 'Every held sale across the counter.' : 'Sales you’ve personally held.'}
+              </p>
             </div>
             <div className="flex-1 overflow-y-auto p-4 space-y-3">
               {heldSales.length === 0 ? (
                 <div className="rounded-xl border border-dashed border-brown-200 px-4 py-10 text-center text-sm text-brown-500 dark:border-dm-border dark:text-white/50">
-                  No held sales. Use the Hold button on a sale to park it here while you serve someone else.
+                  {isAdmin
+                    ? "No held sales right now. Use the Hold button on a sale to park it here while you serve someone else."
+                    : "You haven't held any sales. Use the Hold button on a sale to park it here while you serve someone else."}
                 </div>
               ) : (
                 heldSales.map((held) => {
