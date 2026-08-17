@@ -7,6 +7,7 @@ import NoData from '../components/NoData'
 import { setOrder } from '../store/orderSlice'
 import Axios from '../utils/Axios'
 import AxiosToastError from '../utils/AxiosToastError'
+import { hasStoredAccessToken } from '../utils/authStorage'
 
 const RateDriver = ({ orderId, ratedValue, onRated }) => {
   const [submitting, setSubmitting] = useState(false)
@@ -84,13 +85,19 @@ const MyOrders = () => {
   const orders = useSelector(state => state.orders.order)
   const user = useSelector(state => state.user)
   const dispatch = useDispatch()
-  const [loading, setLoading] = useState(false)
+  // On a hard refresh, Redux resets before App.jsx's fetchUserDetails() call
+  // resolves, so user._id is briefly empty even for a logged-in session. Start
+  // "loading" whenever a token is on disk so that gap renders a spinner
+  // instead of a flash of "no orders yet" before the real fetch can run.
+  const [loading, setLoading] = useState(hasStoredAccessToken())
   const [driverRatings, setDriverRatings] = useState({})
 
   useEffect(() => {
-    // Only fetch orders if user is authenticated
     if (user._id) {
       fetchUserOrders()
+    } else if (!hasStoredAccessToken()) {
+      // No session at all (logged out) — stop waiting, show the empty state.
+      setLoading(false)
     }
   }, [user._id])
 
