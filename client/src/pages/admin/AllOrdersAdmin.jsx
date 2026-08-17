@@ -186,7 +186,9 @@ const OrderDetailModal = ({ order, onClose, onStatusChange, onDispatchStateSync 
                <FaInfoCircle className="mr-2" />
               }
               <div>
-                <p className="font-medium">Status: {order.status.charAt(0).toUpperCase() + order.status.slice(1).replace('_', ' ')}</p>
+                <p className="font-medium">
+                  Status: {order.status === 'POS' ? 'Completed (counter sale)' : order.status.charAt(0).toUpperCase() + order.status.slice(1).replace('_', ' ')}
+                </p>
                 {order.statusHistory && order.statusHistory.length > 0 && (
                   <p className="text-sm mt-1">Last updated: {
                     typeof format === 'function'
@@ -298,7 +300,9 @@ const OrderDetailModal = ({ order, onClose, onStatusChange, onDispatchStateSync 
               ) : (
                 <div className="flex items-center space-x-2 text-brown-500 dark:text-white/55">
                   <span className="w-3 h-3 rounded-full inline-block bg-gold-500"></span>
-                  <p className="font-medium">{order.status.charAt(0).toUpperCase() + order.status.slice(1).replace('_', ' ')}</p>
+                  <p className="font-medium">
+                    {order.status === 'POS' ? 'Sold at counter' : order.status.charAt(0).toUpperCase() + order.status.slice(1).replace('_', ' ')}
+                  </p>
                   <p className="text-sm">
                     {typeof format === 'function'
                       ? format(new Date(order.createdAt), 'PPP p')
@@ -444,26 +448,28 @@ const OrderDetailModal = ({ order, onClose, onStatusChange, onDispatchStateSync 
                 <div className="text-sm space-y-2">
                   <div>
                     <span className="text-brown-500 dark:text-white/55">Name:</span>
-                    <span className="ml-2 font-medium dark:text-white">{order.userId?.name || 'Not Available'}</span>
+                    <span className="ml-2 font-medium dark:text-white">{order.userId?.name || order.customer?.name || 'Not Available'}</span>
                   </div>
                   <div>
                     <span className="text-brown-500 dark:text-white/55">Email:</span>
-                    <span className="ml-2 dark:text-white">{order.userId?.email || 'Not Available'}</span>
+                    <span className="ml-2 dark:text-white">{order.userId?.email || order.customer?.email || 'Not Available'}</span>
                   </div>
                   <div>
                     <span className="text-brown-500 dark:text-white/55">Phone:</span>
-                    <span className="ml-2 dark:text-white">{order.userId?.mobile || order.delivery_address?.phoneNumber || 'Not Available'}</span>
+                    <span className="ml-2 dark:text-white">{order.userId?.mobile || order.delivery_address?.phoneNumber || order.customer?.phone || 'Not Available'}</span>
                   </div>
                 </div>
               </div>
 
               <div className="flex-1 min-w-[250px]">
                 <h4 className="text-sm font-medium mb-2 dark:text-white flex items-center">
-                  <FaMapMarkerAlt className="mr-2 text-brown-400 dark:text-white/40" /> 
-                  {order.fulfillment_type === 'pickup' ? 'Pickup Location' : 'Shipping Address'}
+                  <FaMapMarkerAlt className="mr-2 text-brown-400 dark:text-white/40" />
+                  {order.status === 'POS' ? 'Fulfillment' : order.fulfillment_type === 'pickup' ? 'Pickup Location' : 'Shipping Address'}
                 </h4>
                 <div className="text-sm dark:text-white/70 bg-white dark:bg-dm-card p-3 rounded-md">
-                  {order.fulfillment_type === 'pickup' ? (
+                  {order.status === 'POS' ? (
+                    <p className="font-medium">In-store purchase{order.cashier ? ` · rung up by ${order.cashier}` : ''}</p>
+                  ) : order.fulfillment_type === 'pickup' ? (
                     <div>
                       <p className="font-medium">{order.pickup_location}</p>
                       {order.pickup_instructions && (
@@ -650,15 +656,17 @@ const OrderDetailModal = ({ order, onClose, onStatusChange, onDispatchStateSync 
                   <tr>
                     <td colSpan="3" className="px-2 sm:px-4 py-1.5 sm:py-2 text-right dark:text-white/70">Subtotal:</td>
                     <td className="px-2 sm:px-4 py-1.5 sm:py-2 font-medium dark:text-white">
-                      KSh {Number(order.subTotalAmt || order.subTotal || 0).toLocaleString()}
+                      KSh {Number(order.subTotalAmt || order.subTotal || order.totalAmt || order.totalPrice || 0).toLocaleString()}
                     </td>
                   </tr>
-                  <tr>
-                    <td colSpan="3" className="px-2 sm:px-4 py-1.5 sm:py-2 text-right dark:text-white/70">Shipping:</td>
-                    <td className="px-2 sm:px-4 py-1.5 sm:py-2 font-medium dark:text-white">
-                      KSh {Number(order.shippingPrice || 0).toLocaleString()}
-                    </td>
-                  </tr>
+                  {order.status !== 'POS' && (
+                    <tr>
+                      <td colSpan="3" className="px-2 sm:px-4 py-1.5 sm:py-2 text-right dark:text-white/70">Shipping:</td>
+                      <td className="px-2 sm:px-4 py-1.5 sm:py-2 font-medium dark:text-white">
+                        KSh {Number(order.shippingPrice || 0).toLocaleString()}
+                      </td>
+                    </tr>
+                  )}
                   <tr>
                     <td colSpan="3" className="px-2 sm:px-4 py-1.5 sm:py-2 text-right font-medium dark:text-white">Total:</td>
                     <td className="px-2 sm:px-4 py-1.5 sm:py-2 font-bold dark:text-white">
