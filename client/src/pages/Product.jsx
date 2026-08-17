@@ -65,6 +65,7 @@ const DashboardProduct = () => {
     unpriced: 0
   });
   const [showUnpricedOnly, setShowUnpricedOnly] = useState(false);
+  const [stockFilter, setStockFilter] = useState('all'); // 'all' | 'inStock' | 'lowStock' | 'outOfStock'
   const [isMobileView, setIsMobileView] = useState(false);
   const [viewMode, setViewMode] = useState('grid'); // 'table' or 'grid'
   
@@ -150,7 +151,7 @@ const DashboardProduct = () => {
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm, filterCategory, showUnpricedOnly]);
+  }, [searchTerm, filterCategory, showUnpricedOnly, stockFilter]);
 
   const handleDeleteProduct = async (productId) => {
     if (!window.confirm("Are you sure you want to delete this product?")) {
@@ -218,7 +219,13 @@ const DashboardProduct = () => {
 
       const matchesUnpriced = !showUnpricedOnly || !product.price || Number(product.price) === 0;
 
-      return matchesSearch && matchesCategory && matchesUnpriced;
+      const matchesStock =
+        stockFilter === 'all' ||
+        (stockFilter === 'inStock' && product.stock > 10) ||
+        (stockFilter === 'lowStock' && product.stock > 0 && product.stock <= 10) ||
+        (stockFilter === 'outOfStock' && product.stock === 0);
+
+      return matchesSearch && matchesCategory && matchesUnpriced && matchesStock;
     })
     .sort((a, b) => {
       const getValue = (obj, path) => {
@@ -325,25 +332,53 @@ const DashboardProduct = () => {
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-5 gap-2 sm:gap-4 mb-4 sm:mb-6">
-        <div className="bg-white dark:bg-dm-card p-3 sm:p-4 rounded-lg shadow border-l-4 border-plum-600 dark:border-plum-400 transition-colors duration-200">
-          <p className="text-brown-400 dark:text-white/40 text-xs sm:text-sm">Total Products</p>
-          <p className="text-xl sm:text-2xl font-bold dark:text-white">{stats.total}</p>
-        </div>
-        <div className="bg-white dark:bg-dm-card p-3 sm:p-4 rounded-lg shadow border-l-4 border-green-500 dark:border-green-400 transition-colors duration-200">
-          <p className="text-brown-400 dark:text-white/40 text-xs sm:text-sm">In Stock</p>
-          <p className="text-xl sm:text-2xl font-bold dark:text-white">{stats.inStock}</p>
-        </div>
-        <div className="bg-white dark:bg-dm-card p-3 sm:p-4 rounded-lg shadow border-l-4 border-yellow-500 dark:border-yellow-400 transition-colors duration-200">
-          <p className="text-brown-400 dark:text-white/40 text-xs sm:text-sm">Low Stock</p>
-          <p className="text-xl sm:text-2xl font-bold dark:text-white">{stats.lowStock}</p>
-        </div>
-        <div className="bg-white dark:bg-dm-card p-3 sm:p-4 rounded-lg shadow border-l-4 border-red-500 dark:border-red-400 transition-colors duration-200">
-          <p className="text-brown-400 dark:text-white/40 text-xs sm:text-sm">Out of Stock</p>
-          <p className="text-xl sm:text-2xl font-bold dark:text-white">{stats.outOfStock}</p>
-        </div>
         <button
           type="button"
-          onClick={() => setShowUnpricedOnly(prev => !prev)}
+          onClick={() => { setStockFilter('all'); setShowUnpricedOnly(false); }}
+          className={`text-left bg-white dark:bg-dm-card p-3 sm:p-4 rounded-lg shadow border-l-4 transition-colors duration-200 border-plum-600 dark:border-plum-400 ${
+            stockFilter === 'all' && !showUnpricedOnly ? 'ring-2 ring-plum-400/50' : ''
+          }`}
+          title="Click to clear all card filters"
+        >
+          <p className="text-brown-400 dark:text-white/40 text-xs sm:text-sm">Total Products</p>
+          <p className="text-xl sm:text-2xl font-bold dark:text-white">{stats.total}</p>
+        </button>
+        <button
+          type="button"
+          onClick={() => { setStockFilter(prev => prev === 'inStock' ? 'all' : 'inStock'); setShowUnpricedOnly(false); }}
+          className={`text-left bg-white dark:bg-dm-card p-3 sm:p-4 rounded-lg shadow border-l-4 transition-colors duration-200 border-green-500 dark:border-green-400 ${
+            stockFilter === 'inStock' ? 'ring-2 ring-green-400/50' : ''
+          }`}
+          title="Click to filter products that are in stock"
+        >
+          <p className="text-brown-400 dark:text-white/40 text-xs sm:text-sm">In Stock</p>
+          <p className="text-xl sm:text-2xl font-bold dark:text-white">{stats.inStock}</p>
+        </button>
+        <button
+          type="button"
+          onClick={() => { setStockFilter(prev => prev === 'lowStock' ? 'all' : 'lowStock'); setShowUnpricedOnly(false); }}
+          className={`text-left bg-white dark:bg-dm-card p-3 sm:p-4 rounded-lg shadow border-l-4 transition-colors duration-200 border-yellow-500 dark:border-yellow-400 ${
+            stockFilter === 'lowStock' ? 'ring-2 ring-yellow-400/50' : ''
+          }`}
+          title="Click to filter products that are low on stock (1-10)"
+        >
+          <p className="text-brown-400 dark:text-white/40 text-xs sm:text-sm">Low Stock</p>
+          <p className="text-xl sm:text-2xl font-bold dark:text-white">{stats.lowStock}</p>
+        </button>
+        <button
+          type="button"
+          onClick={() => { setStockFilter(prev => prev === 'outOfStock' ? 'all' : 'outOfStock'); setShowUnpricedOnly(false); }}
+          className={`text-left bg-white dark:bg-dm-card p-3 sm:p-4 rounded-lg shadow border-l-4 transition-colors duration-200 border-red-500 dark:border-red-400 ${
+            stockFilter === 'outOfStock' ? 'ring-2 ring-red-400/50' : ''
+          }`}
+          title="Click to filter products that are out of stock"
+        >
+          <p className="text-brown-400 dark:text-white/40 text-xs sm:text-sm">Out of Stock</p>
+          <p className="text-xl sm:text-2xl font-bold dark:text-white">{stats.outOfStock}</p>
+        </button>
+        <button
+          type="button"
+          onClick={() => { setShowUnpricedOnly(prev => !prev); setStockFilter('all'); }}
           className={`text-left bg-white dark:bg-dm-card p-3 sm:p-4 rounded-lg shadow border-l-4 transition-colors duration-200 ${
             showUnpricedOnly
               ? 'border-gold-500 ring-2 ring-gold-400/50'
@@ -356,14 +391,17 @@ const DashboardProduct = () => {
         </button>
       </div>
 
-      {showUnpricedOnly && (
+      {(showUnpricedOnly || stockFilter !== 'all') && (
         <div className="mb-4 flex items-center justify-between gap-3 rounded-lg bg-gold-100 dark:bg-gold-600/10 border border-gold-300 dark:border-gold-600/30 px-3 py-2 sm:px-4">
           <p className="text-xs sm:text-sm text-gold-700 dark:text-gold-300">
-            Showing only products with no selling price set.
+            {showUnpricedOnly && 'Showing only products with no selling price set.'}
+            {stockFilter === 'inStock' && 'Showing only products that are in stock.'}
+            {stockFilter === 'lowStock' && 'Showing only products that are low on stock (1-10 left).'}
+            {stockFilter === 'outOfStock' && 'Showing only products that are out of stock.'}
           </p>
           <button
             type="button"
-            onClick={() => setShowUnpricedOnly(false)}
+            onClick={() => { setShowUnpricedOnly(false); setStockFilter('all'); }}
             className="text-xs sm:text-sm font-semibold text-gold-700 dark:text-gold-300 underline underline-offset-2 shrink-0"
           >
             Clear filter
