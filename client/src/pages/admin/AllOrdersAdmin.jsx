@@ -904,6 +904,11 @@ const AllOrdersAdmin = () => {
   
   // Add new state for fulfillment filtering
   const [fulfillmentFilter, setFulfillmentFilter] = useState('all');
+
+  // Walk-in (counter/POS) vs Online (website/WhatsApp) order source filter —
+  // a separate axis from order status, since online orders themselves span
+  // every status (pending, shipped, delivered, etc.).
+  const [sourceFilter, setSourceFilter] = useState('all'); // 'all' | 'walkin' | 'online'
   
   // Add new state for view mode
   const [viewMode, setViewMode] = useState('table'); // 'table' or 'grid'
@@ -1121,7 +1126,7 @@ const AllOrdersAdmin = () => {
         (order.fulfillment_type === 'delivery' || order.deliveryMethod === 'delivery');
       
       // Then filter by search term if provided
-      const searchMatch = 
+      const searchMatch =
         !searchTerm ? true : (
         // Check all relevant fields for matches, including customer info from POS sales
         (order.userId?.name?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
@@ -1134,8 +1139,12 @@ const AllOrdersAdmin = () => {
         (order.paymentMethod?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
         (order.cashier?.toLowerCase() || '').includes(searchTerm.toLowerCase())
       );
-      
-      return statusMatch && searchMatch && fulfillmentMatch;
+
+      // Then filter by walk-in vs online source if not "all"
+      const sourceMatch =
+        sourceFilter === 'all' ? true : getOrderSource(order) === sourceFilter;
+
+      return statusMatch && searchMatch && fulfillmentMatch && sourceMatch;
     });
   };
   
@@ -1174,6 +1183,33 @@ const AllOrdersAdmin = () => {
     } else {
       return 'Delivery';
     }
+  };
+
+  // Walk-in = rung up at the physical counter (a POS Sale record, including
+  // a WhatsApp order transcribed by staff — still someone walking the order
+  // in, not the customer checking out themselves). Online = the customer
+  // placed it themselves through the website.
+  const getOrderSource = (order) => {
+    if (order.isPOSSale || order.status === 'POS') return 'walkin';
+    return 'online';
+  };
+
+  const ORDER_SOURCE_BADGE = {
+    walkin: { letter: 'W', label: 'Walk-in', className: 'bg-gold-100 text-gold-700 dark:bg-gold-600/20 dark:text-gold-300' },
+    online: { letter: 'O', label: 'Online', className: 'bg-plum-100 text-plum-700 dark:bg-plum-900/30 dark:text-plum-200' },
+  };
+
+  const OrderSourceBadge = ({ order }) => {
+    const source = ORDER_SOURCE_BADGE[getOrderSource(order)];
+    return (
+      <span
+        title={source.label}
+        aria-label={source.label}
+        className={`inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold ${source.className}`}
+      >
+        {source.letter}
+      </span>
+    );
   };
   
   // Helper function to get style for fulfillment badges
@@ -1309,7 +1345,29 @@ const AllOrdersAdmin = () => {
             </button>
           ))}
         </div>
-        
+
+        {/* Walk-in vs Online source filter — separate axis from order status */}
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-xs font-semibold uppercase tracking-wide text-brown-400 dark:text-white/40">Source</span>
+          {[
+            { key: 'all', label: 'All' },
+            { key: 'walkin', label: 'Walk-in (W)' },
+            { key: 'online', label: 'Online (O)' },
+          ].map((opt) => (
+            <button
+              key={opt.key}
+              onClick={() => { setSourceFilter(opt.key); setCurrentPage(1); }}
+              className={`rounded-full px-3 py-1.5 text-xs font-semibold transition ${
+                sourceFilter === opt.key
+                  ? 'bg-plum-700 text-white'
+                  : 'bg-brown-100 dark:bg-dm-card-2 text-charcoal dark:text-white hover:bg-brown-200 dark:hover:bg-dm-border'
+              }`}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+
         {/* Search and Controls Row */}
         <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-[auto_180px_minmax(0,1fr)_auto] md:items-center lg:items-center">
           {/* View Toggle */}
@@ -1415,9 +1473,10 @@ const AllOrdersAdmin = () => {
                     <tr key={order._id} className="hover:bg-ivory dark:hover:bg-dm-card-2 cursor-pointer" onClick={() => setSelectedOrder(order)}>
                       {/* Order ID column with type badge */}
                       <td className="px-4 py-3">
-                        <div className="flex items-center">
+                        <div className="flex items-center gap-2">
+                          <OrderSourceBadge order={order} />
                           <span className={`w-2 h-2 rounded-full mr-2 ${
-                            getFulfillmentType(order) === 'Pickup' ? 'bg-gold-500' : 
+                            getFulfillmentType(order) === 'Pickup' ? 'bg-gold-500' :
                             getFulfillmentType(order) === 'POS' ? 'bg-plum-700' : 'bg-plum-500'
                           }`}></span>
                           <div>
@@ -1509,8 +1568,9 @@ const AllOrdersAdmin = () => {
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
                       <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-brown-500 dark:text-white/45">
+                        <OrderSourceBadge order={order} />
                         <span className={`inline-block h-2.5 w-2.5 rounded-full ${
-                          getFulfillmentType(order) === 'Pickup' ? 'bg-gold-500' : 
+                          getFulfillmentType(order) === 'Pickup' ? 'bg-gold-500' :
                           getFulfillmentType(order) === 'POS' ? 'bg-plum-700' : 'bg-plum-500'
                         }`}></span>
                         <span>{getFulfillmentType(order)}</span>
