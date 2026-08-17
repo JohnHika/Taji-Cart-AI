@@ -521,12 +521,16 @@ router.post('/sale', auth, Staff, requireStaffPermission('pos.open_counter'), as
         });
       }
 
-      // POS allows negative inventory: only hard-block when stock is a known positive number
-      // AND quantity requested exceeds it. Zero or null stock = allow (reconcile later).
-      if (product.stock != null && product.stock > 0 && product.stock < item.quantity) {
+      // Stock is authoritative here — the counter's on-hand count is a preview
+      // only. Block whenever the sale would take stock below zero, including
+      // when it's already at 0 (a null/undefined stock means untracked, so
+      // those products are exempt rather than treated as always out of stock).
+      if (product.stock != null && product.stock < item.quantity) {
         return res.status(409).json({
           success: false,
-          message: `${product.name} only has ${product.stock} item(s) left in stock`
+          message: product.stock > 0
+            ? `${product.name} only has ${product.stock} item(s) left in stock`
+            : `${product.name} is out of stock`
         });
       }
 
@@ -548,17 +552,31 @@ router.post('/sale', auth, Staff, requireStaffPermission('pos.open_counter'), as
     // Create sale record
     const reservedStock = [];
     for (const item of normalizedItems) {
-      // Update stock without minimum constraint so it can go negative (POS negative inventory).
+      // Atomic conditional decrement: only succeeds if stock is untracked
+      // (null) or still >= the requested quantity at the moment of the
+      // write. Closes the race where two concurrent sales both pass the
+      // earlier read-only check and both decrement the last unit.
       const updatedProduct = await Product.findOneAndUpdate(
-        { _id: item.product },
+        {
+          _id: item.product,
+          $or: [{ stock: null }, { stock: { $gte: item.quantity } }]
+        },
         { $inc: { stock: -item.quantity } },
         { new: true }
       );
 
       if (!updatedProduct) {
-        // Product doesn't exist at all — rollback any prior decrements
+        const stillExists = await Product.exists({ _id: item.product });
+        // Rollback any prior decrements from this same sale before failing.
         for (const reserved of reservedStock) {
           await Product.findByIdAndUpdate(reserved.product, { $inc: { stock: reserved.quantity } });
+        }
+
+        if (stillExists) {
+          return res.status(409).json({
+            success: false,
+            message: `${item.name || 'An item'} sold out while this sale was being completed`
+          });
         }
 
         return res.status(404).json({

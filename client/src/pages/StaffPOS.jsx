@@ -306,12 +306,14 @@ const StaffPOS = () => {
 
     const existingItem = cart.find(item => item._id === product._id);
 
-    // Only block if stock is a real positive number and we've exceeded it.
-    // Zero or null stock = allowed (POS can sell into negative for later reconciliation).
+    // Block once stock is tracked and the requested quantity would meet/exceed
+    // it — including when stock is already 0, not just when it's positive.
     const currentQty = existingItem?.quantity || 0;
     const stockLevel = product.stock != null ? Number(product.stock) : null;
-    if (stockLevel !== null && stockLevel > 0 && currentQty >= stockLevel) {
-      toast.error(`Only ${stockLevel} unit(s) of "${product.name}" left in stock`);
+    if (stockLevel !== null && currentQty >= stockLevel) {
+      toast.error(stockLevel > 0
+        ? `Only ${stockLevel} unit(s) of "${product.name}" left in stock`
+        : `"${product.name}" is out of stock`);
       return;
     }
     
@@ -337,8 +339,10 @@ const StaffPOS = () => {
 
     const matchingItem = cart.find(item => item._id === productId);
     const stockLevel = matchingItem?.stock != null ? Number(matchingItem.stock) : null;
-    if (matchingItem && stockLevel !== null && stockLevel > 0 && newQuantity > stockLevel) {
-      toast.error(`Only ${stockLevel} unit(s) of ${matchingItem.name} are available`);
+    if (matchingItem && stockLevel !== null && newQuantity > stockLevel) {
+      toast.error(stockLevel > 0
+        ? `Only ${stockLevel} unit(s) of ${matchingItem.name} are available`
+        : `${matchingItem.name} is out of stock`);
       return;
     }
     
@@ -2405,8 +2409,8 @@ Applied: {discount}% loyalty discount applied to cart
                   const promoProduct = { ...zeroPriceProduct, _isPromotional: true };
                   const existing = cart.find(i => i._id === promoProduct._id);
                   const stockLevel = promoProduct.stock != null ? Number(promoProduct.stock) : null;
-                  if (stockLevel !== null && stockLevel > 0 && (existing?.quantity || 0) >= stockLevel) {
-                    toast.error(`Only ${stockLevel} unit(s) left in stock`);
+                  if (stockLevel !== null && (existing?.quantity || 0) >= stockLevel) {
+                    toast.error(stockLevel > 0 ? `Only ${stockLevel} unit(s) left in stock` : `${promoProduct.name} is out of stock`);
                     setZeroPriceProduct(null);
                     return;
                   }

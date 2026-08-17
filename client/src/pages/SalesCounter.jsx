@@ -272,9 +272,18 @@ const SalesCounter = () => {
       toast.error(`${product.name} has no price set.`);
       return;
     }
+    // stock === null/undefined means untracked inventory — always allowed.
+    if (product.stock != null && product.stock <= 0) {
+      toast.error(`${product.name} is out of stock.`);
+      return;
+    }
     setCart((prev) => {
       const existing = prev.find((i) => i._id === product._id);
       if (existing) {
+        if (product.stock != null && existing.quantity + 1 > product.stock) {
+          toast.error(`Only ${product.stock} of ${product.name} left in stock.`);
+          return prev;
+        }
         return prev.map((i) =>
           i._id === product._id ? { ...i, quantity: i.quantity + 1 } : i
         );
@@ -287,7 +296,15 @@ const SalesCounter = () => {
   const updateQty = (id, delta) => {
     setCart((prev) =>
       prev
-        .map((i) => (i._id === id ? { ...i, quantity: i.quantity + delta } : i))
+        .map((i) => {
+          if (i._id !== id) return i;
+          const nextQty = i.quantity + delta;
+          if (delta > 0 && i.stock != null && nextQty > i.stock) {
+            toast.error(`Only ${i.stock} of ${i.name} left in stock.`);
+            return i;
+          }
+          return { ...i, quantity: nextQty };
+        })
         .filter((i) => i.quantity > 0)
     );
   };
