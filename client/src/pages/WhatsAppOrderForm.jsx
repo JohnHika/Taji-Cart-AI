@@ -57,10 +57,17 @@ const WhatsAppOrderForm = () => {
   }, []);
 
   const filteredProducts = useMemo(() => {
-    const s = search.trim().toLowerCase();
-    if (!s) return [];
+    // Split into words so "marley 14" matches "Marley Twist 14INCH - 1B"
+    // instead of requiring the whole typed string as one exact substring
+    // (which made a bare "14" match every length variant of every style).
+    const searchWords = search.trim().toLowerCase().split(/\s+/).filter(Boolean);
+    if (searchWords.length === 0) return [];
     return products
-      .filter((p) => p.price > 0 && p.name?.toLowerCase().includes(s))
+      .filter((p) => {
+        if (!(p.price > 0)) return false;
+        const haystack = [p.name, p.sku, p.barcode].filter(Boolean).join(' ').toLowerCase();
+        return searchWords.every((word) => haystack.includes(word));
+      })
       .slice(0, 20);
   }, [products, search]);
 
