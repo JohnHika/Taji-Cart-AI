@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { FaEnvelope, FaRegEye, FaRegEyeSlash } from "react-icons/fa";
@@ -28,6 +28,21 @@ const Login = () => {
 
     // Auto-merge guest cart on login
     useGuestCartMerge();
+
+    // Surfaces why the user landed back here after Axios grace-logged them
+    // out (e.g. a missing/unrecoverable session token) — read-once so it
+    // doesn't reappear on a later manual visit to /login.
+    useEffect(() => {
+        try {
+            const reason = sessionStorage.getItem('nawiri:logoutReason');
+            if (reason) {
+                sessionStorage.removeItem('nawiri:logoutReason');
+                toast.error(reason);
+            }
+        } catch {
+            // sessionStorage unavailable — nothing to show, sign-in still works.
+        }
+    }, []);
 
     const handleChange = (e) => {
         const { name, value } = e.target;

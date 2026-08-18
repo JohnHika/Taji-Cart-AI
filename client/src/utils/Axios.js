@@ -118,11 +118,43 @@ if (typeof window !== 'undefined') {
   window.setupRefreshTimer = setupRefreshTimer;
 }
 
+let hasGracefullyLoggedOut = false;
+
+// Clears the (unrecoverable) session and sends the user back to login with a
+// clear reason, instead of leaving a UI that looks logged in but silently
+// fails every subsequent request. Guarded so a burst of simultaneously
+// failing requests only triggers one redirect, not a storm of them.
+const gracefulLogout = (reason = 'Your session has expired. Please sign in again.') => {
+  if (hasGracefullyLoggedOut || typeof window === 'undefined') return;
+  hasGracefullyLoggedOut = true;
+
+  clearAuthStorage();
+  if (refreshTimer) clearTimeout(refreshTimer);
+
+  try {
+    sessionStorage.setItem('nawiri:logoutReason', reason);
+  } catch {
+    // sessionStorage unavailable — the login page just won't have a reason to show.
+  }
+
+  window.dispatchEvent(new CustomEvent('nawiri:session-expired', { detail: { reason } }));
+
+  if (!window.location.pathname.startsWith('/login')) {
+    window.location.href = '/login';
+  }
+};
+
 const refreshToken = async () => {
   try {
     const storedRefreshToken = getStoredRefreshToken();
 
     if (!storedRefreshToken) {
+      // Nothing to refresh with — the session is unrecoverable (storage was
+      // cleared, expired past its stored copy, or never existed). There's no
+      // server round-trip to confirm this against, so grace-logout locally
+      // right away instead of leaving the user stuck with a UI that looks
+      // logged in but silently fails every request from here on.
+      gracefulLogout();
       throw new Error('No refresh token available');
     }
 
@@ -164,10 +196,7 @@ const refreshToken = async () => {
     // Only clear the session for actual auth failures, not transient network errors.
     const isAuthError = isAuthSessionError(error);
     if (isAuthError) {
-      clearAuthStorage();
-      if (typeof window !== 'undefined') {
-        window.location.href = '/login';
-      }
+      gracefulLogout();
     }
 
     throw error;
