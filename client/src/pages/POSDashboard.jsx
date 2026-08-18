@@ -205,12 +205,17 @@ const POSDashboard = () => {
   // Closing EOD is its own opt-in permission, separate from counter access —
   // no staff member can do it until an admin explicitly grants pos.close_eod.
   const canCloseEndOfDay = isAdmin(user) || (user?.staffPermissions || []).includes('pos.close_eod');
+  // Without pos.view_all_sales, the server hard-scopes GET /sales to the
+  // caller's own cashier id regardless of what's requested — so the "Shop
+  // Sales" toggle only makes sense to show for staff who can actually see past their own.
+  const canViewAllSales = isAdmin(user) || (user?.staffPermissions || []).includes('pos.view_all_sales');
 
   const [loading, setLoading] = useState(true);
   const [dailySummary, setDailySummary] = useState(null);
   const [analytics, setAnalytics] = useState(null);
   const [analyticsAccessDenied, setAnalyticsAccessDenied] = useState(false);
   const [recentSales, setRecentSales] = useState([]);
+  const [recentSalesScope, setRecentSalesScope] = useState('mine'); // 'mine' | 'shop'
   const [showReceiptModal, setShowReceiptModal] = useState(false);
   const [selectedSale, setSelectedSale] = useState(null);
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
@@ -242,9 +247,16 @@ const POSDashboard = () => {
     loadDashboardData();
   }, [selectedDate, analyticsPeriod]);
 
+  // Re-fetch just the sales list (not the whole dashboard) when the
+  // My Sales/Shop Sales toggle changes.
+  useEffect(() => {
+    loadRecentSales();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [recentSalesScope]);
+
   useEffect(() => {
     setRecentSalesPage(1);
-  }, [selectedDate, recentSalesView]);
+  }, [selectedDate, recentSalesView, recentSalesScope]);
 
   const loadDashboardData = async () => {
     try {
@@ -360,13 +372,16 @@ const POSDashboard = () => {
 
   const loadRecentSales = async () => {
     try {
-      // Scoped to the selected day (not just "the last 10 ever") — the
-      // server already restricts non-view_all_sales staff to their own
-      // sales, so this ends up being "everything I sold on this day."
+      // Scoped to the selected day (not just "the last 10 ever"). "Shop
+      // Sales" is only meaningful for staff with pos.view_all_sales/admin —
+      // without it the server hard-scopes to the caller's own cashier id
+      // regardless of what's asked for, so "mine" is the honest default and
+      // the only option for everyone else.
       const startDate = `${selectedDate}T00:00:00.000Z`;
       const endDate = `${selectedDate}T23:59:59.999Z`;
+      const scopeParam = recentSalesScope === 'mine' && user?._id ? `&cashier=${user._id}` : '';
       const response = await Axios({
-        url: `/api/pos/sales?limit=500&includeItems=true&startDate=${startDate}&endDate=${endDate}`,
+        url: `/api/pos/sales?limit=500&includeItems=true&startDate=${startDate}&endDate=${endDate}${scopeParam}`,
         method: 'GET'
       });
 
@@ -932,6 +947,34 @@ const POSDashboard = () => {
             </button>
           </div>
         </div>
+
+        {/* My Sales/Shop Sales only means anything for staff who can see
+            past their own — without pos.view_all_sales the server hard-scopes
+            to the caller regardless of what's asked for. */}
+        {canViewAllSales && (
+          <div className="mb-4 flex gap-2">
+            <button
+              onClick={() => setRecentSalesScope('mine')}
+              className={`rounded-pill px-4 py-2 text-sm font-semibold transition-colors ${
+                recentSalesScope === 'mine'
+                  ? 'bg-plum-700 text-white shadow-sm'
+                  : 'bg-brown-100 text-brown-600 dark:bg-dm-card-2 dark:text-white/55'
+              }`}
+            >
+              My Sales
+            </button>
+            <button
+              onClick={() => setRecentSalesScope('shop')}
+              className={`rounded-pill px-4 py-2 text-sm font-semibold transition-colors ${
+                recentSalesScope === 'shop'
+                  ? 'bg-plum-700 text-white shadow-sm'
+                  : 'bg-brown-100 text-brown-600 dark:bg-dm-card-2 dark:text-white/55'
+              }`}
+            >
+              Shop Sales
+            </button>
+          </div>
+        )}
 
         {paginatedRecentSales.length === 0 ? (
           <div className="text-center py-8 text-brown-400 dark:text-white/40">
