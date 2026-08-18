@@ -3,11 +3,14 @@ import toast from 'react-hot-toast';
 import { jsPDF } from 'jspdf';
 import {
   FaCalendarAlt,
+  FaCamera,
   FaChartBar,
+  FaCheckCircle,
   FaCreditCard,
   FaFileInvoiceDollar,
   FaMoneyBillWave,
   FaDownload,
+  FaQuoteLeft,
   FaReceipt,
   FaShoppingCart,
   FaStore,
@@ -60,6 +63,27 @@ const getSaleCustomerLabel = (sale, { long = false } = {}) => {
   const isOnline = sale?.saleSource === 'online';
   if (long) return isOnline ? 'Online customer' : 'Walk-in customer';
   return isOnline ? 'Online' : 'Walk-in';
+};
+
+// Equity and Text Forwarded payments carry proof (a screenshot or the raw
+// confirmation SMS text) that a cashier attached and approved server-side
+// before the sale could go through (see POST /api/pos/sale) — the receipt
+// should show that proof back, not just the payment method name. Sale.payments
+// always carries one row per payment leg regardless of method (cash, split,
+// or a single equity/text_forwarded sale), so there's no separate fallback
+// shape to handle.
+const getSalePaymentProofs = (sale) => {
+  if (!Array.isArray(sale?.payments)) return [];
+  const proofs = [];
+  sale.payments.forEach((row) => {
+    if (row.method === 'equity' && row.proofImageUrl) {
+      proofs.push({ type: 'equity', amount: row.amount, imageUrl: row.proofImageUrl, approvedAt: row.approvedAt });
+    }
+    if (row.method === 'text_forwarded' && row.forwardedText) {
+      proofs.push({ type: 'text_forwarded', amount: row.amount, text: row.forwardedText, approvedAt: row.approvedAt });
+    }
+  });
+  return proofs;
 };
 
 const getSaleItemTotal = (item) => Number(item?.total ?? Number(item?.price || 0) * Number(item?.quantity || 0));
@@ -182,6 +206,33 @@ const downloadSaleReceipt = (sale) => {
   if (sale.change > 0) doc.text(`Change: ${DisplayPriceInShillings(sale.change)}`, right - 5, y + 11, { align: 'right' });
   y += 34;
 
+  const paymentProofs = getSalePaymentProofs(sale);
+  if (paymentProofs.length > 0) {
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(9);
+    doc.setTextColor(...plum);
+    doc.text('PAYMENT VERIFICATION', left, y);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8);
+    doc.setTextColor(...muted);
+    y += 6;
+    paymentProofs.forEach((proof) => {
+      const label = proof.type === 'equity'
+        ? 'Equity confirmation photo — approved, on file (view full receipt in Sales Hub to see it)'
+        : 'Forwarded confirmation message — approved';
+      const lines = doc.splitTextToSize(label, right - left);
+      doc.text(lines, left, y);
+      y += lines.length * 4.5;
+      if (proof.type === 'text_forwarded' && proof.text) {
+        const textLines = doc.splitTextToSize(`"${proof.text}"`, right - left - 4);
+        doc.text(textLines, left + 4, y);
+        y += textLines.length * 4.5;
+      }
+      y += 3;
+    });
+    y += 4;
+  }
+
   if (sale.note) {
     doc.setTextColor(...muted);
     doc.setFontSize(8.5);
@@ -228,6 +279,7 @@ const POSDashboard = () => {
   const [recentSalesScope, setRecentSalesScope] = useState('mine'); // 'mine' | 'shop'
   const [showReceiptModal, setShowReceiptModal] = useState(false);
   const [selectedSale, setSelectedSale] = useState(null);
+  const selectedSalePaymentProofs = useMemo(() => getSalePaymentProofs(selectedSale), [selectedSale]);
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [analyticsPeriod, setAnalyticsPeriod] = useState('today');
   const [eodStatus, setEodStatus] = useState(null);
@@ -1441,6 +1493,40 @@ const POSDashboard = () => {
                   </div>
                 </div>
               </div>
+
+              {selectedSalePaymentProofs.length > 0 && (
+                <div className="mt-6">
+                  <h5 className="mb-3 text-sm font-bold uppercase tracking-wide text-charcoal dark:text-white">Payment verification</h5>
+                  <div className="space-y-3">
+                    {selectedSalePaymentProofs.map((proof, index) => (
+                      <div key={index} className="rounded-xl border border-brown-100 p-3 dark:border-dm-border">
+                        <div className="flex items-center justify-between gap-3">
+                          <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-brown-500 dark:text-white/50">
+                            {proof.type === 'equity' ? <FaCamera /> : <FaQuoteLeft />}
+                            {proof.type === 'equity' ? 'Equity confirmation photo' : 'Forwarded confirmation message'}
+                          </div>
+                          <span className="text-xs font-semibold text-brown-500 dark:text-white/45">{DisplayPriceInShillings(proof.amount)}</span>
+                        </div>
+                        {proof.type === 'equity' ? (
+                          <img
+                            src={proof.imageUrl}
+                            alt="Equity payment confirmation"
+                            className="mt-2 max-h-56 w-full rounded-lg border border-brown-100 bg-white object-contain dark:border-dm-border"
+                          />
+                        ) : (
+                          <p className="mt-2 whitespace-pre-wrap rounded-lg bg-brown-50 p-3 text-sm text-charcoal dark:bg-dm-card-2 dark:text-white/80">
+                            {proof.text}
+                          </p>
+                        )}
+                        <p className="mt-2 flex items-center gap-1.5 text-xs font-medium text-green-600">
+                          <FaCheckCircle />
+                          Approved{proof.approvedAt ? ` · ${new Date(proof.approvedAt).toLocaleString('en-KE')}` : ''}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {selectedSale.note && (
                 <div className="mt-5 rounded-xl border border-brown-100 bg-brown-50 p-3 text-xs italic text-brown-500 dark:border-dm-border dark:bg-dm-card-2 dark:text-white/45">
