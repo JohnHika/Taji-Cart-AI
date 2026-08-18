@@ -800,6 +800,29 @@ router.get('/summary/daily', auth, Staff, requireStaffPermission('pos.view_analy
             $sum: {
               $cond: [{ $eq: ['$paymentMethod', 'text_forwarded'] }, '$total', 0]
             }
+          },
+          // Walk-in/online tally so a shop owner can reconcile how much of
+          // the day's revenue came from customers physically at the counter
+          // vs staff recording a website/WhatsApp order on their behalf.
+          walkinSales: {
+            $sum: {
+              $cond: [{ $ne: ['$saleSource', 'online'] }, '$total', 0]
+            }
+          },
+          onlineSales: {
+            $sum: {
+              $cond: [{ $eq: ['$saleSource', 'online'] }, '$total', 0]
+            }
+          },
+          walkinCount: {
+            $sum: {
+              $cond: [{ $ne: ['$saleSource', 'online'] }, 1, 0]
+            }
+          },
+          onlineCount: {
+            $sum: {
+              $cond: [{ $eq: ['$saleSource', 'online'] }, 1, 0]
+            }
           }
         }
       }
@@ -813,9 +836,13 @@ router.get('/summary/daily', auth, Staff, requireStaffPermission('pos.view_analy
       cashSales: 0,
       equitySales: 0,
       splitSales: 0,
-      textForwardedSales: 0
+      textForwardedSales: 0,
+      walkinSales: 0,
+      onlineSales: 0,
+      walkinCount: 0,
+      onlineCount: 0
     };
-    
+
     // Get top selling products for the day
     const topProducts = await Sale.aggregate([
       { $match: filter },
@@ -831,12 +858,33 @@ router.get('/summary/daily', auth, Staff, requireStaffPermission('pos.view_analy
       { $sort: { totalQuantity: -1 } },
       { $limit: 5 }
     ]);
-    
+
+    // Hourly sales trend for the chart on the Sales Hub — every hour of the
+    // day is present (zero-filled) so the chart's x-axis doesn't skip hours
+    // with no sales.
+    const hourlyRaw = await Sale.aggregate([
+      { $match: filter },
+      {
+        $group: {
+          _id: { $hour: '$saleDate' },
+          total: { $sum: '$total' },
+          count: { $sum: 1 }
+        }
+      }
+    ]);
+    const hourlyByHour = new Map(hourlyRaw.map((h) => [h._id, h]));
+    const hourlyTrend = Array.from({ length: 24 }, (_, hour) => ({
+      hour,
+      total: hourlyByHour.get(hour)?.total || 0,
+      count: hourlyByHour.get(hour)?.count || 0
+    }));
+
     res.json({
       success: true,
       data: {
         summary,
         topProducts,
+        hourlyTrend,
         date: targetDate.toISOString().split('T')[0]
       }
     });
@@ -1443,6 +1491,10 @@ router.post('/eod/close', auth, Staff, requireStaffPermission('pos.close_eod'), 
           equitySales: { $sum: { $cond: [{ $eq: ['$paymentMethod', 'equity'] }, '$total', 0] } },
           splitSales: { $sum: { $cond: [{ $eq: ['$paymentMethod', 'split'] }, '$total', 0] } },
           textForwardedSales: { $sum: { $cond: [{ $eq: ['$paymentMethod', 'text_forwarded'] }, '$total', 0] } },
+          walkinSales: { $sum: { $cond: [{ $ne: ['$saleSource', 'online'] }, '$total', 0] } },
+          onlineSales: { $sum: { $cond: [{ $eq: ['$saleSource', 'online'] }, '$total', 0] } },
+          walkinCount: { $sum: { $cond: [{ $ne: ['$saleSource', 'online'] }, 1, 0] } },
+          onlineCount: { $sum: { $cond: [{ $eq: ['$saleSource', 'online'] }, 1, 0] } },
           transactionCount: { $sum: 1 }
         }
       }
@@ -1489,6 +1541,7 @@ router.post('/eod/close', auth, Staff, requireStaffPermission('pos.close_eod'), 
         .map((item) => `${item.quantity}x ${item.name}`)
         .join(', '),
       paymentMethod: sale.paymentMethod,
+      saleSource: sale.saleSource === 'online' ? 'online' : 'walkin',
       total: sale.total,
       proofImageUrls: (sale.payments || [])
         .map((payment) => payment.proofImageUrl)
@@ -1532,6 +1585,10 @@ router.post('/eod/close', auth, Staff, requireStaffPermission('pos.close_eod'), 
         equitySales: totals?.equitySales || 0,
         splitSales: totals?.splitSales || 0,
         textForwardedSales: totals?.textForwardedSales || 0,
+        walkinSales: totals?.walkinSales || 0,
+        onlineSales: totals?.onlineSales || 0,
+        walkinCount: totals?.walkinCount || 0,
+        onlineCount: totals?.onlineCount || 0,
         transactionCount: totals?.transactionCount || 0,
         hourlyBreakdown,
         cashierBreakdown,

@@ -24,6 +24,10 @@ const endOfDaySchema = new mongoose.Schema({
     equitySales: { type: Number, default: 0 },
     splitSales: { type: Number, default: 0 },
     textForwardedSales: { type: Number, default: 0 },
+    walkinSales: { type: Number, default: 0 },
+    onlineSales: { type: Number, default: 0 },
+    walkinCount: { type: Number, default: 0 },
+    onlineCount: { type: Number, default: 0 },
     transactionCount: { type: Number, default: 0 },
     hourlyBreakdown: [{
       hour: { type: Number, required: true }, // 0-23
@@ -49,6 +53,7 @@ const endOfDaySchema = new mongoose.Schema({
       cashierName: { type: String, default: '' },
       itemsSummary: { type: String, default: '' },
       paymentMethod: { type: String, default: '' },
+      saleSource: { type: String, default: 'walkin' },
       total: { type: Number, default: 0 },
       proofImageUrls: [{ type: String }],
       // Text-forwarded confirmation text (M-Pesa/bank SMS relayed as text

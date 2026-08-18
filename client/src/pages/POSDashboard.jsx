@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import toast from 'react-hot-toast';
 import { jsPDF } from 'jspdf';
 import {
@@ -10,20 +10,42 @@ import {
   FaDownload,
   FaReceipt,
   FaShoppingCart,
+  FaStore,
+  FaThLarge,
+  FaThList,
   FaTimes,
+  FaTruck,
   FaUndo,
   FaUser,
   FaWhatsapp
 } from 'react-icons/fa';
+import {
+  Bar,
+  BarChart,
+  CartesianGrid,
+  Cell,
+  Legend,
+  Pie,
+  PieChart,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis
+} from 'recharts';
 import { useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import LoadingSpinner from '../components/LoadingSpinner';
+import Pagination from '../components/Pagination';
 import Axios from '../utils/Axios';
 import AxiosToastError from '../utils/AxiosToastError';
 import { downloadEndOfDayReport } from '../utils/eodReceipt';
 import { DisplayPriceInShillings } from '../utils/DisplayPriceInShillings';
 import isAdmin from '../utils/isAdmin';
 import isStaff from '../utils/isStaff';
+
+const RECENT_SALES_PAGE_SIZE = 12;
+const PAYMENT_CHART_COLORS = { cash: '#4b1e3e', equity: '#c9943a', split: '#7d4e40', text_forwarded: '#2563eb' };
+const SOURCE_CHART_COLORS = { walkin: '#c9943a', online: '#4b1e3e' };
 
 const getSaleSubtotal = (sale) => Number(
   sale?.subtotal ??
@@ -197,6 +219,8 @@ const POSDashboard = () => {
   const [eodLoading, setEodLoading] = useState(false);
   const [showResetEodModal, setShowResetEodModal] = useState(false);
   const [resetReason, setResetReason] = useState('');
+  const [recentSalesView, setRecentSalesView] = useState('list'); // 'list' | 'grid'
+  const [recentSalesPage, setRecentSalesPage] = useState(1);
 
   // Wait for session hydration before deciding access, and allow admins to use sales tools.
   useEffect(() => {
@@ -217,6 +241,10 @@ const POSDashboard = () => {
   useEffect(() => {
     loadDashboardData();
   }, [selectedDate, analyticsPeriod]);
+
+  useEffect(() => {
+    setRecentSalesPage(1);
+  }, [selectedDate, recentSalesView]);
 
   const loadDashboardData = async () => {
     try {
@@ -373,6 +401,42 @@ const POSDashboard = () => {
     '30d': 'last 30 days',
     '90d': 'last 90 days'
   }[analyticsPeriod] || 'selected period';
+
+  const sourceChartData = useMemo(() => {
+    if (!dailySummary) return [];
+    return [
+      { key: 'walkin', name: 'Walk-in', value: dailySummary.summary.walkinSales || 0 },
+      { key: 'online', name: 'Online', value: dailySummary.summary.onlineSales || 0 }
+    ].filter((d) => d.value > 0);
+  }, [dailySummary]);
+
+  const paymentChartData = useMemo(() => {
+    if (!dailySummary) return [];
+    return [
+      { key: 'cash', name: 'Cash', value: dailySummary.summary.cashSales || 0 },
+      { key: 'equity', name: 'Equity', value: dailySummary.summary.equitySales || 0 },
+      { key: 'split', name: 'Split', value: dailySummary.summary.splitSales || 0 },
+      { key: 'text_forwarded', name: 'Text Fwd', value: dailySummary.summary.textForwardedSales || 0 }
+    ].filter((d) => d.value > 0);
+  }, [dailySummary]);
+
+  const hourlyChartData = useMemo(() => {
+    if (!dailySummary?.hourlyTrend) return [];
+    // Trim leading/trailing all-zero hours so the chart isn't mostly empty
+    // axis for a shop that only trades roughly 8am-8pm.
+    const firstActive = dailySummary.hourlyTrend.findIndex((h) => h.total > 0 || h.count > 0);
+    const lastActive = dailySummary.hourlyTrend.length - 1 - [...dailySummary.hourlyTrend].reverse().findIndex((h) => h.total > 0 || h.count > 0);
+    if (firstActive === -1) return [];
+    return dailySummary.hourlyTrend
+      .slice(firstActive, lastActive + 1)
+      .map((h) => ({ ...h, label: `${String(h.hour).padStart(2, '0')}:00` }));
+  }, [dailySummary]);
+
+  const totalRecentSalesPages = Math.max(1, Math.ceil(recentSales.length / RECENT_SALES_PAGE_SIZE));
+  const paginatedRecentSales = useMemo(() => {
+    const start = (recentSalesPage - 1) * RECENT_SALES_PAGE_SIZE;
+    return recentSales.slice(start, start + RECENT_SALES_PAGE_SIZE);
+  }, [recentSales, recentSalesPage]);
 
   if (loading) {
     return (
@@ -665,6 +729,100 @@ const POSDashboard = () => {
         </div>
       )}
 
+      {dailySummary && (
+        <div className="mb-6 grid gap-6 lg:grid-cols-2">
+          <div className="rounded-2xl bg-white p-5 shadow-sm dark:bg-dm-card sm:p-6">
+            <div className="mb-4 flex items-center justify-between gap-3">
+              <h3 className="text-base font-bold tracking-tight text-charcoal dark:text-white">
+                Walk-in vs Online
+              </h3>
+              <span className="text-xs text-brown-500 dark:text-white/45">{selectedDate}</span>
+            </div>
+            <div className="mb-4 grid grid-cols-2 gap-3">
+              <div className="rounded-2xl border border-brown-100 bg-ivory p-3 dark:border-dm-border dark:bg-dm-card-2 sm:p-4">
+                <div className="mb-1 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wide text-brown-500 dark:text-white/40 sm:text-xs">
+                  <FaStore size={11} style={{ color: SOURCE_CHART_COLORS.walkin }} /> Walk-in
+                </div>
+                <p className="text-base font-black text-charcoal dark:text-white sm:text-lg">
+                  {DisplayPriceInShillings(dailySummary.summary.walkinSales)}
+                </p>
+                <p className="text-xs text-brown-400 dark:text-white/40">{dailySummary.summary.walkinCount || 0} sale{dailySummary.summary.walkinCount === 1 ? '' : 's'}</p>
+              </div>
+              <div className="rounded-2xl border border-brown-100 bg-ivory p-3 dark:border-dm-border dark:bg-dm-card-2 sm:p-4">
+                <div className="mb-1 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wide text-brown-500 dark:text-white/40 sm:text-xs">
+                  <FaTruck size={11} style={{ color: SOURCE_CHART_COLORS.online }} /> Online
+                </div>
+                <p className="text-base font-black text-charcoal dark:text-white sm:text-lg">
+                  {DisplayPriceInShillings(dailySummary.summary.onlineSales)}
+                </p>
+                <p className="text-xs text-brown-400 dark:text-white/40">{dailySummary.summary.onlineCount || 0} sale{dailySummary.summary.onlineCount === 1 ? '' : 's'}</p>
+              </div>
+            </div>
+            {sourceChartData.length > 0 ? (
+              <ResponsiveContainer width="100%" height={180}>
+                <PieChart>
+                  <Pie data={sourceChartData} dataKey="value" nameKey="name" innerRadius={45} outerRadius={70} paddingAngle={2}>
+                    {sourceChartData.map((d) => (
+                      <Cell key={d.key} fill={SOURCE_CHART_COLORS[d.key]} />
+                    ))}
+                  </Pie>
+                  <Tooltip formatter={(value) => DisplayPriceInShillings(value)} />
+                  <Legend />
+                </PieChart>
+              </ResponsiveContainer>
+            ) : (
+              <p className="py-6 text-center text-sm text-brown-400 dark:text-white/40">No sales yet to chart.</p>
+            )}
+          </div>
+
+          <div className="rounded-2xl bg-white p-5 shadow-sm dark:bg-dm-card sm:p-6">
+            <div className="mb-4 flex items-center justify-between gap-3">
+              <h3 className="text-base font-bold tracking-tight text-charcoal dark:text-white">
+                Payment Method Split
+              </h3>
+              <span className="text-xs text-brown-500 dark:text-white/45">{selectedDate}</span>
+            </div>
+            {paymentChartData.length > 0 ? (
+              <ResponsiveContainer width="100%" height={252}>
+                <PieChart>
+                  <Pie data={paymentChartData} dataKey="value" nameKey="name" innerRadius={45} outerRadius={80} paddingAngle={2}>
+                    {paymentChartData.map((d) => (
+                      <Cell key={d.key} fill={PAYMENT_CHART_COLORS[d.key]} />
+                    ))}
+                  </Pie>
+                  <Tooltip formatter={(value) => DisplayPriceInShillings(value)} />
+                  <Legend />
+                </PieChart>
+              </ResponsiveContainer>
+            ) : (
+              <p className="py-6 text-center text-sm text-brown-400 dark:text-white/40">No sales yet to chart.</p>
+            )}
+          </div>
+
+          <div className="rounded-2xl bg-white p-5 shadow-sm dark:bg-dm-card sm:p-6 lg:col-span-2">
+            <div className="mb-4 flex items-center justify-between gap-3">
+              <h3 className="text-base font-bold tracking-tight text-charcoal dark:text-white">
+                Hourly Sales Trend
+              </h3>
+              <span className="text-xs text-brown-500 dark:text-white/45">{selectedDate}</span>
+            </div>
+            {hourlyChartData.length > 0 ? (
+              <ResponsiveContainer width="100%" height={220}>
+                <BarChart data={hourlyChartData}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                  <XAxis dataKey="label" fontSize={11} />
+                  <YAxis fontSize={11} tickFormatter={(v) => `${Math.round(v / 1000)}k`} />
+                  <Tooltip formatter={(value) => DisplayPriceInShillings(value)} />
+                  <Bar dataKey="total" name="Sales" fill="#4b1e3e" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <p className="py-6 text-center text-sm text-brown-400 dark:text-white/40">No sales yet to chart.</p>
+            )}
+          </div>
+        </div>
+      )}
+
       <div className="mb-6 grid gap-6 xl:grid-cols-[minmax(0,1.15fr)_minmax(320px,0.85fr)]">
         <div className="rounded-2xl bg-white p-5 shadow-sm dark:bg-dm-card sm:p-6">
           <div className="mb-4 flex items-center justify-between gap-3">
@@ -738,159 +896,275 @@ const POSDashboard = () => {
       </div>
 
       {/* Recent Sales */}
-        <div className="bg-white dark:bg-dm-card rounded-2xl shadow-sm p-6">
-          <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+      <div className="bg-white dark:bg-dm-card rounded-2xl shadow-sm p-4 sm:p-6">
+        <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
             <h3 className="text-base font-bold text-charcoal dark:text-white tracking-tight">
-            Recent Sales
+              Recent Sales
             </h3>
             <span className="text-xs text-brown-500 dark:text-white/45">
               {recentSales.length} sale{recentSales.length === 1 ? '' : 's'} on {selectedDate}
             </span>
           </div>
-        <div className="space-y-3 md:hidden">
-          {recentSales.map((sale) => (
-            <div key={sale._id} className="rounded-2xl border border-brown-100 p-4 dark:border-dm-border">
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <div className="text-base font-semibold text-charcoal dark:text-white">
-                    #{sale.saleNumber}
-                  </div>
-                  <div className="text-sm text-brown-400 dark:text-white/40">
-                    {new Date(sale.saleDate).toLocaleDateString()}
-                  </div>
-                  <div className="mt-1 text-sm text-charcoal dark:text-white/55 truncate">
-                    {sale.customer?.name || sale.customerName || 'Walk-in'}
-                  </div>
-                </div>
-                <span className="text-sm font-semibold text-charcoal dark:text-white">
-                  {DisplayPriceInShillings(sale.total)}
-                </span>
-              </div>
-
-              <div className="mt-3 text-sm text-brown-500 dark:text-white/55">
-                {(sale.items && sale.items.length > 0)
-                  ? (
-                    <div className="line-clamp-2">
-                      {(sale.items || []).slice(0, 3).map((item) => `${item.quantity} x ${item.name}`).join(', ')}
-                      {sale.items.length > 3 ? ` +${sale.items.length - 3} more` : ''}
-                    </div>
-                  ) : (
-                    <span className="italic text-brown-400">No items</span>
-                  )}
-              </div>
-
-              <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
-                <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-pill ${
-                  sale.paymentMethod === 'cash' ? 'bg-plum-100 text-plum-700 dark:bg-plum-900/30 dark:text-plum-200' :
-                  sale.paymentMethod === 'equity' ? 'bg-gold-100 text-gold-600 dark:bg-gold-900/20 dark:text-gold-300' :
-                  'bg-blush-100 text-blush-500 dark:bg-blush-500/10 dark:text-blush-300'
-                }`}>
-                  {sale.paymentMethod.charAt(0).toUpperCase() + sale.paymentMethod.slice(1)}
-                </span>
-
-                <button
-                  onClick={() => { setSelectedSale(sale); setShowReceiptModal(true); }}
-                  className="px-3 py-1.5 rounded-md border border-brown-200 dark:border-dm-border hover:bg-ivory dark:hover:bg-dm-card-2 text-charcoal dark:text-white/55 text-sm"
-                >
-                  View Receipt
-                </button>
-              </div>
-            </div>
-          ))}
-
-          {recentSales.length === 0 && (
-            <div className="text-center py-8 text-brown-400 dark:text-white/40">
-              No sales found
-            </div>
-          )}
+          <div className="hidden items-center gap-2 sm:flex">
+            <button
+              onClick={() => setRecentSalesView('list')}
+              className={`p-2 rounded-md ${recentSalesView === 'list' ? 'bg-plum-700 text-white' : 'bg-brown-100 dark:bg-dm-card-2 text-charcoal dark:text-white'}`}
+              aria-label="List view"
+            >
+              <FaThList />
+            </button>
+            <button
+              onClick={() => setRecentSalesView('grid')}
+              className={`p-2 rounded-md ${recentSalesView === 'grid' ? 'bg-plum-700 text-white' : 'bg-brown-100 dark:bg-dm-card-2 text-charcoal dark:text-white'}`}
+              aria-label="Grid view"
+            >
+              <FaThLarge />
+            </button>
+          </div>
         </div>
 
-        <div className="hidden md:block overflow-x-auto">
-          <table className="min-w-full divide-y divide-brown-100 dark:divide-dm-border">
-            <thead className="bg-ivory dark:bg-dm-card-2">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-brown-400 dark:text-white/40 uppercase tracking-wider">
-                  Sale #
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-brown-400 dark:text-white/40 uppercase tracking-wider">
-                  Date
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-brown-400 dark:text-white/40 uppercase tracking-wider">
-                  Customer
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-brown-400 dark:text-white/40 uppercase tracking-wider">
-                  Items
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-brown-400 dark:text-white/40 uppercase tracking-wider">
-                  Payment
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-brown-400 dark:text-white/40 uppercase tracking-wider">
-                  Total
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-brown-400 dark:text-white/40 uppercase tracking-wider">
-                  Cashier
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-brown-400 dark:text-white/40 uppercase tracking-wider">
-                  Actions
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white dark:bg-dm-card divide-y divide-brown-100 dark:divide-dm-border">
-              {recentSales.map(sale => (
-                <tr key={sale._id} className="hover:bg-ivory dark:hover:bg-dm-card-2">
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-charcoal dark:text-white">
-                    #{sale.saleNumber}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-brown-400 dark:text-white/40">
-                    {new Date(sale.saleDate).toLocaleDateString()}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-brown-400 dark:text-white/40">
-                    {sale.customer?.name || sale.customerName || 'Walk-in'}
-                  </td>
-                  <td className="px-6 py-4 text-sm text-brown-400 dark:text-white/55 max-w-[280px]">
+        {paginatedRecentSales.length === 0 ? (
+          <div className="text-center py-8 text-brown-400 dark:text-white/40">
+            No sales found
+          </div>
+        ) : recentSalesView === 'grid' ? (
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+            {paginatedRecentSales.map((sale) => (
+              <div key={sale._id} className="rounded-2xl border border-brown-100 p-4 dark:border-dm-border">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-1.5">
+                      <span
+                        title={sale.saleSource === 'online' ? 'Online' : 'Walk-in'}
+                        className={`inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold ${
+                          sale.saleSource === 'online'
+                            ? 'bg-plum-100 text-plum-700 dark:bg-plum-900/30 dark:text-plum-200'
+                            : 'bg-gold-100 text-gold-700 dark:bg-gold-600/20 dark:text-gold-300'
+                        }`}
+                      >
+                        {sale.saleSource === 'online' ? 'O' : 'W'}
+                      </span>
+                      <div className="text-base font-semibold text-charcoal dark:text-white">
+                        #{sale.saleNumber}
+                      </div>
+                    </div>
+                    <div className="text-sm text-brown-400 dark:text-white/40">
+                      {new Date(sale.saleDate).toLocaleDateString()}
+                    </div>
+                    <div className="mt-1 text-sm text-charcoal dark:text-white/55 truncate">
+                      {sale.customer?.name || sale.customerName || 'Walk-in'}
+                    </div>
+                  </div>
+                  <span className="text-sm font-semibold text-charcoal dark:text-white">
+                    {DisplayPriceInShillings(sale.total)}
+                  </span>
+                </div>
+
+                <div className="mt-3 text-sm text-brown-500 dark:text-white/55">
+                  {(sale.items && sale.items.length > 0)
+                    ? (
+                      <div className="line-clamp-2">
+                        {(sale.items || []).slice(0, 3).map((item) => `${item.quantity} x ${item.name}`).join(', ')}
+                        {sale.items.length > 3 ? ` +${sale.items.length - 3} more` : ''}
+                      </div>
+                    ) : (
+                      <span className="italic text-brown-400">No items</span>
+                    )}
+                </div>
+
+                <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
+                  <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-pill ${
+                    sale.paymentMethod === 'cash' ? 'bg-plum-100 text-plum-700 dark:bg-plum-900/30 dark:text-plum-200' :
+                    sale.paymentMethod === 'equity' ? 'bg-gold-100 text-gold-600 dark:bg-gold-900/20 dark:text-gold-300' :
+                    'bg-blush-100 text-blush-500 dark:bg-blush-500/10 dark:text-blush-300'
+                  }`}>
+                    {sale.paymentMethod.charAt(0).toUpperCase() + sale.paymentMethod.slice(1)}
+                  </span>
+
+                  <button
+                    onClick={() => { setSelectedSale(sale); setShowReceiptModal(true); }}
+                    className="px-3 py-1.5 rounded-md border border-brown-200 dark:border-dm-border hover:bg-ivory dark:hover:bg-dm-card-2 text-charcoal dark:text-white/55 text-sm"
+                  >
+                    View Receipt
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <>
+            <div className="space-y-3 md:hidden">
+              {paginatedRecentSales.map((sale) => (
+                <div key={sale._id} className="rounded-2xl border border-brown-100 p-4 dark:border-dm-border">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-1.5">
+                        <span
+                          title={sale.saleSource === 'online' ? 'Online' : 'Walk-in'}
+                          className={`inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold ${
+                            sale.saleSource === 'online'
+                              ? 'bg-plum-100 text-plum-700 dark:bg-plum-900/30 dark:text-plum-200'
+                              : 'bg-gold-100 text-gold-700 dark:bg-gold-600/20 dark:text-gold-300'
+                          }`}
+                        >
+                          {sale.saleSource === 'online' ? 'O' : 'W'}
+                        </span>
+                        <div className="text-base font-semibold text-charcoal dark:text-white">
+                          #{sale.saleNumber}
+                        </div>
+                      </div>
+                      <div className="text-sm text-brown-400 dark:text-white/40">
+                        {new Date(sale.saleDate).toLocaleDateString()}
+                      </div>
+                      <div className="mt-1 text-sm text-charcoal dark:text-white/55 truncate">
+                        {sale.customer?.name || sale.customerName || 'Walk-in'}
+                      </div>
+                    </div>
+                    <span className="text-sm font-semibold text-charcoal dark:text-white">
+                      {DisplayPriceInShillings(sale.total)}
+                    </span>
+                  </div>
+
+                  <div className="mt-3 text-sm text-brown-500 dark:text-white/55">
                     {(sale.items && sale.items.length > 0)
                       ? (
-                        <div className="truncate" title={(sale.items || []).map(i => `${i.quantity} x ${i.name}`).join(', ')}>
-                          {(sale.items || []).slice(0,3).map(i => `${i.quantity} x ${i.name}`).join(', ')}
+                        <div className="line-clamp-2">
+                          {(sale.items || []).slice(0, 3).map((item) => `${item.quantity} x ${item.name}`).join(', ')}
                           {sale.items.length > 3 ? ` +${sale.items.length - 3} more` : ''}
                         </div>
                       ) : (
                         <span className="italic text-brown-400">No items</span>
                       )}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                      sale.paymentMethod === 'cash' ? 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400' :
-                      sale.paymentMethod === 'equity' ? 'bg-gold-100 text-gold-800 dark:bg-gold-900/25 dark:text-gold-300' :
-                      'bg-purple-100 text-purple-800 dark:bg-purple-900/20 dark:text-purple-400'
+                  </div>
+
+                  <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
+                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-pill ${
+                      sale.paymentMethod === 'cash' ? 'bg-plum-100 text-plum-700 dark:bg-plum-900/30 dark:text-plum-200' :
+                      sale.paymentMethod === 'equity' ? 'bg-gold-100 text-gold-600 dark:bg-gold-900/20 dark:text-gold-300' :
+                      'bg-blush-100 text-blush-500 dark:bg-blush-500/10 dark:text-blush-300'
                     }`}>
                       {sale.paymentMethod.charAt(0).toUpperCase() + sale.paymentMethod.slice(1)}
                     </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-charcoal dark:text-white">
-                    {DisplayPriceInShillings(sale.total)}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-brown-400 dark:text-white/40">
-                    {sale.cashierName}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm">
+
                     <button
                       onClick={() => { setSelectedSale(sale); setShowReceiptModal(true); }}
-                      className="px-3 py-1.5 rounded-md border border-brown-200 dark:border-dm-border hover:bg-ivory dark:hover:bg-dm-card-2 text-charcoal dark:text-white/55"
+                      className="px-3 py-1.5 rounded-md border border-brown-200 dark:border-dm-border hover:bg-ivory dark:hover:bg-dm-card-2 text-charcoal dark:text-white/55 text-sm"
                     >
                       View Receipt
                     </button>
-                  </td>
-                </tr>
+                  </div>
+                </div>
               ))}
-            </tbody>
-          </table>
-          {recentSales.length === 0 && (
-            <div className="text-center py-8 text-brown-400 dark:text-white/40">
-              No sales found
             </div>
-          )}
-        </div>
+
+            <div className="hidden md:block overflow-x-auto">
+              <table className="min-w-full divide-y divide-brown-100 dark:divide-dm-border">
+                <thead className="bg-ivory dark:bg-dm-card-2">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-brown-400 dark:text-white/40 uppercase tracking-wider">
+                      Sale #
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-brown-400 dark:text-white/40 uppercase tracking-wider">
+                      Source
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-brown-400 dark:text-white/40 uppercase tracking-wider">
+                      Date
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-brown-400 dark:text-white/40 uppercase tracking-wider">
+                      Customer
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-brown-400 dark:text-white/40 uppercase tracking-wider">
+                      Items
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-brown-400 dark:text-white/40 uppercase tracking-wider">
+                      Payment
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-brown-400 dark:text-white/40 uppercase tracking-wider">
+                      Total
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-brown-400 dark:text-white/40 uppercase tracking-wider">
+                      Cashier
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-brown-400 dark:text-white/40 uppercase tracking-wider">
+                      Actions
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white dark:bg-dm-card divide-y divide-brown-100 dark:divide-dm-border">
+                  {paginatedRecentSales.map(sale => (
+                    <tr key={sale._id} className="hover:bg-ivory dark:hover:bg-dm-card-2">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-charcoal dark:text-white">
+                        #{sale.saleNumber}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span
+                          className={`inline-flex h-6 w-6 items-center justify-center rounded-full text-[11px] font-bold ${
+                            sale.saleSource === 'online'
+                              ? 'bg-plum-100 text-plum-700 dark:bg-plum-900/30 dark:text-plum-200'
+                              : 'bg-gold-100 text-gold-700 dark:bg-gold-600/20 dark:text-gold-300'
+                          }`}
+                        >
+                          {sale.saleSource === 'online' ? 'O' : 'W'}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-brown-400 dark:text-white/40">
+                        {new Date(sale.saleDate).toLocaleDateString()}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-brown-400 dark:text-white/40">
+                        {sale.customer?.name || sale.customerName || 'Walk-in'}
+                      </td>
+                      <td className="px-6 py-4 text-sm text-brown-400 dark:text-white/55 max-w-[280px]">
+                        {(sale.items && sale.items.length > 0)
+                          ? (
+                            <div className="truncate" title={(sale.items || []).map(i => `${i.quantity} x ${i.name}`).join(', ')}>
+                              {(sale.items || []).slice(0,3).map(i => `${i.quantity} x ${i.name}`).join(', ')}
+                              {sale.items.length > 3 ? ` +${sale.items.length - 3} more` : ''}
+                            </div>
+                          ) : (
+                            <span className="italic text-brown-400">No items</span>
+                          )}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                          sale.paymentMethod === 'cash' ? 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400' :
+                          sale.paymentMethod === 'equity' ? 'bg-gold-100 text-gold-800 dark:bg-gold-900/25 dark:text-gold-300' :
+                          'bg-purple-100 text-purple-800 dark:bg-purple-900/20 dark:text-purple-400'
+                        }`}>
+                          {sale.paymentMethod.charAt(0).toUpperCase() + sale.paymentMethod.slice(1)}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-charcoal dark:text-white">
+                        {DisplayPriceInShillings(sale.total)}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-brown-400 dark:text-white/40">
+                        {sale.cashierName}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm">
+                        <button
+                          onClick={() => { setSelectedSale(sale); setShowReceiptModal(true); }}
+                          className="px-3 py-1.5 rounded-md border border-brown-200 dark:border-dm-border hover:bg-ivory dark:hover:bg-dm-card-2 text-charcoal dark:text-white/55"
+                        >
+                          View Receipt
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
+        )}
+
+        {recentSales.length > RECENT_SALES_PAGE_SIZE && (
+          <div className="mt-6 flex justify-center">
+            <Pagination
+              currentPage={recentSalesPage}
+              totalPages={totalRecentSalesPages}
+              onPageChange={setRecentSalesPage}
+            />
+          </div>
+        )}
       </div>
 
       {/* Reset End-of-Day Modal (admin only) */}

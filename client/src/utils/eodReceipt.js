@@ -72,10 +72,11 @@ const fetchImageAsDataUrl = (url) =>
 // eod: {
 //   date, branch, closedByName,
 //   summary: {
-//     totalSales, cashSales, equitySales, splitSales, textForwardedSales, transactionCount,
+//     totalSales, cashSales, equitySales, splitSales, textForwardedSales,
+//     walkinSales, onlineSales, walkinCount, onlineCount, transactionCount,
 //     hourlyBreakdown: [{ hour, total, cashTotal, count }],
 //     cashierBreakdown: [{ cashierName, saleCount, total }],
-//     transactions: [{ saleNumber, saleDate, cashierName, itemsSummary, paymentMethod, total, proofImageUrls, forwardedTexts }],
+//     transactions: [{ saleNumber, saleDate, saleSource, cashierName, itemsSummary, paymentMethod, total, proofImageUrls, forwardedTexts }],
 //     exchangeCount, exchanges: [{ exchangeNumber, requestedAt, sourceNumber, customerName,
 //       returnedItemSummary, replacementItemSummary, priceDifference, status, requestedByName }]
 //   }
@@ -199,10 +200,11 @@ export const downloadEndOfDayReport = async (eod) => {
     const THUMB_MM = 12;
     autoTable(doc, {
       startY: y,
-      head: [['Time', 'Sale #', 'Cashier', 'Items', 'Payment', 'Amount', 'Proof']],
+      head: [['Time', 'Sale #', 'Source', 'Cashier', 'Items', 'Payment', 'Amount', 'Proof']],
       body: transactions.map((t) => [
         formatSaleTime(t.saleDate),
         t.saleNumber,
+        t.saleSource === 'online' ? 'Online' : 'Walk-in',
         t.cashierName || 'N/A',
         t.itemsSummary || '',
         paymentMethodLabel(t.paymentMethod),
@@ -215,16 +217,17 @@ export const downloadEndOfDayReport = async (eod) => {
       alternateRowStyles: { fillColor: [250, 248, 245] },
       columnStyles: {
         0: { cellWidth: 14 },
-        1: { cellWidth: 30 },
-        2: { cellWidth: 24 },
-        3: { cellWidth: 'auto' },
-        4: { cellWidth: 16 },
-        5: { cellWidth: 22, halign: 'right' },
-        6: { cellWidth: THUMB_MM + 4, halign: 'center' },
+        1: { cellWidth: 26 },
+        2: { cellWidth: 16 },
+        3: { cellWidth: 22 },
+        4: { cellWidth: 'auto' },
+        5: { cellWidth: 16 },
+        6: { cellWidth: 22, halign: 'right' },
+        7: { cellWidth: THUMB_MM + 4, halign: 'center' },
       },
       margin: { left, right: 18 },
       didDrawCell: (data) => {
-        if (data.section !== 'body' || data.column.index !== 6) return;
+        if (data.section !== 'body' || data.column.index !== 7) return;
         const urls = transactions[data.row.index]?.proofImageUrls || [];
         const firstProof = urls.map((u) => proofByUrl.get(u)).find(Boolean);
         if (!firstProof) return;
@@ -312,6 +315,8 @@ export const downloadEndOfDayReport = async (eod) => {
     ['Equity sales', summary.equitySales || 0],
     ['Split sales', summary.splitSales || 0],
     ['Text Forwarded sales', summary.textForwardedSales || 0],
+    ['Walk-in sales', summary.walkinSales || 0],
+    ['Online sales', summary.onlineSales || 0],
   ];
   doc.setFontSize(9);
   rows.forEach(([label, value]) => {
