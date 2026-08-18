@@ -25,6 +25,19 @@ const auth = async(request, response, next) => {
             try {
                 const user = await UserModel.findById(decode._id);
                 if (user) {
+                    // An admin suspending/blocking a user must take effect
+                    // immediately, not just at the user's next login — reject
+                    // every request on a still-valid access token the moment
+                    // the account is marked Suspended, the same way logout does.
+                    if (user.status === 'Suspended') {
+                        return response.status(401).json({
+                            message: "This account has been suspended",
+                            error: true,
+                            success: false,
+                            suspended: true
+                        });
+                    }
+
                     // Attach full user for downstream middleware/controllers expecting req.user
                     request.user = user;
                     request.userRole = user.role || 'user';
@@ -36,7 +49,7 @@ const auth = async(request, response, next) => {
                 console.error("Error fetching user for role:", userError);
                 // Continue even if we couldn't set the role
             }
-            
+
             next()
         } catch (jwtError) {
             console.log("JWT verification failed:", jwtError.message)

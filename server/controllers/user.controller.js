@@ -12,7 +12,7 @@ import forgotPasswordTemplate from '../utils/forgotPasswordTemplate.js'
 import generatedAccessToken from '../utils/generatedAccessToken.js'
 import generatedOtp from '../utils/generatedOtp.js'
 import genertedRefreshToken from '../utils/generatedRefreshToken.js'
-import { isCurrentRefreshToken } from '../utils/authSession.js'
+import { isCurrentRefreshToken, isRefreshTokenInGraceWindow } from '../utils/authSession.js'
 import { sendVerificationEmail } from '../utils/sendVerificationEmail.js'
 import uploadImageClodinary from '../utils/uploadImageClodinary.js'
 
@@ -1262,7 +1262,14 @@ export async function logoutController(request, response) {
 
         if (userid) {
             try {
-                await UserModel.findByIdAndUpdate(userid, { refresh_token: "" })
+                // Clear the grace-window token too — an explicit logout must be
+                // immediate and absolute, not still honor a recently-rotated
+                // token for the next 60s.
+                await UserModel.findByIdAndUpdate(userid, {
+                    refresh_token: "",
+                    previous_refresh_token: "",
+                    previous_refresh_token_rotated_at: null
+                })
             } catch (error) {
                 console.log("Error updating user refresh token:", error.message)
             }
@@ -1316,10 +1323,17 @@ export async function refreshToken(request, response) {
 
             const userId = verifyToken?._id;
 
-            // A refresh token must still be the user's current server-side token.
-            // Logout clears this value, so a logged-out token cannot be reused.
-            const user = await UserModel.findById(userId).select('refresh_token');
-            if (!user || !isCurrentRefreshToken(user.refresh_token, refreshToken)) {
+            // A refresh token must still be the user's current server-side token,
+            // OR the one just rotated out within the grace window — a second
+            // tab/device can still be holding that previous token when this
+            // request lands. Logout clears both fields, so a logged-out token
+            // cannot be reused either way.
+            const user = await UserModel.findById(userId).select('refresh_token previous_refresh_token previous_refresh_token_rotated_at');
+            const isValid = user && (
+                isCurrentRefreshToken(user.refresh_token, refreshToken) ||
+                isRefreshTokenInGraceWindow(user, refreshToken)
+            );
+            if (!isValid) {
                 return response.status(401).json({
                     message: "Invalid or expired token",
                     error: true,
@@ -2049,7 +2063,15 @@ export async function blockUserController(req, res) {
         user.suspensionDate = new Date();
         user.suspensionEndDate = suspensionEndDate;
         user.suspensionDuration = duration;
-        
+
+        // Kill the session outright: the auth middleware already rejects
+        // Suspended users on their next request, but clearing both refresh
+        // token slots means they can't silently mint a new access token via
+        // /refresh-token either, even inside the grace window.
+        user.refresh_token = '';
+        user.previous_refresh_token = '';
+        user.previous_refresh_token_rotated_at = null;
+
         await user.save();
         
         // Send email notification to the user

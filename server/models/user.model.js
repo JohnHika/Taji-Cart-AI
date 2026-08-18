@@ -39,6 +39,20 @@ const userSchema = new mongoose.Schema({
         type : String,
         default : ""
     },
+    // The refresh token this one just replaced, plus when it was rotated out.
+    // A grace window (see authSession.js) lets it still be accepted briefly
+    // after rotation — closes a multi-tab/multi-device race where one tab
+    // refreshes first and a second tab's still-in-flight request would
+    // otherwise get hard-rejected and force an unexpected logout, even
+    // though the user never signed out anywhere.
+    previous_refresh_token : {
+        type : String,
+        default : ""
+    },
+    previous_refresh_token_rotated_at : {
+        type : Date,
+        default : null
+    },
     verify_email : {
         type : Boolean,
         default : false
