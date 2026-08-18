@@ -24,6 +24,12 @@ const router = express.Router();
 
 const escapeRegex = (value = '') => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
+// Nawiri Hair operates in Kenya (EAT, UTC+3, no DST). Mongo's $hour operator
+// defaults to UTC unless given an explicit timezone, which silently shifts
+// every hourly chart/report by 3 hours (e.g. a 2pm sale bucketed as hour 11)
+// — pass this to every $hour aggregation on Sale.saleDate.
+const BUSINESS_TIMEZONE = 'Africa/Nairobi';
+
 // Case-insensitive collation matching the ci indexes on barcode/qrCode/sku
 // (product.model.js) — a query needs this passed explicitly for Mongo to
 // use those indexes instead of falling back to a collection scan.
@@ -910,7 +916,7 @@ router.get('/summary/daily', auth, Staff, requireStaffPermission('pos.view_analy
       { $match: filter },
       {
         $group: {
-          _id: { $hour: '$saleDate' },
+          _id: { $hour: { date: '$saleDate', timezone: BUSINESS_TIMEZONE } },
           total: { $sum: '$total' },
           count: { $sum: 1 }
         }
@@ -1255,7 +1261,8 @@ router.get('/analytics', auth, Staff, requireStaffPermission('pos.view_analytics
           _id: {
             $dateToString: {
               format: '%Y-%m-%d',
-              date: '$saleDate'
+              date: '$saleDate',
+              timezone: BUSINESS_TIMEZONE
             }
           },
           totalSales: { $sum: '$total' },
@@ -1282,7 +1289,7 @@ router.get('/analytics', auth, Staff, requireStaffPermission('pos.view_analytics
       { $match: filter },
       {
         $group: {
-          _id: { $hour: '$saleDate' },
+          _id: { $hour: { date: '$saleDate', timezone: BUSINESS_TIMEZONE } },
           totalSales: { $sum: '$total' },
           transactionCount: { $sum: 1 }
         }
@@ -1388,7 +1395,7 @@ router.get('/admin/statistics', auth, async (req, res) => {
         {
           $group: {
             _id: {
-              $dateToString: { format: '%Y-%m-%d', date: '$saleDate' }
+              $dateToString: { format: '%Y-%m-%d', date: '$saleDate', timezone: BUSINESS_TIMEZONE }
             },
             dailyRevenue: { $sum: '$total' },
             salesCount: { $sum: 1 },
@@ -1563,7 +1570,7 @@ router.post('/eod/close', auth, Staff, requireStaffPermission('pos.close_eod'), 
       { $match: filter },
       {
         $group: {
-          _id: { $hour: '$saleDate' },
+          _id: { $hour: { date: '$saleDate', timezone: BUSINESS_TIMEZONE } },
           total: { $sum: '$total' },
           cashTotal: { $sum: cashReceivedExpr },
           count: { $sum: 1 }
