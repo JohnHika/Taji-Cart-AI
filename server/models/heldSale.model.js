@@ -27,6 +27,10 @@ const heldSaleSchema = new mongoose.Schema({
   customerPhone: { type: String, default: '' },
   saleNote: { type: String, default: '' },
   deliveryNote: { type: String, default: '' },
+  // Stored as a string (not Date) here since a held sale is just a draft
+  // snapshot of whatever the cashier typed into the date input — validated
+  // and converted to a real Date only when the sale is actually completed.
+  deliveryScheduledDate: { type: String, default: '' },
   fulfillmentType: {
     type: String,
     enum: ['in_store', 'pickup', 'delivery'],

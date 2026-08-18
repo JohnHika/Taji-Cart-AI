@@ -332,6 +332,7 @@ router.post('/held-sales', auth, Staff, requireStaffPermission('pos.open_counter
       customerPhone,
       saleNote,
       deliveryNote,
+      deliveryScheduledDate,
       fulfillmentType,
       saleSource,
       deliveryDetails,
@@ -357,6 +358,7 @@ router.post('/held-sales', auth, Staff, requireStaffPermission('pos.open_counter
       customerPhone: customerPhone || '',
       saleNote: saleNote || '',
       deliveryNote: deliveryNote || '',
+      deliveryScheduledDate: deliveryScheduledDate || '',
       fulfillmentType: fulfillmentType || 'in_store',
       saleSource: saleSource === 'online' ? 'online' : 'walkin',
       deliveryDetails: deliveryDetails || {},
@@ -423,7 +425,8 @@ router.post('/sale', auth, Staff, requireStaffPermission('pos.open_counter'), as
       delivery_mode,
       deliveryZoneId,
       saccoOperatorId,
-      saccoDestinationTown
+      saccoDestinationTown,
+      deliveryScheduledDate
     } = req.body;
 
     // Validate required fields
@@ -624,6 +627,22 @@ router.post('/sale', auth, Staff, requireStaffPermission('pos.open_counter'), as
       normalizedFulfillmentType === 'pickup' ? 'awaiting_pickup' :
       normalizedFulfillmentType === 'delivery' ? 'awaiting_delivery' : 'n/a';
 
+    // A customer can buy today and ask for delivery tomorrow (or later) —
+    // never trust the client's date string blindly; parse and validate it,
+    // and never let it be set in the past. Defaults to today (same-day)
+    // when not provided, same as before this field existed.
+    let normalizedDeliveryScheduledDate = new Date();
+    if (normalizedFulfillmentType === 'delivery' && deliveryScheduledDate) {
+      const parsed = new Date(deliveryScheduledDate);
+      if (!Number.isNaN(parsed.getTime())) {
+        const todayStart = new Date();
+        todayStart.setHours(0, 0, 0, 0);
+        if (parsed >= todayStart) {
+          normalizedDeliveryScheduledDate = parsed;
+        }
+      }
+    }
+
     const sale = new Sale({
       saleNumber,
       items: normalizedItems,
@@ -635,6 +654,7 @@ router.post('/sale', auth, Staff, requireStaffPermission('pos.open_counter'), as
       fulfillmentStatus,
       pickupCode: normalizedFulfillmentType === 'pickup' ? generatePickupCode() : '',
       deliveryNote: normalizedFulfillmentType === 'delivery' ? String(req.body.deliveryNote || '').slice(0, 500) : '',
+      deliveryScheduledDate: normalizedFulfillmentType === 'delivery' ? normalizedDeliveryScheduledDate : undefined,
       delivery_mode: normalizedDeliveryMode,
       delivery_zone: deliveryZone ? deliveryZone._id : undefined,
       delivery_zone_name: deliveryZone ? deliveryZone.name : '',
@@ -1005,8 +1025,8 @@ router.get('/pending-fulfillment', auth, Staff, requireStaffPermission('pos.mana
     };
 
     const sales = await Sale.find(filter)
-      .select('saleNumber saleDate customerName customerPhone items total fulfillment_type fulfillmentStatus pickupCode deliveryNote delivery_mode delivery_zone_name sacco_operator_name sacco_destination_town cashierName')
-      .sort({ saleDate: 1 })
+      .select('saleNumber saleDate customerName customerPhone items total fulfillment_type fulfillmentStatus pickupCode deliveryNote deliveryScheduledDate delivery_mode delivery_zone_name sacco_operator_name sacco_destination_town cashierName')
+      .sort({ deliveryScheduledDate: 1, saleDate: 1 })
       .lean();
 
     res.json({ success: true, data: sales });

@@ -120,6 +120,14 @@ const saleSchema = new mongoose.Schema({
     type: String,
     default: ''
   },
+  // The date the customer asked for delivery — a customer can buy today and
+  // ask for delivery tomorrow (or later). Defaults to the sale date itself
+  // (same-day) when not explicitly set, so every delivery sale has a date
+  // to sort/filter the fulfillment queue by, not just whoever happened to
+  // add a free-text note.
+  deliveryScheduledDate: {
+    type: Date
+  },
   fulfilledBy: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User'

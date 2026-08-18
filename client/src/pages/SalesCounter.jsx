@@ -116,6 +116,12 @@ const SalesCounter = () => {
   const [customerPhone, setCustomerPhone] = useState(() => restoredDraft?.customerPhone || '');
   const [saleNote, setSaleNote] = useState(() => restoredDraft?.saleNote || '');
   const [deliveryNote, setDeliveryNote] = useState(() => restoredDraft?.deliveryNote || '');
+  // A customer can buy today and ask for delivery tomorrow (or later) —
+  // defaults to today (same-day, the previous behavior) so staff only need
+  // to touch this when the customer actually wants a later date.
+  const todayDateString = new Date().toISOString().slice(0, 10);
+  const tomorrowDateString = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+  const [deliveryScheduledDate, setDeliveryScheduledDate] = useState(() => restoredDraft?.deliveryScheduledDate || todayDateString);
   const [submitting, setSubmitting] = useState(false);
   const [completedSale, setCompletedSale] = useState(null);
   const [qrCodeDataUrl, setQrCodeDataUrl] = useState('');
@@ -172,13 +178,14 @@ const SalesCounter = () => {
         customerPhone,
         saleNote,
         deliveryNote,
+        deliveryScheduledDate,
         activeHeldSaleId,
       }));
     } catch {
       // sessionStorage unavailable (private browsing quota, etc.) — draft
       // recovery just won't be available this session, sale flow still works.
     }
-  }, [cart, fulfillmentType, saleSource, deliveryDetails, paymentMethod, amountTendered, splitCashAmount, equityProofUrl, equityApproved, forwardedText, forwardedTextApproved, customerName, customerPhone, saleNote, deliveryNote, activeHeldSaleId]);
+  }, [cart, fulfillmentType, saleSource, deliveryDetails, paymentMethod, amountTendered, splitCashAmount, equityProofUrl, equityApproved, forwardedText, forwardedTextApproved, customerName, customerPhone, saleNote, deliveryNote, deliveryScheduledDate, activeHeldSaleId]);
 
   // Reset pagination whenever the filter changes so "Load more" starts fresh.
   useEffect(() => {
@@ -250,6 +257,7 @@ const SalesCounter = () => {
           customerPhone,
           saleNote,
           deliveryNote,
+          deliveryScheduledDate,
           fulfillmentType,
           saleSource,
           deliveryDetails,
@@ -291,6 +299,7 @@ const SalesCounter = () => {
       setCustomerPhone(heldSale.customerPhone || '');
       setSaleNote(heldSale.saleNote || '');
       setDeliveryNote(heldSale.deliveryNote || '');
+      setDeliveryScheduledDate(heldSale.deliveryScheduledDate || todayDateString);
       setFulfillmentType(heldSale.fulfillmentType || 'in_store');
       setSaleSource(heldSale.saleSource || 'walkin');
       setDeliveryDetails(heldSale.deliveryDetails || { mode: 'standard', zoneId: '', saccoOperatorId: '', saccoDestinationTown: '' });
@@ -443,6 +452,7 @@ const SalesCounter = () => {
     setCustomerPhone('');
     setSaleNote('');
     setDeliveryNote('');
+    setDeliveryScheduledDate(todayDateString);
     setCompletedSale(null);
     setQrCodeDataUrl('');
     setShowFullReceipt(false);
@@ -569,6 +579,7 @@ const SalesCounter = () => {
         saccoOperatorId: fulfillmentType === 'delivery' && deliveryDetails.mode === 'sacco' ? deliveryDetails.saccoOperatorId : undefined,
         saccoDestinationTown: fulfillmentType === 'delivery' && deliveryDetails.mode === 'sacco' ? deliveryDetails.saccoDestinationTown.trim() : undefined,
         deliveryNote: fulfillmentType === 'delivery' ? deliveryNote.trim() : undefined,
+        deliveryScheduledDate: fulfillmentType === 'delivery' ? deliveryScheduledDate : undefined,
         subtotal: totals.subtotal,
         discount: 0,
         tax: totals.tax,
@@ -795,6 +806,40 @@ const SalesCounter = () => {
               onChange={setDeliveryDetails}
               onFeeChange={setDeliveryFeePreview}
             />
+            <div className="mt-3">
+              <label className="text-sm font-medium">Delivery date</label>
+              <div className="mt-1 flex gap-2">
+                <input
+                  type="date"
+                  value={deliveryScheduledDate}
+                  min={todayDateString}
+                  onChange={(e) => setDeliveryScheduledDate(e.target.value)}
+                  className="flex-1 rounded-lg border border-brown-200 bg-white px-3 py-2 text-sm dark:border-dm-border dark:bg-dm-card-2"
+                />
+                <button
+                  type="button"
+                  onClick={() => setDeliveryScheduledDate(todayDateString)}
+                  className={`shrink-0 rounded-lg border px-3 py-2 text-xs font-semibold transition-colors ${
+                    deliveryScheduledDate === todayDateString
+                      ? 'border-plum-500 bg-plum-50 text-plum-700 dark:border-plum-400 dark:bg-plum-900/20 dark:text-plum-300'
+                      : 'border-brown-200 text-brown-600 hover:bg-brown-50 dark:border-dm-border dark:text-white/60 dark:hover:bg-dm-card-2'
+                  }`}
+                >
+                  Today
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setDeliveryScheduledDate(tomorrowDateString)}
+                  className={`shrink-0 rounded-lg border px-3 py-2 text-xs font-semibold transition-colors ${
+                    deliveryScheduledDate === tomorrowDateString
+                      ? 'border-plum-500 bg-plum-50 text-plum-700 dark:border-plum-400 dark:bg-plum-900/20 dark:text-plum-300'
+                      : 'border-brown-200 text-brown-600 hover:bg-brown-50 dark:border-dm-border dark:text-white/60 dark:hover:bg-dm-card-2'
+                  }`}
+                >
+                  Tomorrow
+                </button>
+              </div>
+            </div>
             <div className="mt-3">
               <label className="text-sm font-medium">Delivery arrangement note</label>
               <textarea

@@ -31,6 +31,24 @@ const deliveryModeLabel = (sale) => {
   return 'Standard delivery';
 };
 
+// A customer can buy today and ask for delivery tomorrow (or later) — this
+// turns the raw scheduled date into "Due today"/"Due tomorrow"/a plain date
+// so staff can spot what's urgent without doing date math in their head.
+const dueLabel = (dateValue) => {
+  if (!dateValue) return null;
+  const due = new Date(dateValue);
+  if (Number.isNaN(due.getTime())) return null;
+  const dueDay = new Date(due.getFullYear(), due.getMonth(), due.getDate());
+  const today = new Date();
+  const todayDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  const diffDays = Math.round((dueDay - todayDay) / (24 * 60 * 60 * 1000));
+
+  if (diffDays === 0) return { text: 'Due today', urgent: true };
+  if (diffDays === 1) return { text: 'Due tomorrow', urgent: false };
+  if (diffDays < 0) return { text: `Overdue — was due ${due.toLocaleDateString()}`, urgent: true };
+  return { text: `Due ${due.toLocaleDateString()}`, urgent: false };
+};
+
 const SalesCounterFulfillment = () => {
   const user = useSelector((state) => state.user);
   const navigate = useNavigate();
@@ -276,9 +294,20 @@ const SalesCounterFulfillment = () => {
 
                       {sale.fulfillment_type === 'delivery' && (
                         <>
-                          <p className="mt-2 flex items-center gap-1.5 text-xs font-semibold text-plum-700 dark:text-plum-300">
-                            <FaMapMarkerAlt size={11} /> {deliveryModeLabel(sale)}
-                          </p>
+                          <div className="mt-2 flex flex-wrap items-center gap-2">
+                            <p className="flex items-center gap-1.5 text-xs font-semibold text-plum-700 dark:text-plum-300">
+                              <FaMapMarkerAlt size={11} /> {deliveryModeLabel(sale)}
+                            </p>
+                            {dueLabel(sale.deliveryScheduledDate) && (
+                              <span className={`inline-flex items-center gap-1 rounded-pill px-2 py-0.5 text-[11px] font-bold ${
+                                dueLabel(sale.deliveryScheduledDate).urgent
+                                  ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300'
+                                  : 'bg-gold-100 text-gold-700 dark:bg-gold-900/20 dark:text-gold-300'
+                              }`}>
+                                <FaClock size={9} /> {dueLabel(sale.deliveryScheduledDate).text}
+                              </span>
+                            )}
+                          </div>
                           {sale.deliveryNote && (
                             <p className="mt-1 text-xs italic text-brown-500 dark:text-white/50">&quot;{sale.deliveryNote}&quot;</p>
                           )}
