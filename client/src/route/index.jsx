@@ -49,6 +49,7 @@ const CatalogQuality                = lazyWithRetry(() => import('../pages/Catal
 const CategoryPage                  = lazyWithRetry(() => import('../pages/CategoryPage'));
 const DeliveryZonesPage             = lazyWithRetry(() => import('../pages/DeliveryZonesPage'));
 const AllOrdersAdmin                = lazyWithRetry(() => import('../pages/admin/AllOrdersAdmin'));
+const EodReports                    = lazyWithRetry(() => import('../pages/admin/EodReports'));
 const LoyaltyProgramAdmin           = lazyWithRetry(() => import('../pages/admin/LoyaltyProgramAdmin'));
 const UsersAdmin                    = lazyWithRetry(() => import('../pages/admin/UsersAdmin'));
 const CommunityPerksAdmin           = lazyWithRetry(() => import('../pages/admin/CommunityPerksAdmin'));
@@ -211,6 +212,7 @@ const router = createBrowserRouter([
           { path: 'delivery-zones',         element: <PrivateRoute requireAdmin={true}>{S(DeliveryZonesPage)}</PrivateRoute> },
           { path: 'subcategory',            element: <PrivateRoute requireAdmin={true}>{S(SubCategoryPage)}</PrivateRoute> },
           { path: 'allorders',              element: <PrivateRoute requireAdmin={true}>{S(AllOrdersAdmin)}</PrivateRoute> },
+          { path: 'eod-reports',            element: <PrivateRoute requireAdmin={true}>{S(EodReports)}</PrivateRoute> },
           { path: 'loyalty-program-admin',  element: <PrivateRoute requireAdmin={true}>{S(LoyaltyProgramAdmin)}</PrivateRoute> },
           { path: 'users-admin',            element: <PrivateRoute requireAdmin={true}>{S(UsersAdmin)}</PrivateRoute> },
           { path: 'admin-community-perks',  element: <PrivateRoute requireAdmin={true}>{S(CommunityPerksAdmin)}</PrivateRoute> },
