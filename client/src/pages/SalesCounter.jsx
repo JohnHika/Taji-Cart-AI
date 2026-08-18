@@ -1192,8 +1192,16 @@ const SalesCounter = () => {
             </div>
           </div>
 
-          {/* Scrolling content, padded to clear the fixed header/footer exactly */}
+          {/* Scrolling content, padded to clear the fixed header/footer exactly.
+              The pt-[180px]/pb-[96px] fallback classes matter on first paint:
+              mobileHeaderHeight/mobileFooterHeight start at 0 and are only set
+              once the measuring effect runs after mount, so without a static
+              fallback the top row of products renders flush under the fixed
+              header for a frame (visible as "hidden beneath the header" on
+              slower loads). JS still overrides with the exact measured height
+              once available. */}
           <div
+            className="pt-[180px] pb-[96px]"
             style={{
               paddingTop: mobileHeaderHeight ? `${mobileHeaderHeight}px` : undefined,
               paddingBottom: mobileFooterHeight ? `${mobileFooterHeight + 16}px` : undefined,
