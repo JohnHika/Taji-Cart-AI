@@ -1598,25 +1598,35 @@ router.post('/eod/close', auth, Staff, requireStaffPermission('pos.close_eod'), 
     // includes each Equity/Split payment's proof image, and each Text
     // Forwarded payment's confirmation text, so both can be shown next to
     // the transaction row.
+    const MAX_ITEM_LINES_SHOWN = 5;
     const sales = await Sale.find(filter).sort({ saleDate: 1 }).lean();
-    const transactions = sales.map((sale) => ({
-      saleNumber: sale.saleNumber,
-      saleDate: sale.saleDate,
-      cashierName: sale.cashierName || '',
-      itemsSummary: (sale.items || [])
-        .map((item) => `${item.quantity}x ${item.name}`)
-        .join(', '),
-      paymentMethod: sale.paymentMethod,
-      saleSource: sale.saleSource === 'online' ? 'online' : 'walkin',
-      total: sale.total,
-      deliveryCharge: sale.deliveryCharge || 0,
-      proofImageUrls: (sale.payments || [])
-        .map((payment) => payment.proofImageUrl)
-        .filter(Boolean),
-      forwardedTexts: (sale.payments || [])
-        .map((payment) => payment.forwardedText)
-        .filter(Boolean)
-    }));
+    const transactions = sales.map((sale) => {
+      const itemLines = (sale.items || []).map((item) => `${item.quantity}x ${item.name}`);
+      // A bulk/wholesale sale can carry 20-30+ distinct SKUs — joining every
+      // one made a single table row balloon across pages in the PDF. The
+      // full line-by-line breakdown always stays viewable on the sale itself
+      // in Sales Hub; this snapshot only needs to summarize it.
+      const itemsSummary = itemLines.length <= MAX_ITEM_LINES_SHOWN
+        ? itemLines.join(', ')
+        : `${itemLines.slice(0, MAX_ITEM_LINES_SHOWN).join(', ')}, +${itemLines.length - MAX_ITEM_LINES_SHOWN} more item${itemLines.length - MAX_ITEM_LINES_SHOWN === 1 ? '' : 's'}`;
+
+      return {
+        saleNumber: sale.saleNumber,
+        saleDate: sale.saleDate,
+        cashierName: sale.cashierName || '',
+        itemsSummary,
+        paymentMethod: sale.paymentMethod,
+        saleSource: sale.saleSource === 'online' ? 'online' : 'walkin',
+        total: sale.total,
+        deliveryCharge: sale.deliveryCharge || 0,
+        proofImageUrls: (sale.payments || [])
+          .map((payment) => payment.proofImageUrl)
+          .filter(Boolean),
+        forwardedTexts: (sale.payments || [])
+          .map((payment) => payment.forwardedText)
+          .filter(Boolean)
+      };
+    });
 
     // Every return/exchange requested this trading day, whatever it's since
     // moved on to (still awaiting hair, completed, even cancelled) — a

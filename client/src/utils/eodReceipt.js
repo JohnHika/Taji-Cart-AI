@@ -183,13 +183,19 @@ export const downloadEndOfDayReport = async (eod) => {
     y = (doc.lastAutoTable?.finalY || y) + 12;
   }
 
-  // --- Per-transaction detail, with Equity/Split proof thumbnails ---
+  // --- Per-transaction detail ---
+  // Proof images/text are deliberately NOT rendered inline in this table —
+  // a screenshot shrunk to fit a table row is too small to actually verify
+  // anything. They get their own full-size sections below instead (Equity
+  // confirmations as legible images, Text Forwarded as full message text);
+  // this table just flags which sales have proof to look for there.
   if (transactions.length > 0) {
     ensureSpace(20);
     drawSectionTitle('Transaction detail');
 
     // Pre-fetch every proof image up front (one row can carry more than one,
-    // for a split sale) so the table body can be built synchronously below.
+    // for a split sale) so the Equity confirmations section below can render
+    // synchronously.
     const proofByUrl = new Map();
     const allUrls = transactions.flatMap((t) => t.proofImageUrls || []);
     await Promise.all(
@@ -198,10 +204,9 @@ export const downloadEndOfDayReport = async (eod) => {
       })
     );
 
-    const THUMB_MM = 12;
     autoTable(doc, {
       startY: y,
-      head: [['Time', 'Sale #', 'Source', 'Cashier', 'Items', 'Payment', 'Amount', 'Proof']],
+      head: [['Time', 'Sale #', 'Source', 'Cashier', 'Items', 'Payment', 'Amount', 'Verified']],
       body: transactions.map((t) => [
         formatSaleTime(t.saleDate),
         t.saleNumber,
@@ -210,11 +215,11 @@ export const downloadEndOfDayReport = async (eod) => {
         t.itemsSummary || '',
         paymentMethodLabel(t.paymentMethod),
         DisplayPriceInShillings(t.total || 0),
-        '',
+        (t.proofImageUrls || []).length > 0 ? 'Photo' : (t.forwardedTexts || []).length > 0 ? 'Text' : '',
       ]),
       theme: 'striped',
       headStyles: { fillColor: PLUM, textColor: 255, fontStyle: 'bold', fontSize: 8.5 },
-      bodyStyles: { fontSize: 7.5, textColor: [26, 15, 20], minCellHeight: THUMB_MM + 2, valign: 'middle' },
+      bodyStyles: { fontSize: 7.5, textColor: [26, 15, 20], valign: 'middle' },
       alternateRowStyles: { fillColor: [250, 248, 245] },
       columnStyles: {
         0: { cellWidth: 14 },
@@ -224,23 +229,9 @@ export const downloadEndOfDayReport = async (eod) => {
         4: { cellWidth: 'auto' },
         5: { cellWidth: 16 },
         6: { cellWidth: 22, halign: 'right' },
-        7: { cellWidth: THUMB_MM + 4, halign: 'center' },
+        7: { cellWidth: 16, halign: 'center' },
       },
       margin: { left, right: 18 },
-      didDrawCell: (data) => {
-        if (data.section !== 'body' || data.column.index !== 7) return;
-        const urls = transactions[data.row.index]?.proofImageUrls || [];
-        const firstProof = urls.map((u) => proofByUrl.get(u)).find(Boolean);
-        if (!firstProof) return;
-        const cellX = data.cell.x + (data.cell.width - THUMB_MM) / 2;
-        const cellY = data.cell.y + (data.cell.height - THUMB_MM) / 2;
-        try {
-          doc.addImage(firstProof.dataUrl, 'JPEG', cellX, cellY, THUMB_MM, THUMB_MM);
-        } catch {
-          // Corrupt/unsupported image data — leave the cell blank rather than
-          // break the rest of the report.
-        }
-      },
     });
     y = (doc.lastAutoTable?.finalY || y) + 12;
 
@@ -253,6 +244,53 @@ export const downloadEndOfDayReport = async (eod) => {
       doc.setTextColor(...MUTED);
       doc.text(`${missingProofCount} proof image(s) could not be loaded for this report.`, left, y);
       y += 10;
+    }
+
+    // --- Equity payment confirmation photos, at a legible size. This is
+    // also the ONLY surviving copy of these once Cloudinary auto-deletes the
+    // source image ~3.5 days after this close (see EndOfDay.proofDeletionDueAt)
+    // — so unlike the single-sale receipt PDF, shrinking or omitting these
+    // isn't an option here; this report is the archival copy. ---
+    const IMG_MAX_WIDTH_MM = 45;
+    const IMG_MAX_HEIGHT_MM = 65;
+    const equityEntries = transactions
+      .filter((t) => (t.proofImageUrls || []).length > 0)
+      .map((t) => ({ saleNumber: t.saleNumber, total: t.total, url: t.proofImageUrls[0] }));
+    if (equityEntries.length > 0) {
+      ensureSpace(14);
+      drawSectionTitle('Equity payment confirmations');
+      equityEntries.forEach(({ saleNumber, total, url }) => {
+        const proof = proofByUrl.get(url);
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(8);
+        if (!proof) {
+          ensureSpace(10);
+          doc.setTextColor(...PLUM);
+          doc.text(saleNumber, left, y);
+          doc.setFont('helvetica', 'normal');
+          doc.setTextColor(...MUTED);
+          doc.text(`(photo unavailable) · ${DisplayPriceInShillings(total)}`, left + 30, y);
+          y += 10;
+          return;
+        }
+        const aspectRatio = proof.width / proof.height;
+        let w = IMG_MAX_WIDTH_MM;
+        let h = w / aspectRatio;
+        if (h > IMG_MAX_HEIGHT_MM) {
+          h = IMG_MAX_HEIGHT_MM;
+          w = h * aspectRatio;
+        }
+        ensureSpace(h + 12);
+        doc.setTextColor(...PLUM);
+        doc.text(`${saleNumber} · ${DisplayPriceInShillings(total)}`, left, y);
+        y += 4;
+        try {
+          doc.addImage(proof.dataUrl, 'JPEG', left, y, w, h);
+        } catch {
+          // Corrupt/unsupported image data — skip rather than break the report.
+        }
+        y += h + 8;
+      });
     }
 
     // --- Text Forwarded confirmation messages, in full (can't thumbnail text) ---
