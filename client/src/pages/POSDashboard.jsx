@@ -1003,7 +1003,7 @@ const POSDashboard = () => {
           </div>
         ) : (
           <>
-            <div className="space-y-3 md:hidden">
+            <div className="space-y-3 lg:hidden">
               {paginatedRecentSales.map((sale) => (
                 <div key={sale._id} className="rounded-2xl border border-brown-100 p-4 dark:border-dm-border">
                   <div className="flex items-start justify-between gap-3">
@@ -1067,7 +1067,7 @@ const POSDashboard = () => {
               ))}
             </div>
 
-            <div className="hidden md:block overflow-x-auto">
+            <div className="hidden lg:block overflow-x-auto">
               <table className="min-w-full divide-y divide-brown-100 dark:divide-dm-border">
                 <thead className="bg-ivory dark:bg-dm-card-2">
                   <tr>

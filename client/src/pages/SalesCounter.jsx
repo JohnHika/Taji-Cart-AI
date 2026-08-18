@@ -349,8 +349,14 @@ const SalesCounter = () => {
     return filteredProducts.slice(0, QUICK_PICKS_COUNT);
   }, [filteredProducts, isBrowsingUnfiltered]);
 
-  const visibleProducts = filteredProducts.slice(0, visibleCount);
-  const hasMoreProducts = visibleCount < filteredProducts.length;
+  // When Quick picks is showing (unfiltered browse), "All products" below it
+  // should pick up where Quick picks left off — otherwise the same first
+  // QUICK_PICKS_COUNT items appear twice, once in each section.
+  const allProductsSource = isBrowsingUnfiltered
+    ? filteredProducts.slice(QUICK_PICKS_COUNT)
+    : filteredProducts;
+  const visibleProducts = allProductsSource.slice(0, visibleCount);
+  const hasMoreProducts = visibleCount < allProductsSource.length;
 
   const addToCart = (product) => {
     if (!product.price || product.price <= 0) {
@@ -1214,7 +1220,7 @@ const SalesCounter = () => {
                   onClick={() => setVisibleCount((v) => v + PAGE_SIZE)}
                   className="w-full min-h-[44px] rounded-lg border border-brown-200 bg-white py-2.5 text-sm font-semibold text-plum-700 transition-colors hover:bg-plum-50 dark:border-dm-border dark:bg-dm-card dark:text-plum-300 dark:hover:bg-dm-card-2"
                 >
-                  Load more ({filteredProducts.length - visibleCount} remaining)
+                  Load more ({allProductsSource.length - visibleCount} remaining)
                 </button>
               </div>
             )}
@@ -1325,7 +1331,7 @@ const SalesCounter = () => {
                 onClick={() => setVisibleCount((v) => v + PAGE_SIZE)}
                 className="w-full rounded-lg border border-brown-200 bg-white py-2.5 text-sm font-semibold text-plum-700 transition-colors hover:bg-plum-50 dark:border-dm-border dark:bg-dm-card dark:text-plum-300 dark:hover:bg-dm-card-2"
               >
-                Load more ({filteredProducts.length - visibleCount} remaining)
+                Load more ({allProductsSource.length - visibleCount} remaining)
               </button>
             </div>
           )}
