@@ -101,11 +101,16 @@ const StockValue = () => {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-2">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
               <div className="rounded-2xl border border-brown-100 bg-white p-4 shadow-sm dark:border-dm-border dark:bg-dm-card">
                 <p className="text-[10px] font-semibold uppercase tracking-wide text-brown-500 dark:text-white/40">Products Counted</p>
                 <p className="mt-1 text-lg font-black tracking-tight">{data.productCount}</p>
                 <p className="text-xs text-brown-400 dark:text-white/40">Published products only</p>
+              </div>
+              <div className="rounded-2xl border border-brown-100 bg-white p-4 shadow-sm dark:border-dm-border dark:bg-dm-card">
+                <p className="text-[10px] font-semibold uppercase tracking-wide text-brown-500 dark:text-white/40">Actually In Stock</p>
+                <p className="mt-1 text-lg font-black tracking-tight">{data.productsWithStock}</p>
+                <p className="text-xs text-brown-400 dark:text-white/40">Products with stock &gt; 0</p>
               </div>
               <div className="rounded-2xl border border-brown-100 bg-white p-4 shadow-sm dark:border-dm-border dark:bg-dm-card">
                 <p className="text-[10px] font-semibold uppercase tracking-wide text-brown-500 dark:text-white/40">Total Units in Stock</p>
@@ -148,7 +153,10 @@ const StockValue = () => {
             </div>
 
             <div className="rounded-2xl border border-brown-100 bg-white p-5 shadow-sm dark:border-dm-border dark:bg-dm-card">
-              <h3 className="mb-4 text-base font-bold tracking-tight">Highest-Value Products</h3>
+              <h3 className="mb-1 text-base font-bold tracking-tight">Highest-Value Products</h3>
+              <p className="mb-4 text-xs text-brown-400 dark:text-white/40">
+                By retail value, in-stock items only.
+              </p>
               {data.topProducts.length > 0 ? (
                 <div className="overflow-x-auto">
                   <table className="min-w-full divide-y divide-brown-100 dark:divide-dm-border">

@@ -113,6 +113,11 @@ export const getStockValueController = async (_request, response) => {
             totalCostValue: { $sum: { $multiply: ['$costPrice', '$stock'] } },
             totalRetailValue: { $sum: { $multiply: ['$price', '$stock'] } },
             productCount: { $sum: 1 },
+            // Separate from productCount — a published product can still have
+            // 0 or negative stock (sold out, oversold before a restock), which
+            // contributes nothing to the value totals but shouldn't be counted
+            // as if it's sitting on the shelf.
+            productsWithStock: { $sum: { $cond: [{ $gt: ['$stock', 0] }, 1, 0] } },
             totalUnits: { $sum: '$stock' },
           },
         },
@@ -152,7 +157,11 @@ export const getStockValueController = async (_request, response) => {
         { $sort: { retailValue: -1 } },
       ]),
       ProductModel.aggregate([
-        { $match: { publish: true } },
+        // Only products actually sitting on the shelf — a 0/negative-stock
+        // SKU isn't "highest value," it's dead inventory, and would otherwise
+        // tie for last place under retailValue/costValue sorting and clutter
+        // the top of the list.
+        { $match: { publish: true, stock: { $gt: 0 } } },
         {
           $project: {
             name: 1,
@@ -162,7 +171,12 @@ export const getStockValueController = async (_request, response) => {
             retailValue: { $multiply: ['$price', '$stock'] },
           },
         },
-        { $sort: { costValue: -1 } },
+        // Sorted by retailValue, not costValue — costPrice is currently
+        // unpopulated (0) for every product in this catalog, so sorting by
+        // costValue ties everything at zero and returns an arbitrary order.
+        // retailValue is the only value that's actually meaningful today;
+        // once costPrice is backfilled this ranking may want revisiting.
+        { $sort: { retailValue: -1 } },
         { $limit: 10 },
       ]),
     ]);
@@ -171,6 +185,7 @@ export const getStockValueController = async (_request, response) => {
       totalCostValue: 0,
       totalRetailValue: 0,
       productCount: 0,
+      productsWithStock: 0,
       totalUnits: 0,
     };
 
@@ -181,6 +196,7 @@ export const getStockValueController = async (_request, response) => {
         totalRetailValue: totals.totalRetailValue,
         potentialProfit: totals.totalRetailValue - totals.totalCostValue,
         productCount: totals.productCount,
+        productsWithStock: totals.productsWithStock,
         totalUnits: totals.totalUnits,
         byCategory: byCategoryRaw,
         topProducts,
