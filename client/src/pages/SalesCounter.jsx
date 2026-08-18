@@ -97,6 +97,10 @@ const SalesCounter = () => {
   const [cart, setCart] = useState(() => restoredDraft?.cart || []);
   const [showCart, setShowCart] = useState(false);
   const [fulfillmentType, setFulfillmentType] = useState(() => restoredDraft?.fulfillmentType || 'in_store');
+  // Walk-in = customer is physically at the counter right now. Online = this
+  // is a website/WhatsApp order being paid for/recorded at the counter on
+  // the customer's behalf. Defaults to walk-in, the normal counter case.
+  const [saleSource, setSaleSource] = useState(() => restoredDraft?.saleSource || 'walkin');
   const [deliveryDetails, setDeliveryDetails] = useState(() => restoredDraft?.deliveryDetails || { mode: 'standard', zoneId: '', saccoOperatorId: '', saccoDestinationTown: '' });
   const [deliveryFeePreview, setDeliveryFeePreview] = useState(0);
   const [paymentMethod, setPaymentMethod] = useState(() => restoredDraft?.paymentMethod || 'cash');
@@ -155,6 +159,7 @@ const SalesCounter = () => {
       sessionStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify({
         cart,
         fulfillmentType,
+        saleSource,
         deliveryDetails,
         paymentMethod,
         amountTendered,
@@ -173,7 +178,7 @@ const SalesCounter = () => {
       // sessionStorage unavailable (private browsing quota, etc.) — draft
       // recovery just won't be available this session, sale flow still works.
     }
-  }, [cart, fulfillmentType, deliveryDetails, paymentMethod, amountTendered, splitCashAmount, equityProofUrl, equityApproved, forwardedText, forwardedTextApproved, customerName, customerPhone, saleNote, deliveryNote, activeHeldSaleId]);
+  }, [cart, fulfillmentType, saleSource, deliveryDetails, paymentMethod, amountTendered, splitCashAmount, equityProofUrl, equityApproved, forwardedText, forwardedTextApproved, customerName, customerPhone, saleNote, deliveryNote, activeHeldSaleId]);
 
   // Reset pagination whenever the filter changes so "Load more" starts fresh.
   useEffect(() => {
@@ -246,6 +251,7 @@ const SalesCounter = () => {
           saleNote,
           deliveryNote,
           fulfillmentType,
+          saleSource,
           deliveryDetails,
           paymentMethod,
           amountTendered,
@@ -286,6 +292,7 @@ const SalesCounter = () => {
       setSaleNote(heldSale.saleNote || '');
       setDeliveryNote(heldSale.deliveryNote || '');
       setFulfillmentType(heldSale.fulfillmentType || 'in_store');
+      setSaleSource(heldSale.saleSource || 'walkin');
       setDeliveryDetails(heldSale.deliveryDetails || { mode: 'standard', zoneId: '', saccoOperatorId: '', saccoDestinationTown: '' });
       setPaymentMethod(heldSale.paymentMethod || 'cash');
       setAmountTendered(heldSale.amountTendered || '');
@@ -416,6 +423,7 @@ const SalesCounter = () => {
     setCart([]);
     setShowCart(false);
     setFulfillmentType('in_store');
+    setSaleSource('walkin');
     setDeliveryDetails({ mode: 'standard', zoneId: '', saccoOperatorId: '', saccoDestinationTown: '' });
     setDeliveryFeePreview(0);
     setPaymentMethod('cash');
@@ -548,6 +556,7 @@ const SalesCounter = () => {
         customer: null,
         customerName: customerName.trim(),
         customerPhone: customerPhone.trim(),
+        saleSource,
         fulfillment_type: fulfillmentType,
         delivery_mode: fulfillmentType === 'delivery' ? deliveryDetails.mode : undefined,
         deliveryZoneId: fulfillmentType === 'delivery' && deliveryDetails.mode === 'bike' ? deliveryDetails.zoneId : undefined,
@@ -727,6 +736,33 @@ const SalesCounter = () => {
 
   const orderPanelContent = (
     <>
+      {/* Walk-in vs Online — is the customer here in person, or is this a
+          website/WhatsApp order being recorded/paid for at the counter? */}
+      <div className="grid grid-cols-2 gap-1.5 border-b border-brown-100 p-3 dark:border-dm-border">
+        <button
+          type="button"
+          onClick={() => setSaleSource('walkin')}
+          className={`flex min-h-[44px] items-center justify-center gap-1.5 rounded-full px-2 text-xs font-semibold transition-colors active:scale-[0.97] ${
+            saleSource === 'walkin'
+              ? 'bg-gold-500 text-white'
+              : 'bg-brown-100 text-brown-700 dark:bg-dm-border dark:text-white/70'
+          }`}
+        >
+          Walk-in
+        </button>
+        <button
+          type="button"
+          onClick={() => setSaleSource('online')}
+          className={`flex min-h-[44px] items-center justify-center gap-1.5 rounded-full px-2 text-xs font-semibold transition-colors active:scale-[0.97] ${
+            saleSource === 'online'
+              ? 'bg-plum-700 text-white'
+              : 'bg-brown-100 text-brown-700 dark:bg-dm-border dark:text-white/70'
+          }`}
+        >
+          Online
+        </button>
+      </div>
+
       {/* Order type */}
       <div className="grid grid-cols-3 gap-1.5 border-b border-brown-100 p-3 dark:border-dm-border">
         {FULFILLMENT_TYPES.map((f) => (

@@ -1020,6 +1020,7 @@ const AllOrdersAdmin = () => {
             paymentMethod: sale.paymentMethod,
             cashier: sale.cashierName,
             isPOSSale: true,
+            saleSource: sale.saleSource || 'walkin',
             source: 'POS'
           }));
 
@@ -1185,12 +1186,14 @@ const AllOrdersAdmin = () => {
     }
   };
 
-  // Walk-in = rung up at the physical counter (a POS Sale record, including
-  // a WhatsApp order transcribed by staff — still someone walking the order
-  // in, not the customer checking out themselves). Online = the customer
-  // placed it themselves through the website.
+  // Walk-in = customer was physically at the counter. Online = a website/
+  // WhatsApp order, whether the customer checked out themselves (a real
+  // Order) or staff recorded/charged it at the counter on their behalf (a
+  // POS Sale explicitly marked saleSource: 'online' by the cashier).
   const getOrderSource = (order) => {
-    if (order.isPOSSale || order.status === 'POS') return 'walkin';
+    if (order.isPOSSale || order.status === 'POS') {
+      return order.saleSource === 'online' ? 'online' : 'walkin';
+    }
     return 'online';
   };
 

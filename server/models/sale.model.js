@@ -54,6 +54,15 @@ const saleSchema = new mongoose.Schema({
     enum: ['in_store', 'pickup', 'delivery'],
     default: 'in_store'
   },
+  // Whether the customer is physically at the counter (walk-in) or this sale
+  // is staff recording/charging a website/WhatsApp order at the counter on
+  // the customer's behalf (online) — distinct from fulfillment_type, which
+  // covers how the item is handed over, not how the order originated.
+  saleSource: {
+    type: String,
+    enum: ['walkin', 'online'],
+    default: 'walkin'
+  },
   // Only meaningful when fulfillment_type === 'delivery'. Snapshots
   // zone/SACCO name+fare (mirroring Order) so the sale stays readable even
   // if the zone/operator is later renamed, re-priced, or deactivated.

@@ -32,6 +32,11 @@ const heldSaleSchema = new mongoose.Schema({
     enum: ['in_store', 'pickup', 'delivery'],
     default: 'in_store'
   },
+  saleSource: {
+    type: String,
+    enum: ['walkin', 'online'],
+    default: 'walkin'
+  },
   deliveryDetails: {
     mode: { type: String, default: 'standard' },
     zoneId: { type: String, default: '' },

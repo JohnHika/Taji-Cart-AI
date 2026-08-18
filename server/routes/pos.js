@@ -290,7 +290,7 @@ router.get('/admin/sales', auth, async (req, res) => {
       .limit(limit)
       .skip((page - 1) * limit);
     if (!includeItems) {
-      query.select('saleNumber saleDate customer customerName customerPhone total paymentMethod cashier cashierName branch isVoided');
+      query.select('saleNumber saleDate customer customerName customerPhone total paymentMethod cashier cashierName branch isVoided saleSource');
     }
     const sales = await query;
     const total = await Sale.countDocuments(filter);
@@ -333,6 +333,7 @@ router.post('/held-sales', auth, Staff, requireStaffPermission('pos.open_counter
       saleNote,
       deliveryNote,
       fulfillmentType,
+      saleSource,
       deliveryDetails,
       paymentMethod,
       amountTendered,
@@ -357,6 +358,7 @@ router.post('/held-sales', auth, Staff, requireStaffPermission('pos.open_counter
       saleNote: saleNote || '',
       deliveryNote: deliveryNote || '',
       fulfillmentType: fulfillmentType || 'in_store',
+      saleSource: saleSource === 'online' ? 'online' : 'walkin',
       deliveryDetails: deliveryDetails || {},
       paymentMethod: paymentMethod || 'cash',
       amountTendered: amountTendered || '',
@@ -417,6 +419,7 @@ router.post('/sale', auth, Staff, requireStaffPermission('pos.open_counter'), as
       payments,
       note,
       fulfillment_type,
+      saleSource,
       delivery_mode,
       deliveryZoneId,
       saccoOperatorId,
@@ -627,6 +630,7 @@ router.post('/sale', auth, Staff, requireStaffPermission('pos.open_counter'), as
       customer: customer || null,
       customerName: customerName || '',
       customerPhone: customerPhone || '',
+      saleSource: saleSource === 'online' ? 'online' : 'walkin',
       fulfillment_type: normalizedFulfillmentType,
       fulfillmentStatus,
       pickupCode: normalizedFulfillmentType === 'pickup' ? generatePickupCode() : '',
