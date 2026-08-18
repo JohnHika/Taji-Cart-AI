@@ -775,19 +775,27 @@ router.get('/admin/sale/:id', auth, async (req, res) => {
   }
 });
 
+// Explicit UTC (the trailing Z) so day boundaries match what the client
+// sends (see loadRecentSales in POSDashboard.jsx, which builds
+// `${date}T00:00:00.000Z` / `...T23:59:59.999Z`) regardless of the server
+// process's local timezone. Without the Z, `new Date(dateStr)` parses in
+// the server's local time, which can silently disagree with the client
+// about which sales fall on a given day.
+const dateStringToDayBounds = (dateStr) => {
+  const startOfDay = new Date(`${dateStr}T00:00:00.000Z`);
+  const endOfDay = new Date(`${dateStr}T23:59:59.999Z`);
+  return { startOfDay, endOfDay };
+};
+
 // Get daily sales summary
 router.get('/summary/daily', auth, Staff, requireStaffPermission('pos.view_analytics'), async (req, res) => {
   try {
     const { date } = req.query;
-    const targetDate = date ? new Date(date) : new Date();
-    
-    // Set to start and end of day
-    const startOfDay = new Date(targetDate);
-    startOfDay.setHours(0, 0, 0, 0);
-    
-    const endOfDay = new Date(targetDate);
-    endOfDay.setHours(23, 59, 59, 999);
-    
+    // Client always sends a YYYY-MM-DD date string; fall back to "today in
+    // UTC" (matching the same convention) when the param is omitted.
+    const dateStr = date || new Date().toISOString().slice(0, 10);
+    const { startOfDay, endOfDay } = dateStringToDayBounds(dateStr);
+
     let filter = {
       saleDate: {
         $gte: startOfDay,
@@ -921,7 +929,7 @@ router.get('/summary/daily', auth, Staff, requireStaffPermission('pos.view_analy
         summary,
         topProducts,
         hourlyTrend,
-        date: targetDate.toISOString().split('T')[0]
+        date: dateStr
       }
     });
   } catch (error) {
@@ -1194,12 +1202,6 @@ router.put('/sale/:id/cancel-fulfillment', auth, Staff, requireStaffPermission('
     res.status(500).json({ success: false, message: error.message });
   }
 });
-
-const dateStringToDayBounds = (dateStr) => {
-  const startOfDay = new Date(`${dateStr}T00:00:00.000`);
-  const endOfDay = new Date(`${dateStr}T23:59:59.999`);
-  return { startOfDay, endOfDay };
-};
 
 // Get sales analytics
 router.get('/analytics', auth, Staff, requireStaffPermission('pos.view_analytics'), async (req, res) => {

@@ -88,6 +88,15 @@ const getSalePaymentProofs = (sale) => {
 
 const getSaleItemTotal = (item) => Number(item?.total ?? Number(item?.price || 0) * Number(item?.quantity || 0));
 
+// paymentMethod is required at the schema level, but legacy/partial records
+// shouldn't be able to white-screen this page — falls back to 'N/A' instead
+// of assuming a non-empty string.
+const getSalePaymentMethodLabel = (sale) => {
+  const method = sale?.paymentMethod;
+  if (!method) return 'N/A';
+  return method.charAt(0).toUpperCase() + method.slice(1);
+};
+
 const downloadSaleReceipt = (sale) => {
   const doc = new jsPDF({ unit: 'mm', format: 'a4' });
   const pageWidth = doc.internal.pageSize.getWidth();
@@ -348,6 +357,7 @@ const POSDashboard = () => {
       }
     } catch (error) {
       console.error('Error loading daily summary:', error);
+      toast.error('Could not load the daily sales summary. Totals below may be out of date.');
     }
   };
 
@@ -362,6 +372,7 @@ const POSDashboard = () => {
       }
     } catch (error) {
       console.error('Error loading end-of-day status:', error);
+      toast.error('Could not load end-of-day status.');
     }
   };
 
@@ -428,6 +439,7 @@ const POSDashboard = () => {
         setAnalyticsAccessDenied(true);
       } else {
         console.error('Error loading analytics:', error);
+        toast.error('Could not load sales analytics.');
       }
     }
   };
@@ -449,28 +461,45 @@ const POSDashboard = () => {
 
       if (response.data.success) {
         setRecentSales(response.data.data);
+        // Server caps this request at 500 sales — flag it rather than
+        // silently truncating the list with no indication some are missing.
+        if (response.data.data.length >= 500) {
+          toast('Showing the first 500 sales for this day — narrow the scope to see more.', { icon: 'ℹ️' });
+        }
       }
     } catch (error) {
       console.error('Error loading recent sales:', error);
+      toast.error('Could not load recent sales.');
     }
   };
 
-  const analyticsTotalSales = (analytics?.salesOverTime || []).reduce(
-    (sum, entry) => sum + (entry.totalSales || 0),
-    0
-  );
-  const analyticsTransactionCount = (analytics?.salesOverTime || []).reduce(
-    (sum, entry) => sum + (entry.transactionCount || 0),
-    0
-  );
-  const analyticsAverageTicket = analyticsTransactionCount > 0
-    ? analyticsTotalSales / analyticsTransactionCount
-    : 0;
-  const maxTrendValue = Math.max(1, ...(analytics?.salesOverTime || []).map((entry) => entry.totalSales || 0));
-  const maxPaymentValue = Math.max(1, ...(analytics?.paymentBreakdown || []).map((entry) => entry.total || 0));
-  const busiestHours = [...(analytics?.hourlySales || [])]
-    .sort((a, b) => (b.totalSales || 0) - (a.totalSales || 0))
-    .slice(0, 4);
+  const {
+    analyticsTotalSales,
+    analyticsTransactionCount,
+    analyticsAverageTicket,
+    maxTrendValue,
+    maxPaymentValue,
+    busiestHours
+  } = useMemo(() => {
+    const totalSales = (analytics?.salesOverTime || []).reduce(
+      (sum, entry) => sum + (entry.totalSales || 0),
+      0
+    );
+    const transactionCount = (analytics?.salesOverTime || []).reduce(
+      (sum, entry) => sum + (entry.transactionCount || 0),
+      0
+    );
+    return {
+      analyticsTotalSales: totalSales,
+      analyticsTransactionCount: transactionCount,
+      analyticsAverageTicket: transactionCount > 0 ? totalSales / transactionCount : 0,
+      maxTrendValue: Math.max(1, ...(analytics?.salesOverTime || []).map((entry) => entry.totalSales || 0)),
+      maxPaymentValue: Math.max(1, ...(analytics?.paymentBreakdown || []).map((entry) => entry.total || 0)),
+      busiestHours: [...(analytics?.hourlySales || [])]
+        .sort((a, b) => (b.totalSales || 0) - (a.totalSales || 0))
+        .slice(0, 4)
+    };
+  }, [analytics]);
   const analyticsPeriodLabel = {
     today: 'today',
     '24h': 'last 24 hours',
@@ -1124,7 +1153,7 @@ const POSDashboard = () => {
                     sale.paymentMethod === 'equity' ? 'bg-gold-100 text-gold-600 dark:bg-gold-900/20 dark:text-gold-300' :
                     'bg-blush-100 text-blush-500 dark:bg-blush-500/10 dark:text-blush-300'
                   }`}>
-                    {sale.paymentMethod.charAt(0).toUpperCase() + sale.paymentMethod.slice(1)}
+                    {getSalePaymentMethodLabel(sale)}
                   </span>
 
                   <button
@@ -1189,7 +1218,7 @@ const POSDashboard = () => {
                       sale.paymentMethod === 'equity' ? 'bg-gold-100 text-gold-600 dark:bg-gold-900/20 dark:text-gold-300' :
                       'bg-blush-100 text-blush-500 dark:bg-blush-500/10 dark:text-blush-300'
                     }`}>
-                      {sale.paymentMethod.charAt(0).toUpperCase() + sale.paymentMethod.slice(1)}
+                      {getSalePaymentMethodLabel(sale)}
                     </span>
 
                     <button
@@ -1272,11 +1301,11 @@ const POSDashboard = () => {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                          sale.paymentMethod === 'cash' ? 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400' :
-                          sale.paymentMethod === 'equity' ? 'bg-gold-100 text-gold-800 dark:bg-gold-900/25 dark:text-gold-300' :
-                          'bg-purple-100 text-purple-800 dark:bg-purple-900/20 dark:text-purple-400'
+                          sale.paymentMethod === 'cash' ? 'bg-plum-100 text-plum-700 dark:bg-plum-900/30 dark:text-plum-200' :
+                          sale.paymentMethod === 'equity' ? 'bg-gold-100 text-gold-600 dark:bg-gold-900/20 dark:text-gold-300' :
+                          'bg-blush-100 text-blush-500 dark:bg-blush-500/10 dark:text-blush-300'
                         }`}>
-                          {sale.paymentMethod.charAt(0).toUpperCase() + sale.paymentMethod.slice(1)}
+                          {getSalePaymentMethodLabel(sale)}
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-charcoal dark:text-white">
@@ -1512,8 +1541,25 @@ const POSDashboard = () => {
                             src={proof.imageUrl}
                             alt="Equity payment confirmation"
                             className="mt-2 max-h-56 w-full rounded-lg border border-brown-100 bg-white object-contain dark:border-dm-border"
+                            onError={(e) => {
+                              e.currentTarget.style.display = 'none';
+                              const fallback = e.currentTarget.nextElementSibling;
+                              if (fallback) {
+                                fallback.classList.remove('hidden');
+                                fallback.classList.add('flex');
+                              }
+                            }}
                           />
-                        ) : (
+                        ) : null}
+                        {proof.type === 'equity' && (
+                          <div className="hidden mt-2 flex-col items-center gap-1.5 rounded-lg border border-dashed border-brown-200 bg-brown-50 p-4 text-center text-xs text-brown-500 dark:border-dm-border dark:bg-dm-card-2 dark:text-white/50">
+                            <span>Photo could not be loaded.</span>
+                            <a href={proof.imageUrl} target="_blank" rel="noreferrer" className="font-semibold text-plum-700 underline dark:text-plum-300">
+                              Open original link
+                            </a>
+                          </div>
+                        )}
+                        {proof.type === 'text_forwarded' && (
                           <p className="mt-2 whitespace-pre-wrap rounded-lg bg-brown-50 p-3 text-sm text-charcoal dark:bg-dm-card-2 dark:text-white/80">
                             {proof.text}
                           </p>
