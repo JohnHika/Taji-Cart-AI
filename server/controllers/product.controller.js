@@ -131,13 +131,19 @@ export const createProductController = async(request,response)=>{
     }
 }
 
+// Consumers of this endpoint (Sales Counter, Staff POS, WhatsApp order form,
+// Returns/Exchanges, Product Admin) only ever read these fields — excluding
+// more_details/ratings keeps the payload light for the Sales Counter, which
+// loads the full catalog on every shift and can't afford a slow first paint.
+const POS_PRODUCT_PROJECTION =
+  'name handle sku barcode qrCode variants image imageFilename category subCategory unit price discount stock description publish averageRating createdAt updatedAt';
+
 export const getProductController = async (req, res) => {
   try {
-    console.log("Product fetch request received:", req.body);
+    const products = await ProductModel.find(await getCustomerProductFilter())
+      .select(POS_PRODUCT_PROJECTION)
+      .lean();
 
-    const products = await ProductModel.find(await getCustomerProductFilter());
-    
-    console.log(`Found ${products.length} products`);
     res.status(200).json({ success: true, data: products });
   } catch (error) {
     console.error("Product fetch error:", error);

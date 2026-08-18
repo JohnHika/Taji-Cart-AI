@@ -24,6 +24,11 @@ const router = express.Router();
 
 const escapeRegex = (value = '') => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
+// Case-insensitive collation matching the ci indexes on barcode/qrCode/sku
+// (product.model.js) — a query needs this passed explicitly for Mongo to
+// use those indexes instead of falling back to a collection scan.
+const CASE_INSENSITIVE_COLLATION = { locale: 'en', strength: 2 };
+
 router.get('/products/lookup', auth, Staff, requireStaffPermission('pos.open_counter'), async (req, res) => {
   try {
     const rawCode = String(req.query.code || '').trim();
@@ -32,13 +37,15 @@ router.get('/products/lookup', auth, Staff, requireStaffPermission('pos.open_cou
       return res.status(400).json({ success: false, message: 'Barcode, QR code, or SKU is required' });
     }
 
-    const exactCodeMatch = await Product.findOne({
-      $or: [
-        { barcode: { $regex: `^${escapeRegex(rawCode)}$`, $options: 'i' } },
-        { qrCode: { $regex: `^${escapeRegex(rawCode)}$`, $options: 'i' } },
-        { sku: { $regex: `^${escapeRegex(rawCode)}$`, $options: 'i' } }
-      ]
-    });
+    // Three exact-match lookups (one per scan-code field), each a direct
+    // index seek via its own case-insensitive index — run in parallel so a
+    // scanned item resolves in one index hit instead of a collection scan.
+    const [barcodeMatch, qrMatch, skuMatch] = await Promise.all([
+      Product.findOne({ barcode: rawCode }).collation(CASE_INSENSITIVE_COLLATION),
+      Product.findOne({ qrCode: rawCode }).collation(CASE_INSENSITIVE_COLLATION),
+      Product.findOne({ sku: rawCode }).collation(CASE_INSENSITIVE_COLLATION),
+    ]);
+    const exactCodeMatch = barcodeMatch || qrMatch || skuMatch;
 
     if (exactCodeMatch) {
       return res.json({ success: true, data: exactCodeMatch });
