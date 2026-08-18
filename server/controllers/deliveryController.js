@@ -1,11 +1,9 @@
 import mongoose from 'mongoose';
-import sendEmail from '../config/sendEmail.js';
 import DeliveryPersonnelModel from '../models/deliverypersonnel.model.js';
 import NotificationModel from '../models/notification.model.js';
 import { default as Order, default as OrderModel } from '../models/order.model.js';
 import User from '../models/user.model.js';
 import { emitNewDeliveryAssigned, emitOrderStatusUpdated, getIO } from '../socket/socket.js';
-import { nawiriBrand } from '../utils/brand.js';
 import { isBikeDeliveryMode, isFootDeliveryMode } from '../utils/cbdDelivery.js';
 import { sendCsv } from '../utils/csv.js';
 
@@ -24,7 +22,7 @@ const formatDeliveryModeForDriver = (order) => {
   };
 };
 import { buildRiderCallMessage, notifyCustomerRiderWillCall } from '../utils/deliveryRiderCall.js';
-import { renderOrderNoticeEmail } from '../utils/emailTemplates.js';
+import { notifyCustomerOrderDispatched } from '../utils/orderDispatchNotify.js';
 import { getOrderIdentifierQuery } from '../utils/orderIdentifier.js';
 
 const DELIVERY_DRIVER_CAPACITY = 3;
@@ -260,27 +258,6 @@ const formatStaffDeliveryOrder = (order) => ({
     email: order.deliveryPersonnel.userId?.email || ''
   } : null
 });
-
-const sendDispatchUpdateEmail = async (order, user) => {
-  if (!user?.email) {
-    return;
-  }
-
-  await sendEmail({
-    sendTo: user.email,
-    subject: `Order dispatched - ${nawiriBrand.shortName}`,
-    html: renderOrderNoticeEmail({
-      name: user.name,
-      title: 'Your order has been dispatched',
-      intro: 'Your order is now in our delivery workflow and will be assigned to a rider shortly.',
-      orderId: order.orderId || order._id?.toString(),
-      total: `KES ${Number(order.totalAmt || order.total || 0).toLocaleString()}`,
-      fulfillmentType: 'Delivery',
-      ctaLabel: 'Track your order',
-      ctaUrl: nawiriBrand.websiteUrl,
-    })
-  });
-};
 
 const buildEstimatedDeliveryTime = () => {
   const estimatedDelivery = new Date();
@@ -1771,13 +1748,20 @@ export const dispatchOrder = async (req, res) => {
       userId: order.userId
     }, 'dispatch notification');
 
-    if (order.userId) {
-      try {
-        const customer = await User.findById(order.userId).select('name email');
-        await sendDispatchUpdateEmail(order, customer);
-      } catch (emailError) {
-        console.log('Could not send dispatch email:', emailError.message);
-      }
+    try {
+      const customer = order.userId
+        ? await User.findById(order.userId).select('name email mobile phone')
+        : null;
+      await notifyCustomerOrderDispatched({
+        orderNumber: order.orderId || order._id?.toString(),
+        total: `KES ${Number(order.totalAmt || order.total || 0).toLocaleString()}`,
+        fulfillmentType: 'delivery',
+        customerName: customer?.name || order.guestShipping?.name,
+        customerEmail: customer?.email || order.guestEmail,
+        customerPhone: customer?.mobile || customer?.phone || order.guestPhone || order.guestShipping?.phone,
+      });
+    } catch (dispatchNoticeError) {
+      console.log('Could not send dispatch notice:', dispatchNoticeError.message);
     }
 
     emitOrderStatusUpdated(order);

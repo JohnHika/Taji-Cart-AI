@@ -18,6 +18,7 @@ import SaccoOperatorModel from '../models/saccooperator.model.js';
 import { resolveBikeDeliveryZone, resolveDeliveryCharge } from '../utils/deliveryFee.js';
 import { getNextSequence } from '../models/counter.model.js';
 import generatePickupCode from '../utils/generatePickupCode.js';
+import { notifyCustomerOrderDispatched } from '../utils/orderDispatchNotify.js';
 
 const router = express.Router();
 
@@ -1110,6 +1111,19 @@ router.put('/sale/:id/dispatch', auth, Staff, requireStaffPermission('pos.manage
     sale.fulfillmentStatus = 'dispatched';
     sale.auditTrail.push({ action: 'dispatched', by: req.user._id, byName: req.user.name });
     await sale.save();
+
+    try {
+      await notifyCustomerOrderDispatched({
+        orderNumber: sale.saleNumber,
+        total: `KES ${Number(sale.total || 0).toLocaleString()}`,
+        fulfillmentType: 'delivery',
+        deliveryScheduledDate: sale.deliveryScheduledDate,
+        customerName: sale.customerName,
+        customerPhone: sale.customerPhone,
+      });
+    } catch (dispatchNoticeError) {
+      console.error('Could not send dispatch notice for sale:', dispatchNoticeError.message);
+    }
 
     res.json({ success: true, data: sale });
   } catch (error) {
