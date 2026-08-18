@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
 import { Helmet } from 'react-helmet-async';
 import { FaUsers } from 'react-icons/fa';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import SummaryApi from '../common/SummaryApi';
 import CategoryBannerGrid from '../components/CategoryBannerGrid';
 import CommunityCampaignProgress from '../components/CommunityCampaignProgress';
@@ -24,6 +24,7 @@ const emptyHomeCatalog = {
 
 const Home = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [featuredCampaign, setFeaturedCampaign] = useState(null);
   const [loadingCampaign, setLoadingCampaign] = useState(true);
   const [homeCatalog, setHomeCatalog] = useState(emptyHomeCatalog);
@@ -40,6 +41,19 @@ const Home = () => {
     fetchHomeCatalog();
     fetchFeaturedCampaign();
   }, []);
+
+  // React Router doesn't auto-scroll to a #hash on navigation the way a
+  // traditional multi-page site does — needed so links like nav's "Best
+  // Sellers" (which points at /#best-sellers) actually land on that shelf
+  // instead of just the top of the page. Waits for the catalog to finish
+  // loading so the target section actually exists in the DOM first.
+  useEffect(() => {
+    if (loadingCatalog || !location.hash) return;
+    const target = document.querySelector(location.hash);
+    if (target) {
+      target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }, [loadingCatalog, location.hash]);
 
   const hasHomeContent =
     homeCatalog.categoryBanners.length > 0 ||
@@ -284,6 +298,7 @@ const Home = () => {
 
       <div className="container mx-auto px-3 py-8 sm:px-4 sm:py-10">
         <HomeProductShelf
+          sectionId="best-sellers"
           title="Best sellers"
           subtitle="Customer favourites worth adding to your collection."
           products={homeCatalog.bestSellers}

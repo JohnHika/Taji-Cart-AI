@@ -13,6 +13,7 @@ const HomeProductShelf = ({
   viewAllTo = '',
   viewAllState,
   viewAllLabel = 'See All',
+  sectionId,
 }) => {
   const containerRef = useRef(null);
 
@@ -26,7 +27,7 @@ const HomeProductShelf = ({
   };
 
   return (
-    <section className="mb-8 sm:mb-12">
+    <section id={sectionId} className="mb-8 sm:mb-12 scroll-mt-24">
       <div className="mb-4 flex items-end justify-between gap-3 sm:mb-5">
         <div className="min-w-0">
           <h2 className="text-xl font-bold text-charcoal dark:text-white sm:text-2xl">{title}</h2>
@@ -108,6 +109,7 @@ HomeProductShelf.propTypes = {
   viewAllTo: PropTypes.string,
   viewAllState: PropTypes.object,
   viewAllLabel: PropTypes.string,
+  sectionId: PropTypes.string,
 };
 
 export default HomeProductShelf;
