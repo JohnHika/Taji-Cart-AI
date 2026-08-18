@@ -348,6 +348,8 @@ const SummaryApi = {
         url: `${baseURL}/api/pos/analytics`,
         method: 'GET'
     },
+    // Base URL — callers append `/${saleId}/void` (real route is
+    // PUT /api/pos/sale/:id/void)
     voidSale: {
         url: `${baseURL}/api/pos/sale`,
         method: 'PUT'
@@ -376,6 +378,10 @@ const SummaryApi = {
     // Admin
     getUsers: {
         url: `${baseURL}/api/user/admin/users`,
+        method: 'GET'
+    },
+    getStockValue: {
+        url: `${baseURL}/api/product/admin/stock-value`,
         method: 'GET'
     },
     // Cart aliases (some files use addToCart / getCartItems)

@@ -2,11 +2,13 @@ import React, { useEffect, useMemo, useState } from 'react';
 import toast from 'react-hot-toast';
 import { jsPDF } from 'jspdf';
 import {
+  FaBan,
   FaCalendarAlt,
   FaCamera,
   FaChartBar,
   FaCheckCircle,
   FaCreditCard,
+  FaExclamationTriangle,
   FaFileInvoiceDollar,
   FaMoneyBillWave,
   FaDownload,
@@ -295,6 +297,9 @@ const POSDashboard = () => {
   const [eodLoading, setEodLoading] = useState(false);
   const [showResetEodModal, setShowResetEodModal] = useState(false);
   const [resetReason, setResetReason] = useState('');
+  const [showVoidModal, setShowVoidModal] = useState(false);
+  const [voidReason, setVoidReason] = useState('');
+  const [voidLoading, setVoidLoading] = useState(false);
   const [recentSalesView, setRecentSalesView] = useState('list'); // 'list' | 'grid'
   const [recentSalesPage, setRecentSalesPage] = useState(1);
 
@@ -420,6 +425,37 @@ const POSDashboard = () => {
       AxiosToastError(error);
     } finally {
       setEodLoading(false);
+    }
+  };
+
+  // Admin-only — reverses a completed sale: marks it voided, restores the
+  // stock it took, and records who/why in the sale's audit trail (server-side,
+  // see PUT /api/pos/sale/:id/void). Refreshes the Recent Sales list so the
+  // voided badge shows there too, not just in the open receipt drawer.
+  const voidSale = async () => {
+    if (!selectedSale) return;
+    if (!voidReason.trim()) {
+      toast.error('Enter a reason for voiding this sale.');
+      return;
+    }
+    try {
+      setVoidLoading(true);
+      const res = await Axios({
+        url: `/api/pos/sale/${selectedSale._id}/void`,
+        method: 'PUT',
+        data: { reason: voidReason.trim() }
+      });
+      if (res.data.success) {
+        setSelectedSale(res.data.data);
+        toast.success(`Sale ${res.data.data.saleNumber} voided.`);
+        setShowVoidModal(false);
+        setVoidReason('');
+        loadRecentSales();
+      }
+    } catch (error) {
+      AxiosToastError(error);
+    } finally {
+      setVoidLoading(false);
     }
   };
 
@@ -1122,6 +1158,11 @@ const POSDashboard = () => {
                       <div className="text-base font-semibold text-charcoal dark:text-white">
                         #{sale.saleNumber}
                       </div>
+                      {sale.isVoided && (
+                        <span className="inline-flex items-center rounded-full bg-red-100 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-red-600 dark:bg-red-900/30 dark:text-red-300">
+                          Voided
+                        </span>
+                      )}
                     </div>
                     <div className="text-sm text-brown-400 dark:text-white/40">
                       {new Date(sale.saleDate).toLocaleDateString()}
@@ -1187,6 +1228,11 @@ const POSDashboard = () => {
                         <div className="text-base font-semibold text-charcoal dark:text-white">
                           #{sale.saleNumber}
                         </div>
+                        {sale.isVoided && (
+                          <span className="inline-flex items-center rounded-full bg-red-100 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-red-600 dark:bg-red-900/30 dark:text-red-300">
+                            Voided
+                          </span>
+                        )}
                       </div>
                       <div className="text-sm text-brown-400 dark:text-white/40">
                         {new Date(sale.saleDate).toLocaleDateString()}
@@ -1269,7 +1315,14 @@ const POSDashboard = () => {
                   {paginatedRecentSales.map(sale => (
                     <tr key={sale._id} className="hover:bg-ivory dark:hover:bg-dm-card-2">
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-charcoal dark:text-white">
-                        #{sale.saleNumber}
+                        <div className="flex items-center gap-1.5">
+                          #{sale.saleNumber}
+                          {sale.isVoided && (
+                            <span className="inline-flex items-center rounded-full bg-red-100 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-red-600 dark:bg-red-900/30 dark:text-red-300">
+                              Voided
+                            </span>
+                          )}
+                        </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span
@@ -1392,6 +1445,57 @@ const POSDashboard = () => {
         </div>
       )}
 
+      {/* Void Sale Modal (admin only) */}
+      {showVoidModal && selectedSale && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-charcoal/70 p-4 backdrop-blur-sm"
+          role="presentation"
+          onClick={() => setShowVoidModal(false)}
+        >
+          <div
+            className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl dark:bg-dm-card"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="void-sale-title"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <h4 id="void-sale-title" className="text-lg font-bold text-charcoal dark:text-white">
+              Void sale #{selectedSale.saleNumber}?
+            </h4>
+            <p className="mt-2 text-sm text-brown-500 dark:text-white/50">
+              This restores the stock this sale took and cannot be undone. The sale stays on record, marked voided, for audit purposes.
+            </p>
+            <label className="mt-4 block text-sm font-medium text-charcoal dark:text-white">
+              Reason for voiding
+              <textarea
+                value={voidReason}
+                onChange={(e) => setVoidReason(e.target.value)}
+                rows={3}
+                placeholder="e.g. Duplicate entry, customer refund, rung up in error"
+                className="mt-1 w-full resize-none rounded-lg border border-brown-200 bg-white px-3 py-2 text-sm dark:border-dm-border dark:bg-dm-card-2"
+              />
+            </label>
+            <div className="mt-5 flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => { setShowVoidModal(false); setVoidReason(''); }}
+                className="rounded-lg border border-brown-200 px-4 py-2 text-sm font-semibold text-brown-700 hover:bg-brown-50 dark:border-dm-border dark:text-white/70 dark:hover:bg-dm-card-2"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={voidSale}
+                disabled={voidLoading}
+                className="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-60"
+              >
+                {voidLoading ? 'Voiding…' : 'Void sale'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Receipt Modal */}
       {showReceiptModal && selectedSale && (
         <div
@@ -1414,7 +1518,14 @@ const POSDashboard = () => {
                 <div>
                   <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-plum-100">Nawiri Hair</p>
                   <h4 id="receipt-title" className="mt-1 text-xl font-bold tracking-tight">Sales receipt</h4>
-                  <p className="mt-1 text-xs text-plum-100">#{selectedSale.saleNumber || 'N/A'}</p>
+                  <div className="mt-1 flex items-center gap-2">
+                    <p className="text-xs text-plum-100">#{selectedSale.saleNumber || 'N/A'}</p>
+                    {selectedSale.isVoided && (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-red-500/90 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white">
+                        <FaBan size={9} /> Voided
+                      </span>
+                    )}
+                  </div>
                 </div>
               </div>
               <button
@@ -1428,6 +1539,20 @@ const POSDashboard = () => {
             </div>
 
             <div className="flex-1 overflow-y-auto p-5 sm:p-7">
+              {selectedSale.isVoided && (
+                <div className="mb-4 flex items-start gap-2.5 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700 dark:border-red-900/40 dark:bg-red-950/20 dark:text-red-300">
+                  <FaExclamationTriangle className="mt-0.5 shrink-0" size={14} />
+                  <div>
+                    <p className="font-semibold">This sale has been voided.</p>
+                    {selectedSale.voidReason && <p className="mt-0.5">Reason: {selectedSale.voidReason}</p>}
+                    {selectedSale.voidedAt && (
+                      <p className="mt-0.5 text-xs opacity-80">
+                        {new Date(selectedSale.voidedAt).toLocaleString('en-KE')}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )}
               <div className="grid gap-3 rounded-xl border border-brown-100 bg-ivory p-4 dark:border-dm-border dark:bg-dm-card-2 sm:grid-cols-2">
                 <div className="flex items-start gap-3">
                   <FaCalendarAlt className="mt-0.5 text-gold-600" />
@@ -1581,29 +1706,40 @@ const POSDashboard = () => {
               )}
             </div>
 
-            <div className="flex flex-col-reverse gap-3 border-t border-brown-100 bg-ivory px-5 py-4 dark:border-dm-border dark:bg-dm-card-2 sm:flex-row sm:justify-end sm:px-7">
-              <button
-                type="button"
-                onClick={() => setShowReceiptModal(false)}
-                className="rounded-xl border border-brown-200 px-4 py-2.5 text-sm font-semibold text-charcoal transition-colors hover:bg-white dark:border-dm-border dark:text-white dark:hover:bg-dm-card"
-              >
-                Close
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  try {
-                    downloadSaleReceipt(selectedSale);
-                    toast.success('Receipt downloaded as PDF.');
-                  } catch (error) {
-                    console.error('Receipt download failed:', error);
-                    toast.error('Unable to download receipt.');
-                  }
-                }}
-                className="inline-flex items-center justify-center gap-2 rounded-xl bg-plum-700 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-plum-800"
-              >
-                <FaDownload /> Download PDF
-              </button>
+            <div className="flex flex-col-reverse gap-3 border-t border-brown-100 bg-ivory px-5 py-4 dark:border-dm-border dark:bg-dm-card-2 sm:flex-row sm:items-center sm:justify-between sm:px-7">
+              {isAdmin(user) && !selectedSale.isVoided && (
+                <button
+                  type="button"
+                  onClick={() => setShowVoidModal(true)}
+                  className="inline-flex items-center justify-center gap-2 rounded-xl border border-red-200 px-4 py-2.5 text-sm font-semibold text-red-600 transition-colors hover:bg-red-50 dark:border-red-900/40 dark:text-red-400 dark:hover:bg-red-950/20"
+                >
+                  <FaBan /> Void sale
+                </button>
+              )}
+              <div className="flex flex-col-reverse gap-3 sm:flex-row">
+                <button
+                  type="button"
+                  onClick={() => setShowReceiptModal(false)}
+                  className="rounded-xl border border-brown-200 px-4 py-2.5 text-sm font-semibold text-charcoal transition-colors hover:bg-white dark:border-dm-border dark:text-white dark:hover:bg-dm-card"
+                >
+                  Close
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    try {
+                      downloadSaleReceipt(selectedSale);
+                      toast.success('Receipt downloaded as PDF.');
+                    } catch (error) {
+                      console.error('Receipt download failed:', error);
+                      toast.error('Unable to download receipt.');
+                    }
+                  }}
+                  className="inline-flex items-center justify-center gap-2 rounded-xl bg-plum-700 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-plum-800"
+                >
+                  <FaDownload /> Download PDF
+                </button>
+              </div>
             </div>
           </div>
         </div>

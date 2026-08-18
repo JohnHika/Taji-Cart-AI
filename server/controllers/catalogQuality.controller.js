@@ -96,3 +96,98 @@ export const getAllProductsForAdminController = async (_request, response) => {
     return response.status(500).json({ success: false, message: 'Unable to load products' });
   }
 };
+
+// Total value of current sellable inventory — cost value (what it took to
+// acquire) and retail value (what it would sell for at current prices), plus
+// a category breakdown and the highest-value products. Only counts published
+// products (matches the { publish: 1, stock: 1 } index on Product), since an
+// unpublished product isn't part of "what's on the shelf" for this purpose.
+export const getStockValueController = async (_request, response) => {
+  try {
+    const [totalsResult, byCategoryRaw, topProducts] = await Promise.all([
+      ProductModel.aggregate([
+        { $match: { publish: true } },
+        {
+          $group: {
+            _id: null,
+            totalCostValue: { $sum: { $multiply: ['$costPrice', '$stock'] } },
+            totalRetailValue: { $sum: { $multiply: ['$price', '$stock'] } },
+            productCount: { $sum: 1 },
+            totalUnits: { $sum: '$stock' },
+          },
+        },
+      ]),
+      ProductModel.aggregate([
+        { $match: { publish: true } },
+        // A product can belong to multiple categories (category is an array),
+        // so $unwind means a multi-category product's value is counted once
+        // per category it's in — the category breakdown intentionally does
+        // NOT sum back up to the overall total for that reason.
+        { $unwind: '$category' },
+        {
+          $group: {
+            _id: '$category',
+            costValue: { $sum: { $multiply: ['$costPrice', '$stock'] } },
+            retailValue: { $sum: { $multiply: ['$price', '$stock'] } },
+            productCount: { $sum: 1 },
+          },
+        },
+        {
+          $lookup: {
+            from: 'categories',
+            localField: '_id',
+            foreignField: '_id',
+            as: 'categoryDoc',
+          },
+        },
+        {
+          $project: {
+            _id: 1,
+            name: { $ifNull: [{ $first: '$categoryDoc.name' }, 'Uncategorized'] },
+            costValue: 1,
+            retailValue: 1,
+            productCount: 1,
+          },
+        },
+        { $sort: { retailValue: -1 } },
+      ]),
+      ProductModel.aggregate([
+        { $match: { publish: true } },
+        {
+          $project: {
+            name: 1,
+            sku: 1,
+            stock: 1,
+            costValue: { $multiply: ['$costPrice', '$stock'] },
+            retailValue: { $multiply: ['$price', '$stock'] },
+          },
+        },
+        { $sort: { costValue: -1 } },
+        { $limit: 10 },
+      ]),
+    ]);
+
+    const totals = totalsResult[0] || {
+      totalCostValue: 0,
+      totalRetailValue: 0,
+      productCount: 0,
+      totalUnits: 0,
+    };
+
+    return response.json({
+      success: true,
+      data: {
+        totalCostValue: totals.totalCostValue,
+        totalRetailValue: totals.totalRetailValue,
+        potentialProfit: totals.totalRetailValue - totals.totalCostValue,
+        productCount: totals.productCount,
+        totalUnits: totals.totalUnits,
+        byCategory: byCategoryRaw,
+        topProducts,
+      },
+    });
+  } catch (error) {
+    console.error('Failed to compute stock value:', error);
+    return response.status(500).json({ success: false, message: 'Unable to compute stock value' });
+  }
+};

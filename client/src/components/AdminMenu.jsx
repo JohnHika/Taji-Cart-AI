@@ -28,7 +28,8 @@ import {
   FaUpload,
   FaUser,
   FaUsers,
-  FaUserTie
+  FaUserTie,
+  FaWarehouse
 } from 'react-icons/fa';
 import { HiOutlineExternalLink } from 'react-icons/hi';
 import { useDispatch, useSelector } from 'react-redux';
@@ -169,6 +170,7 @@ const AdminMenu = ({ close, forLightPanel = false }) => {
       <nav className="mt-2 flex min-w-0 flex-col gap-0.5 overflow-x-hidden text-sm">
         <p className={sectionClass}>Dashboard</p>
         <MenuLink to="/dashboard" icon={FaTachometerAlt} label="Dashboard overview" exact />
+        <MenuLink to="/dashboard/admin-control-center" icon={FaTachometerAlt} label="Admin control center" />
         <MenuLink to="/dashboard/profile" icon={FaUser} label="My profile" />
 
         <p className={sectionClass}>User management</p>
@@ -188,6 +190,7 @@ const AdminMenu = ({ close, forLightPanel = false }) => {
         <MenuLink to="/dashboard/upload-product" icon={FaUpload} label="Upload product" />
         <MenuLink to="/dashboard/product" icon={FaBoxOpen} label="Product" />
         <MenuLink to="/dashboard/catalog-quality" icon={FaEyeSlash} label="Catalog quality" />
+        <MenuLink to="/dashboard/stock-value" icon={FaWarehouse} label="Stock value" />
 
         <p className={sectionClass}>Marketing & community</p>
         <MenuLink to="/dashboard/loyalty-program-admin" icon={FaCrown} label="Loyalty program" />

@@ -1,6 +1,6 @@
 import { Router } from 'express'
 import { createProductController, deleteProductDetails, getHomeCatalogController, getProductByCategory, getProductByCategoryAndSubCategory, getProductController, getProductDetailsController, getProductDetailsForAdminController, getProductByIdController, rateProduct, searchProduct, updateProductDetails } from '../controllers/product.controller.js'
-import { getAllProductsForAdminController, getCatalogQualityController, updateCatalogQualityController } from '../controllers/catalogQuality.controller.js'
+import { getAllProductsForAdminController, getCatalogQualityController, getStockValueController, updateCatalogQualityController } from '../controllers/catalogQuality.controller.js'
 import { admin } from '../middleware/Admin.js'
 import auth from '../middleware/auth.js'
 
@@ -10,6 +10,7 @@ productRouter.get('/admin/catalog-quality', auth, admin, getCatalogQualityContro
 productRouter.put('/admin/catalog-quality', auth, admin, updateCatalogQualityController)
 productRouter.post('/admin/all', auth, admin, getAllProductsForAdminController)
 productRouter.post('/admin/detail', auth, admin, getProductDetailsForAdminController)
+productRouter.get('/admin/stock-value', auth, admin, getStockValueController)
 
 productRouter.post("/create",auth,admin,createProductController)
 productRouter.post('/get',getProductController)
