@@ -1615,6 +1615,16 @@ router.post('/eod/close', auth, Staff, requireStaffPermission('pos.close_eod'), 
         saleDate: sale.saleDate,
         cashierName: sale.cashierName || '',
         itemsSummary,
+        // Uncapped, one entry per line item — the Detailed EOD report and
+        // Excel export need every line, not the capped itemsSummary string
+        // above (which exists only for the compact Summary report's table).
+        items: (sale.items || []).map((item) => ({
+          name: item.name,
+          quantity: item.quantity,
+          price: item.price,
+          total: item.total,
+          sku: item.sku || ''
+        })),
         paymentMethod: sale.paymentMethod,
         saleSource: sale.saleSource === 'online' ? 'online' : 'walkin',
         total: sale.total,

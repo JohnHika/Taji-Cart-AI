@@ -57,7 +57,17 @@ const endOfDaySchema = new mongoose.Schema({
       saleNumber: { type: String, required: true },
       saleDate: { type: Date, required: true },
       cashierName: { type: String, default: '' },
+      // Capped (first 5 + "N more") — only what the compact Summary report's
+      // table needs. The Detailed report and Excel export use `items` below
+      // instead, which is never capped.
       itemsSummary: { type: String, default: '' },
+      items: [{
+        name: { type: String, default: '' },
+        quantity: { type: Number, default: 0 },
+        price: { type: Number, default: 0 },
+        total: { type: Number, default: 0 },
+        sku: { type: String, default: '' }
+      }],
       paymentMethod: { type: String, default: '' },
       saleSource: { type: String, default: 'walkin' },
       total: { type: Number, default: 0 },

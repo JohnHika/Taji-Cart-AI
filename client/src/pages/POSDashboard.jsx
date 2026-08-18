@@ -9,7 +9,10 @@ import {
   FaCheckCircle,
   FaCreditCard,
   FaExclamationTriangle,
+  FaFileExcel,
   FaFileInvoiceDollar,
+  FaFilePdf,
+  FaListUl,
   FaMoneyBillWave,
   FaDownload,
   FaQuoteLeft,
@@ -43,7 +46,11 @@ import LoadingSpinner from '../components/LoadingSpinner';
 import Pagination from '../components/Pagination';
 import Axios from '../utils/Axios';
 import AxiosToastError from '../utils/AxiosToastError';
-import { downloadEndOfDayReport } from '../utils/eodReceipt';
+import {
+  downloadEndOfDaySummaryReport,
+  downloadEndOfDayDetailedReport,
+  downloadEndOfDayExcel
+} from '../utils/eodReport';
 import { DisplayPriceInShillings } from '../utils/DisplayPriceInShillings';
 import isAdmin from '../utils/isAdmin';
 import isStaff from '../utils/isStaff';
@@ -295,6 +302,9 @@ const POSDashboard = () => {
   const [analyticsPeriod, setAnalyticsPeriod] = useState('today');
   const [eodStatus, setEodStatus] = useState(null);
   const [eodLoading, setEodLoading] = useState(false);
+  const [showEodFormatModal, setShowEodFormatModal] = useState(false);
+  const [pendingEodDownload, setPendingEodDownload] = useState(null);
+  const [eodFormatChoice, setEodFormatChoice] = useState('detailed'); // 'detailed' | 'summary' | 'excel'
   const [showResetEodModal, setShowResetEodModal] = useState(false);
   const [resetReason, setResetReason] = useState('');
   const [showVoidModal, setShowVoidModal] = useState(false);
@@ -395,11 +405,34 @@ const POSDashboard = () => {
         setEodStatus(eod);
         toast.success(`End of day closed for ${selectedDate}`);
       } else {
-        toast('This day has already been closed — downloading the existing report.', { icon: 'ℹ️' });
+        toast('This day has already been closed — choose a format to download it.', { icon: 'ℹ️' });
       }
-      await downloadEndOfDayReport(eod);
+      setPendingEodDownload(eod);
+      setShowEodFormatModal(true);
     } catch (error) {
       AxiosToastError(error);
+    } finally {
+      setEodLoading(false);
+    }
+  };
+
+  // Dispatches to whichever report generator the picker modal's selection
+  // maps to — see client/src/utils/eodReport.js for what each format covers.
+  const downloadEodInFormat = async (eod, format) => {
+    try {
+      setEodLoading(true);
+      if (format === 'detailed') {
+        await downloadEndOfDayDetailedReport(eod);
+      } else if (format === 'excel') {
+        await downloadEndOfDayExcel(eod);
+      } else {
+        await downloadEndOfDaySummaryReport(eod);
+      }
+      setShowEodFormatModal(false);
+      setPendingEodDownload(null);
+    } catch (error) {
+      console.error('EOD download failed:', error);
+      toast.error('Could not generate that report. Please try again.');
     } finally {
       setEodLoading(false);
     }
@@ -1393,6 +1426,96 @@ const POSDashboard = () => {
           </div>
         )}
       </div>
+
+      {/* EOD Report Format Modal */}
+      {showEodFormatModal && pendingEodDownload && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-charcoal/70 p-4 backdrop-blur-sm"
+          role="presentation"
+          onClick={() => { if (!eodLoading) { setShowEodFormatModal(false); setPendingEodDownload(null); } }}
+        >
+          <div
+            className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl dark:bg-dm-card"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="eod-format-title"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <h4 id="eod-format-title" className="text-lg font-bold text-charcoal dark:text-white">
+              Download end-of-day report
+            </h4>
+            <p className="mt-2 text-sm text-brown-500 dark:text-white/50">
+              Choose the format for {pendingEodDownload.date}.
+            </p>
+
+            <div className="mt-4 space-y-2">
+              {[
+                {
+                  key: 'detailed',
+                  icon: FaListUl,
+                  label: 'Detailed PDF',
+                  description: 'One full record per sale — every item, plus its proof photo or forwarded text inline. Best for tracking and follow-up.'
+                },
+                {
+                  key: 'summary',
+                  icon: FaFilePdf,
+                  label: 'Summary PDF',
+                  description: 'Compact daily totals — hourly timeline, cashier breakdown, day summary. Best for a quick read of the numbers.'
+                },
+                {
+                  key: 'excel',
+                  icon: FaFileExcel,
+                  label: 'Excel spreadsheet',
+                  description: 'One row per transaction plus hourly and day-summary sheets. Best for filtering and reconciliation.'
+                }
+              ].map((option) => (
+                <button
+                  key={option.key}
+                  type="button"
+                  onClick={() => setEodFormatChoice(option.key)}
+                  className={`flex w-full items-start gap-3 rounded-xl border p-3 text-left transition-colors ${
+                    eodFormatChoice === option.key
+                      ? 'border-plum-500 bg-plum-50 dark:border-plum-400 dark:bg-plum-900/20'
+                      : 'border-brown-200 hover:bg-brown-50 dark:border-dm-border dark:hover:bg-dm-card-2'
+                  }`}
+                >
+                  <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${
+                    eodFormatChoice === option.key
+                      ? 'bg-plum-700 text-white'
+                      : 'bg-brown-100 text-brown-500 dark:bg-dm-card-2 dark:text-white/50'
+                  }`}>
+                    <option.icon size={14} />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-charcoal dark:text-white">{option.label}</p>
+                    <p className="mt-0.5 text-xs text-brown-500 dark:text-white/50">{option.description}</p>
+                  </div>
+                </button>
+              ))}
+            </div>
+
+            <div className="mt-5 flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => { setShowEodFormatModal(false); setPendingEodDownload(null); }}
+                disabled={eodLoading}
+                className="rounded-lg border border-brown-200 px-4 py-2 text-sm font-semibold text-brown-700 hover:bg-brown-50 disabled:opacity-60 dark:border-dm-border dark:text-white/70 dark:hover:bg-dm-card-2"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => downloadEodInFormat(pendingEodDownload, eodFormatChoice)}
+                disabled={eodLoading}
+                className="inline-flex items-center gap-2 rounded-lg bg-plum-700 px-4 py-2 text-sm font-semibold text-white hover:bg-plum-800 disabled:opacity-60"
+              >
+                <FaDownload size={12} />
+                {eodLoading ? 'Generating…' : 'Download'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Reset End-of-Day Modal (admin only) */}
       {showResetEodModal && (
