@@ -823,7 +823,11 @@ router.get('/summary/daily', auth, Staff, requireStaffPermission('pos.view_analy
             $sum: {
               $cond: [{ $eq: ['$saleSource', 'online'] }, 1, 0]
             }
-          }
+          },
+          // Delivery is fulfilled by contracted riders, not the shop itself —
+          // total sums in deliveryCharge (via the Sale pre-save hook), so
+          // deliveryRevenue/productRevenue split it back out for reporting.
+          deliveryRevenue: { $sum: '$deliveryCharge' }
         }
       }
     ]);
@@ -840,8 +844,12 @@ router.get('/summary/daily', auth, Staff, requireStaffPermission('pos.view_analy
       walkinSales: 0,
       onlineSales: 0,
       walkinCount: 0,
-      onlineCount: 0
+      onlineCount: 0,
+      deliveryRevenue: 0,
+      productRevenue: 0
     };
+    summary.deliveryRevenue = summary.deliveryRevenue || 0;
+    summary.productRevenue = Math.max(0, (summary.totalSales || 0) - summary.deliveryRevenue);
 
     // Get top selling products for the day
     const topProducts = await Sale.aggregate([
@@ -1495,10 +1503,18 @@ router.post('/eod/close', auth, Staff, requireStaffPermission('pos.close_eod'), 
           onlineSales: { $sum: { $cond: [{ $eq: ['$saleSource', 'online'] }, '$total', 0] } },
           walkinCount: { $sum: { $cond: [{ $ne: ['$saleSource', 'online'] }, 1, 0] } },
           onlineCount: { $sum: { $cond: [{ $eq: ['$saleSource', 'online'] }, 1, 0] } },
-          transactionCount: { $sum: 1 }
+          transactionCount: { $sum: 1 },
+          // Delivery is fulfilled by contracted riders, not the shop itself —
+          // broken out from total so it isn't counted as product revenue.
+          deliveryRevenue: { $sum: '$deliveryCharge' }
         }
       }
     ]);
+
+    if (totals) {
+      totals.deliveryRevenue = totals.deliveryRevenue || 0;
+      totals.productRevenue = Math.max(0, (totals.totalSales || 0) - totals.deliveryRevenue);
+    }
 
     const hourlyBreakdown = await Sale.aggregate([
       { $match: filter },
@@ -1543,6 +1559,7 @@ router.post('/eod/close', auth, Staff, requireStaffPermission('pos.close_eod'), 
       paymentMethod: sale.paymentMethod,
       saleSource: sale.saleSource === 'online' ? 'online' : 'walkin',
       total: sale.total,
+      deliveryCharge: sale.deliveryCharge || 0,
       proofImageUrls: (sale.payments || [])
         .map((payment) => payment.proofImageUrl)
         .filter(Boolean),
@@ -1589,6 +1606,8 @@ router.post('/eod/close', auth, Staff, requireStaffPermission('pos.close_eod'), 
         onlineSales: totals?.onlineSales || 0,
         walkinCount: totals?.walkinCount || 0,
         onlineCount: totals?.onlineCount || 0,
+        deliveryRevenue: totals?.deliveryRevenue || 0,
+        productRevenue: totals?.productRevenue || 0,
         transactionCount: totals?.transactionCount || 0,
         hourlyBreakdown,
         cashierBreakdown,
@@ -1683,7 +1702,7 @@ router.get('/eod/range-summary', auth, async (req, res) => {
     const totals = {
       totalSales: 0, cashSales: 0, equitySales: 0, splitSales: 0, textForwardedSales: 0,
       walkinSales: 0, onlineSales: 0, walkinCount: 0, onlineCount: 0, transactionCount: 0,
-      exchangeCount: 0
+      exchangeCount: 0, deliveryRevenue: 0, productRevenue: 0
     };
     const cashierTotals = new Map();
     const dailyTrend = [];
@@ -1704,7 +1723,9 @@ router.get('/eod/range-summary', auth, async (req, res) => {
         total: s.totalSales || 0,
         walkinSales: s.walkinSales || 0,
         onlineSales: s.onlineSales || 0,
-        transactionCount: s.transactionCount || 0
+        transactionCount: s.transactionCount || 0,
+        deliveryRevenue: s.deliveryRevenue || 0,
+        productRevenue: s.productRevenue || 0
       });
 
       (s.cashierBreakdown || []).forEach((row) => {

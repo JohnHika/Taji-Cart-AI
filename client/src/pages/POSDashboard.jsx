@@ -573,6 +573,11 @@ const POSDashboard = () => {
                 <p className="mt-1 text-xl font-black tracking-tight text-charcoal dark:text-white sm:mt-2 sm:text-2xl">
                   {DisplayPriceInShillings(dailySummary.summary.totalSales)}
                 </p>
+                {dailySummary.summary.deliveryRevenue > 0 && (
+                  <p className="mt-1.5 text-[10px] font-medium text-brown-500 dark:text-white/45 sm:text-xs">
+                    Product: {DisplayPriceInShillings(dailySummary.summary.productRevenue)} · Delivery: {DisplayPriceInShillings(dailySummary.summary.deliveryRevenue)}
+                  </p>
+                )}
               </div>
 
               <div className="rounded-2xl border border-brown-100 bg-ivory p-3 dark:border-dm-border dark:bg-dm-card-2 sm:p-4">
@@ -797,6 +802,32 @@ const POSDashboard = () => {
             ) : (
               <p className="py-6 text-center text-sm text-brown-400 dark:text-white/40">No sales yet to chart.</p>
             )}
+          </div>
+
+          <div className="rounded-2xl bg-white p-5 shadow-sm dark:bg-dm-card sm:p-6">
+            <div className="mb-4 flex items-center justify-between gap-3">
+              <h3 className="text-base font-bold tracking-tight text-charcoal dark:text-white">
+                Product vs Delivery Revenue
+              </h3>
+              <span className="text-xs text-brown-500 dark:text-white/45">{selectedDate}</span>
+            </div>
+            <p className="mb-4 text-xs text-brown-500 dark:text-white/45">
+              Delivery is fulfilled by contracted riders — kept separate from shop sales.
+            </p>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="rounded-2xl border border-brown-100 bg-ivory p-3 dark:border-dm-border dark:bg-dm-card-2 sm:p-4">
+                <p className="text-[10px] font-semibold uppercase tracking-wide text-brown-500 dark:text-white/40 sm:text-xs">Product Sales</p>
+                <p className="mt-1 text-lg font-black text-charcoal dark:text-white">
+                  {DisplayPriceInShillings(dailySummary.summary.productRevenue)}
+                </p>
+              </div>
+              <div className="rounded-2xl border border-brown-100 bg-ivory p-3 dark:border-dm-border dark:bg-dm-card-2 sm:p-4">
+                <p className="text-[10px] font-semibold uppercase tracking-wide text-brown-500 dark:text-white/40 sm:text-xs">Delivery Charges</p>
+                <p className="mt-1 text-lg font-black text-charcoal dark:text-white">
+                  {DisplayPriceInShillings(dailySummary.summary.deliveryRevenue)}
+                </p>
+              </div>
+            </div>
           </div>
 
           <div className="rounded-2xl bg-white p-5 shadow-sm dark:bg-dm-card sm:p-6">

@@ -74,9 +74,10 @@ const fetchImageAsDataUrl = (url) =>
 //   summary: {
 //     totalSales, cashSales, equitySales, splitSales, textForwardedSales,
 //     walkinSales, onlineSales, walkinCount, onlineCount, transactionCount,
+//     deliveryRevenue, productRevenue,
 //     hourlyBreakdown: [{ hour, total, cashTotal, count }],
 //     cashierBreakdown: [{ cashierName, saleCount, total }],
-//     transactions: [{ saleNumber, saleDate, saleSource, cashierName, itemsSummary, paymentMethod, total, proofImageUrls, forwardedTexts }],
+//     transactions: [{ saleNumber, saleDate, saleSource, cashierName, itemsSummary, paymentMethod, total, deliveryCharge, proofImageUrls, forwardedTexts }],
 //     exchangeCount, exchanges: [{ exchangeNumber, requestedAt, sourceNumber, customerName,
 //       returnedItemSummary, replacementItemSummary, priceDifference, status, requestedByName }]
 //   }
@@ -326,6 +327,26 @@ export const downloadEndOfDayReport = async (eod) => {
     doc.text(DisplayPriceInShillings(value), right - 4, y, { align: 'right' });
     y += 7;
   });
+
+  // Delivery is fulfilled by contracted riders, not the shop — broken out
+  // separately from the payment-method rows above so it reads as "not shop
+  // revenue" rather than just another payment channel.
+  if ((summary.deliveryRevenue || 0) > 0) {
+    y += 3;
+    doc.setDrawColor(230, 220, 210);
+    doc.line(right - 92, y, right, y);
+    y += 7;
+    [
+      ['Product sales', summary.productRevenue || 0],
+      ['Delivery charges (rider)', summary.deliveryRevenue || 0],
+    ].forEach(([label, value]) => {
+      doc.setTextColor(...MUTED);
+      doc.text(label, right - 65, y, { align: 'right' });
+      doc.setTextColor(26, 15, 20);
+      doc.text(DisplayPriceInShillings(value), right - 4, y, { align: 'right' });
+      y += 7;
+    });
+  }
 
   ensureSpace(30);
   doc.setFillColor(...PLUM);

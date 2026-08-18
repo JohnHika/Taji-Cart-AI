@@ -659,11 +659,13 @@ const OrderDetailModal = ({ order, onClose, onStatusChange, onDispatchStateSync 
                       KSh {Number(order.subTotalAmt || order.subTotal || order.totalAmt || order.totalPrice || 0).toLocaleString()}
                     </td>
                   </tr>
-                  {order.status !== 'POS' && (
+                  {Number(order.deliveryCharge || 0) > 0 && (
                     <tr>
-                      <td colSpan="3" className="px-2 sm:px-4 py-1.5 sm:py-2 text-right dark:text-white/70">Shipping:</td>
+                      <td colSpan="3" className="px-2 sm:px-4 py-1.5 sm:py-2 text-right dark:text-white/70">
+                        Delivery (rider):
+                      </td>
                       <td className="px-2 sm:px-4 py-1.5 sm:py-2 font-medium dark:text-white">
-                        KSh {Number(order.shippingPrice || 0).toLocaleString()}
+                        KSh {Number(order.deliveryCharge || 0).toLocaleString()}
                       </td>
                     </tr>
                   )}
@@ -1001,6 +1003,8 @@ const AllOrdersAdmin = () => {
             status: 'POS',
             paymentStatus: 'paid',
             totalAmt: sale.total,
+            subTotalAmt: sale.subtotal,
+            deliveryCharge: sale.deliveryCharge || 0,
             saleDate: sale.saleDate,
             createdAt: sale.saleDate,
             customer: {

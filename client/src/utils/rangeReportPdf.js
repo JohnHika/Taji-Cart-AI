@@ -13,9 +13,10 @@ const BOTTOM_MARGIN_MM = 20;
 // report: {
 //   startDate, endDate, branch, daysClosed, daysInRange, missingDates,
 //   totals: { totalSales, cashSales, equitySales, splitSales, textForwardedSales,
-//     walkinSales, onlineSales, walkinCount, onlineCount, transactionCount, exchangeCount },
+//     walkinSales, onlineSales, walkinCount, onlineCount, transactionCount, exchangeCount,
+//     deliveryRevenue, productRevenue },
 //   paymentTotalsByMethod: { cash, equity, split, text_forwarded },
-//   dailyTrend: [{ date, total, walkinSales, onlineSales, transactionCount }],
+//   dailyTrend: [{ date, total, walkinSales, onlineSales, transactionCount, deliveryRevenue, productRevenue }],
 //   cashierBreakdown: [{ cashierName, saleCount, total }]
 // }
 export const downloadRangeReport = (report, { label = 'Report' } = {}) => {
@@ -149,6 +150,26 @@ export const downloadRangeReport = (report, { label = 'Report' } = {}) => {
     doc.text(DisplayPriceInShillings(value), right - 4, y, { align: 'right' });
     y += 7;
   });
+
+  // Delivery is fulfilled by contracted riders, not the shop — broken out
+  // separately from the payment-method rows above so it reads as "not shop
+  // revenue" rather than just another payment channel.
+  if ((report.totals.deliveryRevenue || 0) > 0) {
+    y += 3;
+    doc.setDrawColor(230, 220, 210);
+    doc.line(right - 92, y, right, y);
+    y += 7;
+    [
+      ['Product sales', report.totals.productRevenue || 0],
+      ['Delivery charges (rider)', report.totals.deliveryRevenue || 0],
+    ].forEach(([rowLabel, value]) => {
+      doc.setTextColor(...MUTED);
+      doc.text(rowLabel, right - 65, y, { align: 'right' });
+      doc.setTextColor(26, 15, 20);
+      doc.text(DisplayPriceInShillings(value), right - 4, y, { align: 'right' });
+      y += 7;
+    });
+  }
 
   ensureSpace(30);
   doc.setFillColor(...PLUM);

@@ -219,6 +219,16 @@ const EodReports = () => {
                 <p className="mt-1 text-lg font-black tracking-tight">{DisplayPriceInShillings(report.totals.onlineSales)}</p>
                 <p className="text-xs text-brown-400 dark:text-white/40">{report.totals.onlineCount} sales</p>
               </div>
+              <div className="col-span-2 rounded-2xl border border-brown-100 bg-white p-3 shadow-sm dark:border-dm-border dark:bg-dm-card sm:p-4">
+                <p className="text-[10px] font-semibold uppercase tracking-wide text-brown-500 dark:text-white/40">Product Sales</p>
+                <p className="mt-1 text-lg font-black tracking-tight">{DisplayPriceInShillings(report.totals.productRevenue)}</p>
+                <p className="text-xs text-brown-400 dark:text-white/40">Shop revenue, delivery excluded</p>
+              </div>
+              <div className="col-span-2 rounded-2xl border border-brown-100 bg-white p-3 shadow-sm dark:border-dm-border dark:bg-dm-card sm:p-4">
+                <p className="text-[10px] font-semibold uppercase tracking-wide text-brown-500 dark:text-white/40">Delivery Charges</p>
+                <p className="mt-1 text-lg font-black tracking-tight">{DisplayPriceInShillings(report.totals.deliveryRevenue)}</p>
+                <p className="text-xs text-brown-400 dark:text-white/40">Collected on behalf of contracted riders</p>
+              </div>
             </div>
 
             <div className="rounded-2xl border border-brown-100 bg-white p-5 shadow-sm dark:border-dm-border dark:bg-dm-card">

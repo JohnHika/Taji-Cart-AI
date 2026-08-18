@@ -28,6 +28,12 @@ const endOfDaySchema = new mongoose.Schema({
     onlineSales: { type: Number, default: 0 },
     walkinCount: { type: Number, default: 0 },
     onlineCount: { type: Number, default: 0 },
+    // Delivery is fulfilled by contracted riders, not the shop itself —
+    // totalSales includes deliveryCharge (via the Sale model's pre-save
+    // hook), so these split it back out: productRevenue is the actual shop
+    // take, deliveryRevenue is what was collected on the rider's behalf.
+    deliveryRevenue: { type: Number, default: 0 },
+    productRevenue: { type: Number, default: 0 },
     transactionCount: { type: Number, default: 0 },
     hourlyBreakdown: [{
       hour: { type: Number, required: true }, // 0-23
@@ -55,6 +61,7 @@ const endOfDaySchema = new mongoose.Schema({
       paymentMethod: { type: String, default: '' },
       saleSource: { type: String, default: 'walkin' },
       total: { type: Number, default: 0 },
+      deliveryCharge: { type: Number, default: 0 },
       proofImageUrls: [{ type: String }],
       // Text-forwarded confirmation text (M-Pesa/bank SMS relayed as text
       // rather than a screenshot) — the text equivalent of proofImageUrls.
