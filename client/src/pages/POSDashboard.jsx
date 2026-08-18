@@ -52,6 +52,16 @@ const getSaleSubtotal = (sale) => Number(
   (sale?.items || []).reduce((sum, item) => sum + Number(item.price || 0) * Number(item.quantity || 0), 0)
 );
 
+// Falls back to a source-aware label ("Online customer" vs "Walk-in
+// customer") instead of always assuming walk-in when no name was recorded.
+const getSaleCustomerLabel = (sale, { long = false } = {}) => {
+  const name = sale?.customer?.name || sale?.customerName;
+  if (name) return name;
+  const isOnline = sale?.saleSource === 'online';
+  if (long) return isOnline ? 'Online customer' : 'Walk-in customer';
+  return isOnline ? 'Online' : 'Walk-in';
+};
+
 const getSaleItemTotal = (item) => Number(item?.total ?? Number(item?.price || 0) * Number(item?.quantity || 0));
 
 const downloadSaleReceipt = (sale) => {
@@ -66,7 +76,7 @@ const downloadSaleReceipt = (sale) => {
   const discount = Number(sale.discount || 0);
   const tax = Number(sale.tax || 0);
   const total = Number(sale.total || 0);
-  const customer = sale.customer?.name || sale.customerName || 'Walk-in customer';
+  const customer = getSaleCustomerLabel(sale, { long: true });
   const date = new Date(sale.saleDate).toLocaleString('en-KE');
   let y = 20;
 
@@ -1036,7 +1046,7 @@ const POSDashboard = () => {
                       {new Date(sale.saleDate).toLocaleDateString()}
                     </div>
                     <div className="mt-1 text-sm text-charcoal dark:text-white/55 truncate">
-                      {sale.customer?.name || sale.customerName || 'Walk-in'}
+                      {getSaleCustomerLabel(sale)}
                     </div>
                   </div>
                   <span className="text-sm font-semibold text-charcoal dark:text-white">
@@ -1101,7 +1111,7 @@ const POSDashboard = () => {
                         {new Date(sale.saleDate).toLocaleDateString()}
                       </div>
                       <div className="mt-1 text-sm text-charcoal dark:text-white/55 truncate">
-                        {sale.customer?.name || sale.customerName || 'Walk-in'}
+                        {getSaleCustomerLabel(sale)}
                       </div>
                     </div>
                     <span className="text-sm font-semibold text-charcoal dark:text-white">
@@ -1195,7 +1205,7 @@ const POSDashboard = () => {
                         {new Date(sale.saleDate).toLocaleDateString()}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-brown-400 dark:text-white/40">
-                        {sale.customer?.name || sale.customerName || 'Walk-in'}
+                        {getSaleCustomerLabel(sale)}
                       </td>
                       <td className="px-6 py-4 text-sm text-brown-400 dark:text-white/55 max-w-[280px]">
                         {(sale.items && sale.items.length > 0)
@@ -1349,7 +1359,7 @@ const POSDashboard = () => {
                   <FaUser className="mt-0.5 text-gold-600" />
                   <div>
                     <p className="text-[10px] font-bold uppercase tracking-wide text-brown-400 dark:text-white/40">Customer</p>
-                    <p className="mt-1 text-sm font-medium text-charcoal dark:text-white">{selectedSale.customer?.name || selectedSale.customerName || 'Walk-in customer'}</p>
+                    <p className="mt-1 text-sm font-medium text-charcoal dark:text-white">{getSaleCustomerLabel(selectedSale, { long: true })}</p>
                     {selectedSale.customerPhone && <p className="mt-0.5 text-xs text-brown-500 dark:text-white/45">{selectedSale.customerPhone}</p>}
                   </div>
                 </div>

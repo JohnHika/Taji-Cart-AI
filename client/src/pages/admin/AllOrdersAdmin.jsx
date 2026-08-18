@@ -1008,7 +1008,7 @@ const AllOrdersAdmin = () => {
             saleDate: sale.saleDate,
             createdAt: sale.saleDate,
             customer: {
-              name: sale.customer?.name || sale.customerName || 'Walk-in Customer',
+              name: sale.customer?.name || sale.customerName || (sale.saleSource === 'online' ? 'Online Customer' : 'Walk-in Customer'),
               email: sale.customer?.email || 'N/A',
               phone: sale.customer?.phone || sale.customerPhone || 'N/A'
             },

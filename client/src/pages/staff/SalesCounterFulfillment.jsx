@@ -274,7 +274,7 @@ const SalesCounterFulfillment = () => {
                       <div className="min-w-0">
                         <p className="text-sm font-bold">{sale.saleNumber}</p>
                         <p className="text-xs text-brown-500 dark:text-white/50">
-                          {sale.customerName || 'Walk-in customer'} {sale.customerPhone ? `· ${sale.customerPhone}` : ''}
+                          {sale.customerName || (sale.saleSource === 'online' ? 'Online customer' : 'Walk-in customer')} {sale.customerPhone ? `· ${sale.customerPhone}` : ''}
                         </p>
                       </div>
                       <span className="shrink-0 text-sm font-bold text-plum-700 dark:text-gold-300">
@@ -376,7 +376,7 @@ const SalesCounterFulfillment = () => {
                     <div className="min-w-0">
                       <p className="text-sm font-semibold">{sale.saleNumber}</p>
                       <p className="text-xs text-brown-500 dark:text-white/50">
-                        {sale.customerName || 'Walk-in customer'} · {sale.fulfillment_type}
+                        {sale.customerName || (sale.saleSource === 'online' ? 'Online customer' : 'Walk-in customer')} · {sale.fulfillment_type}
                       </p>
                       <p className="text-[11px] text-brown-400 dark:text-white/40">
                         {sale.fulfilledByName ? `By ${sale.fulfilledByName} · ` : ''}

@@ -127,7 +127,7 @@ const POSSales = () => {
             </div>
             <div className="flex justify-between items-center text-sm">
               <span className="text-brown-500 dark:text-white/55 truncate max-w-[120px]">
-                {sale.customer?.name || sale.customerName || 'Walk-in'}
+                {sale.customer?.name || sale.customerName || (sale.saleSource === 'online' ? 'Online' : 'Walk-in')}
               </span>
               <span className="px-2 py-0.5 rounded-full text-xs bg-brown-50 dark:bg-dm-card-2 text-charcoal dark:text-white/70">
                 {sale.paymentMethod}
@@ -228,7 +228,7 @@ const POSSales = () => {
               </div>
               <div>
                 <p className="text-brown-400 dark:text-white/40">Customer</p>
-                <p className="text-charcoal dark:text-white">{selected.customer?.name || selected.customerName || 'Walk-in'}</p>
+                <p className="text-charcoal dark:text-white">{selected.customer?.name || selected.customerName || (selected.saleSource === 'online' ? 'Online' : 'Walk-in')}</p>
               </div>
               <div>
                 <p className="text-brown-400 dark:text-white/40">Payment</p>

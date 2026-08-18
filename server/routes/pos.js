@@ -1033,7 +1033,7 @@ router.get('/pending-fulfillment', auth, Staff, requireStaffPermission('pos.mana
     };
 
     const sales = await Sale.find(filter)
-      .select('saleNumber saleDate customerName customerPhone items total fulfillment_type fulfillmentStatus pickupCode deliveryNote deliveryScheduledDate delivery_mode delivery_zone_name sacco_operator_name sacco_destination_town cashierName')
+      .select('saleNumber saleDate saleSource customerName customerPhone items total fulfillment_type fulfillmentStatus pickupCode deliveryNote deliveryScheduledDate delivery_mode delivery_zone_name sacco_operator_name sacco_destination_town cashierName')
       .sort({ deliveryScheduledDate: 1, saleDate: 1 })
       .lean();
 
@@ -1054,7 +1054,7 @@ router.get('/fulfillment-history', auth, Staff, requireStaffPermission('pos.mana
       branch,
       fulfillmentStatus: { $in: ['picked_up', 'dispatched', 'delivered', 'cancelled'] }
     })
-      .select('saleNumber saleDate customerName customerPhone total fulfillment_type fulfillmentStatus fulfilledByName fulfilledAt')
+      .select('saleNumber saleDate saleSource customerName customerPhone total fulfillment_type fulfillmentStatus fulfilledByName fulfilledAt')
       .sort({ fulfilledAt: -1 })
       .limit(200)
       .lean();

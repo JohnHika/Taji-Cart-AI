@@ -1082,7 +1082,7 @@ const StaffPOS = () => {
       line,
     ];
     const cust = (sale.customerName || sale.customerPhone)
-      ? [`Customer: ${sale.customerName || 'Walk-in'}${sale.customerPhone ? ` | Phone: ${sale.customerPhone}` : ''}`, line]
+      ? [`Customer: ${sale.customerName || (sale.saleSource === 'online' ? 'Online' : 'Walk-in')}${sale.customerPhone ? ` | Phone: ${sale.customerPhone}` : ''}`, line]
       : [];
     const items = sale.items.map(it => {
       const left = `${it.quantity} x ${it.name}`;
