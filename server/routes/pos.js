@@ -1479,6 +1479,45 @@ router.get('/eod/:date', auth, Staff, requireStaffPermission('pos.open_counter')
     const eod = await EndOfDay.findOne({ date: req.params.date, branch, isReset: false })
       .populate('closedBy', 'name')
       .sort({ createdAt: -1 });
+
+    // Closes made before the Detailed report existed only captured the
+    // capped itemsSummary string, not the full per-sale items array — those
+    // transactions render as "No items recorded" in the Detailed PDF/Excel.
+    // Backfill it transparently from the underlying Sale records: a sale's
+    // items never change after it's created (even voiding it only sets
+    // isVoided/voidReason), so pulling them now is just completing a field
+    // that should have been captured at close time, not re-deriving data —
+    // it doesn't violate the "frozen at close time" guarantee everything
+    // else in this snapshot has.
+    if (eod?.summary?.transactions?.length > 0) {
+      const missingSaleNumbers = eod.summary.transactions
+        .filter((t) => !t.items || t.items.length === 0)
+        .map((t) => t.saleNumber);
+      if (missingSaleNumbers.length > 0) {
+        const sales = await Sale.find({ saleNumber: { $in: missingSaleNumbers } })
+          .select('saleNumber items')
+          .lean();
+        const itemsBySaleNumber = new Map(sales.map((s) => [s.saleNumber, s.items || []]));
+        let patched = false;
+        eod.summary.transactions.forEach((t) => {
+          const items = itemsBySaleNumber.get(t.saleNumber);
+          if ((!t.items || t.items.length === 0) && items && items.length > 0) {
+            t.items = items.map((item) => ({
+              name: item.name,
+              quantity: item.quantity,
+              price: item.price,
+              total: item.total,
+              sku: item.sku || ''
+            }));
+            patched = true;
+          }
+        });
+        if (patched) {
+          await eod.save();
+        }
+      }
+    }
+
     res.json({ success: true, data: eod || null });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });

@@ -161,14 +161,24 @@ const drawDaySummarySection = (doc, layout, { left, right, pageWidth, summary })
     });
   }
 
+  // Delivery charges pass straight through to contracted riders — they're
+  // never the shop's money, so the headline total excludes them even though
+  // every payment-method row above (Cash received, Equity sales, etc.)
+  // includes it. Falls back to totalSales only for a pre-productRevenue
+  // record that somehow slipped past the backfill in GET /eod/:date.
+  const shopTotal = summary.productRevenue != null ? summary.productRevenue : (summary.totalSales || 0);
+
   ensureSpace(30);
   doc.setFillColor(...PLUM);
   doc.roundedRect(right - 92, yRef.v, 92, 14, 2, 2, 'F');
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(11);
   doc.setTextColor(255, 255, 255);
-  doc.text('TOTAL', right - 65, yRef.v + 9, { align: 'right' });
-  doc.text(DisplayPriceInShillings(summary.totalSales || 0), right - 4, yRef.v + 9, { align: 'right' });
+  // "SHOP TOTAL" is longer than the old "TOTAL" label, so its right edge
+  // sits further right than before (right-55, not right-65) to keep the
+  // amount from crowding it — still well clear of the amount's own anchor.
+  doc.text('SHOP TOTAL', right - 55, yRef.v + 9, { align: 'right' });
+  doc.text(DisplayPriceInShillings(shopTotal), right - 4, yRef.v + 9, { align: 'right' });
   yRef.v += 27;
 
   ensureSpace(15);
@@ -755,6 +765,11 @@ export const downloadEndOfDayExcel = async (eod) => {
     { key: 'value', header: 'Amount', width: 18 },
   ];
   summarySheet.getRow(1).eachCell((cell) => headerCellStyle(cell));
+  // Delivery charges pass straight through to contracted riders — never the
+  // shop's money — so SHOP TOTAL excludes them even though every
+  // payment-method row above (Cash received, Equity sales, etc.) includes
+  // it in its own total.
+  const shopTotal = summary.productRevenue != null ? summary.productRevenue : (summary.totalSales || 0);
   const summaryRows = [
     ['Cash received', summary.cashSales || 0],
     ['Equity sales', summary.equitySales || 0],
@@ -764,12 +779,12 @@ export const downloadEndOfDayExcel = async (eod) => {
     ['Online sales', summary.onlineSales || 0],
     ['Product sales', summary.productRevenue || 0],
     ['Delivery charges (rider)', summary.deliveryRevenue || 0],
-    ['TOTAL', summary.totalSales || 0],
+    ['SHOP TOTAL', shopTotal],
   ];
   summaryRows.forEach(([label, value], idx) => {
     const r = summarySheet.addRow({ label, value });
     r.getCell('value').numFmt = '"Ksh" #,##0.00';
-    if (label === 'TOTAL') {
+    if (label === 'SHOP TOTAL') {
       r.eachCell((cell) => {
         cell.font = { name: 'Calibri', size: 10, bold: true };
       });
