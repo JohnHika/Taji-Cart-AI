@@ -46,6 +46,10 @@ const FULFILLMENT_TYPES = [
 const paymentMethodLabel = (method) =>
   PAYMENT_METHODS.find((m) => m.id === method)?.label || method || 'N/A';
 
+// stock === null/undefined means untracked inventory — always treated as
+// available, matching addToCart's own out-of-stock check below.
+const isProductOutOfStock = (product) => product.stock != null && product.stock <= 0;
+
 const PAGE_SIZE = 24;
 const QUICK_PICKS_COUNT = 8;
 
@@ -337,7 +341,7 @@ const SalesCounter = () => {
     // "Extension Hair 20 inch" — every word must appear somewhere in the
     // searchable text, in any order, instead of requiring one exact phrase.
     const searchWords = search.trim().toLowerCase().split(/\s+/).filter(Boolean);
-    return products.filter((p) => {
+    const filtered = products.filter((p) => {
       if (!p.price || p.price <= 0) return false; // skip products without a price
       const haystack = [p.name, p.sku, p.barcode].filter(Boolean).join(' ').toLowerCase();
       const matchesSearch = searchWords.every((word) => haystack.includes(word));
@@ -349,6 +353,12 @@ const SalesCounter = () => {
         selectedCategory === 'all' || categoryIds.includes(selectedCategory);
       return matchesSearch && matchesCategory;
     });
+    // Sink out-of-stock items to the end so a cashier opening the counter —
+    // or Quick Picks specifically, which just takes the first few of this
+    // list — isn't mostly greeted with things that can't actually be sold.
+    // Still fully findable via search, just not first. Array.sort is stable
+    // (ES2019+), so relative order within each group is unaffected.
+    return filtered.sort((a, b) => Number(isProductOutOfStock(a)) - Number(isProductOutOfStock(b)));
   }, [products, search, selectedCategory]);
 
   const isBrowsingUnfiltered = !search.trim() && selectedCategory === 'all';
@@ -635,7 +645,7 @@ const SalesCounter = () => {
     const inCartQty = cart.find((i) => i._id === p._id)?.quantity || 0;
     // stock === null/undefined means untracked inventory — no badge shown for those.
     const hasStockInfo = p.stock != null;
-    const isOutOfStock = hasStockInfo && p.stock <= 0;
+    const isOutOfStock = isProductOutOfStock(p);
     const isLowStock = hasStockInfo && p.stock > 0 && p.stock <= 5;
     return (
       <div
