@@ -1029,22 +1029,24 @@ const SalesCounter = () => {
                 <label className="text-sm font-medium">Equity SMS confirmation</label>
                 <input
                   ref={equityProofInputRef}
+                  id="equity-proof-input-sales-counter"
                   type="file"
                   accept="image/*"
                   capture="environment"
                   onChange={handleEquityProofSelected}
-                  className="hidden"
+                  style={{ position: 'absolute', left: '-9999px' }}
                 />
                 {!equityProofUrl ? (
-                  <button
-                    type="button"
-                    onClick={() => equityProofInputRef.current?.click()}
-                    disabled={equityProofUploading}
-                    className="mt-1 flex w-full items-center justify-center gap-2 rounded-lg border border-dashed border-brown-300 py-3 text-sm font-medium text-brown-600 transition-colors hover:bg-brown-50 disabled:opacity-60 dark:border-dm-border dark:text-white/70 dark:hover:bg-dm-card-2"
+                  // A <label htmlFor> (not a button + ref.click()) so iOS Safari treats
+                  // opening the camera as a direct user gesture — a JS-triggered click()
+                  // on a display:none input gets silently blocked on iOS.
+                  <label
+                    htmlFor="equity-proof-input-sales-counter"
+                    className={`mt-1 flex w-full items-center justify-center gap-2 rounded-lg border border-dashed border-brown-300 py-3 text-sm font-medium text-brown-600 transition-colors hover:bg-brown-50 dark:border-dm-border dark:text-white/70 dark:hover:bg-dm-card-2 ${equityProofUploading ? 'pointer-events-none opacity-60' : 'cursor-pointer'}`}
                   >
                     <FaCamera />
                     {equityProofUploading ? 'Uploading…' : 'Attach confirmation photo'}
-                  </button>
+                  </label>
                 ) : (
                   <div className="mt-1 space-y-2">
                     <div className="relative overflow-hidden rounded-lg border border-brown-200 dark:border-dm-border">

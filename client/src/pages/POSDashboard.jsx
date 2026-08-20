@@ -291,6 +291,7 @@ const POSDashboard = () => {
 
   const [loading, setLoading] = useState(true);
   const [dailySummary, setDailySummary] = useState(null);
+  const [dailySummaryAccessDenied, setDailySummaryAccessDenied] = useState(false);
   const [analytics, setAnalytics] = useState(null);
   const [analyticsAccessDenied, setAnalyticsAccessDenied] = useState(false);
   const [recentSales, setRecentSales] = useState([]);
@@ -369,10 +370,15 @@ const POSDashboard = () => {
 
       if (response.data.success) {
         setDailySummary(response.data.data);
+        setDailySummaryAccessDenied(false);
       }
     } catch (error) {
-      console.error('Error loading daily summary:', error);
-      toast.error('Could not load the daily sales summary. Totals below may be out of date.');
+      if (error?.response?.status === 403) {
+        setDailySummaryAccessDenied(true);
+      } else {
+        console.error('Error loading daily summary:', error);
+        toast.error('Could not load the daily sales summary. Totals below may be out of date.');
+      }
     }
   };
 
@@ -769,6 +775,10 @@ const POSDashboard = () => {
                   {dailySummary.summary.totalItems}
                 </p>
               </div>
+            </div>
+          ) : dailySummaryAccessDenied ? (
+            <div className="rounded-2xl border border-dashed border-amber-300 bg-amber-50 px-4 py-10 text-center text-sm text-amber-700 dark:border-amber-700/50 dark:bg-amber-900/20 dark:text-amber-300">
+              You don't have permission to view sales analytics. Ask an admin to grant "View sales analytics" under Manage Role.
             </div>
           ) : (
             <div className="rounded-2xl border border-dashed border-brown-200 bg-ivory px-4 py-10 text-center text-sm text-brown-500 dark:border-dm-border dark:bg-dm-card-2 dark:text-white/50">

@@ -2280,10 +2280,11 @@ Applied: {discount}% loyalty discount applied to cart
               </label>
               <input
                 ref={photoInputRef}
+                id="payment-proof-input-staff-pos"
                 type="file"
                 accept="image/*"
                 capture="environment"
-                className="hidden"
+                style={{ position: 'absolute', left: '-9999px' }}
                 onChange={(e) => {
                   const file = e.target.files?.[0];
                   if (file) {
@@ -2308,14 +2309,16 @@ Applied: {discount}% loyalty discount applied to cart
                   </div>
                 </div>
               ) : (
-                <button
-                  type="button"
-                  onClick={() => photoInputRef.current?.click()}
-                  className="w-full flex items-center justify-center gap-2 py-3 border-2 border-dashed border-blush-300 dark:border-dm-border rounded-xl text-brown-400 dark:text-white/40 hover:border-plum-400 hover:text-plum-600 dark:hover:border-plum-600 dark:hover:text-plum-300 transition-colors"
+                // A <label htmlFor> (not a button + ref.click()) so iOS Safari treats
+                // opening the camera as a direct user gesture — a JS-triggered click()
+                // on a display:none input gets silently blocked on iOS.
+                <label
+                  htmlFor="payment-proof-input-staff-pos"
+                  className="w-full flex items-center justify-center gap-2 py-3 border-2 border-dashed border-blush-300 dark:border-dm-border rounded-xl text-brown-400 dark:text-white/40 hover:border-plum-400 hover:text-plum-600 dark:hover:border-plum-600 dark:hover:text-plum-300 transition-colors cursor-pointer"
                 >
                   <FaCamera size={14} />
                   <span className="text-sm">Take / Attach Photo</span>
-                </button>
+                </label>
               )}
             </div>
 
