@@ -28,6 +28,7 @@ import AxiosToastError from '../utils/AxiosToastError';
 import uploadImage from '../utils/UploadImage';
 import { DisplayPriceInShillings } from '../utils/DisplayPriceInShillings';
 import { calculateSalesCounterTotals } from '../utils/salesCounterTotals';
+import { isWholesaleEligible } from '../utils/wholesalePricing';
 import { nawiriBrand } from '../config/brand';
 
 const PAYMENT_METHODS = [
@@ -423,9 +424,28 @@ const SalesCounter = () => {
     setCart((prev) => prev.filter((i) => i._id !== id));
   };
 
+  // Wholesale eligibility is basket-wide: total quantity across every line,
+  // not any single product's quantity. Crossing the threshold auto-applies
+  // each eligible product's wholesalePrice for the rest of this sale.
+  const itemCount = cart.reduce((sum, item) => sum + item.quantity, 0);
+  const wholesaleEligible = isWholesaleEligible(itemCount);
+
+  const pricedCart = useMemo(() => cart.map((item) => {
+    const hasWholesalePrice = item.wholesalePrice !== undefined && item.wholesalePrice !== null && Number(item.wholesalePrice) > 0;
+    const wholesaleApplied = wholesaleEligible && hasWholesalePrice;
+    return {
+      ...item,
+      effectivePrice: wholesaleApplied ? Number(item.wholesalePrice) : item.price,
+      wholesaleApplied,
+    };
+  }), [cart, wholesaleEligible]);
+
   const itemTotals = useMemo(() => {
-    return calculateSalesCounterTotals(cart, amountTendered);
-  }, [cart, amountTendered]);
+    return calculateSalesCounterTotals(
+      pricedCart.map((i) => ({ ...i, price: i.effectivePrice })),
+      amountTendered
+    );
+  }, [pricedCart, amountTendered]);
 
   // deliveryFeePreview is 0 unless the Delivery fulfillment tab is active —
   // DeliveryModeSelector only reports a fee while it's mounted.
@@ -436,8 +456,6 @@ const SalesCounter = () => {
     const tendered = Number(amountTendered) || 0;
     return { ...itemTotals, total, change: Math.max(0, tendered - total) };
   }, [itemTotals, deliveryCharge, amountTendered]);
-
-  const itemCount = cart.reduce((sum, item) => sum + item.quantity, 0);
 
   // For a split sale, the cash portion is whatever the cashier enters; the
   // remainder is assumed to be covered by Equity.
@@ -571,13 +589,13 @@ const SalesCounter = () => {
     try {
       setSubmitting(true);
       const saleData = {
-        items: cart.map((i) => ({
+        items: pricedCart.map((i) => ({
           product: i._id,
           sku: i.sku || '',
           name: i.name,
-          price: i.price,
+          price: i.effectivePrice,
           quantity: i.quantity,
-          total: i.price * i.quantity,
+          total: i.effectivePrice * i.quantity,
         })),
         customer: null,
         customerName: customerName.trim(),
@@ -871,7 +889,7 @@ const SalesCounter = () => {
             Your basket is empty. Add products from the counter to begin a sale.
           </div>
         ) : (
-          cart.map((item) => (
+          pricedCart.map((item) => (
             <div
               key={item._id}
               className="grid grid-cols-[3rem_minmax(0,1fr)] gap-3 rounded-xl border border-brown-100 bg-plum-50/40 p-3 shadow-sm dark:border-dm-border dark:bg-dm-card-2"
@@ -891,8 +909,13 @@ const SalesCounter = () => {
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
                     <p className="truncate text-sm font-semibold">{item.name}</p>
-                    <p className="text-xs text-brown-500 dark:text-white/50">
-                      {DisplayPriceInShillings(item.price)} each
+                    <p className="text-xs text-brown-500 dark:text-white/50 flex items-center gap-1.5">
+                      {DisplayPriceInShillings(item.effectivePrice)} each
+                      {item.wholesaleApplied && (
+                        <span className="text-[10px] font-medium text-gold-700 dark:text-gold-300 bg-gold-100/70 dark:bg-gold-600/15 px-1.5 py-0.5 rounded">
+                          Wholesale
+                        </span>
+                      )}
                     </p>
                   </div>
                   <button
@@ -905,7 +928,7 @@ const SalesCounter = () => {
                 </div>
                 <div className="mt-2 flex items-center justify-between gap-3">
                   <p className="text-sm font-bold tabular-nums text-plum-700 dark:text-gold-300">
-                    {DisplayPriceInShillings(item.price * item.quantity)}
+                    {DisplayPriceInShillings(item.effectivePrice * item.quantity)}
                   </p>
                   <div className="flex items-center rounded-lg border border-brown-200 bg-white p-0.5 dark:border-dm-border dark:bg-dm-card">
                     <button

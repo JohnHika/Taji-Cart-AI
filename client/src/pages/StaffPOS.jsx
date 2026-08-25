@@ -34,6 +34,7 @@ import { nawiriBrand } from '../config/brand';
 import Axios from '../utils/Axios';
 import AxiosToastError from '../utils/AxiosToastError';
 import { DisplayPriceInShillings } from '../utils/DisplayPriceInShillings';
+import { isWholesaleEligible } from '../utils/wholesalePricing';
 import isStaff from '../utils/isStaff';
 
 const SALES_RECORDS_LABEL = 'Sales Records';
@@ -358,10 +359,28 @@ const StaffPOS = () => {
     setCart(cart.filter(item => item._id !== productId));
   };
 
+  // Wholesale eligibility is basket-wide: total quantity across every line,
+  // not any single product's quantity. Crossing the threshold auto-applies
+  // each eligible product's wholesalePrice for the rest of this sale.
+  const wholesaleEligible = useMemo(
+    () => isWholesaleEligible(cart.reduce((sum, item) => sum + item.quantity, 0)),
+    [cart]
+  );
+
+  const pricedCart = useMemo(() => cart.map((item) => {
+    const hasWholesalePrice = item.wholesalePrice !== undefined && item.wholesalePrice !== null && Number(item.wholesalePrice) > 0;
+    const wholesaleApplied = wholesaleEligible && hasWholesalePrice;
+    return {
+      ...item,
+      effectivePrice: wholesaleApplied ? Number(item.wholesalePrice) : item.price,
+      wholesaleApplied,
+    };
+  }), [cart, wholesaleEligible]);
+
   // Calculate totals
   const calculateTotals = () => {
-    const lineTotals = cart.map(item => {
-      const lineSub = item.price * item.quantity;
+    const lineTotals = pricedCart.map(item => {
+      const lineSub = item.effectivePrice * item.quantity;
       const lineDiscountPct = item.discountPct ? Math.min(100, Math.max(0, item.discountPct)) : 0;
       const lineDiscount = lineSub * (lineDiscountPct / 100);
       return { lineSub, lineDiscount };
@@ -942,14 +961,14 @@ const StaffPOS = () => {
       
       // Create sale record
       const saleData = {
-        items: cart.map(item => ({
+        items: pricedCart.map(item => ({
           product: item._id,
           sku: item.sku || '',
           name: item.name,
-          price: item.price,
+          price: item.effectivePrice,
           quantity: item.quantity,
           discountPct: item.discountPct || 0,
-          total: item.price * item.quantity
+          total: item.effectivePrice * item.quantity
         })),
         customer: customer?._id || null,
         customerName: (customer?.name || walkInName || '').trim(),
@@ -1699,7 +1718,7 @@ Applied: {discount}% loyalty discount applied to cart
               </div>
             ) : (
               <div className="space-y-2">
-                {cart.map(item => (
+                {pricedCart.map(item => (
                   <div key={item._id} className="border border-brown-100 dark:border-dm-border rounded-card p-3 bg-white dark:bg-dm-card">
                     <div className="flex gap-3 min-w-0">
                       <div className="w-12 h-12 rounded-lg bg-blush-50 dark:bg-dm-card-2 overflow-hidden flex-shrink-0">
@@ -1713,6 +1732,9 @@ Applied: {discount}% loyalty discount applied to cart
                             <h4 className="font-medium text-sm text-charcoal dark:text-white truncate" title={item.name}>{item.name}</h4>
                             {item._isPromotional && (
                               <span className="flex-shrink-0 text-[10px] px-1.5 py-0.5 bg-plum-100 dark:bg-plum-900/30 text-plum-700 dark:text-plum-300 rounded-full font-semibold leading-none">FREE</span>
+                            )}
+                            {item.wholesaleApplied && (
+                              <span className="flex-shrink-0 text-[10px] px-1.5 py-0.5 bg-gold-100/70 dark:bg-gold-600/15 text-gold-700 dark:text-gold-300 rounded-full font-semibold leading-none">WHOLESALE</span>
                             )}
                           </div>
                           <button onClick={() => removeFromCart(item._id)} className="text-blush-400 hover:text-red-500 flex-shrink-0 transition-colors"><FaTrash size={13} /></button>
@@ -1729,9 +1751,9 @@ Applied: {discount}% loyalty discount applied to cart
                             <button onClick={() => updateQuantity(item._id, item.quantity + 1)} className="w-6 h-6 rounded-full bg-blush-100 dark:bg-dm-card-2 flex items-center justify-center text-plum-600 dark:text-plum-300"><FaPlus size={9} /></button>
                           </div>
                           <div className="text-right min-w-0">
-                            <p className="font-price text-sm font-semibold text-gold-600 dark:text-gold-400 truncate">{DisplayPriceInShillings(item.price * item.quantity)}</p>
+                            <p className="font-price text-sm font-semibold text-gold-600 dark:text-gold-400 truncate">{DisplayPriceInShillings(item.effectivePrice * item.quantity)}</p>
                             <div className="flex items-center justify-end gap-1.5 text-xs text-brown-400 dark:text-white/40">
-                              <span className="truncate">{DisplayPriceInShillings(item.price)} ea</span>
+                              <span className="truncate">{DisplayPriceInShillings(item.effectivePrice)} ea</span>
                               <span>|</span>
                               <span className="flex items-center gap-0.5"><FaPercent size={9} />
                                 <input type="number" min="0" max="100" value={item.discountPct || ''} onChange={(e)=> setCart(prev=>prev.map(it => it._id===item._id ? { ...it, discountPct: Math.max(0, Math.min(100, parseFloat(e.target.value || '0'))) } : it))} className="w-10 text-right border border-blush-200 dark:border-dm-border rounded px-1 bg-white dark:bg-dm-card text-charcoal dark:text-white" placeholder="0" />

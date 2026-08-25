@@ -24,11 +24,22 @@ import {
   isBikeDeliveryMode,
   SACCO_TERMINAL_DROPOFF_CHARGE,
 } from '../utils/cbdDelivery.js';
+import { getEffectiveUnitPrice, getWholesalePricingSettings, isWholesaleEligible } from '../utils/wholesalePricing.js';
 
 // buildValidatedOrderPricing / pricewithDiscount live in order.controller.js but
 // aren't exported there — re-derive the pieces this controller needs directly
 // against ProductModel to keep this module self-contained.
 const roundMoney = (amount = 0) => Number(Number(amount || 0).toFixed(2));
+
+// Mirrors pricewithDiscount() in order.controller.js — this module doesn't
+// apply royal loyalty discounts (Jenga checkout runs before that lookup), so
+// the signature only takes price/discount.
+const pricewithDiscount = (price, dis = 0) => {
+  const basePrice = Number(price || 0);
+  const productDiscount = Math.max(0, Number(dis || 0));
+  const discountAmount = Math.round((basePrice * productDiscount) / 100);
+  return Math.max(0, basePrice - discountAmount);
+};
 
 // Jenga requires payment.ref to be 6-20 alphanumeric characters (no separators).
 // Epoch seconds (not ms) fits in 10 digits; combined with a 4-char random
@@ -53,9 +64,16 @@ const priceItems = async (items) => {
   )];
 
   const products = await ProductModel.find({ _id: { $in: productIds } })
-    .select('_id name image price discount stock')
+    .select('_id name image price discount wholesalePrice stock')
     .lean();
   const productsById = new Map(products.map((p) => [String(p._id), p]));
+
+  const totalQuantity = orderItems.reduce(
+    (sum, item) => sum + Math.max(0, Math.floor(Number(item?.quantity) || 0)),
+    0
+  );
+  const wholesaleEligible = isWholesaleEligible(totalQuantity);
+  const wholesaleSettings = await getWholesalePricingSettings();
 
   let subTotalAmt = 0;
   const normalizedItems = orderItems.map((item) => {
@@ -80,8 +98,14 @@ const priceItems = async (items) => {
       throw err;
     }
 
-    const discountAmount = Math.round((product.price * Math.max(0, Number(product.discount || 0))) / 100);
-    const unitPrice = Math.max(0, product.price - discountAmount);
+    const unitPrice = getEffectiveUnitPrice({
+      price: product.price,
+      discount: product.discount,
+      wholesalePrice: product.wholesalePrice,
+      wholesaleEligible,
+      stackDiscounts: wholesaleSettings.stackDiscounts,
+      pricewithDiscountFn: pricewithDiscount,
+    });
     subTotalAmt += unitPrice * quantity;
 
     return { productId: product, quantity };

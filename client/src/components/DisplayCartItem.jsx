@@ -11,11 +11,12 @@ import { useGlobalContext } from '../provider/GlobalProvider'
 import Axios from '../utils/Axios'
 import { DisplayPriceInShillings } from '../utils/DisplayPriceInShillings'
 import { pricewithDiscount } from '../utils/PriceWithDiscount'
+import { getEffectiveUnitPrice } from '../utils/wholesalePricing'
 import AddToCartButton from './AddToCartButton'
 
 const DisplayCartItem = ({ close, variant = 'drawer' }) => {
     const isEmbedded = variant === 'embedded'
-    const { notDiscountTotalPrice, totalPrice, totalQty, royalCardData, royalDiscount, clearCartItems } = useGlobalContext()
+    const { notDiscountTotalPrice, totalPrice, totalQty, royalCardData, royalDiscount, wholesaleEligible, wholesaleStackDiscounts, clearCartItems } = useGlobalContext()
     const cartItem = useSelector(state => state.cartItem.cart)
     const cartLoading = useSelector(state => state.cartItem.loading)
     const user = useSelector(state => state.user)
@@ -114,17 +115,32 @@ const DisplayCartItem = ({ close, variant = 'drawer' }) => {
                                                 // Calculate prices
                                                 const originalPrice = item?.productId?.price;
                                                 const discountPercentage = item?.productId?.discount || 0;
-                                                
+                                                const wholesalePrice = item?.productId?.wholesalePrice;
+                                                const wholesaleApplied = wholesaleEligible
+                                                    && wholesalePrice !== undefined && wholesalePrice !== null && Number(wholesalePrice) > 0;
+
                                                 // Calculate price after product discount only
                                                 const productDiscountAmount = Math.ceil((originalPrice * discountPercentage) / 100);
                                                 const priceAfterProductDiscount = originalPrice - productDiscountAmount;
-                                                
-                                                // Calculate final price after both discounts
-                                                const finalPrice = pricewithDiscount(originalPrice, discountPercentage, royalDiscount);
-                                                
+
+                                                // Calculate final price — swaps to wholesale price once the cart
+                                                // qualifies, unless the admin has discounts stacking on top of it
+                                                const finalPrice = getEffectiveUnitPrice({
+                                                    price: originalPrice,
+                                                    discount: discountPercentage,
+                                                    wholesalePrice,
+                                                    royalDiscount,
+                                                    wholesaleEligible,
+                                                    stackDiscounts: wholesaleStackDiscounts,
+                                                    pricewithDiscountFn: pricewithDiscount,
+                                                });
+
                                                 // Calculate how much was saved from royal discount specifically
-                                                const royalDiscountAmount = priceAfterProductDiscount - finalPrice;
-                                                
+                                                // (not meaningful once wholesale pricing has replaced the discount chain)
+                                                const royalDiscountAmount = wholesaleApplied && !wholesaleStackDiscounts
+                                                    ? 0
+                                                    : priceAfterProductDiscount - finalPrice;
+
                                                 return(
                                                     <div key={item?._id || index} className="flex w-full gap-3 pb-4 border-b border-brown-100 dark:border-dm-border last:border-0 last:pb-0">
                                                         <div className="w-16 h-16 min-h-16 min-w-16 rounded-card bg-blush-50 dark:bg-dm-card-2 border border-brown-100 dark:border-dm-border overflow-hidden flex items-center justify-center">
@@ -140,10 +156,15 @@ const DisplayCartItem = ({ close, variant = 'drawer' }) => {
 
                                                             <div className="flex items-center flex-wrap gap-1 mt-1">
                                                                 <p className="font-semibold font-price text-gold-600 dark:text-gold-300">{DisplayPriceInShillings(finalPrice)}</p>
-                                                                {(discountPercentage > 0 || royalDiscount > 0) && (
+                                                                {(discountPercentage > 0 || royalDiscount > 0 || wholesaleApplied) && (
                                                                     <p className="text-brown-300 dark:text-white/35 line-through text-[10px]">
                                                                         {DisplayPriceInShillings(originalPrice)}
                                                                     </p>
+                                                                )}
+                                                                {wholesaleApplied && (
+                                                                    <span className="text-[10px] text-gold-700 dark:text-gold-300 flex items-center bg-gold-100/70 dark:bg-gold-600/15 px-1.5 py-0.5 rounded">
+                                                                        Wholesale price
+                                                                    </span>
                                                                 )}
                                                                 {royalDiscount > 0 && royalDiscountAmount > 0 && (
                                                                     <span className="text-[10px] text-plum-600 dark:text-plum-300 flex items-center">
@@ -153,7 +174,7 @@ const DisplayCartItem = ({ close, variant = 'drawer' }) => {
                                                                 )}
                                                             </div>
 
-                                                            {discountPercentage > 0 && royalDiscount > 0 && (
+                                                            {discountPercentage > 0 && royalDiscount > 0 && !(wholesaleApplied && !wholesaleStackDiscounts) && (
                                                                 <div className="text-[10px] text-plum-600 dark:text-plum-300 mt-1">
                                                                     Saved: {DisplayPriceInShillings(productDiscountAmount)}
                                                                     {royalDiscountAmount > 0 && (

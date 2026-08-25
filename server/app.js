@@ -57,6 +57,10 @@ import {
     updateTierThresholds,
 } from './controllers/loyalty.controller.js';
 import { searchUsers } from './controllers/user.controller.js';
+import {
+    getWholesalePricingSettingsController,
+    updateWholesalePricingSettingsController,
+} from './controllers/wholesalePricing.controller.js';
 import { admin } from './middleware/Admin.js';
 import auth from './middleware/auth.js';
 
@@ -182,6 +186,12 @@ app.get('/api/admin/loyalty/access', auth, admin, getLoyaltyAccessListController
 app.put('/api/admin/loyalty/access/:userId', auth, admin, setUserLoyaltyAccessController);
 app.get('/api/admin/users/search', auth, admin, searchUsers);
 app.get('/api/users/:userId/loyalty-card', auth, getUserLoyaltyCard);
+
+// ── Wholesale pricing settings ──────────────────────────────────────────────
+// GET is public — the storefront cart needs it to preview the same price the
+// server will charge once an order's quantity crosses the wholesale threshold.
+app.get('/api/wholesale-pricing/settings', getWholesalePricingSettingsController);
+app.put('/api/admin/wholesale-pricing/settings', auth, admin, updateWholesalePricingSettingsController);
 
 // ── Global error handler ─────────────────────────────────────────────────────
 app.use((err, req, res, next) => {

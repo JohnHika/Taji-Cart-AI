@@ -46,11 +46,12 @@ export const createProductController = async(request,response)=>{
             stock,
             costPrice,
             price,
+            wholesalePrice,
             discount,
             description,
             more_details,
             weight
-        } = request.body 
+        } = request.body
 
         const normalizedSku = normalizeScanValue(sku);
         const normalizedBarcode = normalizeScanValue(barcode);
@@ -63,6 +64,26 @@ export const createProductController = async(request,response)=>{
                 error : true,
                 success : false
             })
+        }
+
+        // Wholesale price is optional, but when set it must undercut retail price
+        const hasWholesalePrice = wholesalePrice !== undefined && wholesalePrice !== null && wholesalePrice !== '';
+        const numericWholesalePrice = hasWholesalePrice ? Number(wholesalePrice) : undefined;
+        if (hasWholesalePrice) {
+            if (Number.isNaN(numericWholesalePrice) || numericWholesalePrice < 0) {
+                return response.status(400).json({
+                    message : "Wholesale price must be a positive number",
+                    error : true,
+                    success : false
+                })
+            }
+            if (numericWholesalePrice >= Number(price)) {
+                return response.status(400).json({
+                    message : "Wholesale price must be lower than the retail price",
+                    error : true,
+                    success : false
+                })
+            }
         }
 
         // Check for SKU uniqueness
@@ -108,6 +129,7 @@ export const createProductController = async(request,response)=>{
             stock,
             costPrice,
             price,
+            wholesalePrice: numericWholesalePrice,
             discount,
             description,
             more_details,
@@ -136,7 +158,7 @@ export const createProductController = async(request,response)=>{
 // more_details/ratings keeps the payload light for the Sales Counter, which
 // loads the full catalog on every shift and can't afford a slow first paint.
 const POS_PRODUCT_PROJECTION =
-  'name handle sku barcode qrCode variants image imageFilename category subCategory unit price discount stock description publish averageRating createdAt updatedAt';
+  'name handle sku barcode qrCode variants image imageFilename category subCategory unit price wholesalePrice discount stock description publish averageRating createdAt updatedAt';
 
 export const getProductController = async (req, res) => {
   try {
@@ -880,6 +902,42 @@ export const updateProductDetails = async(request,response)=>{
             } else {
                 delete updatePayload.qrCode;
                 unsetPayload.qrCode = 1;
+            }
+        }
+
+        // Wholesale price is optional, but when set it must undercut retail price.
+        // The retail price being compared against may itself be part of this same
+        // update, or (if omitted) whatever is already saved on the product.
+        if ('wholesalePrice' in request.body) {
+            const rawWholesalePrice = request.body.wholesalePrice;
+            const hasWholesalePrice = rawWholesalePrice !== undefined && rawWholesalePrice !== null && rawWholesalePrice !== '';
+
+            if (!hasWholesalePrice) {
+                delete updatePayload.wholesalePrice;
+                unsetPayload.wholesalePrice = 1;
+            } else {
+                const numericWholesalePrice = Number(rawWholesalePrice);
+                if (Number.isNaN(numericWholesalePrice) || numericWholesalePrice < 0) {
+                    return response.status(400).json({
+                        message: "Wholesale price must be a positive number",
+                        error: true,
+                        success: false
+                    });
+                }
+
+                const priceForComparison = 'price' in request.body
+                    ? Number(request.body.price)
+                    : (await ProductModel.findById(productIdToUse).select('price').lean())?.price;
+
+                if (priceForComparison !== undefined && numericWholesalePrice >= priceForComparison) {
+                    return response.status(400).json({
+                        message: "Wholesale price must be lower than the retail price",
+                        error: true,
+                        success: false
+                    });
+                }
+
+                updatePayload.wholesalePrice = numericWholesalePrice;
             }
         }
 

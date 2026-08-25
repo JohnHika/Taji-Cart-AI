@@ -33,6 +33,7 @@ const UploadProduct = () => {
       stock: "",
       costPrice: "",
       price: "",
+      wholesalePrice: "",
       discount: "",
       weight: "",
       imageFilename: "",
@@ -80,6 +81,7 @@ const UploadProduct = () => {
           ...productData,
           barcode: productData.barcode || "",
           qrCode: productData.qrCode || "",
+          wholesalePrice: productData.wholesalePrice ?? "",
           // Ensure these are arrays even if API returns objects or null
           image: Array.isArray(productData.image) ? productData.image : [],
           category: Array.isArray(productData.category) ? productData.category : [],
@@ -240,7 +242,14 @@ const UploadProduct = () => {
       successAlert("Please upload at least one image", "error");
       return;
     }
-    
+
+    if (data.wholesalePrice !== "" && data.wholesalePrice !== null && data.wholesalePrice !== undefined) {
+      if (Number(data.wholesalePrice) >= Number(data.price)) {
+        successAlert("Wholesale price must be lower than the retail price", "error");
+        return;
+      }
+    }
+
     try {
       setFormLoading(true);
       
@@ -279,6 +288,7 @@ const UploadProduct = () => {
             stock: "",
             costPrice: "",
             price: "",
+            wholesalePrice: "",
             discount: "",
             weight: "",
             imageFilename: "",
@@ -754,6 +764,26 @@ const UploadProduct = () => {
               />
               <p className='text-xs text-brown-400 dark:text-white/40'>What customers pay</p>
             </div>
+          </div>
+
+          <div className='grid gap-1'>
+            <label htmlFor='wholesalePrice' className='font-medium dark:text-white'>Wholesale Price (KSh)</label>
+            <input
+              id='wholesalePrice'
+              type='number'
+              placeholder='Optional bulk-buyer price'
+              name='wholesalePrice'
+              value={data.wholesalePrice}
+              onChange={handleChange}
+              min="0"
+              step="0.01"
+              className='bg-plum-50/90 dark:bg-dm-card p-2 outline-none border dark:border-dm-border focus-within:border-plum-500 dark:focus-within:border-plum-400 rounded dark:text-white transition-colors duration-200'
+            />
+            {data.wholesalePrice !== "" && data.price !== "" && Number(data.wholesalePrice) >= Number(data.price) ? (
+              <p className='text-xs text-red-500 dark:text-red-400'>Must be lower than the retail price</p>
+            ) : (
+              <p className='text-xs text-brown-400 dark:text-white/40'>Optional. Leave blank if this product is not sold wholesale. Must be lower than the retail price.</p>
+            )}
           </div>
 
           <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>

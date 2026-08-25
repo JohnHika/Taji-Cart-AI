@@ -96,6 +96,11 @@ const productSchema = new mongoose.Schema({
         required : true,
         description: "Retail selling price in Ksh"
     },
+    wholesalePrice : {
+        type : Number,
+        min : 0,
+        description: "Optional bulk/wholesale price in Ksh - must be lower than the retail price"
+    },
     discount : {
         type : Number,
         default : 0

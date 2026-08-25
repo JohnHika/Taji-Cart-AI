@@ -177,6 +177,14 @@ const SummaryApi = {
         url: `${baseURL}/api/product/delete-product`,
         method: 'delete'
     },
+    getWholesalePricingSettings: {
+        url: `${baseURL}/api/wholesale-pricing/settings`,
+        method: 'get'
+    },
+    updateWholesalePricingSettings: {
+        url: `${baseURL}/api/admin/wholesale-pricing/settings`,
+        method: 'put'
+    },
     searchProduct: {
         url: `${baseURL}/api/product/search-product`,
         method: 'post'

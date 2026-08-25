@@ -68,6 +68,8 @@ const DashboardProduct = () => {
   const [stockFilter, setStockFilter] = useState('all'); // 'all' | 'inStock' | 'lowStock' | 'outOfStock'
   const [isMobileView, setIsMobileView] = useState(false);
   const [viewMode, setViewMode] = useState('grid'); // 'table' or 'grid'
+  const [wholesaleStackDiscounts, setWholesaleStackDiscounts] = useState(false);
+  const [wholesaleSettingsLoading, setWholesaleSettingsLoading] = useState(false);
   
   // Function to calculate price with discount
   const pricewithDiscount = (price, discount) => {
@@ -111,12 +113,42 @@ const DashboardProduct = () => {
       const response = await Axios({
         ...SummaryApi.getAllCategory
       });
-      
+
       if (response.data.success) {
         setCategories(response.data.data || []);
       }
     } catch (error) {
       console.error("Error fetching categories:", error);
+    }
+  };
+
+  const fetchWholesaleSettings = async () => {
+    try {
+      const response = await Axios(SummaryApi.getWholesalePricingSettings);
+      if (response.data.success) {
+        setWholesaleStackDiscounts(Boolean(response.data.data?.stackDiscounts));
+      }
+    } catch (error) {
+      console.error("Error fetching wholesale pricing settings:", error);
+    }
+  };
+
+  const handleToggleWholesaleStacking = async () => {
+    const nextValue = !wholesaleStackDiscounts;
+    try {
+      setWholesaleSettingsLoading(true);
+      const response = await Axios({
+        ...SummaryApi.updateWholesalePricingSettings,
+        data: { stackDiscounts: nextValue }
+      });
+      if (response.data.success) {
+        setWholesaleStackDiscounts(nextValue);
+        toast.success(response.data.message);
+      }
+    } catch (error) {
+      AxiosToastError(error);
+    } finally {
+      setWholesaleSettingsLoading(false);
     }
   };
 
@@ -147,6 +179,7 @@ const DashboardProduct = () => {
   useEffect(() => {
     fetchProducts();
     fetchCategories();
+    fetchWholesaleSettings();
   }, []);
 
   useEffect(() => {
@@ -329,6 +362,29 @@ const DashboardProduct = () => {
             Add Product
           </Link>
         </div>
+      </div>
+
+      <div className="mb-4 sm:mb-6 flex items-center justify-between gap-4 rounded-lg border border-gold-200 dark:border-gold-600/30 bg-gold-50/60 dark:bg-gold-600/10 p-3 sm:p-4">
+        <div>
+          <p className="text-sm font-semibold text-charcoal dark:text-white">Wholesale pricing</p>
+          <p className="text-xs text-brown-500 dark:text-white/50 mt-0.5">
+            Orders totaling more than 50 items auto-apply each product's wholesale price (Edit Product). Stack product/Royal discounts on top of it?
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={handleToggleWholesaleStacking}
+          disabled={wholesaleSettingsLoading}
+          aria-pressed={wholesaleStackDiscounts}
+          className={`shrink-0 relative inline-flex h-7 w-12 items-center rounded-full transition-colors disabled:opacity-60 ${
+            wholesaleStackDiscounts ? 'bg-plum-600' : 'bg-brown-200 dark:bg-dm-border'
+          }`}
+          title={wholesaleStackDiscounts ? 'Discounts stack on top of wholesale price' : 'Wholesale price is used as the final price'}
+        >
+          <span className={`inline-block h-5 w-5 transform rounded-full bg-white transition-transform ${
+            wholesaleStackDiscounts ? 'translate-x-6' : 'translate-x-1'
+          }`} />
+        </button>
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-5 gap-2 sm:gap-4 mb-4 sm:mb-6">

@@ -29,6 +29,7 @@ import { buildRiderCallMessage, notifyCustomerRiderWillCall } from "../utils/del
 import { renderOrderNoticeEmail } from "../utils/emailTemplates.js";
 import { getOrderIdentifierQuery } from "../utils/orderIdentifier.js";
 import { hasLoyaltyAccess } from "../utils/loyaltySettings.js";
+import { getEffectiveUnitPrice, getWholesalePricingSettings, isWholesaleEligible } from "../utils/wholesalePricing.js";
 
 // Add this helper function to better log objects
 const inspectObject = (obj) => util.inspect(obj, {depth: 3, colors: true});
@@ -144,9 +145,16 @@ const buildValidatedOrderPricing = async ({
 
   const products = await ProductModel.find({
     _id: { $in: uniqueProductIds },
-  }).select('_id name image price discount stock').lean();
+  }).select('_id name image price discount wholesalePrice stock').lean();
 
   const productsById = new Map(products.map((product) => [String(product._id), product]));
+
+  // Wholesale eligibility is cart-wide: the total quantity across every line
+  // in the order, not any single product's quantity on its own.
+  const totalQuantity = orderItems.reduce((sum, item) => sum + getValidatedQuantity(item?.quantity), 0);
+  const wholesaleEligible = isWholesaleEligible(totalQuantity);
+  const wholesaleSettings = await getWholesalePricingSettings();
+
   let subTotalAmt = 0;
 
   const normalizedItems = orderItems.map((item) => {
@@ -172,7 +180,15 @@ const buildValidatedOrderPricing = async ({
       throw createOrderValidationError(`Insufficient stock for ${product.name}. Available: ${product.stock}, Requested: ${quantity}`);
     }
 
-    const unitPrice = pricewithDiscount(product.price, product.discount, royalDiscount);
+    const unitPrice = getEffectiveUnitPrice({
+      price: product.price,
+      discount: product.discount,
+      wholesalePrice: product.wholesalePrice,
+      royalDiscount,
+      wholesaleEligible,
+      stackDiscounts: wholesaleSettings.stackDiscounts,
+      pricewithDiscountFn: pricewithDiscount,
+    });
     subTotalAmt += unitPrice * quantity;
 
     return {
