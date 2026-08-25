@@ -26,6 +26,7 @@ import useMobile from '../hooks/useMobile';
 import Axios from '../utils/Axios';
 import AxiosToastError from '../utils/AxiosToastError';
 import uploadImage from '../utils/UploadImage';
+import { compressImage } from '../utils/compressImage';
 import { DisplayPriceInShillings } from '../utils/DisplayPriceInShillings';
 import { calculateSalesCounterTotals } from '../utils/salesCounterTotals';
 import { isWholesaleEligible } from '../utils/wholesalePricing';
@@ -113,6 +114,7 @@ const SalesCounter = () => {
   const [splitCashAmount, setSplitCashAmount] = useState(() => restoredDraft?.splitCashAmount || '');
   const [equityProofUrl, setEquityProofUrl] = useState(() => restoredDraft?.equityProofUrl || '');
   const [equityProofUploading, setEquityProofUploading] = useState(false);
+  const [equityProofUploadProgress, setEquityProofUploadProgress] = useState(0);
   const [equityApproved, setEquityApproved] = useState(() => Boolean(restoredDraft?.equityApproved));
   const equityProofInputRef = useRef(null);
   const [forwardedText, setForwardedText] = useState(() => restoredDraft?.forwardedText || '');
@@ -507,8 +509,13 @@ const SalesCounter = () => {
     if (!file) return;
     try {
       setEquityProofUploading(true);
+      setEquityProofUploadProgress(0);
       setEquityApproved(false);
-      const res = await uploadImage(file);
+      // Shop wifi is often slow — a raw camera photo (3-8MB) is what actually
+      // causes uploads to stall. Shrinking it first is the real fix; upload
+      // itself also retries automatically on a dropped/timed-out connection.
+      const compressed = await compressImage(file);
+      const res = await uploadImage(compressed, setEquityProofUploadProgress);
       const url = res?.data?.data?.url;
       if (!url) throw new Error('Upload did not return an image URL');
       setEquityProofUrl(url);
@@ -517,6 +524,7 @@ const SalesCounter = () => {
       AxiosToastError(err);
     } finally {
       setEquityProofUploading(false);
+      setEquityProofUploadProgress(0);
     }
   };
 
@@ -1068,7 +1076,9 @@ const SalesCounter = () => {
                     className={`mt-1 flex w-full items-center justify-center gap-2 rounded-lg border border-dashed border-brown-300 py-3 text-sm font-medium text-brown-600 transition-colors hover:bg-brown-50 dark:border-dm-border dark:text-white/70 dark:hover:bg-dm-card-2 ${equityProofUploading ? 'pointer-events-none opacity-60' : 'cursor-pointer'}`}
                   >
                     <FaCamera />
-                    {equityProofUploading ? 'Uploading…' : 'Attach confirmation photo'}
+                    {equityProofUploading
+                      ? (equityProofUploadProgress > 0 ? `Uploading… ${equityProofUploadProgress}%` : 'Uploading…')
+                      : 'Attach confirmation photo'}
                   </label>
                 ) : (
                   <div className="mt-1 space-y-2">

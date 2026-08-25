@@ -21,6 +21,7 @@ import LoadingSpinner from '../components/LoadingSpinner';
 import Axios from '../utils/Axios';
 import AxiosToastError from '../utils/AxiosToastError';
 import uploadImage from '../utils/UploadImage';
+import { compressImage } from '../utils/compressImage';
 import { DisplayPriceInShillings } from '../utils/DisplayPriceInShillings';
 
 const PAYMENT_METHODS = [
@@ -70,6 +71,7 @@ const ReturnsExchanges = () => {
   const [splitCashAmount, setSplitCashAmount] = useState('');
   const [equityProofUrl, setEquityProofUrl] = useState('');
   const [equityProofUploading, setEquityProofUploading] = useState(false);
+  const [equityProofUploadProgress, setEquityProofUploadProgress] = useState(0);
   const [equityApproved, setEquityApproved] = useState(false);
   const equityProofInputRef = React.useRef(null);
 
@@ -194,8 +196,13 @@ const ReturnsExchanges = () => {
     if (!file) return;
     try {
       setEquityProofUploading(true);
+      setEquityProofUploadProgress(0);
       setEquityApproved(false);
-      const res = await uploadImage(file);
+      // Shop wifi is often slow — a raw camera photo (3-8MB) is what actually
+      // causes uploads to stall. Shrinking it first is the real fix; upload
+      // itself also retries automatically on a dropped/timed-out connection.
+      const compressed = await compressImage(file);
+      const res = await uploadImage(compressed, setEquityProofUploadProgress);
       const url = res?.data?.data?.url;
       if (!url) throw new Error('Upload did not return an image URL');
       setEquityProofUrl(url);
@@ -204,6 +211,7 @@ const ReturnsExchanges = () => {
       AxiosToastError(err);
     } finally {
       setEquityProofUploading(false);
+      setEquityProofUploadProgress(0);
     }
   };
 
@@ -717,7 +725,9 @@ const ReturnsExchanges = () => {
                             className={`mt-1 flex w-full items-center justify-center gap-2 rounded-lg border border-dashed border-brown-300 bg-white py-3 text-sm font-medium text-brown-600 transition-colors hover:bg-brown-50 dark:border-dm-border dark:bg-dm-card dark:text-white/70 dark:hover:bg-dm-card-2 ${equityProofUploading ? 'pointer-events-none opacity-60' : 'cursor-pointer'}`}
                           >
                             <FaCamera />
-                            {equityProofUploading ? 'Uploading…' : 'Attach confirmation photo'}
+                            {equityProofUploading
+                              ? (equityProofUploadProgress > 0 ? `Uploading… ${equityProofUploadProgress}%` : 'Uploading…')
+                              : 'Attach confirmation photo'}
                           </label>
                         ) : (
                           <div className="mt-1 space-y-2">

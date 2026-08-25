@@ -2,44 +2,73 @@ import toast from 'react-hot-toast';
 import SummaryApi from '../common/SummaryApi';
 import Axios from './Axios';
 
-const uploadImage = async(image) => {
-    try {
-        // Validate the image
-        if (!image) {
-            throw new Error("No image provided");
-        }
-        
-        const formData = new FormData()
-        formData.append('image', image)
-        
-        console.log("Uploading image:", image.name, "Size:", image.size);
-        
-        // Increase timeout for large images
-        const response = await Axios({
-            ...SummaryApi.uploadImage,
-            data: formData,
-            headers: {
-                'Content-Type': 'multipart/form-data'
-            },
-            timeout: 30000 // Increase timeout to 30 seconds for larger images
-        })
-        
-        console.log("Upload response:", response);
-        return response
-    } catch (error) {
-        console.error("Upload error:", error);
-        
-        // Improve error messaging
-        if (error.code === "ECONNABORTED") {
-            toast.error("Upload timed out. The image may be too large or the server is busy.");
-        } else if (error.response) {
-            toast.error(`Upload failed: ${error.response.data?.message || error.message}`);
-        } else {
-            toast.error("Failed to upload image. Please try again.");
-        }
-        
-        throw error;
+const UPLOAD_TIMEOUT_MS = 45000;
+// A stalled upload on a poor shop connection is a timeout or a plain network
+// drop, not a server rejection — those are worth a couple of silent retries
+// before bothering the cashier. A 4xx/5xx from the server (bad file, auth,
+// etc.) won't succeed on retry, so it fails immediately instead.
+const MAX_ATTEMPTS = 3;
+const RETRY_DELAY_MS = [1500, 3000];
+
+const isRetryableError = (error) => !error.response; // covers ECONNABORTED (timeout) and network errors
+
+const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+// onProgress (optional) receives 0-100 as the upload sends — mainly so a
+// stalled upload reads as "40%, still going" instead of a plain frozen
+// spinner, which is what makes a slow connection feel "stuck" versus just slow.
+const uploadImage = async(image, onProgress) => {
+    if (!image) {
+        throw new Error("No image provided");
     }
+
+    const formData = new FormData()
+    formData.append('image', image)
+
+    console.log("Uploading image:", image.name, "Size:", image.size);
+
+    let lastError = null;
+    for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+        try {
+            onProgress?.(0);
+            const response = await Axios({
+                ...SummaryApi.uploadImage,
+                data: formData,
+                headers: {
+                    'Content-Type': 'multipart/form-data'
+                },
+                timeout: UPLOAD_TIMEOUT_MS,
+                onUploadProgress: (event) => {
+                    if (!event.total) return;
+                    onProgress?.(Math.round((event.loaded * 100) / event.total));
+                }
+            })
+
+            console.log("Upload response:", response);
+            return response
+        } catch (error) {
+            lastError = error;
+            console.error(`Upload error (attempt ${attempt}/${MAX_ATTEMPTS}):`, error);
+
+            const canRetry = attempt < MAX_ATTEMPTS && isRetryableError(error);
+            if (canRetry) {
+                await wait(RETRY_DELAY_MS[attempt - 1] || RETRY_DELAY_MS[RETRY_DELAY_MS.length - 1]);
+                continue;
+            }
+            break;
+        }
+    }
+
+    // Improve error messaging
+    if (lastError.code === "ECONNABORTED") {
+        toast.error("Upload timed out after several attempts. Check your connection and try again.");
+    } else if (lastError.response) {
+        toast.error(`Upload failed: ${lastError.response.data?.message || lastError.message}`);
+    } else {
+        toast.error("Failed to upload image after several attempts. Check your connection and try again.");
+    }
+
+    throw lastError;
 }
 
 // New function to handle multiple image uploads
