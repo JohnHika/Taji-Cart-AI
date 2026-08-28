@@ -34,6 +34,7 @@ import { logout } from '../store/userSlice';
 import Axios from '../utils/Axios';
 import AxiosToastError from '../utils/AxiosToastError';
 import { clearAuthStorage } from '../utils/authStorage';
+import hasStaffPermission from '../utils/hasStaffPermission';
 import { useGlobalContext } from '../provider/GlobalProvider';
 
 const DashboardSidebar = ({ userRole, isStaff }) => {
@@ -164,6 +165,16 @@ const DashboardSidebar = ({ userRole, isStaff }) => {
             <MenuItem to="/dashboard/staff/pending-pickups" icon={FaBoxes} label="Pending Pickups" />
             <MenuItem to="/dashboard/staff/delivery/pending" icon={FaTruck} label="Pending Deliveries" />
             <MenuItem to="/dashboard/staff/completed-verifications" icon={FaClipboardCheck} label="Verification History" />
+          </>
+        )}
+
+        {!isAdmin && isStaff && hasStaffPermission(user, 'catalog.manage') && (
+          <>
+            <SectionLabel title="Catalog" />
+            <MenuItem to="/dashboard/upload-product" icon={FaUpload} label="Upload Product" />
+            <MenuItem to="/dashboard/product" icon={FaBoxOpen} label="Products" />
+            <MenuItem to="/dashboard/category" icon={FaListAlt} label="Category" />
+            <MenuItem to="/dashboard/subcategory" icon={FaLayerGroup} label="Sub Category" />
           </>
         )}
 

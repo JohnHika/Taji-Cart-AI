@@ -53,6 +53,7 @@ import {
 } from '../utils/eodReport';
 import { DisplayPriceInShillings } from '../utils/DisplayPriceInShillings';
 import isAdmin from '../utils/isAdmin';
+import hasStaffPermission from '../utils/hasStaffPermission';
 import isStaff from '../utils/isStaff';
 
 const RECENT_SALES_PAGE_SIZE = 12;
@@ -1840,7 +1841,7 @@ const POSDashboard = () => {
             </div>
 
             <div className="flex flex-col-reverse gap-3 border-t border-brown-100 bg-ivory px-5 py-4 dark:border-dm-border dark:bg-dm-card-2 sm:flex-row sm:items-center sm:justify-between sm:px-7">
-              {isAdmin(user) && !selectedSale.isVoided && (
+              {(isAdmin(user) || hasStaffPermission(user, 'pos.void_sale')) && !selectedSale.isVoided && (
                 <button
                   type="button"
                   onClick={() => setShowVoidModal(true)}

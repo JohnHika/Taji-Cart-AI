@@ -70,6 +70,7 @@ const DashboardProduct = () => {
   const [viewMode, setViewMode] = useState('grid'); // 'table' or 'grid'
   const [wholesaleStackDiscounts, setWholesaleStackDiscounts] = useState(false);
   const [wholesaleSettingsLoading, setWholesaleSettingsLoading] = useState(false);
+  const [catalogAccessDenied, setCatalogAccessDenied] = useState(false);
   
   // Function to calculate price with discount
   const pricewithDiscount = (price, discount) => {
@@ -87,9 +88,10 @@ const DashboardProduct = () => {
       });
       
       if (response.data.success) {
+        setCatalogAccessDenied(false);
         const productData = response.data.data || [];
         setProducts(productData);
-        
+
         setStats({
           total: productData.length,
           inStock: productData.filter(p => p.stock > 10).length,
@@ -101,8 +103,12 @@ const DashboardProduct = () => {
         setProducts([]);
       }
     } catch (error) {
-      console.error("Error fetching products:", error);
-      AxiosToastError(error);
+      if (error?.response?.status === 403) {
+        setCatalogAccessDenied(true);
+      } else {
+        console.error("Error fetching products:", error);
+        AxiosToastError(error);
+      }
     } finally {
       setLoading(false);
     }
@@ -508,6 +514,10 @@ const DashboardProduct = () => {
       {loading ? (
         <div className="flex justify-center items-center h-64">
           <LoadingSpinner />
+        </div>
+      ) : catalogAccessDenied ? (
+        <div className="rounded-2xl border border-dashed border-amber-300 bg-amber-50 px-4 py-10 text-center text-sm text-amber-700 dark:border-amber-700/50 dark:bg-amber-900/20 dark:text-amber-300">
+          You do not have permission to manage the product catalog. Ask an admin to grant &ldquo;Add, edit, and remove products/categories&rdquo; under Manage Role.
         </div>
       ) : (
         <>

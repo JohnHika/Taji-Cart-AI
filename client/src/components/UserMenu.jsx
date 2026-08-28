@@ -2,6 +2,7 @@ import React from 'react';
 import toast from 'react-hot-toast';
 import {
   FaBoxes,
+  FaBoxOpen,
   FaBullhorn,
   FaCog,
   FaClipboardCheck,
@@ -9,6 +10,8 @@ import {
   FaCrown,
   FaGift,
   FaHistory,
+  FaLayerGroup,
+  FaListAlt,
   FaMapMarkedAlt,
   FaMapMarkerAlt,
   FaQrcode,
@@ -19,6 +22,7 @@ import {
   FaTachometerAlt,
   FaTruck,
   FaUndo,
+  FaUpload,
   FaUser,
   FaUserTie
 } from 'react-icons/fa';
@@ -49,6 +53,7 @@ const UserMenu = ({ close, variant = 'dropdown' }) => {
   const hasLoyaltyAccess = Boolean(royalCardData);
   const canManageExchanges = isAdmin || (user?.staffPermissions || []).includes('exchange.manage');
   const canManageCounterFulfillment = isAdmin || (user?.staffPermissions || []).includes('pos.manage_fulfillment');
+  const canManageCatalog = isAdmin || (user?.staffPermissions || []).includes('catalog.manage');
 
   const sectionClass = 'min-w-0 px-4 py-1 mt-3 mb-0.5 text-xs font-semibold uppercase tracking-[0.14em] leading-tight text-brown-500 dark:text-white/45 whitespace-normal break-words';
 
@@ -174,6 +179,14 @@ const UserMenu = ({ close, variant = 'dropdown' }) => {
                 <MenuLink to="/dashboard/staff/delivery" icon={FaCog} label="Delivery management" />
                 {canManageCounterFulfillment && (
                   <MenuLink to="/dashboard/staff/counter-fulfillment" icon={FaTruck} label="Sales counter deliveries" />
+                )}
+                {canManageCatalog && (
+                  <>
+                    <MenuLink to="/dashboard/product" icon={FaBoxOpen} label="Products" />
+                    <MenuLink to="/dashboard/upload-product" icon={FaUpload} label="Upload product" />
+                    <MenuLink to="/dashboard/category" icon={FaListAlt} label="Category" />
+                    <MenuLink to="/dashboard/subcategory" icon={FaLayerGroup} label="Sub category" />
+                  </>
                 )}
               </>
             )}

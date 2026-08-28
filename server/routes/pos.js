@@ -946,17 +946,9 @@ router.get('/summary/daily', auth, Staff, requireStaffPermission('pos.view_analy
   }
 });
 
-// Void/Cancel a sale (admin only)
-router.put('/sale/:id/void', auth, async (req, res) => {
+// Void/Cancel a sale (admin, or staff granted pos.void_sale)
+router.put('/sale/:id/void', auth, Staff, requireStaffPermission('pos.void_sale'), async (req, res) => {
   try {
-    // Only admin can void sales
-    if (!req.user.isAdmin && req.user.role !== 'admin') {
-      return res.status(403).json({
-        success: false,
-        message: 'Only administrators can void sales'
-      });
-    }
-    
     const { reason } = req.body;
     
     if (!reason) {

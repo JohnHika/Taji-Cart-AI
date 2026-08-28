@@ -27,7 +27,9 @@ export const STAFF_GRANTABLE_PERMISSIONS = [
   { id: 'order.update_status', label: 'Update operational order status' },
   { id: 'sales.export', label: 'Export sales records' },
   { id: 'delivery.export', label: 'Export delivery records' },
-  { id: 'exchange.manage', label: 'Process returns and exchanges' }
+  { id: 'exchange.manage', label: 'Process returns and exchanges' },
+  { id: 'catalog.manage', label: 'Add, edit, and remove products/categories' },
+  { id: 'pos.void_sale', label: 'Void a completed sale' }
 ];
 
 export const getEffectiveStaffPermissions = (user) => {
