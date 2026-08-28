@@ -66,6 +66,17 @@ const userSchema = new mongoose.Schema({
         enum : ["Active","Inactive","Suspended"],
         default : "Active"
     },
+    // Brute-force protection: the only prior defense on login was a blanket
+    // 200-req/15min-per-IP rate limit, which does nothing against a patient
+    // single-IP attacker or a distributed one. Tracked per-account instead.
+    failedLoginAttempts : {
+        type : Number,
+        default : 0
+    },
+    lockedUntil : {
+        type : Date,
+        default : null
+    },
     address_details : [
         {
             type : mongoose.Schema.ObjectId,

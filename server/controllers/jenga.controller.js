@@ -31,6 +31,27 @@ import { getEffectiveUnitPrice, getWholesalePricingSettings, isWholesaleEligible
 // against ProductModel to keep this module self-contained.
 const roundMoney = (amount = 0) => Number(Number(amount || 0).toFixed(2));
 
+// Jenga's account-based settlement flow has no status-query API and doesn't
+// document a signature on its inbound callback (unlike Stripe-style HMAC
+// webhooks) — so orderReference alone (client-visible, needed for polling)
+// isn't enough to trust a callback. Appending a shared secret to the
+// callBackUrl we register per-request means a forged callback also needs to
+// know this value, which never reaches the client. Optional but strongly
+// recommended: set JENGA_CALLBACK_SECRET in the environment.
+let warnedMissingJengaCallbackSecret = false;
+const buildJengaCallbackUrl = (baseUrl) => {
+  const secret = process.env.JENGA_CALLBACK_SECRET;
+  if (!secret) {
+    if (!warnedMissingJengaCallbackSecret) {
+      console.warn('JENGA_CALLBACK_SECRET is not set — Jenga payment callbacks are unauthenticated. Set this env var to harden against forged "payment successful" callbacks.');
+      warnedMissingJengaCallbackSecret = true;
+    }
+    return baseUrl;
+  }
+  const separator = baseUrl.includes('?') ? '&' : '?';
+  return `${baseUrl}${separator}token=${encodeURIComponent(secret)}`;
+};
+
 // Mirrors pricewithDiscount() in order.controller.js — this module doesn't
 // apply royal loyalty discounts (Jenga checkout runs before that lookup), so
 // the signature only takes price/discount.
@@ -265,7 +286,7 @@ export const initiateJengaPayment = async (request, response) => {
 
     const merchantAccountNumber = requireEnv('JENGA_ACCOUNT_NUMBER');
     const merchantName = requireEnv('JENGA_MERCHANT_NAME');
-    const callbackUrl = requireEnv('JENGA_CALLBACK_URL');
+    const callbackUrl = buildJengaCallbackUrl(requireEnv('JENGA_CALLBACK_URL'));
 
     const token = await getAuthToken();
     const signature = signStkPushRequest({
@@ -544,6 +565,14 @@ export const getJengaPaymentStatus = async (request, response) => {
  */
 export const handleJengaCallback = async (request, response) => {
   try {
+    const expectedToken = process.env.JENGA_CALLBACK_SECRET;
+    if (expectedToken && request.query?.token !== expectedToken) {
+      console.error('Jenga callback rejected: missing/incorrect token');
+      // 200 (not 401) so a genuine misconfiguration doesn't trigger Jenga's
+      // retry storm — this is logged for investigation either way.
+      return response.status(200).json({ success: true });
+    }
+
     const callbackData = request.body;
     const orderReference = callbackData?.transactionReference;
 

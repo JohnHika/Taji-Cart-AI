@@ -19,10 +19,9 @@ import { resolveBikeDeliveryZone, resolveDeliveryCharge } from '../utils/deliver
 import { getNextSequence } from '../models/counter.model.js';
 import generatePickupCode from '../utils/generatePickupCode.js';
 import { notifyCustomerOrderDispatched } from '../utils/orderDispatchNotify.js';
+import escapeRegex from '../utils/escapeRegex.js';
 
 const router = express.Router();
-
-const escapeRegex = (value = '') => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 // Nawiri Hair operates in Kenya (EAT, UTC+3, no DST). Mongo's $hour operator
 // defaults to UTC unless given an explicit timezone, which silently shifts

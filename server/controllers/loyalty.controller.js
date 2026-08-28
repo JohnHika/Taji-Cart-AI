@@ -8,6 +8,7 @@ import UserModel from '../models/user.model.js';
 import { renderAccountNoticeEmail } from '../utils/emailTemplates.js';
 import { createSecurityCode, verifySecurityCode } from '../utils/securityUtils.js';
 import { getLoyaltySettings, hasLoyaltyAccess } from '../utils/loyaltySettings.js';
+import escapeRegex from '../utils/escapeRegex.js';
 
 // Generate a unique card number
 const generateCardNumber = () => {
@@ -1235,21 +1236,22 @@ export const getLoyaltyCards = async (req, res) => {
         filter.cardNumber = search;
       } else {
         // Otherwise search for user info by looking up users first
+        const safeSearch = escapeRegex(search);
         const users = await UserModel.find({
           $or: [
-            { name: { $regex: search, $options: 'i' } },
-            { email: { $regex: search, $options: 'i' } },
-            { mobile: { $regex: search, $options: 'i' } }
+            { name: { $regex: safeSearch, $options: 'i' } },
+            { email: { $regex: safeSearch, $options: 'i' } },
+            { mobile: { $regex: safeSearch, $options: 'i' } }
           ]
         }).select('_id');
-        
+
         const userIds = users.map(user => user._id);
-        
+
         if (userIds.length > 0) {
           filter.userId = { $in: userIds };
         } else {
           // If no users match, still try searching card tiers
-          filter.tier = { $regex: search, $options: 'i' };
+          filter.tier = { $regex: safeSearch, $options: 'i' };
         }
       }
     }

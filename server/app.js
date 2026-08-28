@@ -5,6 +5,7 @@ import express from 'express';
 import rateLimit from 'express-rate-limit';
 import session from 'express-session';
 import passport from 'passport';
+import helmet from 'helmet';
 
 import connectDB from './config/connectDB.js';
 import './config/passport.js'; // registers passport strategies (side-effect only)
@@ -68,6 +69,15 @@ dotenv.config();
 
 const app = express();
 
+// Baseline security headers (X-Content-Type-Options, X-Frame-Options, HSTS,
+// etc.) — was a listed dependency but never actually applied. CSP is left at
+// helmet's default; this is a JSON API (no HTML templates to protect), and
+// crossOriginResourcePolicy is relaxed since this API is intentionally
+// served cross-origin to the Vercel-hosted frontend (see CORS config below).
+app.use(helmet({
+    crossOriginResourcePolicy: { policy: 'cross-origin' },
+}));
+
 // Render (and similar platforms) terminate TLS and forward requests with
 // X-Forwarded-* headers. Trust the first proxy hop so express-rate-limit and
 // secure cookies work correctly in production.
@@ -129,8 +139,22 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 app.use(passport.initialize());
+
+// A hardcoded fallback secret here would be sitting in this public repo's
+// history — anyone could forge session state signed with it. Fine for local
+// dev convenience; in production, missing this env var is a config error
+// that should fail loudly at boot, not silently run with a known secret.
+const resolveSessionSecret = () => {
+    if (process.env.SESSION_SECRET) return process.env.SESSION_SECRET;
+    if (process.env.NODE_ENV === 'production') {
+        console.error('FATAL: SESSION_SECRET is not set. Refusing to start in production with a publicly-known fallback session secret.');
+        process.exit(1);
+    }
+    return 'nawiri-session-fallback-dev'; // local dev only
+};
+
 app.use(session({
-  secret: process.env.SESSION_SECRET || 'nawiri-session-fallback-dev',
+  secret: resolveSessionSecret(),
   resave: false,
   saveUninitialized: false,
   cookie: { secure: process.env.NODE_ENV === 'production' },

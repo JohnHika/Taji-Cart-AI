@@ -8,6 +8,7 @@ import { nawiriBrand } from '../utils/brand.js'
 import { renderAccountNoticeEmail } from '../utils/emailTemplates.js'
 import { STAFF_GRANTABLE_PERMISSIONS, getEffectiveStaffPermissions } from '../utils/staffPermissions.js'
 import { normalizeEmail, validateEmailAddress } from '../utils/emailValidation.js'
+import escapeRegex from '../utils/escapeRegex.js'
 import forgotPasswordTemplate from '../utils/forgotPasswordTemplate.js'
 import generatedAccessToken from '../utils/generatedAccessToken.js'
 import generatedOtp from '../utils/generatedOtp.js'
@@ -485,11 +486,14 @@ export async function sendVerificationEmailController(request, response) {
 }
 
 //login controller
+const LOGIN_LOCKOUT_THRESHOLD = 5;
+const LOGIN_LOCKOUT_DURATION_MS = 15 * 60 * 1000;
+
 export async function loginController(request, response) {
     try {
         const { email, password } = request.body;
 
-        if (!email || !password) {
+        if (!email || !password || typeof email !== 'string' || typeof password !== 'string') {
             return response.status(400).json({
                 message: "Provide email and password",
                 error: true,
@@ -500,9 +504,12 @@ export async function loginController(request, response) {
         const normalizedEmail = normalizeEmail(email)
         const user = await UserModel.findOne({ email: normalizedEmail });
 
+        // Deliberately the same message as an incorrect password below — telling
+        // an attacker "this email isn't registered" vs "wrong password" lets
+        // them build a confirmed list of real accounts to target.
         if (!user) {
             return response.status(400).json({
-                message: "User not registered",
+                message: "Invalid email or password",
                 error: true,
                 success: false
             });
@@ -530,14 +537,36 @@ export async function loginController(request, response) {
             })
         }
 
-        const checkPassword = await bcryptjs.compare(password, user.password);
-
-        if (!checkPassword) {
-            return response.status(400).json({
-                message: "Incorrect password",
+        if (user.lockedUntil && user.lockedUntil > new Date()) {
+            const minutesLeft = Math.ceil((user.lockedUntil - new Date()) / 60000);
+            return response.status(429).json({
+                message: `Too many failed attempts. Try again in ${minutesLeft} minute${minutesLeft === 1 ? '' : 's'}.`,
                 error: true,
                 success: false
             });
+        }
+
+        const checkPassword = await bcryptjs.compare(password, user.password);
+
+        if (!checkPassword) {
+            const attempts = (user.failedLoginAttempts || 0) + 1;
+            const update = { failedLoginAttempts: attempts };
+            if (attempts >= LOGIN_LOCKOUT_THRESHOLD) {
+                update.lockedUntil = new Date(Date.now() + LOGIN_LOCKOUT_DURATION_MS);
+                update.failedLoginAttempts = 0;
+            }
+            await UserModel.findByIdAndUpdate(user._id, update);
+
+            // Same message as "email not found" above — see the comment there.
+            return response.status(400).json({
+                message: "Invalid email or password",
+                error: true,
+                success: false
+            });
+        }
+
+        if (user.failedLoginAttempts || user.lockedUntil) {
+            await UserModel.findByIdAndUpdate(user._id, { failedLoginAttempts: 0, lockedUntil: null });
         }
 
         if (!user.verify_email && user.authType !== 'google') {
@@ -1053,11 +1082,14 @@ export async function forgotPasswordController(request,response) {
 
         const user = await UserModel.findOne({ email: normalizedEmail })
 
+        // Deliberately generic — telling an attacker whether an email is
+        // registered here would let them enumerate real accounts (including
+        // admin/staff ones) without ever needing valid credentials.
         if(!user){
-            return response.status(400).json({
-                message : "Email not available",
-                error : true,
-                success : false
+            return response.json({
+                message : "If that account exists, a password reset code is on the way.",
+                error : false,
+                success : true
             })
         }
 
@@ -1119,9 +1151,12 @@ export async function verifyForgotPasswordOtp(request,response){
 
         const user = await UserModel.findOne({ email })
 
+        // Same generic wording for "no such account", "expired", and
+        // "wrong code" — distinguishing them would let an attacker confirm
+        // which emails are registered before ever needing real credentials.
         if(!user){
             return response.status(400).json({
-                message : "Email not available",
+                message : "Invalid or expired code",
                 error : true,
                 success : false
             })
@@ -1131,7 +1166,7 @@ export async function verifyForgotPasswordOtp(request,response){
 
         if(user.forgot_password_expiry < currentTime  ){
             return response.status(400).json({
-                message : "Otp is expired",
+                message : "Invalid or expired code",
                 error : true,
                 success : false
             })
@@ -1139,7 +1174,7 @@ export async function verifyForgotPasswordOtp(request,response){
 
         if(otp !== user.forgot_password_otp){
             return response.status(400).json({
-                message : "Invalid otp",
+                message : "Invalid or expired code",
                 error : true,
                 success : false
             })
@@ -1634,10 +1669,11 @@ export async function searchUsers(req, res) {
     // For search terms less than 2 characters, treat as short search
     if (term.length < 2) {
       // Allow single character searches but limit results
+      const safeTerm = escapeRegex(term);
       const searchQuery = {
         $or: [
-          { name: { $regex: `^${term}`, $options: 'i' } }, // Names starting with the character
-          { email: { $regex: `^${term}`, $options: 'i' } }, // Emails starting with the character
+          { name: { $regex: `^${safeTerm}`, $options: 'i' } }, // Names starting with the character
+          { email: { $regex: `^${safeTerm}`, $options: 'i' } }, // Emails starting with the character
         ]
       };
 
@@ -1724,11 +1760,12 @@ export async function searchUsers(req, res) {
     }
     
     // Normal user search by name, email, or mobile
+    const safeSearchTerm = escapeRegex(term)
     const searchQuery = {
       $or: [
-        { name: { $regex: term, $options: 'i' } },
-        { email: { $regex: term, $options: 'i' } },
-        { mobile: { $regex: term, $options: 'i' } }
+        { name: { $regex: safeSearchTerm, $options: 'i' } },
+        { email: { $regex: safeSearchTerm, $options: 'i' } },
+        { mobile: { $regex: safeSearchTerm, $options: 'i' } }
       ]
     };
 
