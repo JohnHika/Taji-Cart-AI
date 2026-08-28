@@ -2,10 +2,10 @@ import cookieParser from 'cookie-parser';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import express from 'express';
-import rateLimit from 'express-rate-limit';
 import session from 'express-session';
 import passport from 'passport';
 import helmet from 'helmet';
+import { generalLimiter } from './middleware/rateLimiters.js';
 
 import connectDB from './config/connectDB.js';
 import './config/passport.js'; // registers passport strategies (side-effect only)
@@ -123,18 +123,11 @@ app.use(cors({
 app.options('*', cors());
 
 // ── Core middleware ──────────────────────────────────────────────────────────
-const limiter = rateLimit({
-    windowMs: 15 * 60 * 1000,
-    max: 200,
-    standardHeaders: true,
-    legacyHeaders: false,
-    message: 'Too many requests, please try again later',
-});
 // ── Health + root — must be BEFORE rate-limiter so self-pings always succeed ─
 app.get('/', (req, res) => res.json({ message: 'Taji Cart API is running ✅' }));
 app.get('/health', (_req, res) => res.status(200).json({ status: 'ok', uptime: process.uptime(), time: new Date().toISOString() }));
 
-app.use(limiter);
+app.use(generalLimiter);
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());

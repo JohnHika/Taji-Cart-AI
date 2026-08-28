@@ -39,18 +39,20 @@ import { delivery } from '../middleware/Delivery.js';
 import staff from '../middleware/Staff.js';
 import { requireStaffPermission } from '../middleware/requireStaffPermission.js';
 import upload from '../middleware/multer.js';
+import { authLimiter } from '../middleware/rateLimiters.js';
 
 const userRouter = Router()
 
-// Public routes
-userRouter.post('/register', registerUserController)
-userRouter.post('/verify-email', verifyEmailController)
-userRouter.post('/send-verification-email', sendVerificationEmailController)
-userRouter.post('/login', loginController)
+// Public routes — auth-sensitive ones get a much stricter per-IP limit than
+// the general app-wide one (see middleware/rateLimiters.js for why).
+userRouter.post('/register', authLimiter, registerUserController)
+userRouter.post('/verify-email', authLimiter, verifyEmailController)
+userRouter.post('/send-verification-email', authLimiter, sendVerificationEmailController)
+userRouter.post('/login', authLimiter, loginController)
 userRouter.get('/logout', logoutController)
-userRouter.put('/forgot-password', forgotPasswordController)
-userRouter.put('/verify-forgot-password-otp', verifyForgotPasswordOtp)
-userRouter.put('/reset-password', resetpassword)
+userRouter.put('/forgot-password', authLimiter, forgotPasswordController)
+userRouter.put('/verify-forgot-password-otp', authLimiter, verifyForgotPasswordOtp)
+userRouter.put('/reset-password', authLimiter, resetpassword)
 userRouter.post('/refresh-token', refreshToken)
 
 // Authenticated user routes
