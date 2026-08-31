@@ -1461,6 +1461,111 @@ router.get('/admin/statistics', auth, async (req, res) => {
 
 // ─── End of Day ──────────────────────────────────────────────────────────────
 
+// Weekly/monthly EOD roll-up (admin-only). Must be registered before
+// GET /eod/:date below — Express matches routes in registration order, and
+// :date is a wildcard that matches any single path segment, so it was
+// silently swallowing every request to /eod/range-summary (treating the
+// literal string "range-summary" as a date, finding no match, and returning
+// {success:true, data:null} — a clean 200 with no error, which is why the
+// Weekly & Monthly Reports page always just showed "No data available",
+// even for ranges with real closed days).
+//
+// Sums every already-closed daily EOD record (isReset: false) whose date
+// falls within the requested range — a rollup of the existing daily-close
+// data rather than a separate live query, so a day that was never closed
+// simply doesn't contribute to the total (surfaced explicitly via
+// missingDates so an admin knows the range isn't fully accounted for).
+router.get('/eod/range-summary', auth, async (req, res) => {
+  try {
+    if (!req.user.isAdmin && req.user.role !== 'admin') {
+      return res.status(403).json({ success: false, message: 'Only administrators can view multi-day reports' });
+    }
+
+    const { startDate, endDate } = req.query;
+    if (!startDate || !endDate || !/^\d{4}-\d{2}-\d{2}$/.test(startDate) || !/^\d{4}-\d{2}-\d{2}$/.test(endDate)) {
+      return res.status(400).json({ success: false, message: 'startDate and endDate in YYYY-MM-DD format are required' });
+    }
+    if (startDate > endDate) {
+      return res.status(400).json({ success: false, message: 'startDate must not be after endDate' });
+    }
+
+    const branch = req.user.staff_branch || 'Main Store';
+    const closes = await EndOfDay.find({
+      branch,
+      isReset: false,
+      date: { $gte: startDate, $lte: endDate }
+    }).sort({ date: 1 }).lean();
+
+    // Every calendar date in the range, so the caller can tell an admin
+    // exactly which days weren't closed (and so aren't reflected below).
+    const allDates = [];
+    for (let d = new Date(`${startDate}T00:00:00`); d <= new Date(`${endDate}T00:00:00`); d.setDate(d.getDate() + 1)) {
+      allDates.push(d.toISOString().slice(0, 10));
+    }
+    const closedDates = new Set(closes.map((c) => c.date));
+    const missingDates = allDates.filter((d) => !closedDates.has(d));
+
+    const totals = {
+      totalSales: 0, cashSales: 0, equitySales: 0, splitSales: 0, textForwardedSales: 0,
+      walkinSales: 0, onlineSales: 0, walkinCount: 0, onlineCount: 0, transactionCount: 0,
+      exchangeCount: 0, deliveryRevenue: 0, productRevenue: 0
+    };
+    const cashierTotals = new Map();
+    const dailyTrend = [];
+    const paymentTotalsByMethod = { cash: 0, equity: 0, split: 0, text_forwarded: 0 };
+
+    closes.forEach((eod) => {
+      const s = eod.summary || {};
+      Object.keys(totals).forEach((key) => {
+        totals[key] += s[key] || 0;
+      });
+      paymentTotalsByMethod.cash += s.cashSales || 0;
+      paymentTotalsByMethod.equity += s.equitySales || 0;
+      paymentTotalsByMethod.split += s.splitSales || 0;
+      paymentTotalsByMethod.text_forwarded += s.textForwardedSales || 0;
+
+      dailyTrend.push({
+        date: eod.date,
+        total: s.totalSales || 0,
+        walkinSales: s.walkinSales || 0,
+        onlineSales: s.onlineSales || 0,
+        transactionCount: s.transactionCount || 0,
+        deliveryRevenue: s.deliveryRevenue || 0,
+        productRevenue: s.productRevenue || 0
+      });
+
+      (s.cashierBreakdown || []).forEach((row) => {
+        const key = String(row.cashier || row.cashierName);
+        const existing = cashierTotals.get(key) || { cashierName: row.cashierName, saleCount: 0, total: 0 };
+        existing.saleCount += row.saleCount || 0;
+        existing.total += row.total || 0;
+        cashierTotals.set(key, existing);
+      });
+    });
+
+    const cashierBreakdown = Array.from(cashierTotals.values()).sort((a, b) => b.total - a.total);
+
+    res.json({
+      success: true,
+      data: {
+        startDate,
+        endDate,
+        branch,
+        daysClosed: closes.length,
+        daysInRange: allDates.length,
+        missingDates,
+        totals,
+        paymentTotalsByMethod,
+        dailyTrend,
+        cashierBreakdown
+      }
+    });
+  } catch (error) {
+    console.error('GET /api/pos/eod/range-summary error:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
 // Get the EOD record for a date (branch defaults to the current user's branch).
 // Returns null (not 404) when the day hasn't been closed yet, so the client
 // can distinguish "not closed" from a real error.
@@ -1758,104 +1863,6 @@ router.put('/eod/:date/reset', auth, async (req, res) => {
 
     res.json({ success: true, message: 'End-of-day close reset', data: eod });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
-  }
-});
-
-// ─── Weekly / monthly EOD roll-up (admin-only) ───────────────────────────
-//
-// Sums every already-closed daily EOD record (isReset: false) whose date
-// falls within the requested range — a rollup of the existing daily-close
-// data rather than a separate live query, so a day that was never closed
-// simply doesn't contribute to the total (surfaced explicitly via
-// missingDates so an admin knows the range isn't fully accounted for).
-router.get('/eod/range-summary', auth, async (req, res) => {
-  try {
-    if (!req.user.isAdmin && req.user.role !== 'admin') {
-      return res.status(403).json({ success: false, message: 'Only administrators can view multi-day reports' });
-    }
-
-    const { startDate, endDate } = req.query;
-    if (!startDate || !endDate || !/^\d{4}-\d{2}-\d{2}$/.test(startDate) || !/^\d{4}-\d{2}-\d{2}$/.test(endDate)) {
-      return res.status(400).json({ success: false, message: 'startDate and endDate in YYYY-MM-DD format are required' });
-    }
-    if (startDate > endDate) {
-      return res.status(400).json({ success: false, message: 'startDate must not be after endDate' });
-    }
-
-    const branch = req.user.staff_branch || 'Main Store';
-    const closes = await EndOfDay.find({
-      branch,
-      isReset: false,
-      date: { $gte: startDate, $lte: endDate }
-    }).sort({ date: 1 }).lean();
-
-    // Every calendar date in the range, so the caller can tell an admin
-    // exactly which days weren't closed (and so aren't reflected below).
-    const allDates = [];
-    for (let d = new Date(`${startDate}T00:00:00`); d <= new Date(`${endDate}T00:00:00`); d.setDate(d.getDate() + 1)) {
-      allDates.push(d.toISOString().slice(0, 10));
-    }
-    const closedDates = new Set(closes.map((c) => c.date));
-    const missingDates = allDates.filter((d) => !closedDates.has(d));
-
-    const totals = {
-      totalSales: 0, cashSales: 0, equitySales: 0, splitSales: 0, textForwardedSales: 0,
-      walkinSales: 0, onlineSales: 0, walkinCount: 0, onlineCount: 0, transactionCount: 0,
-      exchangeCount: 0, deliveryRevenue: 0, productRevenue: 0
-    };
-    const cashierTotals = new Map();
-    const dailyTrend = [];
-    const paymentTotalsByMethod = { cash: 0, equity: 0, split: 0, text_forwarded: 0 };
-
-    closes.forEach((eod) => {
-      const s = eod.summary || {};
-      Object.keys(totals).forEach((key) => {
-        totals[key] += s[key] || 0;
-      });
-      paymentTotalsByMethod.cash += s.cashSales || 0;
-      paymentTotalsByMethod.equity += s.equitySales || 0;
-      paymentTotalsByMethod.split += s.splitSales || 0;
-      paymentTotalsByMethod.text_forwarded += s.textForwardedSales || 0;
-
-      dailyTrend.push({
-        date: eod.date,
-        total: s.totalSales || 0,
-        walkinSales: s.walkinSales || 0,
-        onlineSales: s.onlineSales || 0,
-        transactionCount: s.transactionCount || 0,
-        deliveryRevenue: s.deliveryRevenue || 0,
-        productRevenue: s.productRevenue || 0
-      });
-
-      (s.cashierBreakdown || []).forEach((row) => {
-        const key = String(row.cashier || row.cashierName);
-        const existing = cashierTotals.get(key) || { cashierName: row.cashierName, saleCount: 0, total: 0 };
-        existing.saleCount += row.saleCount || 0;
-        existing.total += row.total || 0;
-        cashierTotals.set(key, existing);
-      });
-    });
-
-    const cashierBreakdown = Array.from(cashierTotals.values()).sort((a, b) => b.total - a.total);
-
-    res.json({
-      success: true,
-      data: {
-        startDate,
-        endDate,
-        branch,
-        daysClosed: closes.length,
-        daysInRange: allDates.length,
-        missingDates,
-        totals,
-        paymentTotalsByMethod,
-        dailyTrend,
-        cashierBreakdown
-      }
-    });
-  } catch (error) {
-    console.error('GET /api/pos/eod/range-summary error:', error);
     res.status(500).json({ success: false, message: error.message });
   }
 });
