@@ -315,7 +315,7 @@ const ReturnsExchanges = () => {
     [returnBasket]
   );
   const replacementTotal = useMemo(
-    () => Object.values(replacementBasket).reduce((sum, l) => l.price * l.quantity, 0),
+    () => Object.values(replacementBasket).reduce((sum, l) => sum + l.price * l.quantity, 0),
     [replacementBasket]
   );
   const priceDifference = Math.round((replacementTotal - returnedTotal) * 100) / 100;
