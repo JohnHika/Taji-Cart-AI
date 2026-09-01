@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import toast from 'react-hot-toast';
 import {
   FaArrowLeft,
+  FaBan,
   FaBoxOpen,
   FaCamera,
   FaCheckCircle,
@@ -945,12 +946,13 @@ const ReturnsExchanges = () => {
                     </span>
                   </div>
                   <div className={`flex items-center justify-between border-t p-3 dark:border-dm-border ${
-                    priceDifference > 0 ? 'bg-gold-50 dark:bg-gold-900/10' : 'bg-plum-50/50 dark:bg-dm-card-2'
+                    priceDifference > 0 ? 'bg-gold-50 dark:bg-gold-900/10' : priceDifference < 0 ? 'bg-red-50 dark:bg-red-950/20' : 'bg-plum-50/50 dark:bg-dm-card-2'
                   }`}>
-                    <span className="text-sm font-bold">
-                      {priceDifference > 0 ? 'Customer owes' : priceDifference < 0 ? 'Forfeited (no refund)' : 'Even swap — nothing owed'}
+                    <span className={`flex items-center gap-1.5 text-sm font-bold ${priceDifference < 0 ? 'text-red-700 dark:text-red-300' : ''}`}>
+                      {priceDifference < 0 && <FaBan size={12} className="shrink-0" />}
+                      {priceDifference > 0 ? 'Customer needs to add' : priceDifference < 0 ? 'Forfeited — no refund given' : 'Even swap — nothing owed'}
                     </span>
-                    <span className={`text-base font-black ${priceDifference > 0 ? 'text-gold-700 dark:text-gold-300' : 'text-brown-500 dark:text-white/50'}`}>
+                    <span className={`text-base font-black ${priceDifference > 0 ? 'text-gold-700 dark:text-gold-300' : priceDifference < 0 ? 'text-red-700 dark:text-red-300' : 'text-brown-500 dark:text-white/50'}`}>
                       {DisplayPriceInShillings(Math.abs(priceDifference))}
                     </span>
                   </div>
@@ -1227,8 +1229,19 @@ const ReturnsExchanges = () => {
                         </p>
                         {ex.priceDifference > 0 && (
                           <p className="mt-1.5 text-xs font-semibold text-gold-700 dark:text-gold-300">
-                            Collected {DisplayPriceInShillings(ex.priceDifference)} difference
+                            Customer added {DisplayPriceInShillings(ex.priceDifference)}
                             {ex.payment?.method ? ` · ${PAYMENT_METHODS.find((m) => m.id === ex.payment.method)?.label || ex.payment.method}` : ''}
+                          </p>
+                        )}
+                        {ex.priceDifference < 0 && (
+                          <p className="mt-1.5 flex items-center gap-1.5 text-xs font-semibold text-red-600 dark:text-red-400">
+                            <FaBan size={10} className="shrink-0" />
+                            Forfeited {DisplayPriceInShillings(Math.abs(ex.priceDifference))} — no refund given
+                          </p>
+                        )}
+                        {ex.priceDifference === 0 && (
+                          <p className="mt-1.5 text-xs font-medium text-brown-400 dark:text-white/40">
+                            Even swap — no money changed hands
                           </p>
                         )}
                         {ex.reason && (
