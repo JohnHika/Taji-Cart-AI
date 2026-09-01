@@ -15,6 +15,7 @@ import {
     FaListAlt,
     FaMapMarkedAlt,
     FaMapMarkerAlt,
+    FaMagic,
     FaQrcode,
     FaRocket,
     FaShoppingBag,
@@ -155,6 +156,7 @@ const DashboardSidebar = ({ userRole, isStaff }) => {
             <MenuItem to="/dashboard/loyalty-program-admin" icon={FaCrown} label="Loyalty Program" />
             <MenuItem to="/dashboard/admin-community-perks" icon={FaGift} label="Manage Perks" />
             <MenuItem to="/dashboard/feature-releases" icon={FaRocket} label="Feature Releases" />
+            <MenuItem to="/dashboard/ai-style-tryon" icon={FaMagic} label="AI Try-On" />
             <MenuItem to="/dashboard/pickup-management" icon={FaStore} label="Pickup Management" />
             <MenuItem to="/dashboard/staff/delivery" icon={FaCog} label="Delivery Management" />
           </>

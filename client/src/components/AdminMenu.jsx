@@ -16,6 +16,7 @@ import {
   FaIdCard,
   FaLayerGroup,
   FaListAlt,
+  FaMagic,
   FaMapMarkerAlt,
   FaRoute,
   FaRocket,
@@ -202,6 +203,7 @@ const AdminMenu = ({ close, forLightPanel = false }) => {
         <p className={sectionClass}>Orders & delivery</p>
         <MenuLink to="/dashboard/allorders" icon={FaClipboardList} label="All orders" />
         <MenuLink to="/dashboard/feature-releases" icon={FaRocket} label="Feature releases" />
+        <MenuLink to="/dashboard/ai-style-tryon" icon={FaMagic} label="AI Try-On" />
         <MenuLink to="/dashboard/eod-reports" icon={FaChartLine} label="Weekly/monthly reports" />
         <MenuLink to="/dashboard/driver-verification" icon={FaIdCard} label="Driver verification" />
         <MenuLink to="/dashboard/myorders" icon={FaShoppingBag} label="My orders" />

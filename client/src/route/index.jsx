@@ -3,6 +3,7 @@ import { createBrowserRouter, Navigate, useLocation } from 'react-router-dom';
 import App from '../App';
 import PrivateRoute from '../components/PrivateRoute';
 import lazyWithRetry from '../utils/lazyWithRetry';
+import FeatureGate from '../components/FeatureGate';
 
 // Eagerly loaded — tiny, needed on every route
 import CategoryFallbackErrorPage from '../components/CategoryFallbackErrorPage';
@@ -56,6 +57,7 @@ const CommunityPerksAdmin           = lazyWithRetry(() => import('../pages/admin
 const DriverVerificationDashboard   = lazyWithRetry(() => import('../pages/admin/DriverVerificationDashboard'));
 const StockValue                    = lazyWithRetry(() => import('../pages/admin/StockValue'));
 const FeatureReleases               = lazyWithRetry(() => import('../pages/admin/FeatureReleases'));
+const HairstyleTryOn               = lazyWithRetry(() => import('../pages/admin/HairstyleTryOn'));
 const AdminControlCenter            = lazyWithRetry(() => import('../pages/admin/AdminControlCenter'));
 const CommunityPerks                = lazyWithRetry(() => import('../pages/CommunityPerks'));
 const POSDashboard                  = lazyWithRetry(() => import('../pages/POSDashboard'));
@@ -223,6 +225,7 @@ const router = createBrowserRouter([
           { path: 'stock-value',            element: <PrivateRoute requireAdmin={true}>{S(StockValue)}</PrivateRoute> },
           { path: 'admin-control-center',   element: <PrivateRoute requireAdmin={true}>{S(AdminControlCenter)}</PrivateRoute> },
           { path: 'feature-releases',        element: <PrivateRoute requireAdmin={true}>{S(FeatureReleases)}</PrivateRoute> },
+          { path: 'ai-style-tryon',         element: <PrivateRoute requireAdmin={true}>{S(<FeatureGate flagKey="ai-style-tryon"><HairstyleTryOn /></FeatureGate>)}</PrivateRoute> },
           { path: 'myorders',               element: <PrivateRoute>{S(MyOrders)}</PrivateRoute> },
           { path: 'address',                element: <PrivateRoute>{S(Address)}</PrivateRoute> },
           { path: 'community-perks',        element: <PrivateRoute>{S(CommunityPerks)}</PrivateRoute> },
