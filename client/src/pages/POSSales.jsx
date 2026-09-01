@@ -307,6 +307,53 @@ const POSSales = () => {
                 </div>
               </div>
             )}
+
+            {Array.isArray(selected.exchanges) && selected.exchanges.length > 0 && (
+              <div className="mt-4">
+                <h4 className="font-semibold text-charcoal dark:text-white mb-2">Exchanges on this sale</h4>
+                <div className="space-y-2">
+                  {selected.exchanges.map((ex) => {
+                    const retLines = ex.returnedItems?.length ? ex.returnedItems : (ex.returnedItem ? [ex.returnedItem] : []);
+                    const repLines = ex.replacementItems?.length ? ex.replacementItems : (ex.replacementItem ? [ex.replacementItem] : []);
+                    const statusLabel = {
+                      requested: 'Awaiting hair',
+                      hair_received: 'Ready to complete',
+                      completed: 'Completed',
+                      cancelled: 'Cancelled',
+                    }[ex.status] || ex.status;
+                    return (
+                      <div key={ex._id} className="rounded-lg border border-brown-100 dark:border-dm-border p-2.5 text-xs">
+                        <div className="flex items-center justify-between">
+                          <span className="font-semibold text-charcoal dark:text-white">{ex.exchangeNumber}</span>
+                          <span className="rounded-pill bg-plum-100 px-2 py-0.5 text-[10px] font-bold text-plum-700 dark:bg-plum-900/30 dark:text-plum-300">
+                            {statusLabel}
+                          </span>
+                        </div>
+                        <p className="mt-1 text-brown-500 dark:text-white/50">
+                          {retLines.map((l) => `${l.quantity}× ${l.name}`).join(', ')}
+                          {' → '}
+                          {repLines.map((l) => `${l.quantity}× ${l.name}`).join(', ')}
+                        </p>
+                        {ex.priceDifference > 0 && (
+                          <p className="mt-1 font-semibold text-gold-700 dark:text-gold-300">
+                            Customer added {DisplayPriceInShillings(ex.priceDifference)}
+                            {ex.payment?.method ? ` · ${ex.payment.method}` : ''}
+                          </p>
+                        )}
+                        {ex.priceDifference < 0 && (
+                          <p className="mt-1 font-semibold text-red-600 dark:text-red-400">
+                            Forfeited {DisplayPriceInShillings(Math.abs(ex.priceDifference))} — no refund given
+                          </p>
+                        )}
+                        {ex.priceDifference === 0 && (
+                          <p className="mt-1 text-brown-400 dark:text-white/40">Even swap — no money changed hands</p>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}

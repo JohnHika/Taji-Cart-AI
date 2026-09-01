@@ -749,10 +749,17 @@ router.get('/sale/:id', auth, Staff, requireStaffPermission('receipt.reprint'), 
         message: 'Access denied'
       });
     }
-    
+
+    // Any hair exchanges filed against this receipt — so a reprinted/viewed
+    // sale shows what was actually swapped afterwards, not just what was
+    // originally sold.
+    const exchanges = await Exchange.find({ sourceType: 'sale', sourceNumber: sale.saleNumber })
+      .sort({ createdAt: -1 })
+      .lean();
+
     res.json({
       success: true,
-      data: sale
+      data: { ...sale.toObject(), exchanges }
     });
   } catch (error) {
     res.status(500).json({
@@ -774,7 +781,10 @@ router.get('/admin/sale/:id', auth, async (req, res) => {
     if (!sale) {
       return res.status(404).json({ success: false, message: 'Sale not found' });
     }
-    return res.json({ success: true, data: sale });
+    const exchanges = await Exchange.find({ sourceType: 'sale', sourceNumber: sale.saleNumber })
+      .sort({ createdAt: -1 })
+      .lean();
+    return res.json({ success: true, data: { ...sale.toObject(), exchanges } });
   } catch (error) {
     return res.status(500).json({ success: false, message: error.message });
   }
