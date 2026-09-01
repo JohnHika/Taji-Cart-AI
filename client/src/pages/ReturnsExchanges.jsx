@@ -14,7 +14,9 @@ import {
   FaMinus,
   FaPlus,
   FaSearch,
+  FaShoppingBasket,
   FaTimes,
+  FaTrash,
   FaTruck,
 } from 'react-icons/fa';
 import { useSelector } from 'react-redux';
@@ -50,6 +52,11 @@ const STEPS = [
   { key: 'confirm', label: 'Confirm' },
 ];
 
+// Reads an exchange's swapped lines from the arrays (new shape) with the
+// singular field as fallback (exchanges created before multi-item support).
+const getReturnedLines = (ex) => (ex.returnedItems?.length ? ex.returnedItems : (ex.returnedItem ? [ex.returnedItem] : []));
+const getReplacementLines = (ex) => (ex.replacementItems?.length ? ex.replacementItems : (ex.replacementItem ? [ex.replacementItem] : []));
+
 const ReturnsExchanges = () => {
   const user = useSelector((state) => state.user);
   const navigate = useNavigate();
@@ -63,25 +70,24 @@ const ReturnsExchanges = () => {
   const [searchResults, setSearchResults] = useState([]);
   const [searching, setSearching] = useState(false);
   const [selectedTransaction, setSelectedTransaction] = useState(null);
-  const [selectedReturnedItem, setSelectedReturnedItem] = useState(null);
-  // Quantity of the returned item actually going back — defaults to the
-  // line's full remaining amount, and the cashier can reduce it (never
-  // exceed what was bought minus what earlier exchanges already took).
-  const [returnQty, setReturnQty] = useState(1);
-  // Per-line stepper drafts on the "which item" list, keyed by product id.
-  const [returnQtyDrafts, setReturnQtyDrafts] = useState({});
-  // Replacement quantity — defaults to match the returned amount 1:1, then
-  // the cashier can adjust it independently (e.g. swap 3 for 2).
-  const [replacementQty, setReplacementQty] = useState(1);
+
+  // Step 1b: the return basket — every item going back, keyed by product id:
+  // { [productId]: { ...item, quantity } }. One exchange covers the whole
+  // receipt, no per-item back-and-forth.
+  const [returnBasket, setReturnBasket] = useState({});
+
+  // Step 2: the replacement basket — every product going out, keyed by id:
+  // { [productId]: { ...product, quantity } }. Quantities default to mirror
+  // the returned total 1:1 but are independently adjustable per line.
+  const [replacementBasket, setReplacementBasket] = useState({});
 
   // Step 2: pick the replacement product
   const [products, setProducts] = useState([]);
   const [loadingProducts, setLoadingProducts] = useState(false);
   const [replacementSearch, setReplacementSearch] = useState('');
-  const [selectedReplacement, setSelectedReplacement] = useState(null);
   const [reason, setReason] = useState('');
 
-  // Step 3: payment (only if replacement is pricier)
+  // Step 3: payment (only if the replacement is pricier overall)
   const [paymentMethod, setPaymentMethod] = useState('cash');
   const [splitCashAmount, setSplitCashAmount] = useState('');
   const [amountTendered, setAmountTendered] = useState('');
@@ -161,8 +167,8 @@ const ReturnsExchanges = () => {
 
   const pickTransaction = (transaction) => {
     setSelectedTransaction(transaction);
-    setSelectedReturnedItem(null);
-    setSelectedReplacement(null);
+    setReturnBasket({});
+    setReplacementBasket({});
     setReplacementSearch('');
     setReason('');
     setPaymentMethod('cash');
@@ -172,20 +178,7 @@ const ReturnsExchanges = () => {
     setForwardedTextApproved(false);
     setEquityProofUrl('');
     setEquityApproved(false);
-    setReturnQtyDrafts({});
     if (products.length === 0) loadProducts();
-  };
-
-  // Selecting an item to return seeds its stepper with the full remaining
-  // amount — the common case is returning everything, and reducing is one
-  // tap away. Fully-returned lines are disabled at render time.
-  const pickReturnedItem = (item) => {
-    const max = Math.max(1, item.returnableQty ?? item.quantity);
-    const qty = returnQtyDrafts[item.product] ?? max;
-    setSelectedReturnedItem({ ...item, quantity: qty });
-    setReturnQty(qty);
-    setReplacementQty(qty);
-    setSelectedReplacement(null);
   };
 
   const filteredReplacementProducts = useMemo(() => {
@@ -212,25 +205,78 @@ const ReturnsExchanges = () => {
     return Array.from(byProduct.values());
   }, [selectedTransaction]);
 
-  // Stepper on the per-item cards: starts at the full remaining amount, can
-  // only go down (or back up to it) — never past what the receipt allows.
-  const adjustReturnDraft = (item, delta) => {
-    const max = Math.max(1, item.returnableQty ?? item.quantity);
-    setReturnQtyDrafts((prev) => {
-      const current = prev[item.product] ?? max;
-      const next = Math.min(max, Math.max(1, current + delta));
-      return { ...prev, [item.product]: next };
+  // --- Return basket ------------------------------------------------------
+
+  // Tapping a line toggles it into/out of the basket at its full remaining
+  // amount; the stepper adjusts the quantity afterwards (capped at what the
+  // receipt still allows).
+  const toggleReturnLine = (item) => {
+    setReturnBasket((prev) => {
+      const next = { ...prev };
+      const key = String(item.product);
+      if (next[key]) {
+        delete next[key];
+      } else {
+        next[key] = { ...item, quantity: Math.max(1, item.returnableQty ?? item.quantity) };
+      }
+      return next;
     });
   };
 
-  // Shared compact stepper used on the returned/replacement rows — 44px
-  // tap targets for phones, tabular numbers, disabled edges at the bounds.
-  const renderQtyStepper = ({ value, min, max, onDecrease, onIncrease, decreaseDisabled, increaseDisabled, testId }) => (
+  const adjustReturnQty = (productId, delta) => {
+    setReturnBasket((prev) => {
+      const entry = prev[productId];
+      if (!entry) return prev;
+      const max = Math.max(1, entry.returnableQty ?? entry.quantity);
+      const next = Math.min(max, Math.max(1, entry.quantity + delta));
+      return { ...prev, [productId]: { ...entry, quantity: next } };
+    });
+  };
+
+  // --- Replacement basket ---------------------------------------------------
+
+  // Picking a replacement seeds its quantity with the total returned across
+  // the whole basket (the common 1:1 case) but never below 1; each line is
+  // then independently adjustable.
+  const totalReturnedQty = useMemo(
+    () => Object.values(returnBasket).reduce((sum, l) => sum + l.quantity, 0),
+    [returnBasket]
+  );
+
+  const addReplacement = (product) => {
+    setReplacementBasket((prev) => {
+      const key = String(product._id);
+      if (prev[key]) return prev; // already in the basket — stepper adjusts
+      const seed = Math.max(1, totalReturnedQty);
+      return { ...prev, [key]: { ...product, quantity: seed } };
+    });
+  };
+
+  const adjustReplacementQty = (productId, delta) => {
+    setReplacementBasket((prev) => {
+      const entry = prev[productId];
+      if (!entry) return prev;
+      const next = Math.max(1, entry.quantity + delta);
+      return { ...prev, [productId]: { ...entry, quantity: next } };
+    });
+  };
+
+  const removeReplacement = (productId) => {
+    setReplacementBasket((prev) => {
+      const next = { ...prev };
+      delete next[productId];
+      return next;
+    });
+  };
+
+  // Shared compact stepper — 44px tap targets for phones, tabular numbers,
+  // disabled edges at the bounds.
+  const renderQtyStepper = ({ value, min, max, onDecrease, onIncrease, testId }) => (
     <div className="inline-flex items-center overflow-hidden rounded-lg border border-brown-200 bg-white dark:border-dm-border dark:bg-dm-card">
       <button
         type="button"
         onClick={onDecrease}
-        disabled={decreaseDisabled || value <= min}
+        disabled={value <= min}
         aria-label="Decrease quantity"
         data-testid={testId ? `${testId}-minus` : undefined}
         className="flex h-11 w-11 items-center justify-center text-plum-700 transition-colors hover:bg-plum-50 active:bg-plum-100 disabled:text-brown-300 disabled:hover:bg-transparent dark:text-plum-300 dark:hover:bg-dm-card-2"
@@ -243,7 +289,7 @@ const ReturnsExchanges = () => {
       <button
         type="button"
         onClick={onIncrease}
-        disabled={increaseDisabled || (max != null && value >= max)}
+        disabled={max != null && value >= max}
         aria-label="Increase quantity"
         data-testid={testId ? `${testId}-plus` : undefined}
         className="flex h-11 w-11 items-center justify-center text-plum-700 transition-colors hover:bg-plum-50 active:bg-plum-100 disabled:text-brown-300 disabled:hover:bg-transparent dark:text-plum-300 dark:hover:bg-dm-card-2"
@@ -253,15 +299,17 @@ const ReturnsExchanges = () => {
     </div>
   );
 
-  const returnedTotal = selectedReturnedItem
-    ? selectedReturnedItem.unitPrice * returnQty
-    : 0;
-  const replacementTotal = selectedReplacement
-    ? selectedReplacement.price * replacementQty
-    : 0;
-  const priceDifference = selectedReplacement
-    ? Math.round((replacementTotal - returnedTotal) * 100) / 100
-    : 0;
+  // --- Totals across the whole exchange -------------------------------------
+
+  const returnedTotal = useMemo(
+    () => Object.values(returnBasket).reduce((sum, l) => sum + l.unitPrice * l.quantity, 0),
+    [returnBasket]
+  );
+  const replacementTotal = useMemo(
+    () => Object.values(replacementBasket).reduce((sum, l) => l.price * l.quantity, 0),
+    [replacementBasket]
+  );
+  const priceDifference = Math.round((replacementTotal - returnedTotal) * 100) / 100;
 
   const splitEquityAmount = Math.max(0, priceDifference - (Number(splitCashAmount) || 0));
 
@@ -270,9 +318,12 @@ const ReturnsExchanges = () => {
   const amountTenderedValue = Number(amountTendered) || 0;
   const cashChange = Math.max(0, Math.round((amountTenderedValue - priceDifference) * 100) / 100);
 
+  const returnBasketCount = Object.keys(returnBasket).length;
+  const replacementBasketCount = Object.keys(replacementBasket).length;
+
   const activeStepIndex = !selectedTransaction ? 0
-    : !selectedReturnedItem ? 1
-    : !selectedReplacement ? 2
+    : returnBasketCount === 0 ? 1
+    : replacementBasketCount === 0 ? 2
     : 3;
 
   const pendingCount = useMemo(
@@ -313,8 +364,8 @@ const ReturnsExchanges = () => {
     setSearchTerm('');
     setSearchResults([]);
     setSelectedTransaction(null);
-    setSelectedReturnedItem(null);
-    setSelectedReplacement(null);
+    setReturnBasket({});
+    setReplacementBasket({});
     setReplacementSearch('');
     setReason('');
     setPaymentMethod('cash');
@@ -324,9 +375,6 @@ const ReturnsExchanges = () => {
     setForwardedTextApproved(false);
     setEquityProofUrl('');
     setEquityApproved(false);
-    setReturnQty(1);
-    setReplacementQty(1);
-    setReturnQtyDrafts({});
   };
 
   // Lets the admin (who received the confirmation SMS on their own phone)
@@ -342,8 +390,13 @@ const ReturnsExchanges = () => {
   };
 
   const submitExchange = async () => {
-    if (!selectedTransaction || !selectedReturnedItem || !selectedReplacement) {
-      toast.error('Select the returned item and its replacement first.');
+    if (!selectedTransaction) return;
+    if (returnBasketCount === 0) {
+      toast.error('Tick at least one item to return.');
+      return;
+    }
+    if (replacementBasketCount === 0) {
+      toast.error('Add at least one replacement item.');
       return;
     }
     if (priceDifference > 0 && (paymentMethod === 'equity' || paymentMethod === 'split') && (!equityProofUrl || !equityApproved)) {
@@ -398,15 +451,15 @@ const ReturnsExchanges = () => {
           sourceNumber: selectedTransaction.sourceNumber,
           customerName: selectedTransaction.customerName,
           customerPhone: selectedTransaction.customerPhone,
-          returnedItem: {
-            product: selectedReturnedItem.product,
-            unitPrice: selectedReturnedItem.unitPrice,
-            quantity: returnQty,
-          },
-          replacementItem: {
-            product: selectedReplacement._id,
-            quantity: replacementQty,
-          },
+          returnedItems: Object.values(returnBasket).map((l) => ({
+            product: l.product,
+            unitPrice: l.unitPrice,
+            quantity: l.quantity,
+          })),
+          replacementItems: Object.values(replacementBasket).map((l) => ({
+            product: l._id,
+            quantity: l.quantity,
+          })),
           reason: reason.trim(),
           payment,
         },
@@ -469,6 +522,20 @@ const ReturnsExchanges = () => {
       setActingOnId(null);
     }
   };
+
+  // Renders one line of the return/replacement summary table on the
+  // confirm step — qty × name with the line total on the right.
+  const renderSummaryLine = (badge, labelClass, qty, name, total, extra) => (
+    <div className="flex items-center gap-3 p-3">
+      <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-bold ${badge}`}>
+        {extra || (labelClass === 'minus' ? '−' : '+')}
+      </span>
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-sm font-semibold">{qty}× {name}</p>
+      </div>
+      <span className="shrink-0 text-sm font-bold">{DisplayPriceInShillings(total)}</span>
+    </div>
+  );
 
   return (
     <div className="min-h-screen bg-ivory dark:bg-dm-surface text-charcoal dark:text-white pb-16">
@@ -622,14 +689,15 @@ const ReturnsExchanges = () => {
               </div>
             )}
 
-            {/* Step 1b: pick which item from that transaction is being returned */}
-            {selectedTransaction && !selectedReturnedItem && (
+            {/* Step 1b: tick EVERY item going back — one exchange covers the
+                whole receipt, no per-item back-and-forth. */}
+            {selectedTransaction && (
               <div>
                 <div className="flex items-center justify-between">
                   <div>
-                    <h2 className="text-base font-bold tracking-tight">Which item is being returned?</h2>
+                    <h2 className="text-base font-bold tracking-tight">What is being returned?</h2>
                     <p className="mt-0.5 text-xs text-brown-400 dark:text-white/40">
-                      #{selectedTransaction.sourceNumber} · {selectedTransaction.customerName}
+                      #{selectedTransaction.sourceNumber} · {selectedTransaction.customerName} · tick everything going back
                     </p>
                   </div>
                   <button
@@ -650,78 +718,140 @@ const ReturnsExchanges = () => {
                   {returnableItems.map((item, idx) => {
                     const max = Math.max(1, item.returnableQty ?? item.quantity);
                     const fullyReturned = item.returnableQty === 0;
-                    const draftQty = returnQtyDrafts[item.product] ?? max;
+                    const inBasket = Boolean(returnBasket[String(item.product)]);
+                    const basketQty = returnBasket[String(item.product)]?.quantity;
                     return (
                       <div
                         key={`${item.product}-${idx}`}
                         className={`rounded-xl border p-3 transition-all dark:border-dm-border ${
                           fullyReturned
                             ? 'border-brown-100 bg-brown-50/60 opacity-60 dark:bg-dm-card-2/40'
-                            : 'border-brown-100 bg-ivory hover:border-plum-300 hover:shadow-sm dark:bg-dm-card-2'
+                            : inBasket
+                              ? 'border-plum-400 bg-plum-50/60 dark:bg-plum-900/10'
+                              : 'border-brown-100 bg-ivory hover:border-plum-300 hover:shadow-sm dark:bg-dm-card-2'
                         }`}
                       >
                         <div className="flex items-start justify-between gap-3">
-                          <div className="min-w-0">
-                            <p className="truncate text-sm font-semibold">{item.name}</p>
-                            <p className="text-xs text-brown-500 dark:text-white/50">
-                              Bought {item.quantity} × {DisplayPriceInShillings(item.unitPrice)}
-                            </p>
-                            <p className={`text-xs font-semibold ${fullyReturned ? 'text-brown-400 dark:text-white/30' : 'text-plum-700 dark:text-gold-300'}`}>
-                              {fullyReturned
-                                ? 'Already fully exchanged'
-                                : `${item.returnableQty ?? item.quantity} returnable`}
-                            </p>
-                          </div>
-                          <span className="shrink-0 text-sm font-bold text-plum-700 dark:text-gold-300">
-                            {DisplayPriceInShillings(item.unitPrice * draftQty)}
+                          <button
+                            type="button"
+                            onClick={() => toggleReturnLine(item)}
+                            disabled={fullyReturned}
+                            className="flex min-w-0 flex-1 items-start gap-3 text-left disabled:cursor-not-allowed"
+                            aria-label={inBasket ? `Remove ${item.name} from return basket` : `Add ${item.name} to return basket`}
+                          >
+                            <span
+                              className={`mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-md border text-xs font-bold transition-colors ${
+                                inBasket
+                                  ? 'border-plum-600 bg-plum-700 text-white'
+                                  : 'border-brown-300 bg-white text-transparent dark:border-dm-border dark:bg-dm-card'
+                              }`}
+                            >
+                              <FaCheckCircle size={12} />
+                            </span>
+                            <div className="min-w-0">
+                              <p className="truncate text-sm font-semibold">{item.name}</p>
+                              <p className="text-xs text-brown-500 dark:text-white/50">
+                                Bought {item.quantity} × {DisplayPriceInShillings(item.unitPrice)}
+                              </p>
+                              <p className={`text-xs font-semibold ${fullyReturned ? 'text-brown-400 dark:text-white/30' : 'text-plum-700 dark:text-gold-300'}`}>
+                                {fullyReturned
+                                  ? 'Already fully exchanged'
+                                  : `${item.returnableQty ?? item.quantity} returnable`}
+                              </p>
+                            </div>
+                          </button>
+                          <span className="shrink-0 pt-0.5 text-sm font-bold text-plum-700 dark:text-gold-300">
+                            {DisplayPriceInShillings(item.unitPrice * (basketQty ?? max))}
                           </span>
                         </div>
-                        <div className="mt-3 flex flex-col-reverse items-stretch justify-between gap-3 sm:flex-row sm:items-center">
-                          <div className="flex items-center gap-3">
-                            {!fullyReturned && renderQtyStepper({
-                              value: draftQty,
+                        {inBasket && (
+                          <div className="mt-3 flex justify-end">
+                            {renderQtyStepper({
+                              value: basketQty,
                               min: 1,
                               max,
-                              onDecrease: () => adjustReturnDraft(item, -1),
-                              onIncrease: () => adjustReturnDraft(item, +1),
+                              onDecrease: () => adjustReturnQty(String(item.product), -1),
+                              onIncrease: () => adjustReturnQty(String(item.product), +1),
                               testId: `return-qty-${item.product}`,
                             })}
                           </div>
-                          <button
-                            type="button"
-                            onClick={() => pickReturnedItem(item)}
-                            disabled={fullyReturned}
-                            className="inline-flex min-h-[44px] items-center justify-center gap-1.5 rounded-lg bg-plum-700 px-4 text-sm font-semibold text-white transition-colors hover:bg-plum-800 active:scale-[0.98] disabled:cursor-not-allowed disabled:bg-brown-200 dark:disabled:bg-dm-card-2 dark:disabled:text-white/30"
-                          >
-                            Return {draftQty > 1 ? `${draftQty} ` : ''}this item
-                            <FaChevronRight size={11} />
-                          </button>
-                        </div>
+                        )}
                       </div>
                     );
                   })}
                 </div>
+
+                {/* Return basket running total */}
+                {returnBasketCount > 0 && (
+                  <div className="mt-4 flex items-center justify-between rounded-xl border border-plum-200 bg-plum-50/50 px-4 py-3 dark:border-plum-900/40 dark:bg-plum-900/10">
+                    <span className="flex items-center gap-2 text-sm font-bold text-plum-800 dark:text-plum-200">
+                      <FaShoppingBasket size={14} />
+                      Returning {returnBasketCount} {returnBasketCount === 1 ? 'item' : 'items'} · {totalReturnedQty} pcs
+                    </span>
+                    <span className="text-sm font-black text-plum-800 dark:text-plum-200">
+                      {DisplayPriceInShillings(returnedTotal)}
+                    </span>
+                  </div>
+                )}
               </div>
             )}
 
-            {/* Step 2: pick replacement */}
-            {selectedTransaction && selectedReturnedItem && !selectedReplacement && (
-              <div>
+            {/* Step 2: pick replacements — add as many as needed, each with
+                its own quantity. */}
+            {selectedTransaction && returnBasketCount > 0 && (
+              <div className="mt-6 border-t border-brown-100 pt-5 dark:border-dm-border">
                 <div className="flex items-center justify-between">
                   <div>
-                    <h2 className="text-base font-bold tracking-tight">Pick the replacement</h2>
+                    <h2 className="text-base font-bold tracking-tight">Pick the replacement{replacementBasketCount > 0 ? 's' : ''}</h2>
                     <p className="mt-0.5 text-xs text-brown-400 dark:text-white/40">
-                      Returning {returnQty}× {selectedReturnedItem.name}
+                      For {totalReturnedQty} pcs going back · add as many products as the customer is taking
                     </p>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => setSelectedReturnedItem(null)}
-                    className="shrink-0 rounded-pill border border-brown-200 px-3 py-1.5 text-xs font-semibold text-brown-600 transition-colors hover:bg-brown-50 dark:border-dm-border dark:text-white/60 dark:hover:bg-dm-card-2"
-                  >
-                    Change item
-                  </button>
                 </div>
+
+                {/* Replacement basket */}
+                {replacementBasketCount > 0 && (
+                  <div className="mt-4 space-y-2">
+                    {Object.entries(replacementBasket).map(([id, line]) => (
+                      <div key={id} className="flex items-center gap-3 rounded-xl border border-plum-200 bg-plum-50/40 p-3 dark:border-plum-900/40 dark:bg-plum-900/10">
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-sm font-semibold">{line.name}</p>
+                          <p className="text-xs text-brown-500 dark:text-white/50">
+                            {DisplayPriceInShillings(line.price)} each · {DisplayPriceInShillings(line.price * line.quantity)} total
+                          </p>
+                        </div>
+                        <div className="flex shrink-0 items-center gap-2">
+                          {renderQtyStepper({
+                            value: line.quantity,
+                            min: 1,
+                            max: undefined,
+                            onDecrease: () => adjustReplacementQty(id, -1),
+                            onIncrease: () => adjustReplacementQty(id, +1),
+                            testId: `replacement-qty-${id}`,
+                          })}
+                          <button
+                            type="button"
+                            onClick={() => removeReplacement(id)}
+                            className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-red-600 transition-colors hover:bg-red-50 dark:hover:bg-red-950/30"
+                            aria-label={`Remove ${line.name} from replacements`}
+                          >
+                            <FaTrash size={13} />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                    <div className="flex items-center justify-between rounded-xl border border-green-200 bg-green-50/50 px-4 py-3 dark:border-green-900/40 dark:bg-green-900/10">
+                      <span className="flex items-center gap-2 text-sm font-bold text-green-800 dark:text-green-200">
+                        <FaCheckCircle size={14} />
+                        Replacing with {replacementBasketCount} {replacementBasketCount === 1 ? 'item' : 'items'}
+                      </span>
+                      <span className="text-sm font-black text-green-800 dark:text-green-200">
+                        {DisplayPriceInShillings(replacementTotal)}
+                      </span>
+                    </div>
+                  </div>
+                )}
+
                 <div className="relative mt-4">
                   <FaSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-brown-400 text-sm" />
                   <input
@@ -736,26 +866,38 @@ const ReturnsExchanges = () => {
                   <div className="flex justify-center py-10"><LoadingSpinner /></div>
                 ) : (
                   <div className="mt-4 grid grid-cols-2 gap-2.5 sm:grid-cols-3">
-                    {filteredReplacementProducts.map((p) => (
-                      <button
-                        key={p._id}
-                        type="button"
-                        onClick={() => setSelectedReplacement(p)}
-                        className="overflow-hidden rounded-xl border border-brown-100 bg-ivory text-left transition-all hover:border-plum-300 hover:shadow-sm dark:border-dm-border dark:bg-dm-card-2"
-                      >
-                        <div className="flex aspect-square items-center justify-center bg-white dark:bg-dm-card">
-                          {p.image?.[0] ? (
-                            <img src={p.image[0]} alt={p.name} className="h-full w-full object-cover" loading="lazy" />
-                          ) : (
-                            <span className="text-2xl">🛍️</span>
+                    {filteredReplacementProducts.map((p) => {
+                      const inBasket = Boolean(replacementBasket[String(p._id)]);
+                      return (
+                        <button
+                          key={p._id}
+                          type="button"
+                          onClick={() => addReplacement(p)}
+                          className={`relative overflow-hidden rounded-xl border text-left transition-all hover:shadow-sm dark:border-dm-border ${
+                            inBasket
+                              ? 'border-plum-400 ring-2 ring-plum-300 dark:border-plum-500 dark:ring-plum-700'
+                              : 'border-brown-100 bg-ivory hover:border-plum-300 dark:bg-dm-card-2'
+                          }`}
+                        >
+                          {inBasket && (
+                            <span className="absolute right-1.5 top-1.5 z-10 flex h-6 w-6 items-center justify-center rounded-full bg-plum-700 text-white shadow-sm">
+                              <FaCheckCircle size={12} />
+                            </span>
                           )}
-                        </div>
-                        <div className="p-2">
-                          <p className="text-xs font-semibold leading-snug line-clamp-2 min-h-[2rem]">{p.name}</p>
-                          <p className="mt-0.5 text-sm font-bold text-plum-700 dark:text-plum-300">{DisplayPriceInShillings(p.price)}</p>
-                        </div>
-                      </button>
-                    ))}
+                          <div className="flex aspect-square items-center justify-center bg-white dark:bg-dm-card">
+                            {p.image?.[0] ? (
+                              <img src={p.image[0]} alt={p.name} className="h-full w-full object-cover" loading="lazy" />
+                            ) : (
+                              <span className="text-2xl">🛍️</span>
+                            )}
+                          </div>
+                          <div className="p-2">
+                            <p className="text-xs font-semibold leading-snug line-clamp-2 min-h-[2rem]">{p.name}</p>
+                            <p className="mt-0.5 text-sm font-bold text-plum-700 dark:text-plum-300">{DisplayPriceInShillings(p.price)}</p>
+                          </div>
+                        </button>
+                      );
+                    })}
                     {filteredReplacementProducts.length === 0 && (
                       <div className="col-span-full flex flex-col items-center gap-2 py-10 text-center text-brown-400 dark:text-white/40">
                         <FaBoxOpen size={20} />
@@ -767,53 +909,28 @@ const ReturnsExchanges = () => {
               </div>
             )}
 
-            {/* Step 3: confirm + payment if pricier */}
-            {selectedTransaction && selectedReturnedItem && selectedReplacement && (
-              <div>
-                <div className="flex items-center justify-between">
-                  <h2 className="text-base font-bold tracking-tight">Confirm the exchange</h2>
-                  <button
-                    type="button"
-                    onClick={() => setSelectedReplacement(null)}
-                    className="shrink-0 rounded-pill border border-brown-200 px-3 py-1.5 text-xs font-semibold text-brown-600 transition-colors hover:bg-brown-50 dark:border-dm-border dark:text-white/60 dark:hover:bg-dm-card-2"
-                  >
-                    Change replacement
-                  </button>
-                </div>
+            {/* Step 3: confirm the WHOLE exchange + one payment at the end. */}
+            {selectedTransaction && returnBasketCount > 0 && replacementBasketCount > 0 && (
+              <div className="mt-6 border-t border-brown-100 pt-5 dark:border-dm-border">
+                <h2 className="text-base font-bold tracking-tight">Confirm the exchange</h2>
 
                 <div className="mt-4 overflow-hidden rounded-xl border border-brown-100 dark:border-dm-border">
-                  <div className="flex items-center gap-3 bg-ivory p-3 dark:bg-dm-card-2">
-                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-red-100 text-xs font-bold text-red-600 dark:bg-red-900/20 dark:text-red-300">
-                      −
-                    </span>
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-semibold">{returnQty}× {selectedReturnedItem.name}</p>
-                      <p className="text-xs text-brown-500 dark:text-white/50">Returning</p>
-                    </div>
-                    <span className="shrink-0 text-sm font-bold">{DisplayPriceInShillings(returnedTotal)}</span>
+                  <div className="bg-ivory p-3 dark:bg-dm-card-2">
+                    <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-red-600 dark:text-red-300">Returning</p>
                   </div>
-                  <div className="flex flex-col gap-3 border-t border-brown-100 p-3 dark:border-dm-border sm:flex-row sm:items-center">
-                    <div className="flex items-center gap-3">
-                      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-green-100 text-xs font-bold text-green-600 dark:bg-green-900/20 dark:text-green-300">
-                        +
-                      </span>
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-semibold">{replacementQty}× {selectedReplacement.name}</p>
-                        <p className="text-xs text-brown-500 dark:text-white/50">Replacement</p>
-                      </div>
+                  {Object.values(returnBasket).map((line) => (
+                    <div key={`ret-${line.product}`} className="border-t border-brown-100 dark:border-dm-border">
+                      {renderSummaryLine('bg-red-100 text-xs font-bold text-red-600 dark:bg-red-900/20 dark:text-red-300', 'minus', line.quantity, line.name, line.unitPrice * line.quantity)}
                     </div>
-                    <div className="flex items-center justify-between gap-3 sm:justify-end">
-                      {renderQtyStepper({
-                        value: replacementQty,
-                        min: 1,
-                        max: undefined,
-                        onDecrease: () => setReplacementQty((q) => Math.max(1, q - 1)),
-                        onIncrease: () => setReplacementQty((q) => q + 1),
-                        testId: 'replacement-qty',
-                      })}
-                      <span className="shrink-0 text-sm font-bold">{DisplayPriceInShillings(replacementTotal)}</span>
-                    </div>
+                  ))}
+                  <div className="border-t border-brown-100 bg-ivory p-3 dark:border-dm-border dark:bg-dm-card-2">
+                    <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-green-700 dark:text-green-300">Replacement</p>
                   </div>
+                  {Object.values(replacementBasket).map((line) => (
+                    <div key={`rep-${line._id}`} className="border-t border-brown-100 dark:border-dm-border">
+                      {renderSummaryLine('bg-green-100 text-xs font-bold text-green-600 dark:bg-green-900/20 dark:text-green-300', 'plus', line.quantity, line.name, line.price * line.quantity)}
+                    </div>
+                  ))}
                   <div className={`flex items-center justify-between border-t p-3 dark:border-dm-border ${
                     priceDifference > 0 ? 'bg-gold-50 dark:bg-gold-900/10' : 'bg-plum-50/50 dark:bg-dm-card-2'
                   }`}>
@@ -1063,70 +1180,84 @@ const ReturnsExchanges = () => {
               </div>
             ) : (
               <div className="space-y-3">
-                {exchanges.map((ex) => (
-                  <div key={ex._id} className="overflow-hidden rounded-xl border border-brown-100 dark:border-dm-border">
-                    <div className="flex items-start justify-between gap-2 bg-ivory p-3 dark:bg-dm-card-2">
-                      <div className="min-w-0">
-                        <p className="text-sm font-bold">{ex.exchangeNumber}</p>
-                        <p className="text-xs text-brown-500 dark:text-white/50">
-                          Ref #{ex.sourceNumber} · {ex.customerName || 'Customer'}
+                {exchanges.map((ex) => {
+                  const retLines = getReturnedLines(ex);
+                  const repLines = getReplacementLines(ex);
+                  const retSummary = retLines.map((l) => `${l.quantity}× ${l.name}`).join(', ');
+                  const repSummary = repLines.map((l) => `${l.quantity}× ${l.name}`).join(', ');
+                  const isMulti = retLines.length > 1 || repLines.length > 1;
+                  return (
+                    <div key={ex._id} className="overflow-hidden rounded-xl border border-brown-100 dark:border-dm-border">
+                      <div className="flex items-start justify-between gap-2 bg-ivory p-3 dark:bg-dm-card-2">
+                        <div className="min-w-0">
+                          <p className="text-sm font-bold">
+                            {ex.exchangeNumber}
+                            {isMulti && (
+                              <span className="ml-2 rounded-full bg-plum-100 px-2 py-0.5 text-[10px] font-bold text-plum-700 dark:bg-plum-900/30 dark:text-plum-300">
+                                {retLines.length + repLines.length} items
+                              </span>
+                            )}
+                          </p>
+                          <p className="text-xs text-brown-500 dark:text-white/50">
+                            Ref #{ex.sourceNumber} · {ex.customerName || 'Customer'}
+                          </p>
+                        </div>
+                        <span className={`shrink-0 rounded-pill px-2.5 py-1 text-[11px] font-bold ${STATUS_LABELS[ex.status]?.color || ''}`}>
+                          {STATUS_LABELS[ex.status]?.label || ex.status}
+                        </span>
+                      </div>
+                      <div className="p-3">
+                        <p className="flex items-start gap-1.5 text-xs text-brown-600 dark:text-white/60">
+                          <span className="min-w-0 flex-1 break-words">{retSummary}</span>
+                          <FaExchangeAlt className="shrink-0 pt-0.5 text-brown-300 dark:text-white/25" size={10} />
+                          <span className="min-w-0 flex-1 break-words">{repSummary}</span>
+                        </p>
+                        {ex.priceDifference > 0 && (
+                          <p className="mt-1.5 text-xs font-semibold text-gold-700 dark:text-gold-300">
+                            Collected {DisplayPriceInShillings(ex.priceDifference)} difference
+                            {ex.payment?.method ? ` · ${PAYMENT_METHODS.find((m) => m.id === ex.payment.method)?.label || ex.payment.method}` : ''}
+                          </p>
+                        )}
+                        {ex.reason && (
+                          <p className="mt-1.5 text-xs italic text-brown-400 dark:text-white/40">&quot;{ex.reason}&quot;</p>
+                        )}
+                        {(ex.status === 'requested' || ex.status === 'hair_received') && (
+                          <div className="mt-3 flex gap-2">
+                            {ex.status === 'requested' && (
+                              <button
+                                onClick={() => markHairReceived(ex._id)}
+                                disabled={actingOnId === ex._id}
+                                className="flex min-h-[40px] flex-1 items-center justify-center gap-1.5 rounded-lg bg-plum-700 text-xs font-semibold text-white transition-colors hover:bg-plum-800 disabled:opacity-60"
+                              >
+                                <FaTruck size={12} /> Mark Hair Received
+                              </button>
+                            )}
+                            {ex.status === 'hair_received' && (
+                              <button
+                                onClick={() => completeExchange(ex._id)}
+                                disabled={actingOnId === ex._id}
+                                className="flex min-h-[40px] flex-1 items-center justify-center gap-1.5 rounded-lg bg-green-600 text-xs font-semibold text-white transition-colors hover:bg-green-700 disabled:opacity-60"
+                              >
+                                <FaCheckCircle size={12} /> Complete Exchange
+                              </button>
+                            )}
+                            <button
+                              onClick={() => cancelExchange(ex._id)}
+                              disabled={actingOnId === ex._id}
+                              className="min-h-[40px] rounded-lg border border-red-200 px-3 text-xs font-semibold text-red-600 transition-colors hover:bg-red-50 dark:border-red-900/40 dark:hover:bg-red-950/30"
+                            >
+                              <FaTimes size={12} />
+                            </button>
+                          </div>
+                        )}
+                        <p className="mt-2.5 flex items-center gap-1.5 text-[11px] text-brown-400 dark:text-white/40">
+                          <FaClock size={9} />
+                          {ex.requestedByName} · {new Date(ex.createdAt).toLocaleString()}
                         </p>
                       </div>
-                      <span className={`shrink-0 rounded-pill px-2.5 py-1 text-[11px] font-bold ${STATUS_LABELS[ex.status]?.color || ''}`}>
-                        {STATUS_LABELS[ex.status]?.label || ex.status}
-                      </span>
                     </div>
-                    <div className="p-3">
-                      <p className="flex items-center gap-1.5 text-xs text-brown-600 dark:text-white/60">
-                        <span className="truncate">{ex.returnedItem.quantity}× {ex.returnedItem.name}</span>
-                        <FaExchangeAlt className="shrink-0 text-brown-300 dark:text-white/25" size={10} />
-                        <span className="truncate">{ex.replacementItem.quantity}× {ex.replacementItem.name}</span>
-                      </p>
-                      {ex.priceDifference > 0 && (
-                        <p className="mt-1.5 text-xs font-semibold text-gold-700 dark:text-gold-300">
-                          Collected {DisplayPriceInShillings(ex.priceDifference)} difference
-                          {ex.payment?.method ? ` · ${PAYMENT_METHODS.find((m) => m.id === ex.payment.method)?.label || ex.payment.method}` : ''}
-                        </p>
-                      )}
-                      {ex.reason && (
-                        <p className="mt-1.5 text-xs italic text-brown-400 dark:text-white/40">&quot;{ex.reason}&quot;</p>
-                      )}
-                      {(ex.status === 'requested' || ex.status === 'hair_received') && (
-                        <div className="mt-3 flex gap-2">
-                          {ex.status === 'requested' && (
-                            <button
-                              onClick={() => markHairReceived(ex._id)}
-                              disabled={actingOnId === ex._id}
-                              className="flex min-h-[40px] flex-1 items-center justify-center gap-1.5 rounded-lg bg-plum-700 text-xs font-semibold text-white transition-colors hover:bg-plum-800 disabled:opacity-60"
-                            >
-                              <FaTruck size={12} /> Mark Hair Received
-                            </button>
-                          )}
-                          {ex.status === 'hair_received' && (
-                            <button
-                              onClick={() => completeExchange(ex._id)}
-                              disabled={actingOnId === ex._id}
-                              className="flex min-h-[40px] flex-1 items-center justify-center gap-1.5 rounded-lg bg-green-600 text-xs font-semibold text-white transition-colors hover:bg-green-700 disabled:opacity-60"
-                            >
-                              <FaCheckCircle size={12} /> Complete Exchange
-                            </button>
-                          )}
-                          <button
-                            onClick={() => cancelExchange(ex._id)}
-                            disabled={actingOnId === ex._id}
-                            className="min-h-[40px] rounded-lg border border-red-200 px-3 text-xs font-semibold text-red-600 transition-colors hover:bg-red-50 dark:border-red-900/40 dark:hover:bg-red-950/30"
-                          >
-                            <FaTimes size={12} />
-                          </button>
-                        </div>
-                      )}
-                      <p className="mt-2.5 flex items-center gap-1.5 text-[11px] text-brown-400 dark:text-white/40">
-                        <FaClock size={9} />
-                        {ex.requestedByName} · {new Date(ex.createdAt).toLocaleString()}
-                      </p>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>

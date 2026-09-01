@@ -1781,13 +1781,20 @@ router.post('/eod/close', auth, Staff, requireStaffPermission('pos.close_eod'), 
       branch,
       createdAt: { $gte: startOfDay, $lte: endOfDay }
     }).sort({ createdAt: 1 }).lean();
+
+    // Array-aware line summaries with a singular fallback for exchanges
+    // created before multi-item support — the report must read both.
+    const summarizeLines = (lines, singular) => {
+      const effective = lines?.length ? lines : (singular ? [singular] : []);
+      return effective.map((l) => `${l.quantity}x ${l.name}`).join(', ') || '';
+    };
     const exchanges = dayExchanges.map((ex) => ({
       exchangeNumber: ex.exchangeNumber,
       requestedAt: ex.createdAt,
       sourceNumber: ex.sourceNumber,
       customerName: ex.customerName || '',
-      returnedItemSummary: `${ex.returnedItem.quantity}x ${ex.returnedItem.name}`,
-      replacementItemSummary: `${ex.replacementItem.quantity}x ${ex.replacementItem.name}`,
+      returnedItemSummary: summarizeLines(ex.returnedItems, ex.returnedItem),
+      replacementItemSummary: summarizeLines(ex.replacementItems, ex.replacementItem),
       priceDifference: ex.priceDifference,
       status: ex.status,
       requestedByName: ex.requestedByName || ''

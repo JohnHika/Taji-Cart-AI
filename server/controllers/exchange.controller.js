@@ -135,13 +135,18 @@ export const searchTransactions = async (req, res) => {
             return { sourceType, sourceNumber };
           }),
           status: { $ne: 'cancelled' }
-        }).select('sourceType sourceNumber returnedItem').lean()
+        }).select('sourceType sourceNumber returnedItem returnedItems').lean()
       : [];
 
     const returnedByKey = new Map();
     for (const ex of priorExchanges) {
-      const key = `${ex.sourceType}|${ex.sourceNumber}|${String(ex.returnedItem?.product || '')}`;
-      returnedByKey.set(key, (returnedByKey.get(key) || 0) + (Number(ex.returnedItem?.quantity) || 0));
+      // Read the arrays (new shape) with the singular field as fallback
+      // (exchanges created before arrays existed).
+      const lines = (ex.returnedItems?.length ? ex.returnedItems : (ex.returnedItem ? [ex.returnedItem] : []));
+      for (const line of lines) {
+        const key = `${ex.sourceType}|${ex.sourceNumber}|${String(line?.product || '')}`;
+        returnedByKey.set(key, (returnedByKey.get(key) || 0) + (Number(line?.quantity) || 0));
+      }
     }
 
     for (const result of page) {
@@ -169,6 +174,13 @@ export const searchTransactions = async (req, res) => {
 // Create a new exchange request (status: requested). No stock or payment
 // is touched yet — that only happens once the original hair is confirmed
 // received back and the exchange is completed.
+//
+// Accepts a WHOLE receipt in one request: returnedItems[] (multiple goods,
+// each with its own quantity) and replacementItems[] (any number of
+// replacement products). One aggregate payment covers the total price
+// difference across all lines. The legacy single-item shape
+// (returnedItem/replacementItem) is still accepted and normalized into the
+// arrays, so older clients keep working.
 export const createExchange = async (req, res) => {
   try {
     const {
@@ -178,7 +190,9 @@ export const createExchange = async (req, res) => {
       customerName,
       customerPhone,
       returnedItem,
+      returnedItems,
       replacementItem,
+      replacementItems,
       reason,
       payment
     } = req.body;
@@ -189,39 +203,61 @@ export const createExchange = async (req, res) => {
     if (!mongoose.Types.ObjectId.isValid(String(sourceId))) {
       return res.status(400).json({ success: false, message: 'Invalid source ID' });
     }
-    if (
-      !returnedItem?.product ||
-      !mongoose.Types.ObjectId.isValid(String(returnedItem.product)) ||
-      !returnedItem?.quantity ||
-      typeof returnedItem?.unitPrice !== 'number'
-    ) {
+
+    // Normalize both sides into arrays of {product, quantity, unitPrice?}.
+    // The old singular payload maps to a one-line array; duplicates of the
+    // same product across lines are merged (quantities summed).
+    const mergeLines = (lines) => {
+      const byProduct = new Map();
+      for (const line of lines) {
+        const key = String(line?.product || '');
+        if (!key) continue;
+        if (!byProduct.has(key)) byProduct.set(key, { product: key, quantity: 0, unitPrice: line.unitPrice });
+        byProduct.get(key).quantity += Math.max(1, Number(line?.quantity) || 1);
+        if (typeof line?.unitPrice === 'number') byProduct.get(key).unitPrice = line.unitPrice;
+      }
+      return Array.from(byProduct.values());
+    };
+
+    const rawReturned = Array.isArray(returnedItems) && returnedItems.length > 0
+      ? returnedItems
+      : (returnedItem ? [returnedItem] : []);
+    const returnedLines = mergeLines(rawReturned);
+    const rawReplacement = Array.isArray(replacementItems) && replacementItems.length > 0
+      ? replacementItems
+      : (replacementItem ? [replacementItem] : []);
+    const replacementLines = mergeLines(rawReplacement);
+
+    if (returnedLines.length === 0) {
+      return res.status(400).json({ success: false, message: 'Select at least one item to return.' });
+    }
+    if (replacementLines.length === 0) {
+      return res.status(400).json({ success: false, message: 'Select at least one replacement item.' });
+    }
+    if (returnedLines.some((l) => !mongoose.Types.ObjectId.isValid(l.product))) {
       return res.status(400).json({ success: false, message: 'Returned item details are incomplete' });
     }
-    if (
-      !replacementItem?.product ||
-      !mongoose.Types.ObjectId.isValid(String(replacementItem.product)) ||
-      !replacementItem?.quantity
-    ) {
+    if (replacementLines.some((l) => !mongoose.Types.ObjectId.isValid(l.product))) {
       return res.status(400).json({ success: false, message: 'Replacement item details are incomplete' });
     }
 
-    const replacementProduct = await ProductModel.findById(replacementItem.product).select('name sku price');
-    if (!replacementProduct) {
-      return res.status(404).json({ success: false, message: 'Replacement product not found' });
+    // Look up every product once — names/skus/prices for the snapshots.
+    const allProductIds = [...new Set([...returnedLines.map((l) => l.product), ...replacementLines.map((l) => l.product)])];
+    const productDocs = await ProductModel.find({ _id: { $in: allProductIds } }).select('name sku price').lean();
+    const productMap = new Map(productDocs.map((p) => [String(p._id), p]));
+
+    for (const line of [...returnedLines, ...replacementLines]) {
+      if (!productMap.has(line.product)) {
+        return res.status(404).json({ success: false, message: 'A selected product no longer exists in the catalog.' });
+      }
     }
 
-    const returnedProduct = await ProductModel.findById(returnedItem.product).select('name sku');
-    if (!returnedProduct) {
-      return res.status(404).json({ success: false, message: 'Returned product not found' });
-    }
-
-    // --- Quantity control -------------------------------------------------
+    // --- Quantity control, per product ------------------------------------
     // The cashier may return fewer than were bought, never more — and never
     // more than earlier (non-cancelled) exchanges against the same receipt
     // have already taken back. The receipt number is re-derived from the
     // source document itself so prior exchanges always match the
     // authoritative number, never a client-supplied one.
-    let purchasedQty = 0;
     let authoritativeNumber = String(sourceNumber || '');
     if (sourceType === 'sale') {
       const sale = await Sale.findById(sourceId).select('items saleNumber');
@@ -229,53 +265,100 @@ export const createExchange = async (req, res) => {
         return res.status(404).json({ success: false, message: 'Original sale not found — search for it again and re-pick it.' });
       }
       authoritativeNumber = sale.saleNumber || authoritativeNumber;
-      purchasedQty = sale.items
-        .filter((i) => i.product && String(i.product) === String(returnedItem.product))
-        .reduce((sum, i) => sum + (Number(i.quantity) || 0), 0);
     } else {
       const line = await OrderModel.findById(sourceId).select('orderId');
       if (!line) {
         return res.status(404).json({ success: false, message: 'Original order not found — search for it again and re-pick it.' });
       }
       authoritativeNumber = line.orderId || authoritativeNumber;
-      const siblingLines = await OrderModel.find({ orderId: authoritativeNumber, productId: returnedItem.product }).select('quantity');
-      purchasedQty = siblingLines.reduce((sum, l) => sum + (Number(l.quantity) || 0), 0);
     }
 
-    if (purchasedQty < 1) {
-      return res.status(400).json({
-        success: false,
-        message: `${returnedProduct.name} is not part of #${authoritativeNumber || 'this transaction'}.`
-      });
+    // Purchased quantity per product across the whole source (a sale can
+    // repeat a product on several lines; an order spreads them across
+    // documents sharing an orderId).
+    const purchasedByProduct = new Map();
+    if (sourceType === 'sale') {
+      const sale = await Sale.findById(sourceId).select('items');
+      for (const item of sale.items) {
+        if (!item.product) continue;
+        const key = String(item.product);
+        purchasedByProduct.set(key, (purchasedByProduct.get(key) || 0) + (Number(item.quantity) || 0));
+      }
+    } else {
+      const siblingLines = await OrderModel.find({ orderId: authoritativeNumber, productId: { $in: returnedLines.map((l) => l.product) } }).select('productId quantity');
+      for (const line of siblingLines) {
+        const key = String(line.productId);
+        purchasedByProduct.set(key, (purchasedByProduct.get(key) || 0) + (Number(line.quantity) || 0));
+      }
     }
 
+    // Already-returned quantity per product from earlier non-cancelled
+    // exchanges on this same receipt (array-aware for new records,
+    // singular fallback for legacy ones).
     const priorExchanges = await ExchangeModel.find({
       sourceType,
       sourceNumber: authoritativeNumber,
-      'returnedItem.product': returnedItem.product,
       status: { $ne: 'cancelled' }
-    }).select('returnedItem.quantity');
-    const alreadyReturned = priorExchanges.reduce(
-      (sum, ex) => sum + (Number(ex.returnedItem?.quantity) || 0),
-      0
-    );
-    const remainingQty = purchasedQty - alreadyReturned;
-
-    const returnedQty = Math.max(1, Number(returnedItem.quantity));
-    if (returnedQty > remainingQty) {
-      return res.status(400).json({
-        success: false,
-        message: remainingQty > 0
-          ? `Only ${remainingQty} × ${returnedProduct.name} can still be returned on #${authoritativeNumber} — ${alreadyReturned} ${alreadyReturned === 1 ? 'was' : 'were'} already exchanged.`
-          : `${returnedProduct.name} has already been fully exchanged on #${authoritativeNumber}.`
-      });
+    }).select('returnedItem returnedItems').lean();
+    const alreadyReturnedByProduct = new Map();
+    for (const ex of priorExchanges) {
+      const lines = (ex.returnedItems?.length ? ex.returnedItems : (ex.returnedItem ? [ex.returnedItem] : []));
+      for (const line of lines) {
+        const key = String(line?.product || '');
+        alreadyReturnedByProduct.set(key, (alreadyReturnedByProduct.get(key) || 0) + (Number(line?.quantity) || 0));
+      }
     }
-    const replacementQty = Math.max(1, Number(replacementItem.quantity));
-    const returnedTotal = Number(returnedItem.unitPrice) * returnedQty;
+
+    // Validate every returned line against its per-product cap.
+    for (const line of returnedLines) {
+      const product = productMap.get(line.product);
+      const purchasedQty = purchasedByProduct.get(line.product) || 0;
+      if (purchasedQty < 1) {
+        return res.status(400).json({
+          success: false,
+          message: `${product.name} is not part of #${authoritativeNumber || 'this transaction'}.`
+        });
+      }
+      const alreadyReturned = alreadyReturnedByProduct.get(line.product) || 0;
+      const remainingQty = purchasedQty - alreadyReturned;
+      if (line.quantity > remainingQty) {
+        return res.status(400).json({
+          success: false,
+          message: remainingQty > 0
+            ? `Only ${remainingQty} × ${product.name} can still be returned on #${authoritativeNumber} — ${alreadyReturned} ${alreadyReturned === 1 ? 'was' : 'were'} already exchanged.`
+            : `${product.name} has already been fully exchanged on #${authoritativeNumber}.`
+        });
+      }
+    }
+
+    // Build the final snapshots. The returned side's unit price is the
+    // historical receipt price the client supplied (checked against the
+    // source document below for sales, where per-line prices are stored).
+    const returnedSnapshots = returnedLines.map((line) => {
+      const product = productMap.get(line.product);
+      return {
+        product: product._id,
+        name: product.name,
+        sku: product.sku || '',
+        unitPrice: Number(line.unitPrice ?? 0),
+        quantity: line.quantity
+      };
+    });
     // Server always recomputes the replacement's price from the live catalog
     // — never trusts a client-supplied amount, same rule as checkout/POS.
-    const replacementUnitPrice = replacementProduct.price;
-    const replacementTotal = replacementUnitPrice * replacementQty;
+    const replacementSnapshots = replacementLines.map((line) => {
+      const product = productMap.get(line.product);
+      return {
+        product: product._id,
+        name: product.name,
+        sku: product.sku || '',
+        unitPrice: product.price,
+        quantity: line.quantity
+      };
+    });
+
+    const returnedTotal = returnedSnapshots.reduce((sum, l) => sum + l.unitPrice * l.quantity, 0);
+    const replacementTotal = replacementSnapshots.reduce((sum, l) => sum + l.unitPrice * l.quantity, 0);
     const priceDifference = Math.round((replacementTotal - returnedTotal) * 100) / 100;
 
     if (priceDifference > 0) {
@@ -337,20 +420,11 @@ export const createExchange = async (req, res) => {
       sourceNumber: authoritativeNumber,
       customerName: customerName || '',
       customerPhone: customerPhone || '',
-      returnedItem: {
-        product: returnedProduct._id,
-        name: returnedProduct.name,
-        sku: returnedProduct.sku || '',
-        unitPrice: Number(returnedItem.unitPrice),
-        quantity: returnedQty
-      },
-      replacementItem: {
-        product: replacementProduct._id,
-        name: replacementProduct.name,
-        sku: replacementProduct.sku || '',
-        unitPrice: replacementUnitPrice,
-        quantity: replacementQty
-      },
+      returnedItems: returnedSnapshots,
+      replacementItems: replacementSnapshots,
+      // Legacy mirror so older readers keep working without a migration.
+      returnedItem: returnedSnapshots[0],
+      replacementItem: replacementSnapshots[0],
       priceDifference,
       payment: priceDifference > 0 ? payment : undefined,
       status: 'requested',
@@ -412,8 +486,10 @@ export const markHairReceived = async (req, res) => {
   }
 };
 
-// Complete the exchange: restock the returned item, deduct the
-// replacement from stock, and hand it over to the customer.
+// Complete the exchange: restock every returned item, deduct every
+// replacement from stock, and hand them over to the customer. With multiple
+// lines per exchange, the deduction is stock-guarded per line with rollback
+// of prior lines — the same race-safety rule as the POS sale route.
 export const completeExchange = async (req, res) => {
   try {
     const exchange = await ExchangeModel.findById(req.params.id);
@@ -429,12 +505,50 @@ export const completeExchange = async (req, res) => {
       });
     }
 
-    await ProductModel.findByIdAndUpdate(exchange.returnedItem.product, {
-      $inc: { stock: exchange.returnedItem.quantity }
-    });
-    await ProductModel.findByIdAndUpdate(exchange.replacementItem.product, {
-      $inc: { stock: -exchange.replacementItem.quantity }
-    });
+    const returnedLines = exchange.returnedItems?.length ? exchange.returnedItems : [exchange.returnedItem];
+    const replacementLines = exchange.replacementItems?.length ? exchange.replacementItems : [exchange.replacementItem];
+
+    // Restock everything the customer brought back.
+    for (const line of returnedLines) {
+      await ProductModel.findByIdAndUpdate(line.product, {
+        $inc: { stock: line.quantity }
+      });
+    }
+
+    // Atomic conditional decrement per replacement line: only succeeds if
+    // stock is untracked (null) or still >= the quantity at the moment of
+    // the write. On failure, roll back this sale's earlier decrements and
+    // the restock so stock never drifts from a half-completed swap.
+    const reservedStock = [];
+    for (const line of replacementLines) {
+      const updatedProduct = await ProductModel.findOneAndUpdate(
+        {
+          _id: line.product,
+          $or: [{ stock: null }, { stock: { $gte: line.quantity } }]
+        },
+        { $inc: { stock: -line.quantity } },
+        { new: true }
+      );
+
+      if (!updatedProduct) {
+        for (const reserved of reservedStock) {
+          await ProductModel.findByIdAndUpdate(reserved.product, { $inc: { stock: reserved.quantity } });
+        }
+        for (const restocked of returnedLines) {
+          await ProductModel.findByIdAndUpdate(restocked.product, { $inc: { stock: -restocked.quantity } });
+        }
+
+        const stillExists = await ProductModel.exists({ _id: line.product });
+        return res.status(409).json({
+          success: false,
+          message: stillExists
+            ? `${line.name || 'A replacement item'} sold out while this exchange was being completed`
+            : `Replacement product "${line.name || line.product}" no longer exists.`
+        });
+      }
+
+      reservedStock.push({ product: line.product, quantity: line.quantity });
+    }
 
     exchange.status = 'completed';
     exchange.completedAt = new Date();

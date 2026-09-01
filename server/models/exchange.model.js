@@ -10,6 +10,16 @@ import mongoose from 'mongoose';
 // over/dispatched, once the customer's original hair has physically
 // arrived back at the shop (status: hair_received), reflecting the real
 // workflow: the swap isn't instant.
+// One swapped line: what goes out (product snapshot + qty) or comes in.
+// Shared by the singular legacy fields and the arrays below.
+const makeLineSchema = () => new mongoose.Schema({
+  product: { type: mongoose.Schema.Types.ObjectId, ref: 'product', required: true },
+  name: { type: String, required: true },
+  sku: { type: String, default: '' },
+  unitPrice: { type: Number, required: true },
+  quantity: { type: Number, required: true, min: 1 }
+}, { _id: false });
+
 const exchangeSchema = new mongoose.Schema({
   exchangeNumber: {
     type: String,
@@ -41,20 +51,30 @@ const exchangeSchema = new mongoose.Schema({
     type: String,
     default: ''
   },
-  returnedItem: {
-    product: { type: mongoose.Schema.Types.ObjectId, ref: 'product', required: true },
-    name: { type: String, required: true },
-    sku: { type: String, default: '' },
-    unitPrice: { type: Number, required: true },
-    quantity: { type: Number, required: true, min: 1 }
+  // Source of truth for what's being swapped, so a whole receipt can be
+  // exchanged in ONE request — different goods, different quantities — with
+  // a single payment at the end, instead of one back-and-forth exchange
+  // per item.
+  returnedItems: {
+    type: [makeLineSchema()],
+    validate: {
+      validator: (v) => !v || v.length === 0 || v.length >= 1,
+      message: 'At least one returned item is required when the list is set'
+    }
   },
-  replacementItem: {
-    product: { type: mongoose.Schema.Types.ObjectId, ref: 'product', required: true },
-    name: { type: String, required: true },
-    sku: { type: String, default: '' },
-    unitPrice: { type: Number, required: true },
-    quantity: { type: Number, required: true, min: 1 }
+  replacementItems: {
+    type: [makeLineSchema()],
+    validate: {
+      validator: (v) => !v || v.length === 0 || v.length >= 1,
+      message: 'At least one replacement item is required when the list is set'
+    }
   },
+  // Legacy single-item mirror of the FIRST entry of each array above (or
+  // the whole story for exchanges created before arrays existed). Kept so
+  // older readers (EOD snapshots, cached clients) keep working unchanged;
+  // new code must read the arrays and fall back to these.
+  returnedItem: makeLineSchema(),
+  replacementItem: makeLineSchema(),
   // (replacement total) - (returned total). Positive = customer owes the
   // difference; negative = they exchanged down (forfeited, not refunded);
   // zero = same-type/even swap, no payment involved.
