@@ -62,15 +62,29 @@ const exchangeSchema = new mongoose.Schema({
     type: Number,
     required: true
   },
-  // Only present when priceDifference > 0 and it's been collected.
+  // Only present when priceDifference > 0 and it's been collected. Mirrors
+  // the Sale payment shape — same methods as the Sales Counter (cash,
+  // Equity, split, forwarded confirmation text) with the same server-side
+  // proof rules as the POS sale route.
   payment: {
-    method: { type: String, enum: ['cash', 'equity', 'split'] },
+    method: { type: String, enum: ['cash', 'equity', 'split', 'text_forwarded'] },
     amount: { type: Number },
+    // Cash-only convenience fields, same as a POS sale.
+    amountTendered: { type: Number },
+    change: { type: Number },
+    // Flat proof for a non-split text_forwarded collection.
+    forwardedText: { type: String },
+    approved: { type: Boolean, default: false },
+    approvedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    approvedAt: { type: Date },
     payments: [{
-      method: { type: String, enum: ['cash', 'equity'] },
+      method: { type: String, enum: ['cash', 'equity', 'text_forwarded'] },
       amount: { type: Number },
       proofImageUrl: { type: String },
-      approved: { type: Boolean, default: false }
+      forwardedText: { type: String },
+      approved: { type: Boolean, default: false },
+      approvedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+      approvedAt: { type: Date }
     }]
   },
   status: {
@@ -125,6 +139,9 @@ const exchangeSchema = new mongoose.Schema({
 
 exchangeSchema.index({ status: 1, createdAt: -1 });
 exchangeSchema.index({ sourceType: 1, sourceId: 1 });
+// Serves the "how much is left to return on this receipt" lookups in both
+// the search enrichment and create-side quantity validation.
+exchangeSchema.index({ sourceType: 1, sourceNumber: 1, 'returnedItem.product': 1 });
 
 const Exchange = mongoose.model('exchange', exchangeSchema);
 

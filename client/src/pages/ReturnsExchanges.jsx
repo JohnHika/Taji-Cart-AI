@@ -8,8 +8,11 @@ import {
   FaChevronRight,
   FaClipboardList,
   FaClock,
+  FaCopy,
   FaExchangeAlt,
   FaHourglassHalf,
+  FaMinus,
+  FaPlus,
   FaSearch,
   FaTimes,
   FaTruck,
@@ -24,10 +27,13 @@ import uploadImage from '../utils/UploadImage';
 import { compressImage } from '../utils/compressImage';
 import { DisplayPriceInShillings } from '../utils/DisplayPriceInShillings';
 
+// Mirrors the Sales Counter's payment options exactly, so a cashier moves
+// between the two screens without relearning anything.
 const PAYMENT_METHODS = [
   { id: 'cash', label: 'Cash', color: 'bg-green-600' },
   { id: 'equity', label: 'Equity', color: 'bg-gold-600' },
   { id: 'split', label: 'Split', color: 'bg-plum-600' },
+  { id: 'text_forwarded', label: 'Text Fwd', color: 'bg-blue-600' },
 ];
 
 const STATUS_LABELS = {
@@ -58,6 +64,15 @@ const ReturnsExchanges = () => {
   const [searching, setSearching] = useState(false);
   const [selectedTransaction, setSelectedTransaction] = useState(null);
   const [selectedReturnedItem, setSelectedReturnedItem] = useState(null);
+  // Quantity of the returned item actually going back — defaults to the
+  // line's full remaining amount, and the cashier can reduce it (never
+  // exceed what was bought minus what earlier exchanges already took).
+  const [returnQty, setReturnQty] = useState(1);
+  // Per-line stepper drafts on the "which item" list, keyed by product id.
+  const [returnQtyDrafts, setReturnQtyDrafts] = useState({});
+  // Replacement quantity — defaults to match the returned amount 1:1, then
+  // the cashier can adjust it independently (e.g. swap 3 for 2).
+  const [replacementQty, setReplacementQty] = useState(1);
 
   // Step 2: pick the replacement product
   const [products, setProducts] = useState([]);
@@ -69,6 +84,9 @@ const ReturnsExchanges = () => {
   // Step 3: payment (only if replacement is pricier)
   const [paymentMethod, setPaymentMethod] = useState('cash');
   const [splitCashAmount, setSplitCashAmount] = useState('');
+  const [amountTendered, setAmountTendered] = useState('');
+  const [forwardedText, setForwardedText] = useState('');
+  const [forwardedTextApproved, setForwardedTextApproved] = useState(false);
   const [equityProofUrl, setEquityProofUrl] = useState('');
   const [equityProofUploading, setEquityProofUploading] = useState(false);
   const [equityProofUploadProgress, setEquityProofUploadProgress] = useState(0);
@@ -149,9 +167,25 @@ const ReturnsExchanges = () => {
     setReason('');
     setPaymentMethod('cash');
     setSplitCashAmount('');
+    setAmountTendered('');
+    setForwardedText('');
+    setForwardedTextApproved(false);
     setEquityProofUrl('');
     setEquityApproved(false);
+    setReturnQtyDrafts({});
     if (products.length === 0) loadProducts();
+  };
+
+  // Selecting an item to return seeds its stepper with the full remaining
+  // amount — the common case is returning everything, and reducing is one
+  // tap away. Fully-returned lines are disabled at render time.
+  const pickReturnedItem = (item) => {
+    const max = Math.max(1, item.returnableQty ?? item.quantity);
+    const qty = returnQtyDrafts[item.product] ?? max;
+    setSelectedReturnedItem({ ...item, quantity: qty });
+    setReturnQty(qty);
+    setReplacementQty(qty);
+    setSelectedReplacement(null);
   };
 
   const filteredReplacementProducts = useMemo(() => {
@@ -164,17 +198,77 @@ const ReturnsExchanges = () => {
     ).slice(0, 30);
   }, [products, replacementSearch]);
 
+  // One card per product (an order can repeat the same product across
+  // lines), with the line quantity summed and the server-computed
+  // returnable amount carried through.
+  const returnableItems = useMemo(() => {
+    if (!selectedTransaction) return [];
+    const byProduct = new Map();
+    for (const item of selectedTransaction.items) {
+      const key = String(item.product);
+      if (!byProduct.has(key)) byProduct.set(key, { ...item, quantity: 0 });
+      byProduct.get(key).quantity += item.quantity;
+    }
+    return Array.from(byProduct.values());
+  }, [selectedTransaction]);
+
+  // Stepper on the per-item cards: starts at the full remaining amount, can
+  // only go down (or back up to it) — never past what the receipt allows.
+  const adjustReturnDraft = (item, delta) => {
+    const max = Math.max(1, item.returnableQty ?? item.quantity);
+    setReturnQtyDrafts((prev) => {
+      const current = prev[item.product] ?? max;
+      const next = Math.min(max, Math.max(1, current + delta));
+      return { ...prev, [item.product]: next };
+    });
+  };
+
+  // Shared compact stepper used on the returned/replacement rows — 44px
+  // tap targets for phones, tabular numbers, disabled edges at the bounds.
+  const renderQtyStepper = ({ value, min, max, onDecrease, onIncrease, decreaseDisabled, increaseDisabled, testId }) => (
+    <div className="inline-flex items-center overflow-hidden rounded-lg border border-brown-200 bg-white dark:border-dm-border dark:bg-dm-card">
+      <button
+        type="button"
+        onClick={onDecrease}
+        disabled={decreaseDisabled || value <= min}
+        aria-label="Decrease quantity"
+        data-testid={testId ? `${testId}-minus` : undefined}
+        className="flex h-11 w-11 items-center justify-center text-plum-700 transition-colors hover:bg-plum-50 active:bg-plum-100 disabled:text-brown-300 disabled:hover:bg-transparent dark:text-plum-300 dark:hover:bg-dm-card-2"
+      >
+        <FaMinus size={11} />
+      </button>
+      <span className="min-w-[2.5rem] text-center text-sm font-bold tabular-nums text-plum-700 dark:text-plum-300" data-testid={testId}>
+        {value}
+      </span>
+      <button
+        type="button"
+        onClick={onIncrease}
+        disabled={increaseDisabled || (max != null && value >= max)}
+        aria-label="Increase quantity"
+        data-testid={testId ? `${testId}-plus` : undefined}
+        className="flex h-11 w-11 items-center justify-center text-plum-700 transition-colors hover:bg-plum-50 active:bg-plum-100 disabled:text-brown-300 disabled:hover:bg-transparent dark:text-plum-300 dark:hover:bg-dm-card-2"
+      >
+        <FaPlus size={11} />
+      </button>
+    </div>
+  );
+
   const returnedTotal = selectedReturnedItem
-    ? selectedReturnedItem.unitPrice * selectedReturnedItem.quantity
+    ? selectedReturnedItem.unitPrice * returnQty
     : 0;
   const replacementTotal = selectedReplacement
-    ? selectedReplacement.price * (selectedReturnedItem?.quantity || 1)
+    ? selectedReplacement.price * replacementQty
     : 0;
   const priceDifference = selectedReplacement
     ? Math.round((replacementTotal - returnedTotal) * 100) / 100
     : 0;
 
   const splitEquityAmount = Math.max(0, priceDifference - (Number(splitCashAmount) || 0));
+
+  // Cash tendered → change, mirroring the counter. Anything at or above the
+  // owed amount is fine; the owed amount is what gets recorded either way.
+  const amountTenderedValue = Number(amountTendered) || 0;
+  const cashChange = Math.max(0, Math.round((amountTenderedValue - priceDifference) * 100) / 100);
 
   const activeStepIndex = !selectedTransaction ? 0
     : !selectedReturnedItem ? 1
@@ -225,8 +319,26 @@ const ReturnsExchanges = () => {
     setReason('');
     setPaymentMethod('cash');
     setSplitCashAmount('');
+    setAmountTendered('');
+    setForwardedText('');
+    setForwardedTextApproved(false);
     setEquityProofUrl('');
     setEquityApproved(false);
+    setReturnQty(1);
+    setReplacementQty(1);
+    setReturnQtyDrafts({});
+  };
+
+  // Lets the admin (who received the confirmation SMS on their own phone)
+  // copy it back out — same affordance as the Sales Counter.
+  const copyForwardedText = async () => {
+    if (!forwardedText.trim()) return;
+    try {
+      await navigator.clipboard.writeText(forwardedText);
+      toast.success('Message copied');
+    } catch {
+      toast.error('Could not copy — copy it manually instead.');
+    }
   };
 
   const submitExchange = async () => {
@@ -234,21 +346,36 @@ const ReturnsExchanges = () => {
       toast.error('Select the returned item and its replacement first.');
       return;
     }
-    if (priceDifference > 0 && (!equityProofUrl || !equityApproved) && paymentMethod !== 'cash') {
+    if (priceDifference > 0 && (paymentMethod === 'equity' || paymentMethod === 'split') && (!equityProofUrl || !equityApproved)) {
       toast.error('Attach and approve the Equity confirmation photo before completing this exchange.');
+      return;
+    }
+    if (priceDifference > 0 && paymentMethod === 'text_forwarded' && (!forwardedText.trim() || !forwardedTextApproved)) {
+      toast.error('Paste and approve the forwarded confirmation message before completing this exchange.');
       return;
     }
     if (priceDifference > 0 && paymentMethod === 'split' && (Number(splitCashAmount) || 0) <= 0) {
       toast.error('Enter the cash portion of a split payment.');
       return;
     }
+    if (priceDifference > 0 && paymentMethod === 'cash' && amountTenderedValue > 0 && amountTenderedValue < priceDifference) {
+      toast.error('Amount tendered is less than what the customer owes.');
+      return;
+    }
 
     let payment;
     if (priceDifference > 0) {
       if (paymentMethod === 'cash') {
-        payment = { method: 'cash', amount: priceDifference };
+        payment = {
+          method: 'cash',
+          amount: priceDifference,
+          amountTendered: amountTenderedValue > 0 ? amountTenderedValue : undefined,
+          change: amountTenderedValue > 0 ? cashChange : undefined,
+        };
       } else if (paymentMethod === 'equity') {
         payment = { method: 'equity', amount: priceDifference, payments: [{ method: 'equity', amount: priceDifference, proofImageUrl: equityProofUrl, approved: true }] };
+      } else if (paymentMethod === 'text_forwarded') {
+        payment = { method: 'text_forwarded', amount: priceDifference, forwardedText, approved: true, payments: [{ method: 'text_forwarded', amount: priceDifference, forwardedText, approved: true }] };
       } else {
         payment = {
           method: 'split',
@@ -274,11 +401,11 @@ const ReturnsExchanges = () => {
           returnedItem: {
             product: selectedReturnedItem.product,
             unitPrice: selectedReturnedItem.unitPrice,
-            quantity: selectedReturnedItem.quantity,
+            quantity: returnQty,
           },
           replacementItem: {
             product: selectedReplacement._id,
-            quantity: selectedReturnedItem.quantity,
+            quantity: replacementQty,
           },
           reason: reason.trim(),
           payment,
@@ -520,24 +647,59 @@ const ReturnsExchanges = () => {
                   </p>
                 )}
                 <div className="mt-4 space-y-2">
-                  {selectedTransaction.items.map((item, idx) => (
-                    <button
-                      key={idx}
-                      type="button"
-                      onClick={() => setSelectedReturnedItem(item)}
-                      className="flex w-full items-center justify-between rounded-xl border border-brown-100 bg-ivory p-3 text-left transition-all hover:border-plum-300 hover:shadow-sm dark:border-dm-border dark:bg-dm-card-2"
-                    >
-                      <div className="min-w-0">
-                        <p className="truncate text-sm font-semibold">{item.name}</p>
-                        <p className="text-xs text-brown-500 dark:text-white/50">
-                          {item.quantity} × {DisplayPriceInShillings(item.unitPrice)}
-                        </p>
+                  {returnableItems.map((item, idx) => {
+                    const max = Math.max(1, item.returnableQty ?? item.quantity);
+                    const fullyReturned = item.returnableQty === 0;
+                    const draftQty = returnQtyDrafts[item.product] ?? max;
+                    return (
+                      <div
+                        key={`${item.product}-${idx}`}
+                        className={`rounded-xl border p-3 transition-all dark:border-dm-border ${
+                          fullyReturned
+                            ? 'border-brown-100 bg-brown-50/60 opacity-60 dark:bg-dm-card-2/40'
+                            : 'border-brown-100 bg-ivory hover:border-plum-300 hover:shadow-sm dark:bg-dm-card-2'
+                        }`}
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <p className="truncate text-sm font-semibold">{item.name}</p>
+                            <p className="text-xs text-brown-500 dark:text-white/50">
+                              Bought {item.quantity} × {DisplayPriceInShillings(item.unitPrice)}
+                            </p>
+                            <p className={`text-xs font-semibold ${fullyReturned ? 'text-brown-400 dark:text-white/30' : 'text-plum-700 dark:text-gold-300'}`}>
+                              {fullyReturned
+                                ? 'Already fully exchanged'
+                                : `${item.returnableQty ?? item.quantity} returnable`}
+                            </p>
+                          </div>
+                          <span className="shrink-0 text-sm font-bold text-plum-700 dark:text-gold-300">
+                            {DisplayPriceInShillings(item.unitPrice * draftQty)}
+                          </span>
+                        </div>
+                        <div className="mt-3 flex flex-col-reverse items-stretch justify-between gap-3 sm:flex-row sm:items-center">
+                          <div className="flex items-center gap-3">
+                            {!fullyReturned && renderQtyStepper({
+                              value: draftQty,
+                              min: 1,
+                              max,
+                              onDecrease: () => adjustReturnDraft(item, -1),
+                              onIncrease: () => adjustReturnDraft(item, +1),
+                              testId: `return-qty-${item.product}`,
+                            })}
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => pickReturnedItem(item)}
+                            disabled={fullyReturned}
+                            className="inline-flex min-h-[44px] items-center justify-center gap-1.5 rounded-lg bg-plum-700 px-4 text-sm font-semibold text-white transition-colors hover:bg-plum-800 active:scale-[0.98] disabled:cursor-not-allowed disabled:bg-brown-200 dark:disabled:bg-dm-card-2 dark:disabled:text-white/30"
+                          >
+                            Return {draftQty > 1 ? `${draftQty} ` : ''}this item
+                            <FaChevronRight size={11} />
+                          </button>
+                        </div>
                       </div>
-                      <span className="shrink-0 text-sm font-bold text-plum-700 dark:text-gold-300">
-                        {DisplayPriceInShillings(item.unitPrice * item.quantity)}
-                      </span>
-                    </button>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             )}
@@ -549,7 +711,7 @@ const ReturnsExchanges = () => {
                   <div>
                     <h2 className="text-base font-bold tracking-tight">Pick the replacement</h2>
                     <p className="mt-0.5 text-xs text-brown-400 dark:text-white/40">
-                      Returning {selectedReturnedItem.quantity}× {selectedReturnedItem.name}
+                      Returning {returnQty}× {selectedReturnedItem.name}
                     </p>
                   </div>
                   <button
@@ -625,20 +787,32 @@ const ReturnsExchanges = () => {
                       −
                     </span>
                     <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-semibold">{selectedReturnedItem.quantity}× {selectedReturnedItem.name}</p>
+                      <p className="truncate text-sm font-semibold">{returnQty}× {selectedReturnedItem.name}</p>
                       <p className="text-xs text-brown-500 dark:text-white/50">Returning</p>
                     </div>
                     <span className="shrink-0 text-sm font-bold">{DisplayPriceInShillings(returnedTotal)}</span>
                   </div>
-                  <div className="flex items-center gap-3 border-t border-brown-100 p-3 dark:border-dm-border">
-                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-green-100 text-xs font-bold text-green-600 dark:bg-green-900/20 dark:text-green-300">
-                      +
-                    </span>
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-semibold">{selectedReturnedItem.quantity}× {selectedReplacement.name}</p>
-                      <p className="text-xs text-brown-500 dark:text-white/50">Replacement</p>
+                  <div className="flex flex-col gap-3 border-t border-brown-100 p-3 dark:border-dm-border sm:flex-row sm:items-center">
+                    <div className="flex items-center gap-3">
+                      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-green-100 text-xs font-bold text-green-600 dark:bg-green-900/20 dark:text-green-300">
+                        +
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-semibold">{replacementQty}× {selectedReplacement.name}</p>
+                        <p className="text-xs text-brown-500 dark:text-white/50">Replacement</p>
+                      </div>
                     </div>
-                    <span className="shrink-0 text-sm font-bold">{DisplayPriceInShillings(replacementTotal)}</span>
+                    <div className="flex items-center justify-between gap-3 sm:justify-end">
+                      {renderQtyStepper({
+                        value: replacementQty,
+                        min: 1,
+                        max: undefined,
+                        onDecrease: () => setReplacementQty((q) => Math.max(1, q - 1)),
+                        onIncrease: () => setReplacementQty((q) => q + 1),
+                        testId: 'replacement-qty',
+                      })}
+                      <span className="shrink-0 text-sm font-bold">{DisplayPriceInShillings(replacementTotal)}</span>
+                    </div>
                   </div>
                   <div className={`flex items-center justify-between border-t p-3 dark:border-dm-border ${
                     priceDifference > 0 ? 'bg-gold-50 dark:bg-gold-900/10' : 'bg-plum-50/50 dark:bg-dm-card-2'
@@ -668,7 +842,7 @@ const ReturnsExchanges = () => {
                     <p className="mb-3 text-sm font-bold text-gold-800 dark:text-gold-200">
                       Collect {DisplayPriceInShillings(priceDifference)}
                     </p>
-                    <div className="grid grid-cols-3 gap-2">
+                    <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
                       {PAYMENT_METHODS.map((m) => (
                         <button
                           key={m.id}
@@ -686,6 +860,31 @@ const ReturnsExchanges = () => {
                       ))}
                     </div>
 
+                    {paymentMethod === 'cash' && (
+                      <div className="mt-3">
+                        <label className="text-sm font-medium">Amount tendered <span className="font-normal text-brown-400 dark:text-white/40">(optional)</span></label>
+                        <input
+                          type="number"
+                          min={0}
+                          step={0.01}
+                          value={amountTendered}
+                          onChange={(e) => setAmountTendered(e.target.value)}
+                          placeholder={priceDifference.toFixed(2)}
+                          className="mt-1 w-full rounded-lg border border-brown-200 bg-white px-3 py-2.5 text-sm dark:border-dm-border dark:bg-dm-card-2"
+                        />
+                        {amountTenderedValue > 0 && cashChange > 0 && (
+                          <p className="mt-1 text-sm font-medium text-green-600">
+                            Change: {DisplayPriceInShillings(cashChange)}
+                          </p>
+                        )}
+                        {amountTenderedValue > 0 && amountTenderedValue < priceDifference && (
+                          <p className="mt-1 text-sm font-medium text-red-600">
+                            Short by {DisplayPriceInShillings(Math.round((priceDifference - amountTenderedValue) * 100) / 100)}
+                          </p>
+                        )}
+                      </div>
+                    )}
+
                     {paymentMethod === 'split' && (
                       <div className="mt-3">
                         <label className="text-sm font-medium">Cash portion</label>
@@ -696,7 +895,7 @@ const ReturnsExchanges = () => {
                           value={splitCashAmount}
                           onChange={(e) => setSplitCashAmount(e.target.value)}
                           placeholder="0.00"
-                          className="mt-1 w-full rounded-lg border border-brown-200 bg-white px-3 py-2 text-sm dark:border-dm-border dark:bg-dm-card-2"
+                          className="mt-1 w-full rounded-lg border border-brown-200 bg-white px-3 py-2.5 text-sm dark:border-dm-border dark:bg-dm-card-2"
                         />
                         <p className="mt-1 text-xs text-brown-500 dark:text-white/50">
                           Equity portion: {DisplayPriceInShillings(splitEquityAmount)}
@@ -762,6 +961,53 @@ const ReturnsExchanges = () => {
                         )}
                       </div>
                     )}
+
+                    {paymentMethod === 'text_forwarded' && (
+                      <div className="mt-3">
+                        <div className="flex items-center justify-between">
+                          <label className="text-sm font-medium">Forwarded confirmation message</label>
+                          {forwardedText.trim() && (
+                            <button
+                              type="button"
+                              onClick={copyForwardedText}
+                              className="flex items-center gap-1 text-xs font-medium text-plum-700 hover:text-plum-800 dark:text-plum-300"
+                            >
+                              <FaCopy size={11} /> Copy
+                            </button>
+                          )}
+                        </div>
+                        <textarea
+                          value={forwardedText}
+                          onChange={(e) => {
+                            setForwardedText(e.target.value);
+                            setForwardedTextApproved(false);
+                          }}
+                          placeholder="Paste the M-Pesa/bank confirmation message forwarded to you here…"
+                          rows={4}
+                          className="mt-1 w-full resize-none rounded-lg border border-brown-200 bg-white px-3 py-2 text-sm dark:border-dm-border dark:bg-dm-card-2"
+                        />
+                        {forwardedText.trim() && (
+                          <div className="mt-2 space-y-2">
+                            <label className="flex items-start gap-2.5 rounded-lg border border-brown-100 bg-white p-2.5 text-sm dark:border-dm-border dark:bg-dm-card-2">
+                              <input
+                                type="checkbox"
+                                checked={forwardedTextApproved}
+                                onChange={(e) => setForwardedTextApproved(e.target.checked)}
+                                className="mt-0.5 h-5 w-5 shrink-0 accent-plum-700"
+                              />
+                              <span className="text-brown-700 dark:text-white/70">
+                                I confirm this forwarded message is genuine — approve payment
+                              </span>
+                            </label>
+                            {forwardedTextApproved && (
+                              <p className="flex items-center gap-1.5 text-xs font-medium text-green-600">
+                                <FaCheckCircle /> Approved by {user.name}
+                              </p>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 )}
 
@@ -775,8 +1021,13 @@ const ReturnsExchanges = () => {
 
                 <button
                   onClick={submitExchange}
-                  disabled={submitting || (priceDifference > 0 && (paymentMethod === 'equity' || paymentMethod === 'split') && (!equityProofUrl || !equityApproved))}
-                  className="mt-4 w-full rounded-xl bg-plum-700 py-3.5 text-sm font-bold text-white shadow-sm transition-all hover:bg-plum-800 active:scale-[0.99] disabled:bg-brown-300 disabled:active:scale-100"
+                  disabled={
+                    submitting ||
+                    (priceDifference > 0 && (paymentMethod === 'equity' || paymentMethod === 'split') && (!equityProofUrl || !equityApproved)) ||
+                    (priceDifference > 0 && paymentMethod === 'text_forwarded' && (!forwardedText.trim() || !forwardedTextApproved)) ||
+                    (priceDifference > 0 && paymentMethod === 'cash' && amountTenderedValue > 0 && amountTenderedValue < priceDifference)
+                  }
+                  className="mt-4 w-full min-h-[48px] rounded-xl bg-plum-700 text-sm font-bold text-white shadow-sm transition-all hover:bg-plum-800 active:scale-[0.99] disabled:bg-brown-300 disabled:active:scale-100"
                 >
                   {submitting ? 'Requesting…' : 'Request Exchange'}
                 </button>
@@ -834,6 +1085,7 @@ const ReturnsExchanges = () => {
                       {ex.priceDifference > 0 && (
                         <p className="mt-1.5 text-xs font-semibold text-gold-700 dark:text-gold-300">
                           Collected {DisplayPriceInShillings(ex.priceDifference)} difference
+                          {ex.payment?.method ? ` · ${PAYMENT_METHODS.find((m) => m.id === ex.payment.method)?.label || ex.payment.method}` : ''}
                         </p>
                       )}
                       {ex.reason && (

@@ -121,8 +121,45 @@ export const searchTransactions = async (req, res) => {
     });
 
     const results = [...saleResults, ...orderResults].sort((a, b) => new Date(b.date) - new Date(a.date));
+    const page = results.slice(0, 25);
 
-    res.json({ success: true, data: results.slice(0, 25) });
+    // How much of each line can still be returned: bought minus what earlier
+    // (non-cancelled) exchanges against the same receipt have already taken
+    // back. Lets the counter cap the quantity stepper at the real remaining
+    // amount and grey out fully-returned lines.
+    const sourceKeys = [...new Set(page.map((r) => `${r.sourceType}|${r.sourceNumber}`))];
+    const priorExchanges = sourceKeys.length
+      ? await ExchangeModel.find({
+          $or: sourceKeys.map((key) => {
+            const [sourceType, sourceNumber] = key.split('|');
+            return { sourceType, sourceNumber };
+          }),
+          status: { $ne: 'cancelled' }
+        }).select('sourceType sourceNumber returnedItem').lean()
+      : [];
+
+    const returnedByKey = new Map();
+    for (const ex of priorExchanges) {
+      const key = `${ex.sourceType}|${ex.sourceNumber}|${String(ex.returnedItem?.product || '')}`;
+      returnedByKey.set(key, (returnedByKey.get(key) || 0) + (Number(ex.returnedItem?.quantity) || 0));
+    }
+
+    for (const result of page) {
+      // An order can carry the same product on several lines (and a legacy
+      // sale can too) — the returnable amount is per product across the
+      // whole source, matching what createExchange enforces.
+      const purchasedByProduct = new Map();
+      for (const item of result.items) {
+        purchasedByProduct.set(String(item.product), (purchasedByProduct.get(String(item.product)) || 0) + item.quantity);
+      }
+      for (const item of result.items) {
+        item.purchasedQty = purchasedByProduct.get(String(item.product)) || item.quantity;
+        const alreadyReturned = returnedByKey.get(`${result.sourceType}|${result.sourceNumber}|${String(item.product)}`) || 0;
+        item.returnableQty = Math.max(0, item.purchasedQty - alreadyReturned);
+      }
+    }
+
+    res.json({ success: true, data: page });
   } catch (error) {
     console.error('GET /api/exchanges/search error:', error);
     res.status(500).json({ success: false, message: error.message });
@@ -178,7 +215,61 @@ export const createExchange = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Returned product not found' });
     }
 
+    // --- Quantity control -------------------------------------------------
+    // The cashier may return fewer than were bought, never more — and never
+    // more than earlier (non-cancelled) exchanges against the same receipt
+    // have already taken back. The receipt number is re-derived from the
+    // source document itself so prior exchanges always match the
+    // authoritative number, never a client-supplied one.
+    let purchasedQty = 0;
+    let authoritativeNumber = String(sourceNumber || '');
+    if (sourceType === 'sale') {
+      const sale = await Sale.findById(sourceId).select('items saleNumber');
+      if (!sale) {
+        return res.status(404).json({ success: false, message: 'Original sale not found — search for it again and re-pick it.' });
+      }
+      authoritativeNumber = sale.saleNumber || authoritativeNumber;
+      purchasedQty = sale.items
+        .filter((i) => i.product && String(i.product) === String(returnedItem.product))
+        .reduce((sum, i) => sum + (Number(i.quantity) || 0), 0);
+    } else {
+      const line = await OrderModel.findById(sourceId).select('orderId');
+      if (!line) {
+        return res.status(404).json({ success: false, message: 'Original order not found — search for it again and re-pick it.' });
+      }
+      authoritativeNumber = line.orderId || authoritativeNumber;
+      const siblingLines = await OrderModel.find({ orderId: authoritativeNumber, productId: returnedItem.product }).select('quantity');
+      purchasedQty = siblingLines.reduce((sum, l) => sum + (Number(l.quantity) || 0), 0);
+    }
+
+    if (purchasedQty < 1) {
+      return res.status(400).json({
+        success: false,
+        message: `${returnedProduct.name} is not part of #${authoritativeNumber || 'this transaction'}.`
+      });
+    }
+
+    const priorExchanges = await ExchangeModel.find({
+      sourceType,
+      sourceNumber: authoritativeNumber,
+      'returnedItem.product': returnedItem.product,
+      status: { $ne: 'cancelled' }
+    }).select('returnedItem.quantity');
+    const alreadyReturned = priorExchanges.reduce(
+      (sum, ex) => sum + (Number(ex.returnedItem?.quantity) || 0),
+      0
+    );
+    const remainingQty = purchasedQty - alreadyReturned;
+
     const returnedQty = Math.max(1, Number(returnedItem.quantity));
+    if (returnedQty > remainingQty) {
+      return res.status(400).json({
+        success: false,
+        message: remainingQty > 0
+          ? `Only ${remainingQty} × ${returnedProduct.name} can still be returned on #${authoritativeNumber} — ${alreadyReturned} ${alreadyReturned === 1 ? 'was' : 'were'} already exchanged.`
+          : `${returnedProduct.name} has already been fully exchanged on #${authoritativeNumber}.`
+      });
+    }
     const replacementQty = Math.max(1, Number(replacementItem.quantity));
     const returnedTotal = Number(returnedItem.unitPrice) * returnedQty;
     // Server always recomputes the replacement's price from the live catalog
@@ -194,6 +285,35 @@ export const createExchange = async (req, res) => {
           message: `This exchange requires collecting KSh ${priceDifference.toLocaleString()} — payment details are required.`
         });
       }
+      // Same proof rules as the POS sale route: an Equity row must carry an
+      // approved confirmation photo, a text_forwarded row must carry the
+      // pasted confirmation message — and approval is always re-stamped
+      // server-side, never trusted from the client.
+      const paymentRows = payment.method === 'split'
+        ? (payment.payments || [])
+        : (Array.isArray(payment.payments) && payment.payments.length > 0 ? payment.payments : [payment]);
+
+      const unprovenEquity = paymentRows.find((p) => p.method === 'equity' && (!p.proofImageUrl || !p.approved));
+      if (unprovenEquity) {
+        return res.status(400).json({
+          success: false,
+          message: 'Each Equity payment requires an approved confirmation photo before the exchange can be recorded.'
+        });
+      }
+      const unprovenText = paymentRows.find((p) => p.method === 'text_forwarded' && (!String(p.forwardedText || '').trim() || !p.approved));
+      if (unprovenText) {
+        return res.status(400).json({
+          success: false,
+          message: 'Each Text Forwarded payment requires the pasted confirmation message and approval before the exchange can be recorded.'
+        });
+      }
+      paymentRows.forEach((row) => {
+        if (row.method === 'equity' || row.method === 'text_forwarded') {
+          row.approvedBy = req.user._id;
+          row.approvedAt = new Date();
+        }
+      });
+
       const paidAmount = payment.method === 'split'
         ? (payment.payments || []).reduce((sum, p) => sum + Number(p.amount || 0), 0)
         : Number(payment.amount || 0);
@@ -214,7 +334,7 @@ export const createExchange = async (req, res) => {
       exchangeNumber,
       sourceType,
       sourceId,
-      sourceNumber,
+      sourceNumber: authoritativeNumber,
       customerName: customerName || '',
       customerPhone: customerPhone || '',
       returnedItem: {
