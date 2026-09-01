@@ -857,11 +857,6 @@ const ReturnsExchanges = () => {
                         {DisplayPriceInShillings(replacementTotal)}
                       </span>
                     </div>
-                    {totalReplacementQty !== totalReturnedQty && (
-                      <p className="rounded-xl border border-gold-200 bg-gold-50 px-4 py-2.5 text-xs font-semibold text-gold-800 dark:border-gold-900/40 dark:bg-gold-900/10 dark:text-gold-200">
-                        Swapping {totalReturnedQty} returned {totalReturnedQty === 1 ? 'pc' : 'pcs'} for {totalReplacementQty} — adjust the quantities if that&apos;s not right.
-                      </p>
-                    )}
                   </div>
                 )}
 
@@ -944,17 +939,10 @@ const ReturnsExchanges = () => {
                       {renderSummaryLine('bg-green-100 text-xs font-bold text-green-600 dark:bg-green-900/20 dark:text-green-300', 'plus', line.quantity, line.name, line.price * line.quantity)}
                     </div>
                   ))}
-                  <div className={`flex items-center justify-between border-t border-brown-100 px-3 py-2 text-xs dark:border-dm-border ${
-                    totalReplacementQty === totalReturnedQty
-                      ? 'text-brown-400 dark:text-white/40'
-                      : 'font-semibold text-red-600 dark:text-red-300'
-                  }`}>
+                  <div className="flex items-center justify-between border-t border-brown-100 px-3 py-2 text-xs text-brown-400 dark:border-dm-border dark:text-white/40">
                     <span>
                       {totalReturnedQty} {totalReturnedQty === 1 ? 'pc' : 'pcs'} out ↔ {totalReplacementQty} {totalReplacementQty === 1 ? 'pc' : 'pcs'} in
                     </span>
-                    {totalReplacementQty !== totalReturnedQty && (
-                      <span>Quantities don&apos;t match — check before requesting</span>
-                    )}
                   </div>
                   <div className={`flex items-center justify-between border-t p-3 dark:border-dm-border ${
                     priceDifference > 0 ? 'bg-gold-50 dark:bg-gold-900/10' : 'bg-plum-50/50 dark:bg-dm-card-2'
