@@ -235,20 +235,28 @@ const ReturnsExchanges = () => {
 
   // --- Replacement basket ---------------------------------------------------
 
-  // Picking a replacement seeds its quantity with the total returned across
-  // the whole basket (the common 1:1 case) but never below 1; each line is
-  // then independently adjustable.
+  // Total pieces going back / coming in — drives the pcs-parity hints so a
+  // quantity mistake is visible before the exchange is recorded.
   const totalReturnedQty = useMemo(
     () => Object.values(returnBasket).reduce((sum, l) => sum + l.quantity, 0),
     [returnBasket]
   );
+  const totalReplacementQty = useMemo(
+    () => Object.values(replacementBasket).reduce((sum, l) => sum + l.quantity, 0),
+    [replacementBasket]
+  );
 
+  // Picking a replacement starts the line at 1 — the cashier bumps it with
+  // the stepper if the customer takes more. Deliberately NOT auto-copied
+  // from the returned total: with several replacement products that would
+  // hand EVERY line the full returned count and inflate the swap (e.g.
+  // 2 returned pcs + 2 replacement products → 4 pcs out → wrong price
+  // difference).
   const addReplacement = (product) => {
     setReplacementBasket((prev) => {
       const key = String(product._id);
       if (prev[key]) return prev; // already in the basket — stepper adjusts
-      const seed = Math.max(1, totalReturnedQty);
-      return { ...prev, [key]: { ...product, quantity: seed } };
+      return { ...prev, [key]: { ...product, quantity: 1 } };
     });
   };
 
@@ -843,12 +851,17 @@ const ReturnsExchanges = () => {
                     <div className="flex items-center justify-between rounded-xl border border-green-200 bg-green-50/50 px-4 py-3 dark:border-green-900/40 dark:bg-green-900/10">
                       <span className="flex items-center gap-2 text-sm font-bold text-green-800 dark:text-green-200">
                         <FaCheckCircle size={14} />
-                        Replacing with {replacementBasketCount} {replacementBasketCount === 1 ? 'item' : 'items'}
+                        Replacing with {replacementBasketCount} {replacementBasketCount === 1 ? 'item' : 'items'} · {totalReplacementQty} {totalReplacementQty === 1 ? 'pc' : 'pcs'}
                       </span>
                       <span className="text-sm font-black text-green-800 dark:text-green-200">
                         {DisplayPriceInShillings(replacementTotal)}
                       </span>
                     </div>
+                    {totalReplacementQty !== totalReturnedQty && (
+                      <p className="rounded-xl border border-gold-200 bg-gold-50 px-4 py-2.5 text-xs font-semibold text-gold-800 dark:border-gold-900/40 dark:bg-gold-900/10 dark:text-gold-200">
+                        Swapping {totalReturnedQty} returned {totalReturnedQty === 1 ? 'pc' : 'pcs'} for {totalReplacementQty} — adjust the quantities if that&apos;s not right.
+                      </p>
+                    )}
                   </div>
                 )}
 
@@ -931,6 +944,18 @@ const ReturnsExchanges = () => {
                       {renderSummaryLine('bg-green-100 text-xs font-bold text-green-600 dark:bg-green-900/20 dark:text-green-300', 'plus', line.quantity, line.name, line.price * line.quantity)}
                     </div>
                   ))}
+                  <div className={`flex items-center justify-between border-t border-brown-100 px-3 py-2 text-xs dark:border-dm-border ${
+                    totalReplacementQty === totalReturnedQty
+                      ? 'text-brown-400 dark:text-white/40'
+                      : 'font-semibold text-red-600 dark:text-red-300'
+                  }`}>
+                    <span>
+                      {totalReturnedQty} {totalReturnedQty === 1 ? 'pc' : 'pcs'} out ↔ {totalReplacementQty} {totalReplacementQty === 1 ? 'pc' : 'pcs'} in
+                    </span>
+                    {totalReplacementQty !== totalReturnedQty && (
+                      <span>Quantities don&apos;t match — check before requesting</span>
+                    )}
+                  </div>
                   <div className={`flex items-center justify-between border-t p-3 dark:border-dm-border ${
                     priceDifference > 0 ? 'bg-gold-50 dark:bg-gold-900/10' : 'bg-plum-50/50 dark:bg-dm-card-2'
                   }`}>
