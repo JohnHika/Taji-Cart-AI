@@ -392,6 +392,23 @@ const SummaryApi = {
         url: `${baseURL}/api/product/admin/stock-value`,
         method: 'GET'
     },
+    // Feature releases (admin-managed staged rollout).
+    // getVisibleFeatureFlags is public but admin-aware: the server returns
+    // released flags for everyone plus admin-only previews when signed in
+    // as admin. The :id endpoints below are built inline in the admin page
+    // from baseURL since SummaryApi entries are static objects.
+    getVisibleFeatureFlags: {
+        url: `${baseURL}/api/feature-flags`,
+        method: 'GET'
+    },
+    getAllFeatureFlags: {
+        url: `${baseURL}/api/feature-flags/all`,
+        method: 'GET'
+    },
+    createFeatureFlag: {
+        url: `${baseURL}/api/feature-flags`,
+        method: 'POST'
+    },
     // Cart aliases (some files use addToCart / getCartItems)
     addToCart: {
         url: `${baseURL}/api/cart/create`,

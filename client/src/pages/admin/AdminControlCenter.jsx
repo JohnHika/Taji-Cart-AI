@@ -12,6 +12,7 @@ import {
   FaIdCard,
   FaLayerGroup,
   FaListAlt,
+  FaRocket,
   FaRoute,
   FaTachometerAlt,
   FaUpload,
@@ -59,6 +60,12 @@ const SECTIONS = [
       { to: '/dashboard/allorders', icon: FaClipboardList, label: 'All orders', description: 'Every order across the shop' },
       { to: '/dashboard/eod-reports', icon: FaChartLine, label: 'Weekly/monthly reports', description: 'Rolled-up sales from closed EOD reports' },
       { to: '/dashboard/driver-verification', icon: FaIdCard, label: 'Driver verification', description: 'Approve and manage delivery riders' },
+    ],
+  },
+  {
+    title: 'System',
+    links: [
+      { to: '/dashboard/feature-releases', icon: FaRocket, label: 'Feature releases', description: 'Preview features as admin, release them to everyone when ready' },
     ],
   },
 ];
