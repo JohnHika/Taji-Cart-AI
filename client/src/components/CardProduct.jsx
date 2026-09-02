@@ -21,6 +21,7 @@ const CardProduct = ({ data }) => {
   const rating = getRatingSummary(data);
   const unitName = typeof data.unit === 'string' ? data.unit : data.unit?.[0]?.name;
   const productUrl = `/product/${encodeURIComponent(valideURLConvert(data.name))}-${data._id}`;
+  const isUnavailable = stock.tone === 'unavailable';
 
   const stockTone = {
     available: 'text-emerald-700 dark:text-emerald-300',
@@ -30,7 +31,7 @@ const CardProduct = ({ data }) => {
 
   return (
     <motion.article
-      className="group relative flex w-[154px] flex-col overflow-hidden rounded-card border border-brown-200 bg-white shadow-sm dark:border-dm-border dark:bg-dm-card sm:w-[176px] md:w-[196px] lg:w-[216px]"
+      className="group relative flex w-[154px] flex-col overflow-hidden rounded-card border border-brown-200 bg-white shadow-sm transition-shadow duration-200 hover:shadow-md dark:border-dm-border dark:bg-dm-card sm:w-[176px] md:w-[196px] lg:w-[216px]"
       initial={reduceMotion ? false : { opacity: 0, y: 10 }}
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true, amount: 0.2 }}
@@ -42,7 +43,7 @@ const CardProduct = ({ data }) => {
           src={data.image?.[0]}
           alt={data.name}
           className="aspect-square w-full overflow-hidden bg-ivory dark:bg-dm-card-2 xs:aspect-[4/5] sm:aspect-[3/4]"
-          imgClassName={`h-full w-full object-cover ${reduceMotion ? '' : 'transition-transform duration-300 group-hover:scale-[1.03]'}`}
+          imgClassName={`h-full w-full object-cover ${isUnavailable ? 'opacity-60 saturate-50' : ''} ${reduceMotion ? '' : 'transition-transform duration-300 group-hover:scale-[1.03]'}`}
           watermarkClassName="bottom-1.5 right-1.5 w-[18%] max-w-[44px] opacity-70"
         />
       </Link>
@@ -50,6 +51,23 @@ const CardProduct = ({ data }) => {
         productId={data._id}
         className="absolute right-2 top-2 h-9 w-9 border border-brown-100/80 dark:border-dm-border"
       />
+
+      {/* Discount badge — anchored top-left over the photo, high-contrast so a
+          sale is visible while scrolling, not a quiet "% off" hiding in the
+          price row. */}
+      {hasDiscount && hasValidPrice && (
+        <span className="absolute left-2 top-2 rounded-full bg-red-600 px-2 py-0.5 text-[10px] font-black uppercase tracking-wide text-white shadow-sm">
+          -{data.discount}%
+        </span>
+      )}
+
+      {/* Out-of-stock flag — the dimmed photo plus this flag means the state
+          is readable at a glance, without reading the small red text below. */}
+      {isUnavailable && (
+        <span className="absolute bottom-2 left-2 rounded-full bg-charcoal/80 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white backdrop-blur-sm">
+          Sold out
+        </span>
+      )}
 
       <div className="p-2 sm:p-3">
         <Link
@@ -82,7 +100,7 @@ const CardProduct = ({ data }) => {
           <div className="flex min-w-0 flex-wrap items-baseline justify-between gap-x-2 gap-y-1">
             {hasValidPrice ? (
               <div className="min-w-0">
-                <span className="font-price text-sm font-semibold text-charcoal dark:text-white sm:text-base">
+                <span className="font-price text-sm font-bold text-charcoal dark:text-white sm:text-base">
                   {DisplayPriceInShillings(hasDiscount ? discountedPrice : data.price)}
                 </span>
                 {hasDiscount && (
@@ -94,17 +112,14 @@ const CardProduct = ({ data }) => {
             ) : (
               <span className="text-xs font-medium text-brown-500 dark:text-white/55">Price coming soon</span>
             )}
-            {hasDiscount && hasValidPrice && (
-              <span className="text-[11px] font-semibold text-gold-600 dark:text-gold-300">{data.discount}% off</span>
-            )}
           </div>
 
-          {hasValidPrice && stock.tone !== 'unavailable' ? (
+          {hasValidPrice && !isUnavailable ? (
             <div className="mt-1.5 flex w-full gap-1.5 sm:mt-2 sm:gap-2">
               <div className="min-w-0 flex-1">
-                <AddToCartButton data={data} className="min-h-10" />
+                <AddToCartButton data={data} className="min-h-11" />
               </div>
-              <WhatsAppOrderButton product={data} className="h-10 w-10 shrink-0 rounded-lg" />
+              <WhatsAppOrderButton product={data} className="h-11 w-11 shrink-0 rounded-lg" />
             </div>
           ) : hasValidPrice ? (
             <p className="mt-2 text-left text-[11px] font-semibold text-red-600 dark:text-red-400">This style is currently unavailable</p>

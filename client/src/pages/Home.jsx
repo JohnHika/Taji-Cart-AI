@@ -12,6 +12,7 @@ import PWAInstallBanner from '../components/PWAInstallBanner';
 import TrustStrip from '../components/TrustStrip';
 import UserActiveCampaigns from '../components/UserActiveCampaigns';
 import Axios from '../utils/Axios';
+import { DisplayPriceInShillings } from '../utils/DisplayPriceInShillings';
 import { getProductNavigationOptions } from '../utils/productRouteScroll';
 import { valideURLConvert } from '../utils/valideURLConvert';
 
@@ -58,6 +59,7 @@ const Home = () => {
   const hasHomeContent =
     homeCatalog.categoryBanners.length > 0 ||
     homeCatalog.bestSellers.length > 0 ||
+    homeCatalog.bannerProducts.length > 0 ||
     homeCatalog.subcategoryShelves.length > 0;
 
   const fetchHomeCatalog = async () => {
@@ -218,17 +220,22 @@ const Home = () => {
             <div className="flex gap-3 overflow-x-auto pb-1 scrollbar-hide">
               {[...homeCatalog.bestSellers, ...homeCatalog.bannerProducts]
                 .filter((p) => p.image?.[0] && !p.image[0].includes('product-photo-pending'))
+                // Dedupe: a product can be both a best seller and a banner
+                // product — showing it twice in an 8-slot strip wastes a slot
+                // and looks like a data bug.
+                .filter((p, index, list) => list.findIndex((other) => other._id === p._id) === index)
                 .slice(0, 8)
                 .map((product) => {
                   const productUrl = product._id
                     ? `/product/${encodeURIComponent(valideURLConvert(product.name))}-${product._id}`
                     : '/collections';
+                  const hasValidPrice = Number.isFinite(Number(product.price));
                   return (
                     <Link
                       key={`trending-${product._id || product.name}`}
                       to={productUrl}
                       {...getProductNavigationOptions()}
-                      className="group relative shrink-0 overflow-hidden rounded-lg bg-ivory shadow-sm dark:bg-dm-card-2"
+                      className="group relative shrink-0 overflow-hidden rounded-lg bg-ivory shadow-sm transition-shadow hover:shadow-md dark:bg-dm-card-2"
                       style={{ width: '110px', height: '130px' }}
                     >
                       <img
@@ -240,8 +247,13 @@ const Home = () => {
                           e.currentTarget.style.display = 'none';
                         }}
                       />
-                      <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-charcoal/70 to-transparent px-2 py-1.5">
+                      <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-charcoal/75 to-transparent px-2 py-1.5">
                         <p className="line-clamp-2 text-[10px] font-semibold leading-tight text-white">{product.name}</p>
+                        {hasValidPrice && (
+                          <p className="mt-0.5 text-[10px] font-bold text-gold-300">
+                            {DisplayPriceInShillings(product.price)}
+                          </p>
+                        )}
                       </div>
                     </Link>
                   );

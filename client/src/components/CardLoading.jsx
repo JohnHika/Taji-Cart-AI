@@ -1,6 +1,8 @@
 const CardLoading = () => {
+  // Widths match the real CardProduct exactly (154/176/196/216) so the
+  // skeleton doesn't shift the row by a few px when data lands.
   return (
-    <div className="flex w-[150px] flex-col overflow-hidden rounded-lg border border-brown-200 bg-white dark:border-dm-border dark:bg-dm-card sm:w-[172px] md:w-[192px] lg:w-[212px]">
+    <div className="flex w-[154px] flex-col overflow-hidden rounded-card border border-brown-200 bg-white dark:border-dm-border dark:bg-dm-card sm:w-[176px] md:w-[196px] lg:w-[216px]">
       {/* Compact mobile image skeleton; desktop retains the portrait ratio. */}
       <div className="aspect-square w-full bg-shimmer xs:aspect-[4/5] sm:aspect-[3/4]" />
 
@@ -14,7 +16,7 @@ const CardLoading = () => {
         {/* Price */}
         <div className="mt-1 h-4 w-20 rounded bg-shimmer" />
         {/* Button */}
-        <div className="mt-1 h-8 w-full rounded bg-shimmer" />
+        <div className="mt-1 h-11 w-full rounded bg-shimmer" />
       </div>
     </div>
   )
