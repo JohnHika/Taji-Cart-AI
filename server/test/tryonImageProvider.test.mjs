@@ -104,6 +104,50 @@ test('Ollama Cloud sends both reference images to the image model', async () => 
   assert.equal(Buffer.from(output.base64, 'base64').toString(), 'ollama-image');
 });
 
+test('Qwen fuses the two hosted reference URLs and returns the generated image', async () => {
+  const calls = [];
+  const generatedPng = Buffer.from('qwen-image').toString('base64');
+  const output = await generateTryOnImage({
+    prompt: 'The person from Image 2 is wearing the hairstyle from Image 1.',
+    hairstyleImage: hairstyle,
+    faceImage: face,
+    hairstyleImageUrl: 'https://res.cloudinary.com/demo/hairstyle.jpg',
+    faceImageUrl: 'https://res.cloudinary.com/demo/face.jpg',
+    env: {
+      TRYON_IMAGE_PROVIDER: 'qwen',
+      DASHSCOPE_API_KEY: 'sk-test',
+      DASHSCOPE_WORKSPACE_ID: 'ws-123',
+    },
+    fetchImpl: async (url, options) => {
+      calls.push({ url, options });
+      if (calls.length === 1) {
+        return jsonResponse({
+          output: { choices: [{ message: { content: [{ image: 'https://oss.example.com/result.png?Expires=1' }] } }] },
+        });
+      }
+      return {
+        ok: true,
+        status: 200,
+        headers: { get: (k) => (k.toLowerCase() === 'content-type' ? 'image/png' : null) },
+        arrayBuffer: async () => new TextEncoder().encode('qwen-image').buffer,
+      };
+    },
+  });
+
+  assert.equal(calls.length, 2);
+  assert.match(calls[0].url, /^https:\/\/ws-123\.ap-southeast-1\.maas\.aliyuncs\.com\/api\/v1\/services\/aigc\/multimodal-generation\/generation$/);
+  assert.equal(calls[0].options.headers.Authorization, 'Bearer sk-test');
+  const body = JSON.parse(calls[0].options.body);
+  assert.equal(body.model, 'qwen-image-2.0-pro');
+  assert.equal(body.input.messages[0].content.length, 3);
+  assert.deepEqual(body.input.messages[0].content.map((p) => Object.keys(p)[0]), ['image', 'image', 'text']);
+  assert.equal(calls[1].url, 'https://oss.example.com/result.png?Expires=1');
+  assert.equal(output.provider, 'qwen');
+  assert.equal(output.model, 'qwen-image-2.0-pro');
+  assert.equal(Buffer.from(output.base64, 'base64').toString(), 'qwen-image');
+  assert.equal(output.mimeType, 'image/png');
+});
+
 test('missing provider credentials fail closed with a setup error', () => {
   assert.throws(
     () => assertTryOnProviderConfigured({ TRYON_IMAGE_PROVIDER: 'openai' }),
@@ -128,6 +172,6 @@ test('provider timeouts surface as a retryable gateway timeout', async () => {
 test('unknown providers are rejected instead of silently falling back', () => {
   assert.throws(
     () => getTryOnProvider({ TRYON_IMAGE_PROVIDER: 'not-a-provider' }),
-    (error) => error.statusCode === 500 && /openai.*gemini.*ollama/i.test(error.message)
+    (error) => error.statusCode === 500 && /openai.*gemini.*ollama.*qwen/i.test(error.message)
   );
 });

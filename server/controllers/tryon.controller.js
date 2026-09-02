@@ -109,6 +109,8 @@ export const generateTryOn = async (req, res) => {
       prompt: buildPrompt({ hairstyleName: product.name, notes }),
       hairstyleImage,
       faceImage,
+      hairstyleImageUrl: referenceImageUrl,
+      faceImageUrl: faceUsedUrl,
     });
 
     // Persist the generated image to Cloudinary under its own folder.

@@ -1,15 +1,19 @@
 const GEMINI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta';
 const OPENAI_IMAGE_EDITS_URL = 'https://api.openai.com/v1/images/edits';
 const OLLAMA_API_BASE = 'https://ollama.com/api';
+// Alibaba Model Studio (DashScope). Singapore is the international region
+// with new-user free quota; Beijing is the China-mainland equivalent. The
+// workspace-specific host is required by the current API (no global host).
+const QWEN_REGION_HOSTS = { singapore: 'ap-southeast-1', beijing: 'cn-beijing' };
 
-const supportedProviders = new Set(['openai', 'gemini', 'ollama']);
+const supportedProviders = new Set(['openai', 'gemini', 'ollama', 'qwen']);
 
 const cleanProvider = (value) => String(value || '').trim().toLowerCase();
 
 export const getTryOnProvider = (env = process.env) => {
   const provider = cleanProvider(env.TRYON_IMAGE_PROVIDER || 'openai');
   if (!supportedProviders.has(provider)) {
-    const error = new Error('TRYON_IMAGE_PROVIDER must be "openai", "gemini", or "ollama".');
+    const error = new Error('TRYON_IMAGE_PROVIDER must be "openai", "gemini", "ollama", or "qwen".');
     error.statusCode = 500;
     throw error;
   }
@@ -19,6 +23,7 @@ export const getTryOnProvider = (env = process.env) => {
 export const getTryOnModel = (env = process.env, provider = getTryOnProvider(env)) => {
   if (provider === 'openai') return env.OPENAI_TRYON_IMAGE_MODEL || 'gpt-image-2';
   if (provider === 'ollama') return env.OLLAMA_TRYON_MODEL || 'x/flux-klein';
+  if (provider === 'qwen') return env.QWEN_IMAGE_MODEL || 'qwen-image-2.0-pro';
   return env.GEMINI_IMAGE_MODEL || 'gemini-3-pro-image';
 };
 
@@ -32,7 +37,9 @@ export const assertTryOnProviderConfigured = (env = process.env) => {
     ? Boolean(env.OPENAI_API_KEY)
     : provider === 'ollama'
       ? Boolean(env.OLLAMA_API_KEY)
-      : Boolean(env.GEMINI_API_KEY || env.GOOGLE_API_KEY);
+      : provider === 'qwen'
+        ? Boolean(env.DASHSCOPE_API_KEY)
+        : Boolean(env.GEMINI_API_KEY || env.GOOGLE_API_KEY);
 
   if (!hasKey) {
     const error = new Error(
@@ -40,7 +47,9 @@ export const assertTryOnProviderConfigured = (env = process.env) => {
         ? 'AI Style Try-On is not configured. Add OPENAI_API_KEY to the server environment.'
         : provider === 'ollama'
           ? 'AI Style Try-On is not configured. Add OLLAMA_API_KEY to the server environment.'
-        : 'AI Style Try-On is not configured. Add GEMINI_API_KEY or GOOGLE_API_KEY to the server environment.'
+        : provider === 'qwen'
+          ? 'AI Style Try-On is not configured. Add DASHSCOPE_API_KEY (and DASHSCOPE_WORKSPACE_ID) to the server environment.'
+          : 'AI Style Try-On is not configured. Add GEMINI_API_KEY or GOOGLE_API_KEY to the server environment.'
     );
     error.statusCode = 503;
     throw error;
@@ -51,7 +60,7 @@ export const assertTryOnProviderConfigured = (env = process.env) => {
 
 const getResponseText = async (response) => response.text().catch(() => '');
 
-const PROVIDER_LABELS = { openai: 'OpenAI', gemini: 'Gemini', ollama: 'Ollama' };
+const PROVIDER_LABELS = { openai: 'OpenAI', gemini: 'Gemini', ollama: 'Ollama', qwen: 'Qwen' };
 
 const failForProviderResponse = async ({ response, provider }) => {
   const body = await getResponseText(response);
@@ -176,11 +185,83 @@ const generateWithOllama = async ({ prompt, hairstyleImage, faceImage, model, ap
   return { base64, mimeType: 'image/png' };
 };
 
+const resolveQwenEndpoint = (env) => {
+  if (env.DASHSCOPE_BASE_URL) {
+    return `${String(env.DASHSCOPE_BASE_URL).replace(/\/+$/, '')}/services/aigc/multimodal-generation/generation`;
+  }
+  const workspaceId = String(env.DASHSCOPE_WORKSPACE_ID || '').trim();
+  if (!workspaceId) {
+    const error = new Error('Qwen image editing needs DASHSCOPE_WORKSPACE_ID set to your Model Studio workspace id (or set DASHSCOPE_BASE_URL to the full API host).');
+    error.statusCode = 503;
+    throw error;
+  }
+  const region = String(env.DASHSCOPE_REGION || 'ap-southeast-1').trim();
+  return `https://${workspaceId}.${region}.maas.aliyuncs.com/api/v1/services/aigc/multimodal-generation/generation`;
+};
+
+// Qwen-Image-Edit fuses up to three reference images addressed by order
+// ("Image 1", "Image 2"), which maps exactly onto our hairstyle+face inputs.
+// Unlike the other providers it accepts image URLs rather than raw bytes, so
+// the controller passes the already-hosted Cloudinary URLs through.
+const generateWithQwen = async ({ prompt, hairstyleImageUrl, faceImageUrl, model, apiKey, env, fetchImpl }) => {
+  if (!hairstyleImageUrl) {
+    const error = new Error('Qwen image editing needs the hosted hairstyle reference URL.');
+    error.statusCode = 500;
+    throw error;
+  }
+  const content = [{ image: hairstyleImageUrl }];
+  if (faceImageUrl) content.push({ image: faceImageUrl });
+  content.push({ text: prompt });
+
+  const response = await fetchImpl(resolveQwenEndpoint(env), {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      model,
+      input: { messages: [{ role: 'user', content }] },
+      parameters: {
+        n: 1,
+        watermark: false,
+        prompt_extend: true,
+        size: '1024*1536',
+      },
+    }),
+  });
+  if (!response.ok) await failForProviderResponse({ response, provider: 'qwen' });
+
+  const data = await response.json();
+  const contentParts = data?.output?.choices?.[0]?.message?.content;
+  const imagePart = Array.isArray(contentParts)
+    ? contentParts.find((part) => typeof part?.image === 'string')
+    : null;
+  if (!imagePart?.image) {
+    const error = new Error(
+      `Qwen returned no generated image${data?.message ? `: ${String(data.message).slice(0, 200)}` : '.'}`
+    );
+    error.statusCode = 502;
+    throw error;
+  }
+  // Result images live on a temporary OSS URL (24h) — download and re-encode
+  // so the controller's Cloudinary upload treats it like every other provider.
+  const stored = await fetchImpl(imagePart.image, { method: 'GET' });
+  if (!stored.ok) {
+    const error = new Error(`Generated image could not be downloaded (${stored.status}).`);
+    error.statusCode = 502;
+    throw error;
+  }
+  const buffer = Buffer.from(await stored.arrayBuffer());
+  const mimeType = (stored.headers?.get?.('content-type') || 'image/png').split(';')[0];
+  return { base64: buffer.toString('base64'), mimeType };
+};
+
 // One provider boundary for the controller. It accepts downloaded image buffers
 // rather than public URLs so provider requests never expose Cloudinary signing
 // data, and makes the image model switch an environment change rather than a
 // frontend/backend rewrite.
-export const generateTryOnImage = async ({ prompt, hairstyleImage, faceImage, env = process.env, fetchImpl = fetch }) => {
+export const generateTryOnImage = async ({ prompt, hairstyleImage, faceImage, hairstyleImageUrl, faceImageUrl, env = process.env, fetchImpl = fetch }) => {
   const { provider, model } = assertTryOnProviderConfigured(env);
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 120000);
@@ -206,6 +287,16 @@ export const generateTryOnImage = async ({ prompt, hairstyleImage, faceImage, en
           env,
           fetchImpl: timeoutFetch,
         })
+        : provider === 'qwen'
+          ? await generateWithQwen({
+            prompt,
+            hairstyleImageUrl,
+            faceImageUrl,
+            model,
+            apiKey: env.DASHSCOPE_API_KEY,
+            env,
+            fetchImpl: timeoutFetch,
+          })
         : await generateWithGemini({
         prompt,
         hairstyleImage,
