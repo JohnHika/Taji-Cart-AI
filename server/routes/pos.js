@@ -34,6 +34,94 @@ const BUSINESS_TIMEZONE = 'Africa/Nairobi';
 // use those indexes instead of falling back to a collection scan.
 const CASE_INSENSITIVE_COLLATION = { locale: 'en', strength: 2 };
 
+// ---------------------------------------------------------------------------
+// Exchange-aware sale enrichment
+//
+// A completed exchange changes what the customer actually walked away with:
+// the original receipt's lines went back, replacement lines went out, and a
+// price difference was collected (or forfeited). Every sale view below uses
+// this to carry both stories: what was originally sold (frozen receipt) and
+// what the customer effectively has now (post-exchange).
+// ---------------------------------------------------------------------------
+
+// The exchange documents relevant to a sale list — grouped by receipt number.
+// Only counts towards the customer's "now" items when COMPLETED (an exchange
+// still awaiting hair hasn't swapped anything yet).
+const getExchangeSummariesByNumber = async (saleNumbers) => {
+  const exchanges = await Exchange.find({ sourceType: 'sale', sourceNumber: { $in: saleNumbers } })
+    .sort({ createdAt: -1 })
+    .lean();
+  const byNumber = new Map();
+  for (const ex of exchanges) {
+    if (!byNumber.has(ex.sourceNumber)) byNumber.set(ex.sourceNumber, []);
+    byNumber.get(ex.sourceNumber).push({
+      _id: ex._id,
+      exchangeNumber: ex.exchangeNumber,
+      status: ex.status,
+      priceDifference: ex.priceDifference,
+      sourceType: ex.sourceType,
+      // Lines as { product, name, sku, unitPrice, quantity }
+      returnedItems: ex.returnedItems?.length ? ex.returnedItems : (ex.returnedItem ? [ex.returnedItem] : []),
+      replacementItems: ex.replacementItems?.length ? ex.replacementItems : (ex.replacementItem ? [ex.replacementItem] : []),
+      payment: ex.payment ? { method: ex.payment.method } : null,
+      createdAt: ex.createdAt,
+    });
+  }
+  return byNumber;
+};
+
+// Post-exchange "now" items for one sale: original receipt lines, minus every
+// completed exchange's returned quantities (per product), plus replacement
+// lines. Quantities that drop to/below zero are dropped (a later exchange
+// can't return more than the receipt bought).
+const computeEffectiveItems = (saleItems, completedExchanges) => {
+  const lines = new Map();
+  const add = (key, name, sku, unitPrice, qty) => {
+    if (!lines.has(key)) {
+      lines.set(key, { product: key, name, sku: sku || '', unitPrice, quantity: 0 });
+    }
+    lines.get(key).quantity += qty;
+  };
+  for (const it of (saleItems || [])) {
+    add(String(it.product), it.name, it.sku, it.unitPrice ?? it.price, it.quantity);
+  }
+  for (const ex of completedExchanges) {
+    for (const l of ex.returnedItems) {
+      const key = String(l.product);
+      if (lines.has(key)) lines.get(key).quantity -= l.quantity;
+    }
+    for (const l of ex.replacementItems) {
+      add(String(l.product), l.name, l.sku, l.unitPrice, l.quantity);
+    }
+  }
+  return lines;
+};
+
+const withExchangeData = (sale, exchangeByNumber) => {
+  const exs = exchangeByNumber.get(sale.saleNumber) || [];
+  const completed = exs.filter((ex) => ex.status === 'completed');
+  // Group returned/replacement lines per product across ALL completed
+  // exchanges — the effective receipt is cumulative, not per-exchange.
+  const lines = computeEffectiveItems(sale.items || [], completed);
+  const effectiveItems = [...lines.values()].filter((l) => l.quantity > 0);
+  const returnedTotal = completed.reduce((sum, ex) => sum + ex.returnedItems.reduce((s, l) => s + l.unitPrice * l.quantity, 0), 0);
+  const replacementTotal = completed.reduce((sum, ex) => sum + ex.replacementItems.reduce((s, l) => s + l.unitPrice * l.quantity, 0), 0);
+  return {
+    ...sale,
+    exchanges: exs,
+    exchangeCount: exs.length,
+    completedExchangeCount: completed.length,
+    effectiveItems,
+    effectiveReturnedTotal: returnedTotal,
+    effectiveReplacementTotal: replacementTotal,
+    // New money story: the customer's hair is now worth this much (post-
+    // exchange). priceDifference was already collected/forfeited separately
+    // at exchange time, so the effective total is original total minus the
+    // returned portion plus the replacement portion.
+    effectiveTotal: Math.round(((sale.total || 0) - returnedTotal + replacementTotal) * 100) / 100,
+  };
+};
+
 router.get('/products/lookup', auth, Staff, requireStaffPermission('pos.open_counter'), async (req, res) => {
   try {
     const rawCode = String(req.query.code || '').trim();
@@ -200,12 +288,18 @@ router.get('/sales', auth, Staff, requireStaffPermission(['pos.view_own_sales', 
       query.select('saleNumber saleDate customer customerName total paymentMethod cashier cashierName branch isVoided');
     }
     const sales = await query;
-    
+
+    // Attach each sale's exchanges (if any) so the Sales Hub can badge the
+    // row and the receipt modal can show what it was exchanged for — without
+    // a second request per row.
+    const exchangeByNumber = await getExchangeSummariesByNumber(sales.map((s) => s.saleNumber));
+    const enriched = sales.map((s) => withExchangeData(s.toObject ? s.toObject() : s, exchangeByNumber));
+
     const total = await Sale.countDocuments(filter);
-    
+
     res.json({
       success: true,
-      data: sales,
+      data: enriched,
       pagination: {
         total,
         page: page,
@@ -308,9 +402,12 @@ router.get('/admin/sales', auth, async (req, res) => {
     const sales = await query;
     const total = await Sale.countDocuments(filter);
 
+    const exchangeByNumber = await getExchangeSummariesByNumber(sales.map((s) => s.saleNumber));
+    const enriched = sales.map((s) => withExchangeData(s.toObject ? s.toObject() : s, exchangeByNumber));
+
     return res.json({
       success: true,
-      data: sales,
+      data: enriched,
       pagination: { total, page, pages: Math.ceil(total / limit) }
     });
   } catch (error) {
@@ -753,13 +850,12 @@ router.get('/sale/:id', auth, Staff, requireStaffPermission('receipt.reprint'), 
     // Any hair exchanges filed against this receipt — so a reprinted/viewed
     // sale shows what was actually swapped afterwards, not just what was
     // originally sold.
-    const exchanges = await Exchange.find({ sourceType: 'sale', sourceNumber: sale.saleNumber })
-      .sort({ createdAt: -1 })
-      .lean();
+    const exchangeByNumber = await getExchangeSummariesByNumber([sale.saleNumber]);
+    const enriched = withExchangeData(sale.toObject(), exchangeByNumber);
 
     res.json({
       success: true,
-      data: { ...sale.toObject(), exchanges }
+      data: enriched
     });
   } catch (error) {
     res.status(500).json({
@@ -781,10 +877,9 @@ router.get('/admin/sale/:id', auth, async (req, res) => {
     if (!sale) {
       return res.status(404).json({ success: false, message: 'Sale not found' });
     }
-    const exchanges = await Exchange.find({ sourceType: 'sale', sourceNumber: sale.saleNumber })
-      .sort({ createdAt: -1 })
-      .lean();
-    return res.json({ success: true, data: { ...sale.toObject(), exchanges } });
+    const exchangeByNumber = await getExchangeSummariesByNumber([sale.saleNumber]);
+    const enriched = withExchangeData(sale.toObject(), exchangeByNumber);
+    return res.json({ success: true, data: enriched });
   } catch (error) {
     return res.status(500).json({ success: false, message: error.message });
   }
@@ -1622,6 +1717,45 @@ router.get('/eod/:date', auth, Staff, requireStaffPermission('pos.open_counter')
           await eod.save();
         }
       }
+
+      // Refresh each transaction's exchange lines from the live Exchange
+      // collection — an exchange filed AFTER the day was closed is still a
+      // fact about that receipt, so a re-downloaded Detailed report shows it
+      // ("updating itself" instead of frozen blind). Only persisted when the
+      // data actually changed, so untouched days aren't rewritten.
+      const receiptNumbers = eod.summary.transactions.map((t) => t.saleNumber);
+      const liveExchanges = await Exchange.find({ sourceType: 'sale', sourceNumber: { $in: receiptNumbers } })
+        .sort({ createdAt: -1 })
+        .lean();
+      const summarizeLiveLines = (lines, singular) => {
+        const effective = lines?.length ? lines : (singular ? [singular] : []);
+        return effective.map((l) => `${l.quantity}x ${l.name}`).join(', ') || '';
+      };
+      const liveBySaleNumber = new Map();
+      for (const ex of liveExchanges) {
+        if (!liveBySaleNumber.has(ex.sourceNumber)) liveBySaleNumber.set(ex.sourceNumber, []);
+        liveBySaleNumber.get(ex.sourceNumber).push({
+          exchangeNumber: ex.exchangeNumber,
+          returnedItemSummary: summarizeLiveLines(ex.returnedItems, ex.returnedItem),
+          replacementItemSummary: summarizeLiveLines(ex.replacementItems, ex.replacementItem),
+          priceDifference: ex.priceDifference,
+          status: ex.status,
+        });
+      }
+      let exchangesPatched = false;
+      eod.summary.transactions.forEach((t) => {
+        const current = t.exchanges || [];
+        const live = liveBySaleNumber.get(t.saleNumber) || [];
+        const same = current.length === live.length && current.every((c, i) =>
+          c.exchangeNumber === live[i].exchangeNumber && c.status === live[i].status);
+        if (!same) {
+          t.exchanges = live;
+          exchangesPatched = true;
+        }
+      });
+      if (exchangesPatched) {
+        await eod.save();
+      }
     }
 
     res.json({ success: true, data: eod || null });
@@ -1745,6 +1879,30 @@ router.post('/eod/close', auth, Staff, requireStaffPermission('pos.close_eod'), 
     // the transaction row.
     const MAX_ITEM_LINES_SHOWN = 5;
     const sales = await Sale.find(filter).sort({ saleDate: 1 }).lean();
+
+    // Exchanges already filed against these receipts by close time —
+    // snapshotted per sale so the Detailed report can show "this sale was
+    // exchanged" right on its card, not just in the day-level section.
+    const snapshotExchanges = await Exchange.find({
+      sourceType: 'sale',
+      sourceNumber: { $in: sales.map((s) => s.saleNumber) }
+    }).sort({ createdAt: -1 }).lean();
+    const summarizeSnapshotLines = (lines, singular) => {
+      const effective = lines?.length ? lines : (singular ? [singular] : []);
+      return effective.map((l) => `${l.quantity}x ${l.name}`).join(', ') || '';
+    };
+    const exchangesBySaleNumber = new Map();
+    for (const ex of snapshotExchanges) {
+      if (!exchangesBySaleNumber.has(ex.sourceNumber)) exchangesBySaleNumber.set(ex.sourceNumber, []);
+      exchangesBySaleNumber.get(ex.sourceNumber).push({
+        exchangeNumber: ex.exchangeNumber,
+        returnedItemSummary: summarizeSnapshotLines(ex.returnedItems, ex.returnedItem),
+        replacementItemSummary: summarizeSnapshotLines(ex.replacementItems, ex.replacementItem),
+        priceDifference: ex.priceDifference,
+        status: ex.status,
+      });
+    }
+
     const transactions = sales.map((sale) => {
       const itemLines = (sale.items || []).map((item) => `${item.quantity}x ${item.name}`);
       // A bulk/wholesale sale can carry 20-30+ distinct SKUs — joining every
@@ -1779,7 +1937,10 @@ router.post('/eod/close', auth, Staff, requireStaffPermission('pos.close_eod'), 
           .filter(Boolean),
         forwardedTexts: (sale.payments || [])
           .map((payment) => payment.forwardedText)
-          .filter(Boolean)
+          .filter(Boolean),
+        // Exchanges filed against this receipt by close time (frozen
+        // snapshot) — the Detailed report draws these on the sale's card.
+        exchanges: exchangesBySaleNumber.get(sale.saleNumber) || []
       };
     });
 

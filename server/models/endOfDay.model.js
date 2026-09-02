@@ -75,7 +75,18 @@ const endOfDaySchema = new mongoose.Schema({
       proofImageUrls: [{ type: String }],
       // Text-forwarded confirmation text (M-Pesa/bank SMS relayed as text
       // rather than a screenshot) — the text equivalent of proofImageUrls.
-      forwardedTexts: [{ type: String }]
+      forwardedTexts: [{ type: String }],
+      // Exchanges filed against this receipt by close time — drawn on the
+      // sale's card in the Detailed report ("this sale was exchanged").
+      // Refreshed on read from the live Exchange collection so exchanges
+      // filed AFTER the close still appear (see GET /eod/:date).
+      exchanges: [{
+        exchangeNumber: { type: String, required: true },
+        returnedItemSummary: { type: String, default: '' },
+        replacementItemSummary: { type: String, default: '' },
+        priceDifference: { type: Number, default: 0 },
+        status: { type: String, default: '' }
+      }]
     }],
     // Every return/exchange requested on this trading day, whatever its
     // current status — so a customer bringing hair back is visible in the

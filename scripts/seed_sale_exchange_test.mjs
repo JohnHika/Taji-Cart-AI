@@ -27,23 +27,25 @@ const p2 = await Product.create({ name: 'AFRO TWIST - #27', sku: 'AT27', price: 
 
 const sale = await Sale.create({
   saleNumber: 'TEST-0008',
-  saleDate: new Date(),
+  saleDate: new Date('2026-09-01T12:00:00Z'),
+  branch: 'Main Store',
   cashier: admin._id,
   cashierName: admin.name,
   customerName: 'Walk-in Customer',
-  items: [{ product: p1._id, name: p1.name, sku: p1.sku, quantity: 3, unitPrice: 700, total: 2100 }],
+  items: [{ product: p1._id, name: p1.name, sku: p1.sku, quantity: 3, unitPrice: 700, total: 2100, price: 700 }],
   subtotal: 2100,
   total: 2100,
   paymentMethod: 'cash',
   isVoided: false,
 });
 
-await Exchange.create({
+const exchange = await Exchange.create({
   exchangeNumber: 'EXC-TEST-0001',
   sourceType: 'sale',
   sourceId: sale._id,
   sourceNumber: sale.saleNumber,
   customerName: 'Walk-in Customer',
+  branch: 'Main Store',
   returnedItems: [{ product: p1._id, name: p1.name, sku: p1.sku, unitPrice: 700, quantity: 3 }],
   replacementItems: [{ product: p2._id, name: p2.name, sku: p2.sku, unitPrice: 600, quantity: 4 }],
   returnedItem: { product: p1._id, name: p1.name, sku: p1.sku, unitPrice: 700, quantity: 3 },
@@ -54,6 +56,9 @@ await Exchange.create({
   requestedBy: admin._id,
   requestedByName: admin.name,
 });
+// Pin the exchange to the same trading day so the EOD close's day-level
+// exchange section (filtered by createdAt) captures it too.
+await Exchange.updateOne({ _id: exchange._id }, { $set: { createdAt: new Date('2026-09-01T13:00:00Z') } });
 
 console.log('sale _id:', sale._id.toString());
 console.log('sale.saleNumber:', sale.saleNumber);

@@ -118,12 +118,28 @@ const POSSales = () => {
           >
             <div className="flex justify-between items-start mb-2">
               <div>
-                <p className="font-semibold text-charcoal dark:text-white">#{sale.saleNumber}</p>
+                <p className="font-semibold text-charcoal dark:text-white">
+                  #{sale.saleNumber}
+                  {(sale.exchangeCount || 0) > 0 && (
+                    <span className="ml-1.5 inline-flex items-center rounded-full bg-plum-100 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-plum-700 dark:bg-plum-900/30 dark:text-plum-300" title={sale.exchanges?.map((ex) => `${ex.exchangeNumber} (${ex.status})`).join(', ')}>
+                      Exchanged
+                    </span>
+                  )}
+                </p>
                 <p className="text-xs text-brown-400 dark:text-white/40">
                   {new Date(sale.saleDate).toLocaleDateString()}
                 </p>
               </div>
-              <span className="text-lg font-bold text-primary-100">{DisplayPriceInShillings(sale.total)}</span>
+              <div className="text-right">
+                <span className={`block text-lg font-bold text-primary-100 ${(sale.completedExchangeCount || 0) > 0 ? 'line-through decoration-brown-300/70 text-brown-400 dark:text-white/40' : ''}`}>
+                  {DisplayPriceInShillings(sale.total)}
+                </span>
+                {(sale.completedExchangeCount || 0) > 0 && sale.effectiveTotal != null && (
+                  <span className="block text-sm font-bold text-gold-700 dark:text-gold-300">
+                    {DisplayPriceInShillings(sale.effectiveTotal)}
+                  </span>
+                )}
+              </div>
             </div>
             <div className="flex justify-between items-center text-sm">
               <span className="text-brown-500 dark:text-white/55 truncate max-w-[120px]">
@@ -158,7 +174,14 @@ const POSSales = () => {
           <tbody className="divide-y divide-brown-100 dark:divide-dm-border">
             {filtered.map((sale) => (
               <tr key={sale._id} className="hover:bg-ivory dark:hover:bg-dm-card-2">
-                <td className="px-4 py-3 text-sm text-charcoal dark:text-white">#{sale.saleNumber}</td>
+                <td className="px-4 py-3 text-sm text-charcoal dark:text-white">
+                  #{sale.saleNumber}
+                  {(sale.exchangeCount || 0) > 0 && (
+                    <span className="ml-1.5 inline-flex items-center rounded-full bg-plum-100 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-plum-700 dark:bg-plum-900/30 dark:text-plum-300" title={sale.exchanges?.map((ex) => `${ex.exchangeNumber} (${ex.status})`).join(', ')}>
+                      Exchanged
+                    </span>
+                  )}
+                </td>
                 <td className="px-4 py-3 text-sm text-brown-500 dark:text-white/55">{new Date(sale.saleDate).toLocaleString()}</td>
                 <td className="px-4 py-3 text-sm text-brown-500 dark:text-white/55">{sale.customer?.name || sale.customerName || 'Walk-in'}</td>
                 <td className="px-4 py-3 text-sm">
@@ -166,7 +189,16 @@ const POSSales = () => {
                     {sale.paymentMethod}
                   </span>
                 </td>
-                <td className="px-4 py-3 text-sm font-medium text-charcoal dark:text-white">{DisplayPriceInShillings(sale.total)}</td>
+                <td className="px-4 py-3 text-sm font-medium text-charcoal dark:text-white">
+                  <span className={`block ${(sale.completedExchangeCount || 0) > 0 ? 'line-through decoration-brown-300/70 text-brown-400 dark:text-white/40' : ''}`}>
+                    {DisplayPriceInShillings(sale.total)}
+                  </span>
+                  {(sale.completedExchangeCount || 0) > 0 && sale.effectiveTotal != null && (
+                    <span className="block font-bold text-gold-700 dark:text-gold-300" title="What the customer's hair is worth after the exchange(s)">
+                      {DisplayPriceInShillings(sale.effectiveTotal)}
+                    </span>
+                  )}
+                </td>
                 <td className="px-4 py-3 text-right">
                   <button
                     onClick={() => openSale(sale._id)}
@@ -253,11 +285,11 @@ const POSSales = () => {
               </div>
             </div>
 
-            <div className="border-t border-brown-100 dark:border-dm-border pt-3 text-sm">
+              <div className="border-t border-brown-100 dark:border-dm-border pt-3 text-sm">
               <div className="flex justify-between">
-                <span className="text-brown-500 dark:text-white/40">Subtotal</span>
-                <span className="text-charcoal dark:text-white">{DisplayPriceInShillings(selected.subtotal)}</span>
-              </div>
+                  <span className="text-brown-500 dark:text-white/40">Subtotal</span>
+                  <span className="text-charcoal dark:text-white">{DisplayPriceInShillings(selected.subtotal)}</span>
+                </div>
               {selected.discount > 0 && (
                 <div className="flex justify-between">
                   <span className="text-brown-500 dark:text-white/40">Discount</span>
@@ -272,9 +304,17 @@ const POSSales = () => {
               )}
               <div className="flex justify-between font-semibold text-base mt-1">
                 <span className="text-charcoal dark:text-white">Total</span>
-                <span className="text-charcoal dark:text-white">{DisplayPriceInShillings(selected.total)}</span>
+                <span className={`text-charcoal dark:text-white ${(selected.completedExchangeCount || 0) > 0 ? 'line-through decoration-brown-300/70 text-brown-400 dark:text-white/40' : ''}`}>
+                  {DisplayPriceInShillings(selected.total)}
+                </span>
               </div>
-            </div>
+              {(selected.completedExchangeCount || 0) > 0 && selected.effectiveTotal != null && (
+                <div className="mt-2 flex items-center justify-between rounded-lg bg-gold-100 px-2.5 py-2 dark:bg-gold-900/20">
+                  <span className="text-xs font-bold uppercase tracking-wide text-plum-800 dark:text-gold-200">New total after exchange</span>
+                  <span className="text-base font-black text-gold-700 dark:text-gold-300">{DisplayPriceInShillings(selected.effectiveTotal)}</span>
+                </div>
+              )}
+              </div>
 
             {selected.paymentMethod === 'split' && Array.isArray(selected.payments) && selected.payments.length > 0 && (
               <div className="mt-3">

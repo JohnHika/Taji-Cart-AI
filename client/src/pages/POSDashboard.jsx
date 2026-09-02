@@ -1207,6 +1207,11 @@ const POSDashboard = () => {
                           Voided
                         </span>
                       )}
+                      {(sale.exchangeCount || 0) > 0 && !sale.isVoided && (
+                        <span className="inline-flex items-center rounded-full bg-plum-100 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-plum-700 dark:bg-plum-900/30 dark:text-plum-300" title={sale.exchanges?.map((ex) => `${ex.exchangeNumber} (${ex.status})`).join(', ')}>
+                          Exchanged
+                        </span>
+                      )}
                     </div>
                     <div className="text-sm text-brown-400 dark:text-white/40">
                       {new Date(sale.saleDate).toLocaleDateString()}
@@ -1215,9 +1220,16 @@ const POSDashboard = () => {
                       {getSaleCustomerLabel(sale)}
                     </div>
                   </div>
-                  <span className="text-sm font-semibold text-charcoal dark:text-white">
-                    {DisplayPriceInShillings(sale.total)}
-                  </span>
+                  <div className="text-right">
+                    <span className={`block text-sm font-semibold text-charcoal dark:text-white ${(sale.completedExchangeCount || 0) > 0 && sale.effectiveTotal != null ? 'line-through decoration-brown-300/70 text-brown-400 dark:text-white/40' : ''}`}>
+                      {DisplayPriceInShillings(sale.total)}
+                    </span>
+                    {(sale.completedExchangeCount || 0) > 0 && sale.effectiveTotal != null && (
+                      <span className="block text-sm font-bold text-gold-700 dark:text-gold-300" title="What the customer's hair is worth after the exchange(s)">
+                        {DisplayPriceInShillings(sale.effectiveTotal)}
+                      </span>
+                    )}
+                  </div>
                 </div>
 
                 <div className="mt-3 text-sm text-brown-500 dark:text-white/55">
@@ -1277,30 +1289,42 @@ const POSDashboard = () => {
                             Voided
                           </span>
                         )}
-                      </div>
-                      <div className="text-sm text-brown-400 dark:text-white/40">
+                        {(sale.exchangeCount || 0) > 0 && !sale.isVoided && (
+                          <span className="inline-flex items-center rounded-full bg-plum-100 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-plum-700 dark:bg-plum-900/30 dark:text-plum-300" title={sale.exchanges?.map((ex) => `${ex.exchangeNumber} (${ex.status})`).join(', ')}>
+                            Exchanged
+                          </span>
+                        )}
+                        </div>
+                        <div className="text-sm text-brown-400 dark:text-white/40">
                         {new Date(sale.saleDate).toLocaleDateString()}
-                      </div>
-                      <div className="mt-1 text-sm text-charcoal dark:text-white/55 truncate">
+                        </div>
+                        <div className="mt-1 text-sm text-charcoal dark:text-white/55 truncate">
                         {getSaleCustomerLabel(sale)}
-                      </div>
-                    </div>
-                    <span className="text-sm font-semibold text-charcoal dark:text-white">
-                      {DisplayPriceInShillings(sale.total)}
-                    </span>
-                  </div>
+                        </div>
+                        </div>
+                        <div className="text-right">
+                        <span className={`block text-sm font-semibold text-charcoal dark:text-white ${(sale.completedExchangeCount || 0) > 0 && sale.effectiveTotal != null ? 'line-through decoration-brown-300/70 text-brown-400 dark:text-white/40' : ''}`}>
+                        {DisplayPriceInShillings(sale.total)}
+                        </span>
+                        {(sale.completedExchangeCount || 0) > 0 && sale.effectiveTotal != null && (
+                        <span className="block text-sm font-bold text-gold-700 dark:text-gold-300" title="What the customer's hair is worth after the exchange(s)">
+                          {DisplayPriceInShillings(sale.effectiveTotal)}
+                        </span>
+                        )}
+                        </div>
+                        </div>
 
-                  <div className="mt-3 text-sm text-brown-500 dark:text-white/55">
-                    {(sale.items && sale.items.length > 0)
-                      ? (
+                        <div className="mt-3 text-sm text-brown-500 dark:text-white/55">
+                        {(sale.items && sale.items.length > 0)
+                        ? (
                         <div className="line-clamp-2">
                           {(sale.items || []).slice(0, 3).map((item) => `${item.quantity} x ${item.name}`).join(', ')}
                           {sale.items.length > 3 ? ` +${sale.items.length - 3} more` : ''}
                         </div>
-                      ) : (
+                        ) : (
                         <span className="italic text-brown-400">No items</span>
-                      )}
-                  </div>
+                        )}
+                        </div>
 
                   <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
                     <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-pill ${
@@ -1366,6 +1390,11 @@ const POSDashboard = () => {
                               Voided
                             </span>
                           )}
+                          {(sale.exchangeCount || 0) > 0 && !sale.isVoided && (
+                            <span className="inline-flex items-center rounded-full bg-plum-100 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-plum-700 dark:bg-plum-900/30 dark:text-plum-300" title={sale.exchanges?.map((ex) => `${ex.exchangeNumber} (${ex.status})`).join(', ')}>
+                              Exchanged
+                            </span>
+                          )}
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
@@ -1406,7 +1435,14 @@ const POSDashboard = () => {
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-charcoal dark:text-white">
-                        {DisplayPriceInShillings(sale.total)}
+                        <span className={`block ${(sale.completedExchangeCount || 0) > 0 && sale.effectiveTotal != null ? 'line-through decoration-brown-300/70 text-brown-400 dark:text-white/40' : ''}`}>
+                          {DisplayPriceInShillings(sale.total)}
+                        </span>
+                        {(sale.completedExchangeCount || 0) > 0 && sale.effectiveTotal != null && (
+                          <span className="block font-bold text-gold-700 dark:text-gold-300" title="What the customer's hair is worth after the exchange(s)">
+                            {DisplayPriceInShillings(sale.effectiveTotal)}
+                          </span>
+                        )}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-brown-400 dark:text-white/40">
                         {sale.cashierName}
@@ -1738,6 +1774,33 @@ const POSDashboard = () => {
                 </div>
               </div>
 
+              {(selectedSale.completedExchangeCount || 0) > 0 && (selectedSale.effectiveItems || []).length >= 0 && (
+                <div className="mt-4">
+                  <div className="mb-3 flex items-center justify-between">
+                    <h5 className="text-sm font-bold uppercase tracking-wide text-gold-700 dark:text-gold-300">What the customer has now</h5>
+                    <span className="text-xs text-brown-400 dark:text-white/40">after {selectedSale.completedExchangeCount} completed exchange{selectedSale.completedExchangeCount === 1 ? '' : 's'}</span>
+                  </div>
+                  <div className="divide-y divide-brown-100 overflow-hidden rounded-xl border border-gold-200 bg-gold-50/40 dark:divide-dm-border dark:border-gold-900/40 dark:bg-gold-900/10">
+                    {(selectedSale.effectiveItems || []).map((item, index) => (
+                      <div key={`${item.sku || item.name || 'item'}-${index}`} className="flex items-start justify-between gap-4 p-3.5">
+                        <div className="min-w-0">
+                          <p className="text-sm font-semibold text-charcoal dark:text-white">{item.name || 'Item'}</p>
+                          <p className="mt-1 text-xs text-brown-500 dark:text-white/45">
+                            {item.quantity || 0} × {DisplayPriceInShillings(item.unitPrice || 0)}
+                          </p>
+                        </div>
+                        <p className="shrink-0 text-sm font-bold text-charcoal dark:text-white">{DisplayPriceInShillings((item.unitPrice || 0) * (item.quantity || 0))}</p>
+                      </div>
+                    ))}
+                    {(selectedSale.effectiveItems || []).length === 0 && (
+                      <p className="p-4 text-center text-xs italic text-brown-400 dark:text-white/40">
+                        Everything from this receipt was exchanged away.
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )}
+
               <div className="mt-6 grid gap-4 sm:grid-cols-[1fr_220px] sm:items-end">
                 <div className="rounded-xl bg-gold-100 p-4 dark:bg-gold-900/20">
                   <div className="flex items-center gap-2 text-sm font-bold text-plum-800 dark:text-gold-200">
@@ -1777,10 +1840,65 @@ const POSDashboard = () => {
                   </div>
                   <div className="mt-2 flex items-center justify-between border-t border-brown-200 pt-3 dark:border-dm-border">
                     <span className="font-bold text-charcoal dark:text-white">Total</span>
-                    <span className="text-lg font-black text-plum-700 dark:text-gold-300">{DisplayPriceInShillings(selectedSale.total)}</span>
+                    <span className={`text-lg font-black ${(selectedSale.completedExchangeCount || 0) > 0 ? 'text-brown-400 line-through decoration-brown-300/70 dark:text-white/40' : 'text-plum-700 dark:text-gold-300'}`}>
+                      {DisplayPriceInShillings(selectedSale.total)}
+                    </span>
                   </div>
+                  {(selectedSale.completedExchangeCount || 0) > 0 && selectedSale.effectiveTotal != null && (
+                    <div className="mt-1.5 flex items-center justify-between rounded-lg bg-gold-100 px-2.5 py-2 dark:bg-gold-900/20">
+                      <span className="text-xs font-bold uppercase tracking-wide text-plum-800 dark:text-gold-200">New total after exchange</span>
+                      <span className="text-lg font-black text-gold-700 dark:text-gold-300">{DisplayPriceInShillings(selectedSale.effectiveTotal)}</span>
+                    </div>
+                  )}
                 </div>
               </div>
+
+              {(selectedSale.exchanges || []).length > 0 && (
+                <div className="mt-6">
+                  <h5 className="mb-3 text-sm font-bold uppercase tracking-wide text-charcoal dark:text-white">Exchanges on this sale</h5>
+                  <div className="space-y-3">
+                    {selectedSale.exchanges.map((ex) => {
+                      const EX_STATUS = {
+                        requested: { label: 'Awaiting hair', cls: 'bg-gold-100 text-gold-700 dark:bg-gold-900/20 dark:text-gold-300' },
+                        hair_received: { label: 'Ready to complete', cls: 'bg-plum-100 text-plum-700 dark:bg-plum-900/30 dark:text-plum-300' },
+                        completed: { label: 'Completed', cls: 'bg-green-100 text-green-700 dark:bg-green-900/20 dark:text-green-300' },
+                        cancelled: { label: 'Cancelled', cls: 'bg-brown-100 text-brown-600 dark:bg-dm-card-2 dark:text-white/60' },
+                      }[ex.status] || { label: ex.status, cls: 'bg-brown-100 text-brown-600 dark:bg-dm-card-2 dark:text-white/60' };
+                      return (
+                        <div key={ex._id} className="rounded-xl border border-plum-200 bg-plum-50/40 p-3 dark:border-plum-900/40 dark:bg-plum-900/10">
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="text-sm font-bold text-plum-800 dark:text-plum-200">{ex.exchangeNumber}</span>
+                            <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${EX_STATUS.cls}`}>{EX_STATUS.label}</span>
+                          </div>
+                          <div className="mt-2 space-y-1.5 text-sm">
+                            <div className="flex items-start gap-2">
+                              <span className="mt-0.5 shrink-0 rounded bg-red-100 px-1.5 py-0.5 text-[10px] font-bold text-red-600 dark:bg-red-900/30 dark:text-red-300">Back</span>
+                              <span className="min-w-0 flex-1 text-brown-600 dark:text-white/60">{ex.returnedItems.map((l) => `${l.quantity}× ${l.name}`).join(', ')}</span>
+                            </div>
+                            <div className="flex items-start gap-2">
+                              <span className="mt-0.5 shrink-0 rounded bg-green-100 px-1.5 py-0.5 text-[10px] font-bold text-green-700 dark:bg-green-900/20 dark:text-green-300">Now</span>
+                              <span className="min-w-0 flex-1 text-brown-600 dark:text-white/60">{ex.replacementItems.map((l) => `${l.quantity}× ${l.name}`).join(', ')}</span>
+                            </div>
+                          </div>
+                          <div className="mt-2 border-t border-plum-200/60 pt-2 dark:border-plum-900/40">
+                            {ex.priceDifference > 0 ? (
+                              <p className="text-xs font-bold text-gold-700 dark:text-gold-300">
+                                Customer added {DisplayPriceInShillings(ex.priceDifference)}{ex.payment?.method ? ` · ${ex.payment.method}` : ''}
+                              </p>
+                            ) : ex.priceDifference < 0 ? (
+                              <p className="text-xs font-bold text-red-600 dark:text-red-400">
+                                Forfeited {DisplayPriceInShillings(Math.abs(ex.priceDifference))} — no refund given
+                              </p>
+                            ) : (
+                              <p className="text-xs font-medium text-brown-500 dark:text-white/50">Even swap — no money changed hands</p>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
 
               {selectedSalePaymentProofs.length > 0 && (
                 <div className="mt-6">

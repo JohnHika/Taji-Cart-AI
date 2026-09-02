@@ -490,8 +490,20 @@ const prepareCard = (doc, t, cardWidth, proofByUrl) => {
   const forwardedText = (t.forwardedTexts || [])[0];
   const wrappedText = forwardedText ? doc.splitTextToSize(forwardedText, innerWidth) : null;
 
+  // Exchange lines drawn under the header — measured now with the same
+  // wrapping drawCard uses, so reserved height == drawn height.
+  let exchangeLineCount = 0;
+  (t.exchanges || []).forEach((ex) => {
+    // label line + Back: line + Now: line + optional money line
+    exchangeLineCount += 3 + (ex.priceDifference !== 0 ? 1 : 0);
+    const backWrapped = doc.splitTextToSize(`Back: ${ex.returnedItemSummary || '—'}`, innerWidth - 3);
+    const nowWrapped = doc.splitTextToSize(`Now: ${ex.replacementItemSummary || '—'}`, innerWidth - 3);
+    exchangeLineCount += (backWrapped.length - 1) + (nowWrapped.length - 1);
+  });
+
   let height = CARD_PADDING * 2;
   height += CARD_HEADER_LINE_H;
+  height += exchangeLineCount * CARD_TEXT_LINE_H;
   height += itemLineCount * CARD_ITEM_LINE_H;
   height += CARD_HEADER_LINE_H; // payment method line
   if (proofDims) height += CARD_LABEL_LINE_H + proofDims.h + 3;
@@ -526,6 +538,37 @@ const drawCard = (doc, t, prepared, x, y, cardWidth) => {
   doc.setTextColor(26, 15, 20);
   doc.text(DisplayPriceInShillings(t.total || 0), innerRight, cy + 4, { align: 'right' });
   cy += CARD_HEADER_LINE_H;
+
+  // "Exchanged" marker right under the header when this receipt has exchange(s)
+  if (t.exchanges && t.exchanges.length > 0) {
+    const cardInnerWidth = cardWidth - CARD_PADDING * 2 - 3;
+    t.exchanges.forEach((ex) => {
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(7.5);
+      doc.setTextColor(...PLUM);
+      const exLabel = `↔ Exchanged (${exchangeStatusLabel(ex.status)}): ${ex.exchangeNumber}`;
+      doc.text(exLabel, innerLeft, cy + 3);
+      cy += CARD_TEXT_LINE_H;
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(180, 70, 60);
+      const returnedLine = doc.splitTextToSize(`Back: ${ex.returnedItemSummary || '—'}`, cardInnerWidth);
+      doc.text(returnedLine, innerLeft + 3, cy + 3);
+      cy += returnedLine.length * CARD_TEXT_LINE_H;
+      doc.setTextColor(70, 130, 80);
+      const replaceLine = doc.splitTextToSize(`Now: ${ex.replacementItemSummary || '—'}`, cardInnerWidth);
+      doc.text(replaceLine, innerLeft + 3, cy + 3);
+      cy += replaceLine.length * CARD_TEXT_LINE_H;
+      if (ex.priceDifference > 0) {
+        doc.setTextColor(...GOLD);
+        doc.text(`Customer added ${DisplayPriceInShillings(ex.priceDifference)}`, innerLeft + 3, cy + 3);
+        cy += CARD_TEXT_LINE_H;
+      } else if (ex.priceDifference < 0) {
+        doc.setTextColor(190, 60, 60);
+        doc.text(`Forfeited ${DisplayPriceInShillings(Math.abs(ex.priceDifference))} (no refund)`, innerLeft + 3, cy + 3);
+        cy += CARD_TEXT_LINE_H;
+      }
+    });
+  }
 
   // Every item, in full
   doc.setFont('helvetica', 'normal');
@@ -585,7 +628,7 @@ export const downloadEndOfDayDetailedReport = async (eod) => {
   const summary = eod.summary || {};
   const transactions = summary.transactions || [];
   const layout = createLayout(doc);
-  const { yRef, ensureSpace } = layout;
+  const { yRef, ensureSpace, drawSectionTitle } = layout;
 
   drawHeader(doc, { pageWidth, left, right, eod, subtitle: 'END OF DAY — DETAILED' });
 
@@ -629,6 +672,35 @@ export const downloadEndOfDayDetailedReport = async (eod) => {
     doc.setTextColor(...MUTED);
     doc.text('No transactions recorded for this day.', left, yRef.v);
     yRef.v += 12;
+  }
+
+  // --- Returns & exchanges requested this trading day --- (same section the
+  // Summary report has, so the Detailed format stops hiding exchange activity)
+  const exchanges = summary.exchanges || [];
+  if (exchanges.length > 0) {
+    ensureSpace(20);
+    drawSectionTitle(left, `Returns & exchanges (${exchanges.length})`);
+    autoTable(doc, {
+      startY: yRef.v,
+      head: [['Exchange #', 'Ref sale/order', 'Customer', 'Returned', 'Replacement', 'Owed', 'Status', 'By']],
+      body: exchanges.map((ex) => [
+        ex.exchangeNumber,
+        ex.sourceNumber || '',
+        ex.customerName || 'N/A',
+        ex.returnedItemSummary || '',
+        ex.replacementItemSummary || '',
+        ex.priceDifference > 0 ? DisplayPriceInShillings(ex.priceDifference) : (ex.priceDifference < 0 ? `forfeit ${DisplayPriceInShillings(Math.abs(ex.priceDifference))}` : '—'),
+        exchangeStatusLabel(ex.status),
+        ex.requestedByName || '',
+      ]),
+      theme: 'striped',
+      headStyles: { fillColor: PLUM, textColor: 255, fontStyle: 'bold', fontSize: 8.5 },
+      bodyStyles: { fontSize: 7.5, textColor: [26, 15, 20] },
+      alternateRowStyles: { fillColor: [250, 248, 245] },
+      columnStyles: { 5: { halign: 'right' } },
+      margin: { left, right: 18 },
+    });
+    yRef.v = (doc.lastAutoTable?.finalY || yRef.v) + 12;
   }
 
   drawDaySummarySection(doc, layout, { left, right, pageWidth, summary });
