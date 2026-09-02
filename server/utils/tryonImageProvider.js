@@ -51,9 +51,12 @@ export const assertTryOnProviderConfigured = (env = process.env) => {
 
 const getResponseText = async (response) => response.text().catch(() => '');
 
+const PROVIDER_LABELS = { openai: 'OpenAI', gemini: 'Gemini', ollama: 'Ollama' };
+
 const failForProviderResponse = async ({ response, provider }) => {
   const body = await getResponseText(response);
-  const error = new Error(`${provider === 'openai' ? 'OpenAI' : 'Gemini'} image API error ${response.status}: ${body.slice(0, 300)}`);
+  const label = PROVIDER_LABELS[provider] || provider;
+  const error = new Error(`${label} image API error ${response.status}: ${body.slice(0, 300)}`);
   error.statusCode = 502;
   throw error;
 };
