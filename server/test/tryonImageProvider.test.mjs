@@ -73,6 +73,37 @@ test('Gemini remains an explicit compatible fallback', async () => {
   assert.equal(output.model, 'gemini-3-pro-image');
 });
 
+test('Ollama Cloud sends both reference images to the image model', async () => {
+  let request;
+  const generatedBase64 = Buffer.from('ollama-image').toString('base64');
+  const output = await generateTryOnImage({
+    prompt: 'Install the reference hairstyle onto the person.',
+    hairstyleImage: hairstyle,
+    faceImage: face,
+    env: {
+      TRYON_IMAGE_PROVIDER: 'ollama',
+      OLLAMA_API_KEY: 'test-ollama-key',
+      OLLAMA_TRYON_MODEL: 'x/flux-klein:4b',
+    },
+    fetchImpl: async (url, options) => {
+      request = { url, options };
+      return jsonResponse({ images: [generatedBase64] });
+    },
+  });
+
+  assert.equal(request.url, 'https://ollama.com/api/generate');
+  assert.equal(request.options.headers.Authorization, 'Bearer test-ollama-key');
+  const body = JSON.parse(request.options.body);
+  assert.equal(body.model, 'x/flux-klein:4b');
+  assert.equal(body.stream, false);
+  assert.equal(body.images.length, 2);
+  assert.equal(body.images[0], hairstyle.buffer.toString('base64'));
+  assert.equal(body.images[1], face.buffer.toString('base64'));
+  assert.equal(output.provider, 'ollama');
+  assert.equal(output.model, 'x/flux-klein:4b');
+  assert.equal(Buffer.from(output.base64, 'base64').toString(), 'ollama-image');
+});
+
 test('missing provider credentials fail closed with a setup error', () => {
   assert.throws(
     () => assertTryOnProviderConfigured({ TRYON_IMAGE_PROVIDER: 'openai' }),
@@ -96,7 +127,7 @@ test('provider timeouts surface as a retryable gateway timeout', async () => {
 
 test('unknown providers are rejected instead of silently falling back', () => {
   assert.throws(
-    () => getTryOnProvider({ TRYON_IMAGE_PROVIDER: 'ollama' }),
-    (error) => error.statusCode === 500 && /openai.*gemini/i.test(error.message)
+    () => getTryOnProvider({ TRYON_IMAGE_PROVIDER: 'not-a-provider' }),
+    (error) => error.statusCode === 500 && /openai.*gemini.*ollama/i.test(error.message)
   );
 });

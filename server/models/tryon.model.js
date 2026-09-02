@@ -47,7 +47,7 @@ const tryOnResultSchema = new mongoose.Schema({
   // the provider/model that made it and reproduce a preferred look later.
   provider: {
     type: String,
-    enum: ['openai', 'gemini'],
+    enum: ['openai', 'gemini', 'ollama'],
     default: 'openai',
   },
   model: {

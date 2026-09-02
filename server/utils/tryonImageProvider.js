@@ -1,14 +1,15 @@
 const GEMINI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta';
 const OPENAI_IMAGE_EDITS_URL = 'https://api.openai.com/v1/images/edits';
+const OLLAMA_API_BASE = 'https://ollama.com/api';
 
-const supportedProviders = new Set(['openai', 'gemini']);
+const supportedProviders = new Set(['openai', 'gemini', 'ollama']);
 
 const cleanProvider = (value) => String(value || '').trim().toLowerCase();
 
 export const getTryOnProvider = (env = process.env) => {
   const provider = cleanProvider(env.TRYON_IMAGE_PROVIDER || 'openai');
   if (!supportedProviders.has(provider)) {
-    const error = new Error('TRYON_IMAGE_PROVIDER must be "openai" or "gemini".');
+    const error = new Error('TRYON_IMAGE_PROVIDER must be "openai", "gemini", or "ollama".');
     error.statusCode = 500;
     throw error;
   }
@@ -17,21 +18,28 @@ export const getTryOnProvider = (env = process.env) => {
 
 export const getTryOnModel = (env = process.env, provider = getTryOnProvider(env)) => {
   if (provider === 'openai') return env.OPENAI_TRYON_IMAGE_MODEL || 'gpt-image-2';
+  if (provider === 'ollama') return env.OLLAMA_TRYON_MODEL || 'x/flux-klein';
   return env.GEMINI_IMAGE_MODEL || 'gemini-3-pro-image';
 };
 
 export const assertTryOnProviderConfigured = (env = process.env) => {
   const provider = getTryOnProvider(env);
   const model = getTryOnModel(env, provider);
-  const requiredKey = provider === 'openai' ? 'OPENAI_API_KEY' : 'GEMINI_API_KEY or GOOGLE_API_KEY';
+  const requiredKey = provider === 'openai'
+    ? 'OPENAI_API_KEY'
+    : provider === 'ollama' ? 'OLLAMA_API_KEY' : 'GEMINI_API_KEY or GOOGLE_API_KEY';
   const hasKey = provider === 'openai'
     ? Boolean(env.OPENAI_API_KEY)
-    : Boolean(env.GEMINI_API_KEY || env.GOOGLE_API_KEY);
+    : provider === 'ollama'
+      ? Boolean(env.OLLAMA_API_KEY)
+      : Boolean(env.GEMINI_API_KEY || env.GOOGLE_API_KEY);
 
   if (!hasKey) {
     const error = new Error(
       provider === 'openai'
         ? 'AI Style Try-On is not configured. Add OPENAI_API_KEY to the server environment.'
+        : provider === 'ollama'
+          ? 'AI Style Try-On is not configured. Add OLLAMA_API_KEY to the server environment.'
         : 'AI Style Try-On is not configured. Add GEMINI_API_KEY or GOOGLE_API_KEY to the server environment.'
     );
     error.statusCode = 503;
@@ -130,6 +138,41 @@ const generateWithGemini = async ({ prompt, hairstyleImage, faceImage, model, ap
   return { base64: inline.data, mimeType: inline.mimeType || inline.mime_type || 'image/png' };
 };
 
+const generateWithOllama = async ({ prompt, hairstyleImage, faceImage, model, apiKey, env, fetchImpl }) => {
+  const images = [hairstyleImage, faceImage]
+    .filter(Boolean)
+    .map((image) => image.buffer.toString('base64'));
+  const baseUrl = String(env.OLLAMA_BASE_URL || OLLAMA_API_BASE).replace(/\/+$/, '');
+  const response = await fetchImpl(`${baseUrl}/generate`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      model,
+      prompt,
+      images,
+      stream: false,
+    }),
+  });
+  if (!response.ok) await failForProviderResponse({ response, provider: 'ollama' });
+
+  const data = await response.json();
+  // Ollama's image-generation builds have returned both `images` and `image`
+  // during the experimental API period; accept either without treating a
+  // normal text `response` as an image.
+  const base64 = Array.isArray(data?.images) ? data.images[0] : data?.image;
+  if (typeof base64 !== 'string' || !base64.trim()) {
+    const error = new Error(
+      'Ollama returned no generated image. Confirm that OLLAMA_TRYON_MODEL is an image model such as x/flux-klein, not a vision-only chat model.'
+    );
+    error.statusCode = 502;
+    throw error;
+  }
+  return { base64, mimeType: 'image/png' };
+};
+
 // One provider boundary for the controller. It accepts downloaded image buffers
 // rather than public URLs so provider requests never expose Cloudinary signing
 // data, and makes the image model switch an environment change rather than a
@@ -150,7 +193,17 @@ export const generateTryOnImage = async ({ prompt, hairstyleImage, faceImage, en
         apiKey: env.OPENAI_API_KEY,
         fetchImpl: timeoutFetch,
       })
-      : await generateWithGemini({
+      : provider === 'ollama'
+        ? await generateWithOllama({
+          prompt,
+          hairstyleImage,
+          faceImage,
+          model,
+          apiKey: env.OLLAMA_API_KEY,
+          env,
+          fetchImpl: timeoutFetch,
+        })
+        : await generateWithGemini({
         prompt,
         hairstyleImage,
         faceImage,

@@ -165,9 +165,10 @@ Never commit real `.env` files or secrets. Use your host’s secret manager in p
 |----------|---------|
 | `RAG_ENABLED` | Enable RAG paths that require configuration |
 | `OPENAI_API_KEY` | OpenAI chat/embeddings and the default GPT Image 2 AI Hairstyle Try-On provider |
-| `TRYON_IMAGE_PROVIDER` | Optional: `openai` (default) or `gemini` for admin AI Hairstyle Try-On |
+| `TRYON_IMAGE_PROVIDER` | Optional: `openai` (default), `gemini`, or `ollama` for admin AI Hairstyle Try-On |
 | `OPENAI_TRYON_IMAGE_MODEL` | Optional OpenAI try-on model override; defaults to `gpt-image-2` |
 | `GEMINI_API_KEY` / `GOOGLE_API_KEY`, `GEMINI_IMAGE_MODEL` | Optional Gemini try-on fallback; defaults to `gemini-3-pro-image` |
+| `OLLAMA_API_KEY`, `OLLAMA_BASE_URL`, `OLLAMA_TRYON_MODEL` | Optional Ollama Cloud image provider; base URL defaults to `https://ollama.com/api`, model defaults to `x/flux-klein` |
 | `RAG_EMBED_PROVIDER`, `HF_TOKEN`, `HF_EMBED_MODEL` | Alternative embedding provider |
 | `REASONING_ENABLED`, `REASONING_PROVIDER`, `OLLAMA_BASE_URL`, `REASONING_MODEL` | Optional reasoning layer |
 
