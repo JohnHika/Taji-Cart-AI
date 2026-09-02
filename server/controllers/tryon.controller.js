@@ -2,7 +2,7 @@ import mongoose from 'mongoose';
 import TryOnResultModel from '../models/tryon.model.js';
 import ProductModel from '../models/product.model.js';
 import FeatureFlagModel from '../models/featureFlag.model.js';
-import uploadFileToCloudinary from '../utils/cloudinary.js';
+import { uploadFileToCloudinary } from '../utils/cloudinary.js';
 import { generateTryOnImage } from '../utils/tryonImageProvider.js';
 
 // AI hairstyle try-on. Admin picks a product, adds a stronger hairstyle
