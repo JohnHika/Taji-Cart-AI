@@ -24,6 +24,17 @@ import isAdmin from '../../utils/isAdmin';
 
 const flagUrl = (id, suffix = '') => `${baseURL}/api/feature-flags/${id}${suffix}`;
 
+// Feature keys must match /^[a-z0-9][a-z0-9._-]*$/ (server model rule). Typing
+// "ai style tryon" used to fail with a cryptic server regex error — instead,
+// normalise as the admin types: lowercase, spaces/underscores → hyphens,
+// anything else stripped. What lands in the DB is always a valid key.
+const slugifyFeatureKey = (value = '') =>
+  value
+    .toLowerCase()
+    .replace(/[\s_]+/g, '-')
+    .replace(/[^a-z0-9._-]/g, '')
+    .replace(/-{2,}/g, '-');
+
 const StatusBadge = ({ flag }) => {
   if (flag.enabled === false) {
     return (
@@ -302,12 +313,15 @@ const FeatureReleases = () => {
               </span>
               <input
                 value={form.key}
-                onChange={(e) => setForm((f) => ({ ...f, key: e.target.value.toLowerCase() }))}
+                onChange={(e) => setForm((f) => ({ ...f, key: slugifyFeatureKey(e.target.value) }))}
                 placeholder="ai-style-finder"
                 className="w-full rounded-xl border border-brown-200 bg-ivory px-3 py-2 font-mono text-sm text-charcoal outline-none focus:border-plum-400 focus:ring-2 focus:ring-plum-200 dark:border-dm-border dark:bg-dm-card-2 dark:text-white"
                 autoComplete="off"
                 required
               />
+              <span className="mt-1 block text-[11px] text-brown-400 dark:text-white/40">
+                Spaces and underscores become hyphens automatically; capital letters become lowercase.
+              </span>
             </label>
             <label className="block">
               <span className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-brown-500 dark:text-white/50">

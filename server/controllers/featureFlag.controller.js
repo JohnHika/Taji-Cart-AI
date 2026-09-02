@@ -69,7 +69,17 @@ export const createFeatureFlag = async (request, response) => {
       return response.status(400).json({ success: false, message: 'Key and name are required' });
     }
 
-    const normalisedKey = key.trim().toLowerCase();
+    // Same normalisation as the admin form: "AI Style Tryon" → "ai-style-tryon".
+    // Prevents a Mongoose regex validation crash for any caller that skips the form.
+    const normalisedKey = key
+      .trim()
+      .toLowerCase()
+      .replace(/[\s_]+/g, '-')
+      .replace(/[^a-z0-9._-]/g, '')
+      .replace(/-{2,}/g, '-');
+    if (!normalisedKey) {
+      return response.status(400).json({ success: false, message: 'Key must contain at least one letter or number' });
+    }
     const existing = await FeatureFlagModel.findOne({ key: normalisedKey });
     if (existing) {
       return response.status(409).json({ success: false, message: `Feature key "${normalisedKey}" already exists` });
