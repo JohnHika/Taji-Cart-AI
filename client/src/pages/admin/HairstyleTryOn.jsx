@@ -77,7 +77,11 @@ const HairstyleTryOn = () => {
   const loadProducts = useCallback(async () => {
     try {
       setLoadingProducts(true);
-      const res = await Axios({ url: `${baseURL}/api/product/get`, method: 'GET' });
+      // NOTE: /api/product/get is a POST route. Calling it with GET falls
+      // through to the /:id catch-all, which treats the literal word "get"
+      // as a product id and 400s with "Invalid product ID format" — leaving
+      // the hairstyle grid empty and Generate unusable.
+      const res = await Axios({ url: `${baseURL}/api/product/get`, method: 'POST', data: {} });
       if (res.data?.success) setProducts(res.data?.data || []);
     } catch (error) {
       AxiosToastError(error);
