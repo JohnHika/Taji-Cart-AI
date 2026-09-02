@@ -3,10 +3,23 @@
 // exactly what causes an upload to sit "stuck" until it eventually times out.
 // Resizing to a reasonable max dimension and re-encoding as JPEG typically
 // gets this under ~300KB while keeping SMS text on the screen legible.
+//
+// Speed matters here: this runs between the cashier's shot and the first
+// visible feedback. createImageBitmap decodes OFF the main thread and skips
+// the object-URL dance of the old Image() path — noticeably faster on the
+// low-end Androids the shop actually uses — with Image() kept as the fallback
+// for older browsers.
 const MAX_DIMENSION = 1600;
 const JPEG_QUALITY = 0.75;
 
-const readFileAsImage = (file) =>
+const decodeViaImageBitmap = async (file) => {
+  // 'from-image' respects the camera's EXIF orientation so the shot isn't
+  // rotated wrong on disk. Browsers that don't know the option ignore it
+  // harmlessly; browsers without createImageBitmap throw and we fall back.
+  return createImageBitmap(file, { imageOrientation: 'from-image' });
+};
+
+const decodeViaImg = (file) =>
   new Promise((resolve, reject) => {
     const img = new Image();
     const objectUrl = URL.createObjectURL(file);
@@ -21,13 +34,24 @@ const readFileAsImage = (file) =>
     img.src = objectUrl;
   });
 
+const decodeImage = async (file) => {
+  if (typeof createImageBitmap === 'function') {
+    try {
+      return await decodeViaImageBitmap(file);
+    } catch {
+      // fall through to the Image() path
+    }
+  }
+  return decodeViaImg(file);
+};
+
 export const compressImage = async (file) => {
   if (!file || !file.type?.startsWith('image/')) {
     return file;
   }
 
   try {
-    const img = await readFileAsImage(file);
+    const img = await decodeImage(file);
 
     // A malformed file can sometimes "load" with zero intrinsic dimensions
     // instead of firing onerror. Drawing that to canvas would silently
@@ -51,6 +75,9 @@ export const compressImage = async (file) => {
     canvas.height = Math.round(img.height * scale);
     const ctx = canvas.getContext('2d');
     ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+    // createImageBitmap results hold significant memory until closed —
+    // release as soon as the canvas copy exists.
+    if (typeof img.close === 'function') img.close();
 
     const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/jpeg', JPEG_QUALITY));
     if (!blob || blob.size < 1024 || blob.size >= file.size) {

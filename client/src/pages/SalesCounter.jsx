@@ -507,10 +507,16 @@ const SalesCounter = () => {
     const file = e.target.files?.[0];
     e.target.value = '';
     if (!file) return;
+    // Show the shot on screen IMMEDIATELY — the cashier sees the photo the
+    // moment the camera closes, while compression/upload continue behind a
+    // small "saving" badge. The old flow kept the screen on a bare
+    // "Uploading…" label for the whole round-trip, which read as frozen.
+    const instantPreviewUrl = URL.createObjectURL(file);
+    setEquityProofUrl(instantPreviewUrl);
+    setEquityProofUploading(true);
+    setEquityProofUploadProgress(0);
+    setEquityApproved(false);
     try {
-      setEquityProofUploading(true);
-      setEquityProofUploadProgress(0);
-      setEquityApproved(false);
       // Shop wifi is often slow — a raw camera photo (3-8MB) is what actually
       // causes uploads to stall. Shrinking it first is the real fix; upload
       // itself also retries automatically on a dropped/timed-out connection.
@@ -518,9 +524,12 @@ const SalesCounter = () => {
       const res = await uploadImage(compressed, setEquityProofUploadProgress);
       const url = res?.data?.data?.url;
       if (!url) throw new Error('Upload did not return an image URL');
+      URL.revokeObjectURL(instantPreviewUrl);
       setEquityProofUrl(url);
       toast.success('Equity confirmation photo attached');
     } catch (err) {
+      URL.revokeObjectURL(instantPreviewUrl);
+      setEquityProofUrl('');
       AxiosToastError(err);
     } finally {
       setEquityProofUploading(false);
@@ -557,6 +566,13 @@ const SalesCounter = () => {
     }
     if ((paymentMethod === 'equity' || paymentMethod === 'split') && (!equityProofUrl || !equityApproved)) {
       toast.error('Attach and approve the Equity confirmation photo before charging.');
+      return;
+    }
+    // The instant-preview flow shows the photo locally before the server has
+    // it — never let a sale complete against a photo that's still saving
+    // (its URL is a temporary blob: that hasn't reached Cloudinary yet).
+    if ((paymentMethod === 'equity' || paymentMethod === 'split') && equityProofUploading) {
+      toast.error('The confirmation photo is still saving — it will attach in a moment.');
       return;
     }
     if (paymentMethod === 'text_forwarded' && (!forwardedText.trim() || !forwardedTextApproved)) {
@@ -1084,14 +1100,22 @@ const SalesCounter = () => {
                   <div className="mt-1 space-y-2">
                     <div className="relative overflow-hidden rounded-lg border border-brown-200 dark:border-dm-border">
                       <img src={equityProofUrl} alt="Equity payment confirmation" className="max-h-40 w-full object-contain bg-white" />
-                      <button
-                        type="button"
-                        onClick={removeEquityProof}
-                        className="absolute right-1.5 top-1.5 inline-flex h-7 w-7 items-center justify-center rounded-full bg-black/60 text-white hover:bg-black/75"
-                        aria-label="Remove confirmation photo"
-                      >
-                        <FaTimes size={12} />
-                      </button>
+                      {equityProofUploading && (
+                        <span className="absolute left-1.5 top-1.5 inline-flex items-center gap-1.5 rounded-full bg-plum-700/90 px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-white">
+                          <span className="h-2 w-2 animate-pulse rounded-full bg-white" />
+                          Saving{equityProofUploadProgress > 0 ? ` ${equityProofUploadProgress}%` : '…'}
+                        </span>
+                      )}
+                      {!equityProofUploading && (
+                        <button
+                          type="button"
+                          onClick={removeEquityProof}
+                          className="absolute right-1.5 top-1.5 inline-flex h-7 w-7 items-center justify-center rounded-full bg-black/60 text-white hover:bg-black/75"
+                          aria-label="Remove confirmation photo"
+                        >
+                          <FaTimes size={12} />
+                        </button>
+                      )}
                     </div>
                     <label className="flex items-start gap-2.5 rounded-lg border border-brown-100 bg-white p-2.5 text-sm dark:border-dm-border dark:bg-dm-card-2">
                       <input
@@ -1201,12 +1225,13 @@ const SalesCounter = () => {
             disabled={
               cart.length === 0 ||
               submitting ||
+              equityProofUploading ||
               ((paymentMethod === 'equity' || paymentMethod === 'split') && (!equityProofUrl || !equityApproved)) ||
               (paymentMethod === 'text_forwarded' && (!forwardedText.trim() || !forwardedTextApproved))
             }
             className="flex-1 min-h-[48px] bg-gold-500 hover:bg-gold-600 active:scale-[0.98] disabled:bg-brown-300 disabled:active:scale-100 text-white font-bold py-3 rounded-xl flex items-center justify-center gap-2 transition-all"
           >
-            {submitting ? 'Processing…' : `Charge ${DisplayPriceInShillings(totals.total)}`}
+            {submitting ? 'Processing…' : equityProofUploading ? 'Saving photo…' : `Charge ${DisplayPriceInShillings(totals.total)}`}
           </button>
         </div>
       </div>

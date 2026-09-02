@@ -2,13 +2,15 @@ import toast from 'react-hot-toast';
 import SummaryApi from '../common/SummaryApi';
 import Axios from './Axios';
 
-const UPLOAD_TIMEOUT_MS = 45000;
+const UPLOAD_TIMEOUT_MS = 20000;
 // A stalled upload on a poor shop connection is a timeout or a plain network
-// drop, not a server rejection — those are worth a couple of silent retries
-// before bothering the cashier. A 4xx/5xx from the server (bad file, auth,
-// etc.) won't succeed on retry, so it fails immediately instead.
-const MAX_ATTEMPTS = 3;
-const RETRY_DELAY_MS = [1500, 3000];
+// drop, not a server rejection — those are worth ONE quick silent retry
+// before bothering the cashier (the instant on-screen preview keeps the
+// cashier unblocked either way). A 4xx/5xx from the server (bad file, auth,
+// etc.) won't succeed on retry, so it fails immediately instead. Total
+// worst-case wait before a visible error is now ~45s, not 2+ minutes.
+const MAX_ATTEMPTS = 2;
+const RETRY_DELAY_MS = [1500];
 
 const isRetryableError = (error) => !error.response; // covers ECONNABORTED (timeout) and network errors
 

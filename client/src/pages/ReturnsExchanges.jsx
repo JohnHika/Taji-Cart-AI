@@ -348,10 +348,14 @@ const ReturnsExchanges = () => {
     const file = e.target.files?.[0];
     e.target.value = '';
     if (!file) return;
+    // Instant local preview — same as the Sales Counter: the cashier sees the
+    // photo immediately while it saves behind a "Saving…" badge.
+    const instantPreviewUrl = URL.createObjectURL(file);
+    setEquityProofUrl(instantPreviewUrl);
+    setEquityProofUploading(true);
+    setEquityProofUploadProgress(0);
+    setEquityApproved(false);
     try {
-      setEquityProofUploading(true);
-      setEquityProofUploadProgress(0);
-      setEquityApproved(false);
       // Shop wifi is often slow — a raw camera photo (3-8MB) is what actually
       // causes uploads to stall. Shrinking it first is the real fix; upload
       // itself also retries automatically on a dropped/timed-out connection.
@@ -359,9 +363,12 @@ const ReturnsExchanges = () => {
       const res = await uploadImage(compressed, setEquityProofUploadProgress);
       const url = res?.data?.data?.url;
       if (!url) throw new Error('Upload did not return an image URL');
+      URL.revokeObjectURL(instantPreviewUrl);
       setEquityProofUrl(url);
       toast.success('Equity confirmation photo attached');
     } catch (err) {
+      URL.revokeObjectURL(instantPreviewUrl);
+      setEquityProofUrl('');
       AxiosToastError(err);
     } finally {
       setEquityProofUploading(false);
@@ -410,6 +417,12 @@ const ReturnsExchanges = () => {
     }
     if (priceDifference > 0 && (paymentMethod === 'equity' || paymentMethod === 'split') && (!equityProofUrl || !equityApproved)) {
       toast.error('Attach and approve the Equity confirmation photo before completing this exchange.');
+      return;
+    }
+    // Never submit against the instant local preview while it's still saving
+    // to the server — the blob: URL hasn't reached Cloudinary yet.
+    if (priceDifference > 0 && (paymentMethod === 'equity' || paymentMethod === 'split') && equityProofUploading) {
+      toast.error('The confirmation photo is still saving — one moment.');
       return;
     }
     if (priceDifference > 0 && paymentMethod === 'text_forwarded' && (!forwardedText.trim() || !forwardedTextApproved)) {
@@ -1064,14 +1077,22 @@ const ReturnsExchanges = () => {
                           <div className="mt-1 space-y-2">
                             <div className="relative overflow-hidden rounded-lg border border-brown-200 dark:border-dm-border">
                               <img src={equityProofUrl} alt="Equity payment confirmation" className="max-h-32 w-full object-contain bg-white" />
-                              <button
-                                type="button"
-                                onClick={() => { setEquityProofUrl(''); setEquityApproved(false); }}
-                                className="absolute right-1.5 top-1.5 inline-flex h-7 w-7 items-center justify-center rounded-full bg-black/60 text-white hover:bg-black/75"
-                                aria-label="Remove confirmation photo"
-                              >
-                                <FaTimes size={12} />
-                              </button>
+                              {equityProofUploading && (
+                                <span className="absolute left-1.5 top-1.5 inline-flex items-center gap-1.5 rounded-full bg-plum-700/90 px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-white">
+                                  <span className="h-2 w-2 animate-pulse rounded-full bg-white" />
+                                  Saving{equityProofUploadProgress > 0 ? ` ${equityProofUploadProgress}%` : '…'}
+                                </span>
+                              )}
+                              {!equityProofUploading && (
+                                <button
+                                  type="button"
+                                  onClick={() => { setEquityProofUrl(''); setEquityApproved(false); }}
+                                  className="absolute right-1.5 top-1.5 inline-flex h-7 w-7 items-center justify-center rounded-full bg-black/60 text-white hover:bg-black/75"
+                                  aria-label="Remove confirmation photo"
+                                >
+                                  <FaTimes size={12} />
+                                </button>
+                              )}
                             </div>
                             <label className="flex items-start gap-2.5 rounded-lg border border-brown-100 bg-white p-2.5 text-sm dark:border-dm-border dark:bg-dm-card-2">
                               <input
@@ -1155,13 +1176,14 @@ const ReturnsExchanges = () => {
                   onClick={submitExchange}
                   disabled={
                     submitting ||
+                    equityProofUploading ||
                     (priceDifference > 0 && (paymentMethod === 'equity' || paymentMethod === 'split') && (!equityProofUrl || !equityApproved)) ||
                     (priceDifference > 0 && paymentMethod === 'text_forwarded' && (!forwardedText.trim() || !forwardedTextApproved)) ||
                     (priceDifference > 0 && paymentMethod === 'cash' && amountTenderedValue > 0 && amountTenderedValue < priceDifference)
                   }
                   className="mt-4 w-full min-h-[48px] rounded-xl bg-plum-700 text-sm font-bold text-white shadow-sm transition-all hover:bg-plum-800 active:scale-[0.99] disabled:bg-brown-300 disabled:active:scale-100"
                 >
-                  {submitting ? 'Requesting…' : 'Request Exchange'}
+                  {submitting ? 'Requesting…' : equityProofUploading ? 'Saving photo…' : 'Request Exchange'}
                 </button>
               </div>
             )}
