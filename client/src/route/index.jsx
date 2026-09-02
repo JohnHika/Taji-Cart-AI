@@ -1,5 +1,5 @@
 import React, { Suspense, useEffect } from 'react';
-import { createBrowserRouter, Navigate, useLocation } from 'react-router-dom';
+import { createBrowserRouter, Link, Navigate, useLocation } from 'react-router-dom';
 import App from '../App';
 import PrivateRoute from '../components/PrivateRoute';
 import lazyWithRetry from '../utils/lazyWithRetry';
@@ -94,6 +94,38 @@ const S = (Component) => (
   <Suspense fallback={<PageLoader />}>
     <Component />
   </Suspense>
+);
+
+// S() renders its argument as <Component />, so it must be given a component
+// REFERENCE, never a JSX element. Composing the feature gate into its own
+// component keeps that contract (passing the element directly made React try
+// to use a plain object as a component type, which threw and tripped the
+// app-level error boundary). showPreviewBadge is off because the page renders
+// its own, richer preview notice.
+//
+// The fallback matters: a gate with no fallback renders NOTHING when the flag
+// row is missing from the database, which looks like a broken blank page. An
+// admin who navigated here deliberately gets told exactly what to do instead.
+const TryOnUnavailable = () => (
+  <div className="mx-auto max-w-lg px-4 py-16 text-center">
+    <h2 className="text-lg font-bold text-charcoal dark:text-white">AI Try-On isn&apos;t switched on yet</h2>
+    <p className="mt-3 text-sm leading-relaxed text-brown-500 dark:text-white/60">
+      The <span className="font-mono text-xs">ai-style-tryon</span> feature isn&apos;t registered or is
+      currently disabled, so this tool is hidden. Open Feature Releases to register or re-enable it.
+    </p>
+    <Link
+      to="/dashboard/feature-releases"
+      className="mt-6 inline-block rounded-pill bg-plum-700 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-plum-600"
+    >
+      Go to Feature Releases
+    </Link>
+  </div>
+);
+
+const GatedHairstyleTryOn = () => (
+  <FeatureGate flagKey="ai-style-tryon" showPreviewBadge={false} fallback={<TryOnUnavailable />}>
+    <HairstyleTryOn />
+  </FeatureGate>
 );
 
 function LegacyCheckoutRedirect() {
@@ -225,7 +257,7 @@ const router = createBrowserRouter([
           { path: 'stock-value',            element: <PrivateRoute requireAdmin={true}>{S(StockValue)}</PrivateRoute> },
           { path: 'admin-control-center',   element: <PrivateRoute requireAdmin={true}>{S(AdminControlCenter)}</PrivateRoute> },
           { path: 'feature-releases',        element: <PrivateRoute requireAdmin={true}>{S(FeatureReleases)}</PrivateRoute> },
-          { path: 'ai-style-tryon',         element: <PrivateRoute requireAdmin={true}>{S(<FeatureGate flagKey="ai-style-tryon"><HairstyleTryOn /></FeatureGate>)}</PrivateRoute> },
+          { path: 'ai-style-tryon',         element: <PrivateRoute requireAdmin={true}>{S(GatedHairstyleTryOn)}</PrivateRoute> },
           { path: 'myorders',               element: <PrivateRoute>{S(MyOrders)}</PrivateRoute> },
           { path: 'address',                element: <PrivateRoute>{S(Address)}</PrivateRoute> },
           { path: 'community-perks',        element: <PrivateRoute>{S(CommunityPerks)}</PrivateRoute> },
