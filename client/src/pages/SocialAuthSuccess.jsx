@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { toast } from 'react-hot-toast';
 import { FaSpinner } from 'react-icons/fa';
 import { useDispatch } from 'react-redux';
@@ -38,20 +38,81 @@ const getAuthParams = (location) => {
   return mergedParams;
 };
 
+// Recovery channel for the case where the URL hash was stripped by a
+// redirect hop (www -> apex 308, http -> https, proxy) on the way here:
+// the API's OAuth callback also drops a one-shot readable oauth_handoff
+// cookie on the parent domain. Read it, use it, delete it — never log it.
+const readHandoffCookie = () => {
+  if (typeof document === 'undefined') return null;
+  const prefix = 'oauth_handoff=';
+  const match = document.cookie
+    .split('; ')
+    .find((row) => row.startsWith(prefix));
+  if (!match) return null;
+  try {
+    let raw = decodeURIComponent(match.substring(prefix.length));
+    // express tags object-valued cookies with a "j:" prefix; we send a plain
+    // JSON string but strip the tag anyway in case of any intermediary.
+    if (raw.startsWith('j:')) raw = raw.slice(2);
+    const payload = JSON.parse(raw);
+    // Single-use: clear the moment it's read.
+    document.cookie = `oauth_handoff=; Max-Age=0; path=/social-auth-success; secure`;
+    document.cookie = `oauth_handoff=; Max-Age=0; path=/; secure`;
+    return payload || null;
+  } catch {
+    return null;
+  }
+};
+
 const SocialAuthSuccess = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const location = useLocation();
 
+  // The handoff must fire exactly once. After success we navigate (changing
+  // the location) — without this guard the effect re-runs against the clean
+  // URL, finds no token, and toasts "Authentication failed. Missing token."
+  // even though the login actually succeeded.
+  const handledRef = useRef(false);
+
   useEffect(() => {
+    if (handledRef.current) return;
+    handledRef.current = true;
+
     const handleAuthSuccess = async () => {
       try {
         // Get token and user details from either hash or query parameters.
         // Hash parameters are preferred because they do not hit the server.
         const params = getAuthParams(location);
-        const token = params.get('token') || params.get('accessToken');
-        const refreshToken = params.get('refreshToken');
-        const userData = params.get('userData');
+        let token = params.get('token') || params.get('accessToken');
+        let refreshToken = params.get('refreshToken');
+        let userData = params.get('userData');
+
+        // Hash stripped by a redirect hop (www -> apex, http -> https)?
+        // Fall back to the one-shot handoff cookie the API's callback set
+        // on the parent domain. If that works too, the user never sees an
+        // error at all.
+        if (!token) {
+          const handoff = readHandoffCookie();
+          if (handoff?.accessToken) {
+            token = handoff.accessToken;
+            refreshToken = refreshToken || handoff.refreshToken || undefined;
+            userData = userData || (handoff.userData ? JSON.stringify(handoff.userData) : null);
+            if (!userData && handoff.userId) {
+              // Re-shape the flat cookie payload into the individual params
+              // the fallback constructor below already understands.
+              params.set('userId', handoff.userId);
+              params.set('name', handoff.name || '');
+              params.set('email', handoff.email || '');
+              params.set('role', handoff.role || 'user');
+              params.set('isAdmin', handoff.isAdmin ? 'true' : 'false');
+              params.set('isStaff', handoff.isStaff ? 'true' : 'false');
+              params.set('isDelivery', handoff.isDelivery ? 'true' : 'false');
+              params.set('loyaltyPoints', String(handoff.loyaltyPoints ?? 0));
+              params.set('loyaltyClass', handoff.loyaltyClass || 'Basic');
+            }
+          }
+        }
 
         if (!token) {
           toast.error('Authentication failed. Missing token.');

@@ -86,11 +86,51 @@ const handleSocialAuthSuccess = async (req, res) => {
     
     res.cookie('accessToken', accessToken, cookiesOption);
     res.cookie('refreshToken', refreshToken, cookiesOption);
-    
+
     // Fetch loyalty card info if available
     const loyaltyCard = await LoyaltyCard.findOne({ userId: user._id });
     const loyaltyPoints = loyaltyCard?.points || 0;
     const loyaltyClass = loyaltyCard?.tier || "Basic";
+
+    // The tokens travel to the frontend in the URL hash — but browsers do
+    // NOT forward #fragments across HTTP redirects (e.g. www -> apex 308,
+    // http -> https, or any proxy hop), which stranded users on
+    // "Authentication failed. Missing token." This one-shot readable cookie
+    // on the frontend's parent domain is the recovery channel: the landing
+    // page reads the hash first, then falls back to this cookie, then clears
+    // it. httpOnly stays false ONLY because the SPA must read it once;
+    // it is deleted immediately after handoff client-side (and is
+    // single-use by construction — the server never sets it again except on
+    // a fresh OAuth callback).
+    try {
+      const frontendUrl = new URL(getFrontendBaseUrl());
+      const parentDomain = frontendUrl.hostname.includes('nawirihairke.com')
+        ? '.nawirihairke.com'
+        : frontendUrl.hostname;
+      res.cookie('oauth_handoff', JSON.stringify({
+        accessToken,
+        refreshToken,
+        userId: String(user._id),
+        name: user.name || '',
+        email: user.email || '',
+        role: user.role || 'user',
+        isAdmin: Boolean(user.isAdmin),
+        isStaff: Boolean(user.isStaff || user.role === 'staff' || user.isAdmin),
+        isDelivery: Boolean(user.isDelivery || user.role === 'delivery'),
+        loyaltyPoints,
+        loyaltyClass,
+      }), {
+        domain: parentDomain,
+        httpOnly: false,
+        secure: true,
+        sameSite: 'Lax',
+        path: '/social-auth-success',
+        maxAge: 60 * 1000, // survives one landing; the page deletes it on read
+      });
+    } catch (cookieError) {
+      console.error('oauth_handoff cookie failed:', cookieError);
+      // Non-fatal — hash delivery may still work; do not block the redirect.
+    }
 
     // Get the returnTo parameter from query string or default to login
     const returnTo = req.query.returnTo || '/';
