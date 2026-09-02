@@ -584,7 +584,7 @@ export async function CashOnDeliveryOrderController(request, response) {
                     code: 'INVALID_SACCO_OPERATOR',
                 });
             }
-            if (!saccoDestinationTown) {
+            if (!saccoDestinationTown || !String(saccoDestinationTown).trim()) {
                 return response.status(400).json({
                     message: "Please enter the destination town",
                     error: true,
@@ -592,6 +592,11 @@ export async function CashOnDeliveryOrderController(request, response) {
                 });
             }
         }
+
+        // Single display name for customer-facing messages: the registered
+        // operator's name, or the manually-typed one for SACCOs not yet in
+        // the admin list (saccoOperator is null in that case).
+        const saccoOperatorDisplayName = saccoOperator ? saccoOperator.name : manualSaccoOperator;
 
         // Validate delivery location is within Nairobi CBD radius for foot delivery only
         if (fulfillment_type === 'delivery' && deliveryMode === 'foot') {
@@ -755,7 +760,7 @@ export async function CashOnDeliveryOrderController(request, response) {
             message: fulfillment_type === 'delivery'
                 ? 'Your order has been placed and will be delivered soon.'
                 : fulfillment_type === 'sacco_pickup'
-                    ? `Your order has been placed. Our rider will drop it at ${saccoOperator?.name}'s terminal for ${saccoDestinationTown} and call you when they arrive. ${saccoOperator?.name} will then tell you their own fee to carry it onward.`
+                    ? `Your order has been placed. Our rider will drop it at ${saccoOperatorDisplayName}'s terminal for ${saccoDestinationTown} and call you when they arrive. ${saccoOperatorDisplayName} will then tell you their own fee to carry it onward.`
                     : `Your order has been placed. You can pick it up at ${pickup_location}. Your verification code is ${pickupVerificationCode}`,
             isRead: false,
             userId: userId
@@ -775,7 +780,7 @@ export async function CashOnDeliveryOrderController(request, response) {
                     intro: fulfillment_type === 'pickup'
                         ? `Your order is confirmed for pickup at ${pickup_location}. Keep the verification code below ready when collecting it.`
                         : fulfillment_type === 'sacco_pickup'
-                            ? `Our rider is taking your order to ${saccoOperator?.name}'s Nairobi terminal for ${saccoDestinationTown} (KES ${SACCO_TERMINAL_DROPOFF_CHARGE} shop-to-terminal fee, already included in your total). They'll call you once they're at the terminal to confirm drop-off — ${saccoOperator?.name} will then tell you their own separate fee to carry it onward, which you or your receiver pay directly to them.`
+                            ? `Our rider is taking your order to ${saccoOperatorDisplayName}'s Nairobi terminal for ${saccoDestinationTown} (KES ${SACCO_TERMINAL_DROPOFF_CHARGE} shop-to-terminal fee, already included in your total). They'll call you once they're at the terminal to confirm drop-off — ${saccoOperatorDisplayName} will then tell you their own separate fee to carry it onward, which you or your receiver pay directly to them.`
                             : 'Thank you for shopping with Nawiri Hair Kenya. Your order is confirmed and our team is preparing it now.',
                     orderId: payload[0].orderId,
                     totalAmt,

@@ -45,6 +45,7 @@ const heldSaleSchema = new mongoose.Schema({
     mode: { type: String, default: 'standard' },
     zoneId: { type: String, default: '' },
     saccoOperatorId: { type: String, default: '' },
+    manualSaccoOperatorName: { type: String, default: '' },
     saccoDestinationTown: { type: String, default: '' }
   },
   paymentMethod: {

@@ -1,4 +1,5 @@
 import express from 'express';
+import mongoose from 'mongoose';
 import Sale from '../models/sale.model.js';
 import User from '../models/user.model.js';
 import Product from '../models/product.model.js';
@@ -576,7 +577,7 @@ router.post('/sale', auth, Staff, requireStaffPermission('pos.open_counter'), as
         // for SACCOs not yet in the admin list. The sale snapshot stores the
         // NAME either way, so fulfillment flows read the same field.
         const manualName = typeof manualSaccoOperatorName === 'string' ? manualSaccoOperatorName.trim() : '';
-        if (saccoOperatorId) {
+        if (saccoOperatorId && mongoose.Types.ObjectId.isValid(String(saccoOperatorId))) {
           saccoOperator = await SaccoOperatorModel.findOne({ _id: saccoOperatorId, isActive: true });
           if (!saccoOperator) {
             return res.status(400).json({ success: false, message: 'Selected operator is no longer available. Please pick another.' });
