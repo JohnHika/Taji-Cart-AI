@@ -30,7 +30,7 @@ const WhatsAppOrderForm = () => {
   const [customerEmail, setCustomerEmail] = useState('');
   const [fulfillmentType, setFulfillmentType] = useState('delivery');
   const [pickupLocation, setPickupLocation] = useState('');
-  const [deliveryDetails, setDeliveryDetails] = useState({ mode: 'standard', zoneId: '', saccoOperatorId: '', saccoDestinationTown: '' });
+  const [deliveryDetails, setDeliveryDetails] = useState({ mode: 'standard', zoneId: '', saccoOperatorId: '', manualSaccoOperatorName: '', saccoDestinationTown: '' });
   const [deliveryFeePreview, setDeliveryFeePreview] = useState(0);
   const [submitting, setSubmitting] = useState(false);
 
@@ -100,7 +100,7 @@ const WhatsAppOrderForm = () => {
     setCustomerEmail('');
     setFulfillmentType('delivery');
     setPickupLocation('');
-    setDeliveryDetails({ mode: 'standard', zoneId: '', saccoOperatorId: '', saccoDestinationTown: '' });
+    setDeliveryDetails({ mode: 'standard', zoneId: '', saccoOperatorId: '', manualSaccoOperatorName: '', saccoDestinationTown: '' });
     setDeliveryFeePreview(0);
   };
 
@@ -122,9 +122,20 @@ const WhatsAppOrderForm = () => {
         toast.error('Select a delivery zone.');
         return;
       }
-      if (deliveryDetails.mode === 'sacco' && (!deliveryDetails.saccoOperatorId || !deliveryDetails.saccoDestinationTown.trim())) {
-        toast.error('Select a SACCO/coach operator and destination town.');
-        return;
+      if (deliveryDetails.mode === 'sacco') {
+        const manualOperator = deliveryDetails.saccoOperatorId === '__manual__';
+        if (manualOperator && !(deliveryDetails.manualSaccoOperatorName || '').trim()) {
+          toast.error('Enter the SACCO/coach operator name.');
+          return;
+        }
+        if (!manualOperator && !deliveryDetails.saccoOperatorId) {
+          toast.error('Select a SACCO/coach operator and destination town.');
+          return;
+        }
+        if (!deliveryDetails.saccoDestinationTown.trim()) {
+          toast.error('Enter the destination town.');
+          return;
+        }
       }
     }
 
@@ -149,7 +160,8 @@ const WhatsAppOrderForm = () => {
           pickup_location: fulfillmentType === 'pickup' ? pickupLocation.trim() : undefined,
           deliveryMode: fulfillmentType === 'delivery' ? deliveryDetails.mode : undefined,
           deliveryZoneId: fulfillmentType === 'delivery' && deliveryDetails.mode === 'bike' ? deliveryDetails.zoneId : undefined,
-          saccoOperatorId: resolvedFulfillmentType === 'sacco_pickup' ? deliveryDetails.saccoOperatorId : undefined,
+          saccoOperatorId: resolvedFulfillmentType === 'sacco_pickup' && deliveryDetails.saccoOperatorId !== '__manual__' ? deliveryDetails.saccoOperatorId : undefined,
+          manualSaccoOperatorName: resolvedFulfillmentType === 'sacco_pickup' && deliveryDetails.saccoOperatorId === '__manual__' ? (deliveryDetails.manualSaccoOperatorName || '').trim() : undefined,
           saccoDestinationTown: resolvedFulfillmentType === 'sacco_pickup' ? deliveryDetails.saccoDestinationTown.trim() : undefined,
           source: 'whatsapp',
         },

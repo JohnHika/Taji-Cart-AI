@@ -1,4 +1,5 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import PropTypes from 'prop-types';
 import SummaryApi from '../common/SummaryApi';
 import Axios from '../utils/Axios';
 import AxiosToastError from '../utils/AxiosToastError';
@@ -74,6 +75,19 @@ const DeliveryModeSelector = ({ value, onChange, onFeeChange, onDetailsChange })
     [saccoOperators, value.saccoOperatorId]
   );
 
+  const isManualSacco = value.saccoOperatorId === '__manual__';
+
+  // A manually-entered operator still needs a name to record on the sale
+  // (sacco_operator_name is a plain snapshot string on both Sale and Order,
+  // so a name without a DB row travels through fulfillment exactly the same
+  // way a registered operator's does). We synthesize a stable "__manual__"
+  // marker as the "id" so parents' existing saccoOperatorId-based validation
+  // can tell "picked one" from "nothing selected".
+  const manualSaccoName = (value.manualSaccoOperatorName || '').trim();
+  const resolvedSaccoOperatorName = isManualSacco
+    ? manualSaccoName
+    : selectedSaccoOperator?.name || '';
+
   const previewFee = useMemo(() => {
     if (value.mode === 'bike') return selectedZone ? selectedZone.fare : DEFAULT_DELIVERY_CHARGE;
     if (value.mode === 'sacco') return SACCO_TERMINAL_DROPOFF_CHARGE;
@@ -87,9 +101,9 @@ const DeliveryModeSelector = ({ value, onChange, onFeeChange, onDetailsChange })
   useEffect(() => {
     onDetailsChange?.({
       zoneName: selectedZone?.name || '',
-      saccoOperatorName: selectedSaccoOperator?.name || '',
+      saccoOperatorName: resolvedSaccoOperatorName,
     });
-  }, [selectedZone, selectedSaccoOperator, onDetailsChange]);
+  }, [selectedZone, resolvedSaccoOperatorName, onDetailsChange]);
 
   const setMode = (mode) => onChange({ ...value, mode });
 
@@ -153,7 +167,12 @@ const DeliveryModeSelector = ({ value, onChange, onFeeChange, onDetailsChange })
             <label className="text-sm font-medium text-charcoal dark:text-white">SACCO / coach operator</label>
             <select
               value={value.saccoOperatorId || ''}
-              onChange={(e) => onChange({ ...value, saccoOperatorId: e.target.value })}
+              onChange={(e) => onChange({
+                ...value,
+                saccoOperatorId: e.target.value,
+                // Drop any stale manual name when switching back to a listed operator.
+                manualSaccoOperatorName: e.target.value === '__manual__' ? (value.manualSaccoOperatorName || '') : '',
+              })}
               disabled={saccoLoading}
               className="mt-1 w-full rounded-lg border border-brown-200 bg-white px-3 py-2 text-sm dark:border-dm-border dark:bg-dm-card-2"
             >
@@ -161,6 +180,7 @@ const DeliveryModeSelector = ({ value, onChange, onFeeChange, onDetailsChange })
               {saccoOperators.map((op) => (
                 <option key={op._id} value={op._id}>{op.name}</option>
               ))}
+              <option value="__manual__">Other — enter manually</option>
             </select>
             {selectedSaccoOperator?.destinationsServed?.length > 0 && (
               <p className="mt-1 text-xs text-brown-500 dark:text-white/50">
@@ -168,6 +188,21 @@ const DeliveryModeSelector = ({ value, onChange, onFeeChange, onDetailsChange })
               </p>
             )}
           </div>
+          {isManualSacco && (
+            <div>
+              <label className="text-sm font-medium text-charcoal dark:text-white">Operator name</label>
+              <input
+                type="text"
+                value={manualSaccoName}
+                onChange={(e) => onChange({ ...value, manualSaccoOperatorName: e.target.value })}
+                placeholder="e.g. Easy Coach, Modern Coast, local matatu SACCO"
+                className="mt-1 w-full rounded-lg border border-brown-200 bg-white px-3 py-2 text-sm dark:border-dm-border dark:bg-dm-card-2"
+              />
+              <p className="mt-1 text-xs text-brown-500 dark:text-white/50">
+                For an operator not in the list — the name is recorded on the sale exactly as typed.
+              </p>
+            </div>
+          )}
           <div>
             <label className="text-sm font-medium text-charcoal dark:text-white">Destination town</label>
             <input
@@ -190,6 +225,19 @@ const DeliveryModeSelector = ({ value, onChange, onFeeChange, onDetailsChange })
       </p>
     </div>
   );
+};
+
+DeliveryModeSelector.propTypes = {
+  value: PropTypes.shape({
+    mode: PropTypes.oneOf(['standard', 'bike', 'sacco']),
+    zoneId: PropTypes.string,
+    saccoOperatorId: PropTypes.string,
+    manualSaccoOperatorName: PropTypes.string,
+    saccoDestinationTown: PropTypes.string,
+  }).isRequired,
+  onChange: PropTypes.func.isRequired,
+  onFeeChange: PropTypes.func,
+  onDetailsChange: PropTypes.func,
 };
 
 export default DeliveryModeSelector;

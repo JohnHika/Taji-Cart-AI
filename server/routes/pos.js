@@ -535,6 +535,7 @@ router.post('/sale', auth, Staff, requireStaffPermission('pos.open_counter'), as
       delivery_mode,
       deliveryZoneId,
       saccoOperatorId,
+      manualSaccoOperatorName,
       saccoDestinationTown,
       deliveryScheduledDate
     } = req.body;
@@ -558,6 +559,7 @@ router.post('/sale', auth, Staff, requireStaffPermission('pos.open_counter'), as
     // total is a preview only, same trust rule as online checkout.
     let deliveryZone = null;
     let saccoOperator = null;
+    let manualSaccoOperator = '';
     let deliveryCharge = 0;
     const normalizedDeliveryMode = ['standard', 'bike', 'sacco'].includes(delivery_mode) ? delivery_mode : '';
 
@@ -570,12 +572,22 @@ router.post('/sale', auth, Staff, requireStaffPermission('pos.open_counter'), as
         deliveryZone = zoneResult.zone;
         deliveryCharge = resolveDeliveryCharge({ fulfillmentType: 'delivery', deliveryZone });
       } else if (normalizedDeliveryMode === 'sacco') {
-        if (!saccoOperatorId || !saccoDestinationTown) {
-          return res.status(400).json({ success: false, message: 'Select a SACCO/coach operator and destination town.' });
+        // Either a registered operator id, or a manually-typed operator name
+        // for SACCOs not yet in the admin list. The sale snapshot stores the
+        // NAME either way, so fulfillment flows read the same field.
+        const manualName = typeof manualSaccoOperatorName === 'string' ? manualSaccoOperatorName.trim() : '';
+        if (saccoOperatorId) {
+          saccoOperator = await SaccoOperatorModel.findOne({ _id: saccoOperatorId, isActive: true });
+          if (!saccoOperator) {
+            return res.status(400).json({ success: false, message: 'Selected operator is no longer available. Please pick another.' });
+          }
+        } else if (manualName) {
+          manualSaccoOperator = manualName.slice(0, 120);
+        } else {
+          return res.status(400).json({ success: false, message: 'Select a SACCO/coach operator (or enter its name) and destination town.' });
         }
-        saccoOperator = await SaccoOperatorModel.findOne({ _id: saccoOperatorId, isActive: true });
-        if (!saccoOperator) {
-          return res.status(400).json({ success: false, message: 'Selected operator is no longer available. Please pick another.' });
+        if (!saccoDestinationTown || !String(saccoDestinationTown).trim()) {
+          return res.status(400).json({ success: false, message: 'Enter the destination town.' });
         }
         deliveryCharge = resolveDeliveryCharge({ fulfillmentType: 'sacco_pickup' });
       } else {
@@ -770,8 +782,8 @@ router.post('/sale', auth, Staff, requireStaffPermission('pos.open_counter'), as
       delivery_zone_name: deliveryZone ? deliveryZone.name : '',
       delivery_zone_fare: deliveryZone ? deliveryZone.fare : undefined,
       sacco_operator: saccoOperator ? saccoOperator._id : undefined,
-      sacco_operator_name: saccoOperator ? saccoOperator.name : '',
-      sacco_destination_town: saccoOperator ? saccoDestinationTown : '',
+      sacco_operator_name: saccoOperator ? saccoOperator.name : manualSaccoOperator,
+      sacco_destination_town: (saccoOperator || manualSaccoOperator) ? saccoDestinationTown : '',
       deliveryCharge,
   subtotal,
   discount: discount || 0,

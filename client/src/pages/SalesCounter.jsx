@@ -107,7 +107,7 @@ const SalesCounter = () => {
   // is a website/WhatsApp order being paid for/recorded at the counter on
   // the customer's behalf. Defaults to walk-in, the normal counter case.
   const [saleSource, setSaleSource] = useState(() => restoredDraft?.saleSource || 'walkin');
-  const [deliveryDetails, setDeliveryDetails] = useState(() => restoredDraft?.deliveryDetails || { mode: 'standard', zoneId: '', saccoOperatorId: '', saccoDestinationTown: '' });
+  const [deliveryDetails, setDeliveryDetails] = useState(() => restoredDraft?.deliveryDetails || { mode: 'standard', zoneId: '', saccoOperatorId: '', manualSaccoOperatorName: '', saccoDestinationTown: '' });
   const [deliveryFeePreview, setDeliveryFeePreview] = useState(0);
   const [paymentMethod, setPaymentMethod] = useState(() => restoredDraft?.paymentMethod || 'cash');
   const [amountTendered, setAmountTendered] = useState(() => restoredDraft?.amountTendered || '');
@@ -309,7 +309,7 @@ const SalesCounter = () => {
       setDeliveryScheduledDate(heldSale.deliveryScheduledDate || todayDateString);
       setFulfillmentType(heldSale.fulfillmentType || 'in_store');
       setSaleSource(heldSale.saleSource || 'walkin');
-      setDeliveryDetails(heldSale.deliveryDetails || { mode: 'standard', zoneId: '', saccoOperatorId: '', saccoDestinationTown: '' });
+      setDeliveryDetails(heldSale.deliveryDetails || { mode: 'standard', zoneId: '', saccoOperatorId: '', manualSaccoOperatorName: '', saccoDestinationTown: '' });
       setPaymentMethod(heldSale.paymentMethod || 'cash');
       setAmountTendered(heldSale.amountTendered || '');
       setSplitCashAmount(heldSale.splitCashAmount || '');
@@ -469,7 +469,7 @@ const SalesCounter = () => {
     setShowCart(false);
     setFulfillmentType('in_store');
     setSaleSource('walkin');
-    setDeliveryDetails({ mode: 'standard', zoneId: '', saccoOperatorId: '', saccoDestinationTown: '' });
+    setDeliveryDetails({ mode: 'standard', zoneId: '', saccoOperatorId: '', manualSaccoOperatorName: '', saccoDestinationTown: '' });
     setDeliveryFeePreview(0);
     setPaymentMethod('cash');
     setAmountTendered('');
@@ -588,9 +588,20 @@ const SalesCounter = () => {
         toast.error('Select a delivery zone.');
         return;
       }
-      if (deliveryDetails.mode === 'sacco' && (!deliveryDetails.saccoOperatorId || !deliveryDetails.saccoDestinationTown.trim())) {
-        toast.error('Select a SACCO/coach operator and destination town.');
-        return;
+      if (deliveryDetails.mode === 'sacco') {
+        const manualOperator = deliveryDetails.saccoOperatorId === '__manual__';
+        if (manualOperator && !(deliveryDetails.manualSaccoOperatorName || '').trim()) {
+          toast.error('Enter the SACCO/coach operator name.');
+          return;
+        }
+        if (!manualOperator && !deliveryDetails.saccoOperatorId) {
+          toast.error('Select a SACCO/coach operator and destination town.');
+          return;
+        }
+        if (!deliveryDetails.saccoDestinationTown.trim()) {
+          toast.error('Enter the destination town.');
+          return;
+        }
       }
     }
 
@@ -628,7 +639,8 @@ const SalesCounter = () => {
         fulfillment_type: fulfillmentType,
         delivery_mode: fulfillmentType === 'delivery' ? deliveryDetails.mode : undefined,
         deliveryZoneId: fulfillmentType === 'delivery' && deliveryDetails.mode === 'bike' ? deliveryDetails.zoneId : undefined,
-        saccoOperatorId: fulfillmentType === 'delivery' && deliveryDetails.mode === 'sacco' ? deliveryDetails.saccoOperatorId : undefined,
+        saccoOperatorId: fulfillmentType === 'delivery' && deliveryDetails.mode === 'sacco' && deliveryDetails.saccoOperatorId !== '__manual__' ? deliveryDetails.saccoOperatorId : undefined,
+        manualSaccoOperatorName: fulfillmentType === 'delivery' && deliveryDetails.mode === 'sacco' && deliveryDetails.saccoOperatorId === '__manual__' ? (deliveryDetails.manualSaccoOperatorName || '').trim() : undefined,
         saccoDestinationTown: fulfillmentType === 'delivery' && deliveryDetails.mode === 'sacco' ? deliveryDetails.saccoDestinationTown.trim() : undefined,
         deliveryNote: fulfillmentType === 'delivery' ? deliveryNote.trim() : undefined,
         deliveryScheduledDate: fulfillmentType === 'delivery' ? deliveryScheduledDate : undefined,

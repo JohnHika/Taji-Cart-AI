@@ -530,6 +530,7 @@ export async function CashOnDeliveryOrderController(request, response) {
             pickup_location,
             pickup_instructions,
             saccoOperatorId,
+            manualSaccoOperatorName,
             saccoDestinationTown,
             usePoints = false,
             pointsUsed = 0,
@@ -558,8 +559,24 @@ export async function CashOnDeliveryOrderController(request, response) {
         }
 
         let saccoOperator = null;
+        let manualSaccoOperator = '';
         if (fulfillment_type === 'sacco_pickup') {
-            if (!saccoOperatorId || !mongoose.Types.ObjectId.isValid(String(saccoOperatorId))) {
+            // Registered operator id, or a manually-typed name (operators not
+            // yet in the admin list). The order snapshot stores the name.
+            const manualName = typeof manualSaccoOperatorName === 'string' ? manualSaccoOperatorName.trim() : '';
+            if (saccoOperatorId && mongoose.Types.ObjectId.isValid(String(saccoOperatorId))) {
+                saccoOperator = await SaccoOperatorModel.findOne({ _id: saccoOperatorId, isActive: true });
+                if (!saccoOperator) {
+                    return response.status(400).json({
+                        message: "Selected operator is no longer available. Please pick another.",
+                        error: true,
+                        success: false,
+                        code: 'INVALID_SACCO_OPERATOR',
+                    });
+                }
+            } else if (manualName) {
+                manualSaccoOperator = manualName.slice(0, 120);
+            } else {
                 return response.status(400).json({
                     message: "Please select a SACCO/coach operator",
                     error: true,
@@ -572,15 +589,6 @@ export async function CashOnDeliveryOrderController(request, response) {
                     message: "Please enter the destination town",
                     error: true,
                     success: false
-                });
-            }
-            saccoOperator = await SaccoOperatorModel.findOne({ _id: saccoOperatorId, isActive: true });
-            if (!saccoOperator) {
-                return response.status(400).json({
-                    message: "Selected operator is no longer available. Please pick another.",
-                    error: true,
-                    success: false,
-                    code: 'INVALID_SACCO_OPERATOR',
                 });
             }
         }
@@ -676,7 +684,7 @@ export async function CashOnDeliveryOrderController(request, response) {
             deliveryInstructions: request.body.deliveryInstructions || '',
             pickupVerificationCode: pickupVerificationCode,
             sacco_operator: saccoOperator ? saccoOperator._id : undefined,
-            sacco_operator_name: saccoOperator ? saccoOperator.name : '',
+            sacco_operator_name: saccoOperator ? saccoOperator.name : manualSaccoOperator,
             sacco_destination_town: fulfillment_type === 'sacco_pickup' ? saccoDestinationTown : '',
             subTotalAmt: subTotalAmt,
             deliveryCharge: deliveryCharge,
@@ -857,7 +865,7 @@ export async function trackGuestOrderController(request, response) {
 // Guest Checkout Controller - allows users to purchase without logging in
 export async function guestCheckoutController(request, response) {
     try {
-  const { items, guestEmail, guestPhone, guestShipping, fulfillment_type = 'delivery', pickup_location = '', saccoOperatorId, saccoDestinationTown, source = 'web' } = request.body
+  const { items, guestEmail, guestPhone, guestShipping, fulfillment_type = 'delivery', pickup_location = '', saccoOperatorId, manualSaccoOperatorName, saccoDestinationTown, source = 'web' } = request.body
     const deliveryMode = getDeliveryModeFromPayload(request.body)
     const customerLocation = extractCoordinatesFromPayload(request.body)
 
@@ -874,19 +882,35 @@ export async function guestCheckoutController(request, response) {
         }
 
         let saccoOperator = null;
+        let manualSaccoOperator = '';
         if (fulfillment_type === 'sacco_pickup') {
-            if (!saccoOperatorId || !mongoose.Types.ObjectId.isValid(String(saccoOperatorId)) || !saccoDestinationTown) {
+            // Either a registered operator id, or a manually-typed name for
+            // operators not in the admin list. The order snapshot records the
+            // name either way (see the schema note on sacco_operator_name).
+            const manualName = typeof manualSaccoOperatorName === 'string' ? manualSaccoOperatorName.trim() : '';
+            if (saccoOperatorId && mongoose.Types.ObjectId.isValid(String(saccoOperatorId))) {
+                saccoOperator = await SaccoOperatorModel.findOne({ _id: saccoOperatorId, isActive: true })
+                if (!saccoOperator) {
+                    return response.status(400).json({
+                        message: "Selected operator is no longer available. Please pick another.",
+                        error: true,
+                        success: false,
+                        code: 'INVALID_SACCO_OPERATOR',
+                    })
+                }
+            } else if (manualName) {
+                manualSaccoOperator = manualName.slice(0, 120);
+            } else {
                 return response.status(400).json({
-                    message: "Please select a SACCO/coach operator and destination town",
+                    message: "Please select a SACCO/coach operator (or enter its name) and destination town",
                     error: true,
                     success: false,
                     code: 'INVALID_SACCO_OPERATOR',
                 })
             }
-            saccoOperator = await SaccoOperatorModel.findOne({ _id: saccoOperatorId, isActive: true })
-            if (!saccoOperator) {
+            if (!saccoDestinationTown || !String(saccoDestinationTown).trim()) {
                 return response.status(400).json({
-                    message: "Selected operator is no longer available. Please pick another.",
+                    message: "Enter the destination town",
                     error: true,
                     success: false,
                     code: 'INVALID_SACCO_OPERATOR',
@@ -980,7 +1004,7 @@ export async function guestCheckoutController(request, response) {
             customer_location: customerLocation || undefined,
             deliveryInstructions: request.body.deliveryInstructions || '',
             sacco_operator: saccoOperator ? saccoOperator._id : undefined,
-            sacco_operator_name: saccoOperator ? saccoOperator.name : '',
+            sacco_operator_name: saccoOperator ? saccoOperator.name : manualSaccoOperator,
             sacco_destination_town: fulfillment_type === 'sacco_pickup' ? saccoDestinationTown : '',
             payment_status: fulfillment_type === 'sacco_pickup' ? 'PAY AT SACCO TERMINAL' : '',
             product_details: {
