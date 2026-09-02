@@ -43,6 +43,7 @@ const STATUS_STYLES = {
 const HairstyleTryOn = () => {
   const user = useSelector((state) => state.user);
   const navigate = useNavigate();
+  const referenceInputRef = useRef(null);
   const faceInputRef = useRef(null);
 
   const { visible: flagVisible, flag } = useFeatureFlag('ai-style-tryon');
@@ -53,6 +54,9 @@ const HairstyleTryOn = () => {
 
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [notes, setNotes] = useState('');
+  const [referenceUrl, setReferenceUrl] = useState('');
+  const [referenceUploading, setReferenceUploading] = useState(false);
+  const [referenceUploadProgress, setReferenceUploadProgress] = useState(0);
   const [faceUrl, setFaceUrl] = useState('');
   const [faceUploading, setFaceUploading] = useState(false);
   const [faceUploadProgress, setFaceUploadProgress] = useState(0);
@@ -137,6 +141,27 @@ const HairstyleTryOn = () => {
     }
   };
 
+  const handleReferenceSelected = async (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    try {
+      setReferenceUploading(true);
+      setReferenceUploadProgress(0);
+      const compressed = await compressImage(file);
+      const res = await uploadImage(compressed, setReferenceUploadProgress);
+      const url = res?.data?.data?.url;
+      if (!url) throw new Error('Upload did not return an image URL');
+      setReferenceUrl(url);
+      toast.success('Hairstyle reference attached');
+    } catch (error) {
+      AxiosToastError(error);
+    } finally {
+      setReferenceUploading(false);
+      setReferenceUploadProgress(0);
+    }
+  };
+
   const handleGenerate = async () => {
     if (!selectedProduct) {
       toast.error('Pick a hairstyle first.');
@@ -150,6 +175,7 @@ const HairstyleTryOn = () => {
         data: {
           productId: selectedProduct._id,
           faceImageUrl: faceUrl || undefined,
+          hairstyleReferenceUrl: referenceUrl || undefined,
           notes: notes.trim() || undefined,
         },
         timeout: 180000,
@@ -321,49 +347,89 @@ const HairstyleTryOn = () => {
           )}
         </div>
 
-        {/* Step 2: face + notes */}
+        {/* Step 2: high-quality visual references */}
         <div className="mb-4 rounded-card border border-brown-100 bg-white p-4 dark:border-dm-border dark:bg-dm-card">
-          <p className="mb-3 text-sm font-semibold text-charcoal dark:text-white">2 · Face &amp; styling notes <span className="font-normal text-brown-400 dark:text-white/40">(both optional)</span></p>
+          <p className="mb-1 text-sm font-semibold text-charcoal dark:text-white">2 · Add quality references</p>
+          <p className="mb-3 text-xs leading-relaxed text-brown-500 dark:text-white/50">
+            For the strongest result, use one clear photo of the hairstyle already installed and one clear, front-facing face photo. The product cover photo is used if you skip the hairstyle reference.
+          </p>
 
-          <input
-            ref={faceInputRef}
-            id="tryon-face-input"
-            type="file"
-            accept="image/*"
-            capture="environment"
-            onChange={handleFaceSelected}
-            style={{ position: 'absolute', left: '-9999px' }}
-          />
-          {!faceUrl ? (
-            <label
-              htmlFor="tryon-face-input"
-              className={`flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-brown-300 bg-white py-3 text-sm font-medium text-brown-600 transition-colors hover:bg-brown-50 dark:border-dm-border dark:bg-dm-card-2 dark:text-white/70 dark:hover:bg-dm-card ${faceUploading ? 'pointer-events-none opacity-60' : 'cursor-pointer'}`}
-            >
-              <FaCamera />
-              {faceUploading
-                ? (faceUploadProgress > 0 ? `Uploading… ${faceUploadProgress}%` : 'Uploading…')
-                : 'Attach a face photo (optional — the person to wear it)'}
-            </label>
-          ) : (
-            <div className="flex items-center gap-3 rounded-xl border border-brown-200 bg-white p-2.5 dark:border-dm-border dark:bg-dm-card-2">
-              <img src={faceUrl} alt="Face" className="h-14 w-14 shrink-0 rounded-lg object-cover" />
-              <p className="min-w-0 flex-1 truncate text-xs text-brown-500 dark:text-white/50">Face photo attached</p>
-              <button
-                type="button"
-                onClick={() => setFaceUrl('')}
-                className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-red-600 transition-colors hover:bg-red-50 dark:hover:bg-red-950/30"
-                aria-label="Remove face photo"
-              >
-                <FaTimes size={13} />
-              </button>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div>
+              <input
+                ref={referenceInputRef}
+                id="tryon-reference-input"
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                onChange={handleReferenceSelected}
+                style={{ position: 'absolute', left: '-9999px' }}
+              />
+              {!referenceUrl ? (
+                <label
+                  htmlFor="tryon-reference-input"
+                  className={`flex min-h-[112px] w-full flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-plum-300 bg-plum-50/60 p-3 text-center text-sm font-semibold text-plum-700 transition-colors hover:bg-plum-50 dark:border-plum-800 dark:bg-plum-900/15 dark:text-plum-200 ${referenceUploading ? 'pointer-events-none opacity-60' : 'cursor-pointer'}`}
+                >
+                  {referenceUploading ? <FaSpinner className="animate-spin" /> : <FaImage />}
+                  <span>{referenceUploading ? (referenceUploadProgress > 0 ? `Uploading… ${referenceUploadProgress}%` : 'Uploading reference…') : 'Attach hairstyle reference'}</span>
+                  {!referenceUploading && <span className="text-[11px] font-normal text-plum-600/80 dark:text-plum-300/70">Recommended · person wearing the style</span>}
+                </label>
+              ) : (
+                <div className="relative overflow-hidden rounded-xl border border-plum-200 bg-plum-50/40 p-2 dark:border-plum-800 dark:bg-plum-900/15">
+                  <img src={referenceUrl} alt="Hairstyle reference" className="aspect-[4/3] w-full rounded-lg object-cover" />
+                  <span className="absolute left-3 top-3 rounded-pill bg-plum-700 px-2 py-1 text-[10px] font-bold text-white shadow-sm">Style reference</span>
+                  <button
+                    type="button"
+                    onClick={() => setReferenceUrl('')}
+                    className="absolute right-3 top-3 inline-flex h-9 w-9 items-center justify-center rounded-lg bg-white/95 text-red-600 shadow-sm transition-colors hover:bg-red-50 dark:bg-dm-card"
+                    aria-label="Remove hairstyle reference"
+                  >
+                    <FaTimes size={13} />
+                  </button>
+                </div>
+              )}
             </div>
-          )}
+
+            <div>
+              <input
+                ref={faceInputRef}
+                id="tryon-face-input"
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                capture="user"
+                onChange={handleFaceSelected}
+                style={{ position: 'absolute', left: '-9999px' }}
+              />
+              {!faceUrl ? (
+                <label
+                  htmlFor="tryon-face-input"
+                  className={`flex min-h-[112px] w-full flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-brown-300 bg-white p-3 text-center text-sm font-semibold text-brown-700 transition-colors hover:bg-brown-50 dark:border-dm-border dark:bg-dm-card-2 dark:text-white/70 dark:hover:bg-dm-card ${faceUploading ? 'pointer-events-none opacity-60' : 'cursor-pointer'}`}
+                >
+                  {faceUploading ? <FaSpinner className="animate-spin" /> : <FaCamera />}
+                  <span>{faceUploading ? (faceUploadProgress > 0 ? `Uploading… ${faceUploadProgress}%` : 'Uploading face photo…') : 'Attach customer face photo'}</span>
+                  {!faceUploading && <span className="text-[11px] font-normal text-brown-500 dark:text-white/45">Optional · needed to preserve their identity</span>}
+                </label>
+              ) : (
+                <div className="relative overflow-hidden rounded-xl border border-brown-200 bg-white p-2 dark:border-dm-border dark:bg-dm-card-2">
+                  <img src={faceUrl} alt="Customer face" className="aspect-[4/3] w-full rounded-lg object-cover" />
+                  <span className="absolute left-3 top-3 rounded-pill bg-charcoal/85 px-2 py-1 text-[10px] font-bold text-white shadow-sm">Customer face</span>
+                  <button
+                    type="button"
+                    onClick={() => setFaceUrl('')}
+                    className="absolute right-3 top-3 inline-flex h-9 w-9 items-center justify-center rounded-lg bg-white/95 text-red-600 shadow-sm transition-colors hover:bg-red-50 dark:bg-dm-card"
+                    aria-label="Remove face photo"
+                  >
+                    <FaTimes size={13} />
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
 
           <textarea
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
             rows={2}
-            placeholder="Styling notes, e.g. 'knotless, waist length, side part, studio lighting' — optional"
+            placeholder="Final details, e.g. 'medium knotless, waist length, clean middle part, natural salon studio lighting' — optional"
             className="mt-3 w-full resize-none rounded-xl border border-brown-200 bg-ivory px-3 py-2.5 text-sm outline-none transition-colors focus:border-plum-500 focus:bg-white dark:border-dm-border dark:bg-dm-card-2 dark:text-white"
           />
         </div>
@@ -427,6 +493,11 @@ const HairstyleTryOn = () => {
                     <div className="p-2.5">
                       {r.promptNotes && (
                         <p className="mb-2 line-clamp-1 text-[11px] italic text-brown-400 dark:text-white/40">“{r.promptNotes}”</p>
+                      )}
+                      {r.model && (
+                        <p className="mb-2 truncate text-[10px] font-semibold uppercase tracking-wide text-plum-600 dark:text-plum-300">
+                          {r.provider || 'AI'} · {r.model}
+                        </p>
                       )}
                       <div className="flex flex-wrap gap-1.5">
                         {r.status !== 'approved' && (

@@ -3,20 +3,12 @@ import TryOnResultModel from '../models/tryon.model.js';
 import ProductModel from '../models/product.model.js';
 import FeatureFlagModel from '../models/featureFlag.model.js';
 import uploadFileToCloudinary from '../utils/cloudinary.js';
+import { generateTryOnImage } from '../utils/tryonImageProvider.js';
 
-// AI hairstyle try-on. Admin picks a hairstyle (product) photo, optionally
-// adds a face photo and styling notes, and the server asks the Gemini image
-// model to produce a photorealistic "installed" photo — a person actually
-// wearing that hairstyle. Admins review the result; only an approved result
-// can be attached to the product's public gallery.
-
-const GEMINI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta';
-
-const isConfigured = () => Boolean(process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY);
-const apiKey = () => process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || '';
-// The current Nano Banana image model; overridable so a future model swap is
-// a one-line env change, not a deploy.
-const imageModel = () => process.env.GEMINI_IMAGE_MODEL || 'gemini-3.1-flash-image';
+// AI hairstyle try-on. Admin picks a product, adds a stronger hairstyle
+// reference and optionally a face photo, then the configured image provider
+// creates a photorealistic "installed" portrait. Admins review the result;
+// only an approved result can be attached to the product's public gallery.
 
 // Feature-flag enforcement, fail-closed: the try-on endpoints refuse to run
 // unless the ai-style-tryon flag exists AND is enabled. The admin-only /
@@ -31,111 +23,69 @@ const assertFlagEnabled = async () => {
   }
 };
 
-// Calls the Gemini generateContent endpoint with one or two inline images
-// and a text prompt, and returns the first generated image part as base64.
-// Uses raw fetch (no SDK dependency to add) and a generous timeout — image
-// generation commonly takes 10-30s.
-const generateImage = async ({ promptParts }) => {
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 120000);
-  try {
-    const response = await fetch(
-      `${GEMINI_API_BASE}/models/${imageModel()}:generateContent`,
-      {
-        method: 'POST',
-        headers: {
-          'x-goog-api-key': apiKey(),
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          contents: [{
-            role: 'user',
-            parts: promptParts,
-          }],
-          generationConfig: {
-            responseModalities: ['TEXT', 'IMAGE'],
-          },
-        }),
-        signal: controller.signal,
-      }
-    );
-
-    if (!response.ok) {
-      const body = await response.text().catch(() => '');
-      const err = new Error(`Gemini image API error ${response.status}: ${body.slice(0, 300)}`);
-      err.statusCode = 502;
-      throw err;
-    }
-
-    const data = await response.json();
-    const parts = data?.candidates?.[0]?.content?.parts || [];
-    const imagePart = parts.find((p) => p.inlineData?.data || p.inline_data?.data);
-    if (!imagePart) {
-      const blockReason = data?.promptFeedback?.blockReason;
-      const err = new Error(
-        blockReason
-          ? `The image model declined this request (${blockReason}). Try a different photo or notes.`
-          : 'The image model returned no image. Try again or adjust the photos/notes.'
-      );
-      err.statusCode = 502;
-      throw err;
-    }
-    const inline = imagePart.inlineData || imagePart.inline_data;
-    return {
-      base64: inline.data,
-      mimeType: inline.mimeType || inline.mime_type || 'image/png',
-    };
-  } finally {
-    clearTimeout(timeout);
-  }
-};
-
 const buildPrompt = ({ hairstyleName, notes }) => {
   const noteLine = notes?.trim() ? ` Styling notes: ${notes.trim()}.` : '';
   return [
-    'You are a professional hair studio photo retoucher. Using the attached hairstyle reference image',
-    '(a hair product photo such as braids, a wig, or a weave) and, when provided, the attached face photo,',
-    `produce ONE photorealistic studio portrait of a person wearing "${hairstyleName}" exactly as shown in the reference`,
-    '— same length, colour, texture, and parting. The hairstyle must look naturally installed on the head,',
-    'not like a wig floating or pasted on. If a face photo is provided, keep the person\'s facial features, skin tone,',
-    'and skin texture faithful to that photo; do not beautify or alter their identity. Neutral studio background,',
-    'soft even lighting, head-and-shoulders framing, sharp focus, natural skin texture, no text or watermarks.',
-    'Return only the image.',
+    'You are a senior hair-studio photographer and retoucher. The FIRST input image is the hairstyle reference.',
+    'The SECOND input image, when present, is the customer face and is the identity to preserve.',
+    `Create ONE high-end, photorealistic portrait of that person wearing "${hairstyleName}" exactly as shown in the hairstyle reference`,
+    '— preserve the same braid pattern, length, volume, colour, texture, hairline, parting and finish.',
+    'Make the hair look professionally installed and naturally integrated at the scalp: never floating, pasted-on,',
+    'melted into the skin, or distorted. When a face photo is present, preserve facial features, skin tone, age,',
+    'and skin texture faithfully; do not beautify, change their identity, or alter their face shape.',
+    'Use a clean neutral studio background, soft even salon lighting, head-and-shoulders portrait framing,',
+    'sharp focus, realistic individual hair strands, no text, no watermark, no collage, and no extra people.',
+    'Return only the finished image.',
   ].join(' ') + noteLine;
 };
 
-// Fetch an image URL back as base64 (product photos are Cloudinary URLs —
-// small enough to inline).
-const fetchImageAsBase64 = async (url) => {
-  const response = await fetch(url);
-  if (!response.ok) {
-    throw new Error(`Could not read source image (${response.status})`);
+const asImageUrl = (value, fieldName) => {
+  if (!value) return '';
+  if (typeof value !== 'string' || !/^https?:\/\//i.test(value)) {
+    const error = new Error(`${fieldName} must be an uploaded image URL.`);
+    error.statusCode = 400;
+    throw error;
   }
-  const buffer = Buffer.from(await response.arrayBuffer());
-  const contentType = response.headers.get('content-type') || 'image/jpeg';
-  if (buffer.length > 7 * 1024 * 1024) {
-    const err = new Error('Source image is too large (over 7MB). Use a smaller photo.');
-    err.statusCode = 400;
-    throw err;
+  return value;
+};
+
+// Download the source once and send its bytes to the configured provider.
+// This gives every provider the exact same inputs, limits potentially bad
+// uploads, and does not require exposing Cloudinary credentials to a model.
+const fetchImageAsBuffer = async (url) => {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 20000);
+  try {
+    const response = await fetch(url, { signal: controller.signal });
+    if (!response.ok) {
+      const error = new Error(`Could not read source image (${response.status}).`);
+      error.statusCode = 400;
+      throw error;
+    }
+    const contentType = (response.headers.get('content-type') || 'image/jpeg').split(';')[0];
+    if (!contentType.startsWith('image/')) {
+      const error = new Error('The selected reference is not an image. Upload a JPG, PNG, or WebP photo.');
+      error.statusCode = 400;
+      throw error;
+    }
+    const buffer = Buffer.from(await response.arrayBuffer());
+    if (buffer.length > 7 * 1024 * 1024) {
+      const error = new Error('Source image is too large (over 7MB). Use a smaller photo.');
+      error.statusCode = 400;
+      throw error;
+    }
+    return { buffer, mimeType: contentType };
+  } finally {
+    clearTimeout(timeout);
   }
-  return {
-    base64: buffer.toString('base64'),
-    mimeType: contentType.split(';')[0],
-  };
 };
 
 // POST /api/tryon/generate — admin: generate a try-on image for a product.
 export const generateTryOn = async (req, res) => {
   try {
     await assertFlagEnabled();
-    if (!isConfigured()) {
-      return res.status(503).json({
-        success: false,
-        message: 'AI Style Try-On is not configured. Add GEMINI_API_KEY to the server environment.',
-      });
-    }
 
-    const { productId, faceImageUrl, notes } = req.body || {};
+    const { productId, faceImageUrl, hairstyleReferenceUrl, notes } = req.body || {};
     if (!productId || !mongoose.Types.ObjectId.isValid(String(productId))) {
       return res.status(400).json({ success: false, message: 'Select a hairstyle product first.' });
     }
@@ -148,20 +98,18 @@ export const generateTryOn = async (req, res) => {
       return res.status(400).json({ success: false, message: 'This product has no photo to work from — add a product photo first.' });
     }
 
-    // Build the multimodal prompt: hairstyle photo first, face photo second.
-    const hairstyleImage = await fetchImageAsBase64(product.image[0]);
-    const promptParts = [
-      { text: buildPrompt({ hairstyleName: product.name, notes }) },
-      { inlineData: { mimeType: hairstyleImage.mimeType, data: hairstyleImage.base64 } },
-    ];
-    let faceUsedUrl = '';
-    if (faceImageUrl && /^https?:\/\//.test(faceImageUrl)) {
-      const faceImage = await fetchImageAsBase64(faceImageUrl);
-      promptParts.push({ inlineData: { mimeType: faceImage.mimeType, data: faceImage.base64 } });
-      faceUsedUrl = faceImageUrl;
-    }
-
-    const generated = await generateImage({ promptParts });
+    // A purpose-shot reference (someone wearing the style) is much more
+    // faithful than a package/catalog photo. Product image stays as a safe
+    // fallback so older product records still work.
+    const referenceImageUrl = asImageUrl(hairstyleReferenceUrl, 'Hairstyle reference') || product.image[0];
+    const faceUsedUrl = asImageUrl(faceImageUrl, 'Face photo');
+    const hairstyleImage = await fetchImageAsBuffer(referenceImageUrl);
+    const faceImage = faceUsedUrl ? await fetchImageAsBuffer(faceUsedUrl) : null;
+    const generated = await generateTryOnImage({
+      prompt: buildPrompt({ hairstyleName: product.name, notes }),
+      hairstyleImage,
+      faceImage,
+    });
 
     // Persist the generated image to Cloudinary under its own folder.
     const upload = await uploadFileToCloudinary(
@@ -172,9 +120,12 @@ export const generateTryOn = async (req, res) => {
     const result = await TryOnResultModel.create({
       product: product._id,
       resultImageUrl: upload.url,
-      sourceImageUrl: product.image[0],
+      sourceImageUrl: referenceImageUrl,
+      referenceImageUrl,
       faceUsedUrl,
       promptNotes: String(notes || '').slice(0, 500),
+      provider: generated.provider,
+      model: generated.model,
       status: 'pending_review',
       createdBy: req.userId,
       createdByName: req.user?.name || '',

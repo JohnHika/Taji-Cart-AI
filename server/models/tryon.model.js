@@ -25,6 +25,12 @@ const tryOnResultSchema = new mongoose.Schema({
     type: String,
     default: '',
   },
+  // The actual image sent to the image model. This can be a stronger
+  // reference photo than the product's standard catalog cover image.
+  referenceImageUrl: {
+    type: String,
+    default: '',
+  },
   // Optional face photo the customer/Aunty supplied, when one was used.
   faceUsedUrl: {
     type: String,
@@ -36,6 +42,17 @@ const tryOnResultSchema = new mongoose.Schema({
     type: String,
     default: '',
     trim: true,
+  },
+  // Stored with each result so reviewers can compare a generation against
+  // the provider/model that made it and reproduce a preferred look later.
+  provider: {
+    type: String,
+    enum: ['openai', 'gemini'],
+    default: 'openai',
+  },
+  model: {
+    type: String,
+    default: '',
   },
   // Admins approve a result before it can go anywhere near the public
   // gallery. Rejected ones stay here for reference/retry.

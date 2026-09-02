@@ -19,7 +19,7 @@ const res = await Flag.updateOne(
     $setOnInsert: {
       key: 'ai-style-tryon',
       name: 'AI Hairstyle Try-On',
-      description: 'Generate photorealistic photos of a person wearing a catalog hairstyle (Gemini image model). Admin preview while being refined.',
+      description: 'Generate photorealistic photos of a person wearing a catalog hairstyle (GPT Image 2, with a Gemini fallback). Admin preview while being refined.',
       status: 'admin-only',
       enabled: true,
     },
