@@ -38,8 +38,19 @@ const toneFor = (level) => ({
 }[level] || 'border-brown-200 bg-white text-charcoal dark:border-dm-border dark:bg-dm-card dark:text-white');
 
 const sectionShell = 'rounded-3xl border border-brown-100 bg-white shadow-sm dark:border-dm-border dark:bg-dm-card';
-const mutedText = 'text-brown-500 dark:text-white/55';
 const labelClass = 'text-[11px] font-bold uppercase tracking-wide text-brown-400 dark:text-white/40';
+const skeletonBlock = 'rounded-full bg-brown-100 dark:bg-dm-card-2';
+
+const MetricSkeleton = () => (
+  <div className={`${sectionShell} animate-pulse p-4`}>
+    <div className="flex items-center justify-between gap-3">
+      <div className={`${skeletonBlock} h-2.5 w-16`} />
+      <div className={`${skeletonBlock} h-4 w-4`} />
+    </div>
+    <div className={`${skeletonBlock} mt-3 h-6 w-20 rounded-lg`} />
+    <div className={`${skeletonBlock} mt-2 h-2.5 w-24`} />
+  </div>
+);
 
 const AdminAiInsights = () => {
   const navigate = useNavigate();
@@ -168,11 +179,18 @@ const AdminAiInsights = () => {
             <FaArrowLeft size={14} />
           </button>
           <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-2">
-              <FaBrain className="text-plum-700 dark:text-plum-300" />
+            <div className="flex flex-wrap items-center gap-2">
+              <FaBrain className="shrink-0 text-plum-700 dark:text-plum-300" />
               <h1 className="truncate text-base font-bold text-charcoal dark:text-white">Nawiri Operations Copilot</h1>
+              <span className="rounded-full bg-brown-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-brown-500 dark:bg-dm-card-2 dark:text-white/50">
+                Read-only
+              </span>
             </div>
-            <p className="mt-0.5 text-xs text-brown-500 dark:text-white/50">Counter-first, owner-controlled, and read-only.</p>
+            <p className="mt-0.5 truncate text-xs text-brown-500 dark:text-white/50">
+              {brief
+                ? `${brief.period || 'Selected period'} · Updated ${generatedAt || 'just now'}`
+                : 'Counter-first, owner-controlled data — nothing is written back.'}
+            </p>
           </div>
           <button
             type="button"
@@ -186,35 +204,16 @@ const AdminAiInsights = () => {
         </div>
       </header>
 
-      <main className="mx-auto max-w-7xl space-y-5 p-4 sm:p-6">
-        <section className="overflow-hidden rounded-3xl bg-gradient-to-br from-plum-800 via-plum-700 to-brown-800 p-5 text-white shadow-lg sm:p-7">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-            <div className="max-w-3xl">
-              <p className="text-xs font-bold uppercase tracking-[0.2em] text-plum-200">Business command center</p>
-              <h2 className="mt-2 text-2xl font-black tracking-tight sm:text-3xl">See the whole shop—not just the website.</h2>
-              <p className="mt-2 text-sm leading-6 text-white/75">
-                Choose exactly which business data to include, ask in your own words, and turn on web research only when you want outside context.
-              </p>
-            </div>
-            <div className="rounded-2xl bg-white/10 p-3 text-sm">
-              <p className="text-xs uppercase tracking-wide text-white/70">{brief?.period || 'Loading period…'}</p>
-              <p className="mt-1 text-xs text-white/70">{generatedAt ? `Updated ${generatedAt}` : 'Waiting for live data'}</p>
-            </div>
-          </div>
-        </section>
-
-        <section className={`${sectionShell} p-4 sm:p-5`}>
+      <main className="mx-auto max-w-7xl space-y-4 p-4 sm:space-y-5 sm:p-6">
+        <section className={`${sectionShell} p-3 sm:p-4`} title="The copilot only sees the sources you select.">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <div>
-              <h2 className="font-bold text-charcoal dark:text-white">Control the analysis</h2>
-              <p className="mt-0.5 text-xs text-brown-500 dark:text-white/50">The copilot only sees the sources you select.</p>
-            </div>
-            <span className="rounded-full bg-plum-50 px-3 py-1 text-xs font-semibold text-plum-700 dark:bg-plum-900/30 dark:text-plum-200">
-              {sources.length} of {scopes.length} sources selected
+            <span className={labelClass}>Analysis scope</span>
+            <span className="rounded-full bg-plum-50 px-2.5 py-1 text-[11px] font-semibold text-plum-700 dark:bg-plum-900/30 dark:text-plum-200">
+              {sources.length} of {scopes.length} sources
             </span>
           </div>
 
-          <div className="mt-4 grid gap-4 lg:grid-cols-[auto_1fr]">
+          <div className="mt-3 grid gap-4 lg:grid-cols-[auto_1fr]">
             <div>
               <p className="mb-2 text-xs font-bold uppercase tracking-wide text-brown-400 dark:text-white/40">Time range</p>
               <div className="flex flex-wrap gap-2">
@@ -265,6 +264,161 @@ const AdminAiInsights = () => {
             </div>
           </div>
         </section>
+
+        {loading && !brief ? (
+          <>
+            <section className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+              {Array.from({ length: 5 }).map((_, index) => <MetricSkeleton key={index} />)}
+            </section>
+            <section className="grid gap-5 lg:grid-cols-[minmax(0,1.25fr)_minmax(280px,0.75fr)]">
+              <div className={`${sectionShell} animate-pulse p-5`}>
+                <div className={`${skeletonBlock} h-2.5 w-32`} />
+                <div className="mt-4 space-y-2">
+                  <div className={`${skeletonBlock} h-3 w-full`} />
+                  <div className={`${skeletonBlock} h-3 w-5/6`} />
+                  <div className={`${skeletonBlock} h-3 w-2/3`} />
+                </div>
+              </div>
+              <div className={`${sectionShell} animate-pulse p-5`}>
+                <div className={`${skeletonBlock} h-2.5 w-24`} />
+                <div className="mt-4 space-y-2">
+                  <div className={`${skeletonBlock} h-12 rounded-2xl`} />
+                  <div className={`${skeletonBlock} h-12 rounded-2xl`} />
+                </div>
+              </div>
+            </section>
+          </>
+        ) : !brief ? (
+          <div className="rounded-3xl border border-red-200 bg-red-50 p-6 text-sm text-red-800 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-200">
+            <p>{loadError || 'The operations copilot could not be loaded. Refresh to try again.'}</p>
+            {loadError?.includes('session') && (
+              <Link to="/login" className="mt-3 inline-block font-semibold underline">Sign in again</Link>
+            )}
+          </div>
+        ) : (
+          <>
+            <section className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+              {metricCards.map((metric) => {
+                const Icon = metric.icon;
+                const TrendIcon = metric.trend >= 0 ? FaArrowUp : FaArrowDown;
+                return (
+                  <div key={metric.label} className={`${sectionShell} p-4`}>
+                    <div className="flex items-center justify-between gap-3">
+                      <p className={`${labelClass} min-w-0`}>{metric.label}</p>
+                      <Icon className={`shrink-0 ${metric.active === false ? 'text-brown-200 dark:text-white/25' : 'text-plum-600 dark:text-plum-300'}`} size={15} />
+                    </div>
+                    <p className="mt-2 text-xl font-black tracking-tight text-charcoal dark:text-white sm:text-2xl">{metric.value}</p>
+                    {metric.trend !== undefined && metric.trend !== null ? (
+                      <p className={`mt-1 flex items-center gap-1 text-xs font-semibold ${metric.trend >= 0 ? 'text-green-700 dark:text-green-300' : 'text-red-700 dark:text-red-300'}`}>
+                        <TrendIcon size={11} /> {metric.hint}
+                      </p>
+                    ) : (
+                      <p className="mt-1 text-xs text-brown-500 dark:text-white/50">{metric.hint}</p>
+                    )}
+                  </div>
+                );
+              })}
+            </section>
+
+            <section className="grid gap-5 lg:grid-cols-[minmax(0,1.25fr)_minmax(280px,0.75fr)]">
+              <div className={`${sectionShell} border-plum-100 p-5 dark:border-plum-900/50`}>
+                <div className="flex items-start gap-3">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-plum-100 text-plum-700 dark:bg-plum-900/30 dark:text-plum-300">
+                    <FaBrain />
+                  </div>
+                  <div>
+                    <p className="text-xs font-bold uppercase tracking-wide text-plum-600 dark:text-plum-300">Automatic pulse</p>
+                    <h2 className="mt-0.5 font-bold text-charcoal dark:text-white">What the selected data says</h2>
+                  </div>
+                </div>
+                <p className="mt-4 whitespace-pre-line text-sm leading-6 text-brown-700 dark:text-white/70">
+                  {brief.narrative?.available
+                    ? brief.narrative.text
+                    : `Live data is ready. ${brief.narrative?.reason || 'Ask a question above for an owner-focused analysis.'}`}
+                </p>
+              </div>
+
+              <div className={`${sectionShell} p-5`}>
+                <div className="flex items-center gap-2">
+                  <FaExclamationTriangle className="text-gold-600" />
+                  <h2 className="font-bold text-charcoal dark:text-white">Review queue</h2>
+                </div>
+                {brief.actions?.length > 0 ? (
+                  <div className="mt-3 space-y-2">
+                    {brief.actions.map((action, index) => (
+                      <Link
+                        key={`${action.title}-${index}`}
+                        to={action.href}
+                        className={`block rounded-2xl border p-3 transition-transform hover:-translate-y-0.5 ${toneFor(action.level)}`}
+                      >
+                        <p className="text-sm font-bold">{action.title}</p>
+                        <p className="mt-1 text-xs leading-5 opacity-80">{action.detail}</p>
+                        <p className="mt-2 text-xs font-semibold underline">Open review</p>
+                      </Link>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="mt-3 flex items-center gap-2 rounded-2xl border border-dashed border-brown-200 p-3 text-xs text-brown-500 dark:border-dm-border dark:text-white/50">
+                    <FaCheck className="shrink-0 text-green-600 dark:text-green-400" size={12} />
+                    Nothing needs review right now — the shop is running clean.
+                  </div>
+                )}
+              </div>
+            </section>
+
+            {(brief.counterTopProducts?.length > 0 || brief.lowStockProducts?.length > 0) && (
+              <section className="grid gap-5 lg:grid-cols-2">
+                {brief.counterTopProducts?.length > 0 && (
+                  <div className={`${sectionShell} p-5`}>
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <h2 className="font-bold text-charcoal dark:text-white">Counter best movers</h2>
+                        <p className="mt-0.5 text-xs text-brown-500 dark:text-white/50">From valid, non-voided counter transactions.</p>
+                      </div>
+                      <Link to="/dashboard/sales-hub" className="text-xs font-bold text-plum-700 underline dark:text-plum-300">Sales Hub</Link>
+                    </div>
+                    <div className="mt-3 divide-y divide-brown-100 dark:divide-dm-border">
+                      {brief.counterTopProducts.map((product, index) => (
+                        <div key={product.id} className="flex items-center justify-between gap-3 py-3 text-sm">
+                          <div className="min-w-0">
+                            <p className="truncate font-semibold text-charcoal dark:text-white">{index + 1}. {product.name}</p>
+                            <p className="mt-0.5 text-xs text-brown-500 dark:text-white/50">{product.quantity} units · {product.sku || 'No SKU'}</p>
+                          </div>
+                          <p className="shrink-0 font-bold text-plum-700 dark:text-plum-300">{formatKes(product.revenue)}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {brief.lowStockProducts?.length > 0 && (
+                  <div className={`${sectionShell} p-5`}>
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <h2 className="font-bold text-charcoal dark:text-white">Stock needing review</h2>
+                        <p className="mt-0.5 text-xs text-brown-500 dark:text-white/50">Shown only because Inventory is selected.</p>
+                      </div>
+                      <Link to="/dashboard/catalog-quality" className="text-xs font-bold text-plum-700 underline dark:text-plum-300">Catalog quality</Link>
+                    </div>
+                    <div className="mt-3 divide-y divide-brown-100 dark:divide-dm-border">
+                      {brief.lowStockProducts.map((product) => (
+                        <div key={product.id} className="flex items-center justify-between gap-4 py-3 text-sm">
+                          <div className="min-w-0">
+                            <p className="truncate font-semibold text-charcoal dark:text-white">{product.name}</p>
+                            <p className="mt-0.5 text-xs text-brown-500 dark:text-white/50">{product.sku || 'No SKU'}</p>
+                          </div>
+                          <span className="shrink-0 rounded-pill bg-red-100 px-2.5 py-1 text-xs font-bold text-red-700 dark:bg-red-950/40 dark:text-red-200">
+                            {product.stock} left
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </section>
+            )}
+          </>
+        )}
 
         <section className={`${sectionShell} border-plum-100 p-4 dark:border-plum-900/50 sm:p-5`}>
           <div className="flex items-start gap-3">
@@ -345,133 +499,6 @@ const AdminAiInsights = () => {
             </div>
           )}
         </section>
-
-        {loading && !brief ? (
-          <div className={`${sectionShell} p-10 text-center text-sm ${mutedText}`}>Loading selected business data…</div>
-        ) : !brief ? (
-          <div className="rounded-3xl border border-red-200 bg-red-50 p-6 text-sm text-red-800 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-200">
-            <p>{loadError || 'The operations copilot could not be loaded. Refresh to try again.'}</p>
-            {loadError?.includes('session') && (
-              <Link to="/login" className="mt-3 inline-block font-semibold underline">Sign in again</Link>
-            )}
-          </div>
-        ) : (
-          <>
-            <section className="grid grid-cols-2 gap-3 lg:grid-cols-5">
-              {metricCards.map((metric) => {
-                const Icon = metric.icon;
-                const TrendIcon = metric.trend >= 0 ? FaArrowUp : FaArrowDown;
-                return (
-                  <div key={metric.label} className={`${sectionShell} p-4`}>
-                    <div className="flex items-center justify-between gap-3">
-                      <p className={`${labelClass} min-w-0`}>{metric.label}</p>
-                      <Icon className={`shrink-0 ${metric.active === false ? 'text-brown-200 dark:text-white/25' : 'text-plum-600 dark:text-plum-300'}`} size={15} />
-                    </div>
-                    <p className="mt-2 text-xl font-black tracking-tight text-charcoal dark:text-white sm:text-2xl">{metric.value}</p>
-                    {metric.trend !== undefined && metric.trend !== null ? (
-                      <p className={`mt-1 flex items-center gap-1 text-xs font-semibold ${metric.trend >= 0 ? 'text-green-700 dark:text-green-300' : 'text-red-700 dark:text-red-300'}`}>
-                        <TrendIcon size={11} /> {metric.hint}
-                      </p>
-                    ) : (
-                      <p className="mt-1 text-xs text-brown-500 dark:text-white/50">{metric.hint}</p>
-                    )}
-                  </div>
-                );
-              })}
-            </section>
-
-            <section className="grid gap-5 lg:grid-cols-[minmax(0,1.25fr)_minmax(280px,0.75fr)]">
-              <div className={`${sectionShell} border-plum-100 p-5 dark:border-plum-900/50`}>
-                <div className="flex items-start gap-3">
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-plum-100 text-plum-700 dark:bg-plum-900/30 dark:text-plum-300">
-                    <FaBrain />
-                  </div>
-                  <div>
-                    <p className="text-xs font-bold uppercase tracking-wide text-plum-600 dark:text-plum-300">Automatic pulse</p>
-                    <h2 className="mt-0.5 font-bold text-charcoal dark:text-white">What the selected data says</h2>
-                  </div>
-                </div>
-                <p className="mt-4 whitespace-pre-line text-sm leading-6 text-brown-700 dark:text-white/70">
-                  {brief.narrative?.available
-                    ? brief.narrative.text
-                    : `Live data is ready. ${brief.narrative?.reason || 'Ask a question above for an owner-focused analysis.'}`}
-                </p>
-              </div>
-
-              <div className={`${sectionShell} p-5`}>
-                <div className="flex items-center gap-2">
-                  <FaExclamationTriangle className="text-gold-600" />
-                  <h2 className="font-bold text-charcoal dark:text-white">Review queue</h2>
-                </div>
-                <div className="mt-3 space-y-2">
-                  {brief.actions?.map((action, index) => (
-                    <Link
-                      key={`${action.title}-${index}`}
-                      to={action.href}
-                      className={`block rounded-2xl border p-3 transition-transform hover:-translate-y-0.5 ${toneFor(action.level)}`}
-                    >
-                      <p className="text-sm font-bold">{action.title}</p>
-                      <p className="mt-1 text-xs leading-5 opacity-80">{action.detail}</p>
-                      <p className="mt-2 text-xs font-semibold underline">Open review</p>
-                    </Link>
-                  ))}
-                </div>
-              </div>
-            </section>
-
-            {(brief.counterTopProducts?.length > 0 || brief.lowStockProducts?.length > 0) && (
-              <section className="grid gap-5 lg:grid-cols-2">
-                {brief.counterTopProducts?.length > 0 && (
-                  <div className={`${sectionShell} p-5`}>
-                    <div className="flex items-center justify-between gap-3">
-                      <div>
-                        <h2 className="font-bold text-charcoal dark:text-white">Counter best movers</h2>
-                        <p className="mt-0.5 text-xs text-brown-500 dark:text-white/50">From valid, non-voided counter transactions.</p>
-                      </div>
-                      <Link to="/dashboard/sales-hub" className="text-xs font-bold text-plum-700 underline dark:text-plum-300">Sales Hub</Link>
-                    </div>
-                    <div className="mt-3 divide-y divide-brown-100 dark:divide-dm-border">
-                      {brief.counterTopProducts.map((product, index) => (
-                        <div key={product.id} className="flex items-center justify-between gap-3 py-3 text-sm">
-                          <div className="min-w-0">
-                            <p className="truncate font-semibold text-charcoal dark:text-white">{index + 1}. {product.name}</p>
-                            <p className="mt-0.5 text-xs text-brown-500 dark:text-white/50">{product.quantity} units · {product.sku || 'No SKU'}</p>
-                          </div>
-                          <p className="shrink-0 font-bold text-plum-700 dark:text-plum-300">{formatKes(product.revenue)}</p>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {brief.lowStockProducts?.length > 0 && (
-                  <div className={`${sectionShell} p-5`}>
-                    <div className="flex items-center justify-between gap-3">
-                      <div>
-                        <h2 className="font-bold text-charcoal dark:text-white">Stock needing review</h2>
-                        <p className="mt-0.5 text-xs text-brown-500 dark:text-white/50">Shown only because Inventory is selected.</p>
-                      </div>
-                      <Link to="/dashboard/catalog-quality" className="text-xs font-bold text-plum-700 underline dark:text-plum-300">Catalog quality</Link>
-                    </div>
-                    <div className="mt-3 divide-y divide-brown-100 dark:divide-dm-border">
-                      {brief.lowStockProducts.map((product) => (
-                        <div key={product.id} className="flex items-center justify-between gap-4 py-3 text-sm">
-                          <div className="min-w-0">
-                            <p className="truncate font-semibold text-charcoal dark:text-white">{product.name}</p>
-                            <p className="mt-0.5 text-xs text-brown-500 dark:text-white/50">{product.sku || 'No SKU'}</p>
-                          </div>
-                          <span className="shrink-0 rounded-pill bg-red-100 px-2.5 py-1 text-xs font-bold text-red-700 dark:bg-red-950/40 dark:text-red-200">
-                            {product.stock} left
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </section>
-            )}
-          </>
-        )}
       </main>
     </div>
   );
