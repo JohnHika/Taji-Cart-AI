@@ -150,6 +150,10 @@ const router = createBrowserRouter([
       { path: 'verification-otp',        element: S(OtpVerification) },
       { path: 'reset-password',          element: S(ResetPassword) },
       { path: 'social-auth-success',     element: S(SocialAuthSuccess) },
+      // Retire the former embedded inventory page. Old links deliberately
+      // return to the primary site; Store Management may only be opened via
+      // the admin hand-off triggered on the home page.
+      { path: 'dashboard/store-inventory', element: <Navigate to="/" replace /> },
       { path: 'search',                  element: S(SearchPage) },
       { path: 'order-tracking/:orderId', element: S(OrderTracking) },
       { path: 'product/:productId',      element: S(ProductDisplayPage) },
