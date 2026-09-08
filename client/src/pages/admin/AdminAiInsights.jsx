@@ -16,14 +16,19 @@ const AdminAiInsights = () => {
   const navigate = useNavigate();
   const [brief, setBrief] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(null);
 
   const loadBrief = useCallback(async () => {
     setLoading(true);
+    setLoadError(null);
     try {
       const response = await Axios({ method: 'GET', url: '/api/admin/ai/brief' });
       setBrief(response.data?.data || null);
     } catch (error) {
       console.error('Failed to load admin AI brief:', error);
+      setLoadError(error.response?.status === 401 || error.response?.status === 403
+        ? 'Your admin session has expired. Sign in again to load the operations brief.'
+        : (error.response?.data?.message || 'Could not load the operations brief.'));
       toast.error(error.response?.data?.message || 'Could not load the operations brief.');
     } finally {
       setLoading(false);
@@ -65,7 +70,10 @@ const AdminAiInsights = () => {
         {loading && !brief ? (
           <div className="rounded-2xl border border-brown-100 bg-white p-10 text-center text-sm text-brown-500 dark:border-dm-border dark:bg-dm-card dark:text-white/60">Preparing your operational brief…</div>
         ) : !brief ? (
-          <div className="rounded-2xl border border-red-200 bg-red-50 p-6 text-sm text-red-800 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-200">The brief could not be loaded. Refresh to try again.</div>
+          <div className="rounded-2xl border border-red-200 bg-red-50 p-6 text-sm text-red-800 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-200">
+            <p>{loadError || 'The brief could not be loaded. Refresh to try again.'}</p>
+            {loadError?.includes('session') && <Link to="/login" className="mt-3 inline-block font-semibold underline">Sign in again</Link>}
+          </div>
         ) : <>
           <section className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
             {metricCards.map((metric) => {
