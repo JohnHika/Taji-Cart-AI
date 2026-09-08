@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import toast from 'react-hot-toast';
 import {
   FaBoxOpen,
   FaBullhorn,
+  FaBrain,
   FaCashRegister,
   FaChartLine,
   FaCheck,
@@ -173,6 +174,7 @@ const AdminMenu = ({ close, forLightPanel = false }) => {
         <p className={sectionClass}>Dashboard</p>
         <MenuLink to="/dashboard" icon={FaTachometerAlt} label="Dashboard overview" exact />
         <MenuLink to="/dashboard/admin-control-center" icon={FaTachometerAlt} label="Admin control center" />
+        <MenuLink to="/dashboard/admin-ai-insights" icon={FaBrain} label="AI Operations Copilot" />
         <MenuLink to="/dashboard/profile" icon={FaUser} label="My profile" />
 
         <p className={sectionClass}>User management</p>

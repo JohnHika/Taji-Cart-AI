@@ -1,5 +1,5 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { FaBarcode, FaBullhorn, FaCashRegister, FaClipboardList, FaSpinner, FaStore, FaUsers } from 'react-icons/fa';
+﻿import React, { useEffect, useMemo, useState } from 'react';
+import { FaBarcode, FaBullhorn, FaBrain, FaCashRegister, FaClipboardList, FaSpinner, FaStore, FaUsers } from 'react-icons/fa';
 import { useSelector } from 'react-redux';
 import { Link, useNavigate } from 'react-router-dom';
 import SummaryApi from '../common/SummaryApi';
@@ -73,6 +73,12 @@ const AdminDashboard = () => {
   }, [users]);
 
   const quickLinks = [
+    {
+      label: 'AI Operations Copilot',
+      description: 'See counter and online sales, stock risk, and next actions in one read-only view.',
+      path: '/dashboard/admin-ai-insights',
+      icon: FaBrain
+    },
     {
       label: 'Open Sales Counter',
       description: 'Test barcode scanning and branch selling from your admin account.',
