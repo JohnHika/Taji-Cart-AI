@@ -13,6 +13,7 @@ import Footer from './components/Footer';
 import Header from './components/Header';
 import WhatsAppOrderWidget from './components/WhatsAppOrderWidget';
 import AdminSecretGate from './components/AdminSecretGate';
+import StoreManagementApp from './pages/admin/StoreManagementApp';
 import GlobalProvider from './provider/GlobalProvider';
 import { WhatsAppOrderProvider } from './provider/WhatsAppOrderProvider';
 import { fetchCartItems } from './store/cartProduct';
@@ -23,6 +24,7 @@ import Axios from './utils/Axios';
 import { clearAuthStorage, getStoredAccessToken, isAuthSessionError } from './utils/authStorage';
 import fetchUserDetails from './utils/fetchUserDetails';
 import { getPOSOverflowClass } from './utils/posLayout';
+import { isStorePortalHost } from './utils/storePortalAccess';
 
 // Error fallback component
 function ErrorFallback({ error }) {
@@ -67,6 +69,7 @@ function App() {
   const dispatch = useDispatch();
   const location = useLocation();
   const user = useSelector(state => state.user);
+  const storePortalHost = isStorePortalHost();
   const [isLoading, setIsLoading] = useState(true);
   const categories = useSelector(state => state.product.allCategory);
   const isFetchingProductsRef = useRef(false);
@@ -341,6 +344,7 @@ function App() {
     <ErrorBoundary FallbackComponent={ErrorFallback}>
       <GlobalProvider>
         <WhatsAppOrderProvider>
+        {storePortalHost ? <StoreManagementApp /> : <>
         <ScrollRestoration />
         {isDashboardShell && !isPOSPage && <DashboardMobileHeader />}
         {showStoreChrome && <Header />}
@@ -358,6 +362,7 @@ function App() {
         {showStoreChrome && location.pathname !== '/checkout' && location.pathname !== '/dashboard/checkout' && user?._id && <CartMobileLink />}
         {showStoreChrome && <WhatsAppOrderWidget />}
         {/* ChatbotAI hidden: AI feature not yet complete */}
+        </>}
         </WhatsAppOrderProvider>
       </GlobalProvider>
     </ErrorBoundary>

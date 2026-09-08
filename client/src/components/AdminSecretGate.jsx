@@ -1,22 +1,19 @@
 import { useEffect, useRef } from 'react';
 import { useSelector } from 'react-redux';
-import { useNavigate } from 'react-router-dom';
+import toast from 'react-hot-toast';
 import isAdmin from '../utils/isAdmin';
+import { launchStorePortal } from '../utils/storePortalAccess';
 
 // Typing this sequence anywhere on the public site (not the address bar)
-// reveals the backroom store-inventory page for an already-authenticated
-// admin. This is a discovery shortcut only, NOT a security boundary: the
-// route stays behind the same PrivateRoute + server auth/admin middleware
-// as every other admin page, and the session flag it sets is just what lets
-// StoreInventory.jsx skip straight to rendering instead of bouncing back to
-// /dashboard. A non-admin (or logged-out visitor) typing the same keys does
-// nothing — the listener below never attaches for them in the first place.
+// opens the standalone Store Management application for an already
+// authenticated admin. The listener intentionally never attaches to an input
+// or to non-admin accounts. The server then creates a short-lived, one-time
+// handoff; this shortcut grants no authority by itself.
 const TRIGGER_SEQUENCE = 'n.store123';
 export const STORE_GATE_SESSION_KEY = 'storeGateUnlocked';
 
 const AdminSecretGate = () => {
   const user = useSelector((state) => state.user);
-  const navigate = useNavigate();
   const bufferRef = useRef('');
 
   useEffect(() => {
@@ -30,14 +27,16 @@ const AdminSecretGate = () => {
       bufferRef.current = (bufferRef.current + event.key).slice(-TRIGGER_SEQUENCE.length);
       if (bufferRef.current === TRIGGER_SEQUENCE) {
         bufferRef.current = '';
-        sessionStorage.setItem(STORE_GATE_SESSION_KEY, '1');
-        navigate('/dashboard/store-inventory');
+        launchStorePortal().catch((error) => {
+          console.error('Could not launch Store Management:', error);
+          toast.error(error.response?.data?.message || error.message || 'Could not open Store Management.');
+        });
       }
     };
 
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [user, navigate]);
+  }, [user]);
 
   return null;
 };
