@@ -58,7 +58,7 @@ const AdminAiInsights = () => {
   const [brief, setBrief] = useState(null);
   const [range, setRange] = useState('today');
   const [sources, setSources] = useState(scopes.map((scope) => scope.id));
-  const [question, setQuestion] = useState(quickQuestions[0]);
+  const [question, setQuestion] = useState('');
   const [answer, setAnswer] = useState(null);
   const [webSearch, setWebSearch] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -205,7 +205,9 @@ const AdminAiInsights = () => {
         </div>
       </header>
 
-      <main className="mx-auto max-w-7xl space-y-4 p-4 sm:space-y-5 sm:p-6">
+      <main className="mx-auto max-w-7xl p-4 sm:p-6">
+      <div className="grid gap-4 sm:gap-5 xl:grid-cols-[minmax(0,1fr)_336px] xl:items-start">
+      <div className="space-y-4 sm:space-y-5">
         <section className={`${sectionShell} p-3 sm:p-4`} title="The copilot only sees the sources you select.">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <span className={labelClass}>Analysis scope</span>
@@ -422,7 +424,9 @@ const AdminAiInsights = () => {
             )}
           </>
         )}
+      </div>
 
+      <aside className="xl:sticky xl:top-20">
         <section className={`${sectionShell} border-plum-100 p-4 dark:border-plum-900/50 sm:p-5`}>
           <div className="flex items-start gap-3">
             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-plum-100 text-plum-700 dark:bg-plum-900/30 dark:text-plum-300">
@@ -504,6 +508,8 @@ const AdminAiInsights = () => {
             </div>
           )}
         </section>
+      </aside>
+      </div>
       </main>
     </div>
   );
