@@ -1,7 +1,8 @@
-import React, { useEffect } from 'react';
+import { useEffect } from 'react';
 import toast from 'react-hot-toast';
 import {
   FaArrowLeft,
+  FaBrain,
   FaBoxOpen,
   FaBullhorn,
   FaChartLine,
@@ -57,6 +58,7 @@ const SECTIONS = [
   {
     title: 'Orders, sales & delivery',
     links: [
+      { to: '/dashboard/admin-ai-insights', icon: FaBrain, label: 'AI operations copilot', description: 'Read-only daily brief for stock, orders, delivery, and revenue' },
       { to: '/dashboard/allorders', icon: FaClipboardList, label: 'All orders', description: 'Every order across the shop' },
       { to: '/dashboard/eod-reports', icon: FaChartLine, label: 'Weekly/monthly reports', description: 'Rolled-up sales from closed EOD reports' },
       { to: '/dashboard/driver-verification', icon: FaIdCard, label: 'Driver verification', description: 'Approve and manage delivery riders' },
