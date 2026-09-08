@@ -20,3 +20,37 @@ test('buildOperationsBrief groups actionable stock and order risks without takin
   assert.ok(brief.actions.some((action) => action.href === '/dashboard/catalog-quality'));
   assert.ok(brief.actions.every((action) => !action.mutatesData));
 });
+
+test('buildOperationsBrief combines counter and online revenue when both sources are selected', () => {
+  const brief = buildOperationsBrief({
+    currentOrders: [{ total: 1500, status: 'delivered' }],
+    previousOrders: [{ total: 1000, status: 'delivered' }],
+    currentCounter: { revenue: 8500, saleCount: 4, itemCount: 16 },
+    previousCounter: { revenue: 4000, saleCount: 2, itemCount: 7 },
+    counterTopProducts: [{ _id: 'p1', name: 'GYPSY LOCS', sku: 'GL-14', quantity: 4, revenue: 3000 }],
+    sources: ['counter', 'online'],
+  });
+
+  assert.equal(brief.metrics.revenue, 10000);
+  assert.equal(brief.metrics.counterRevenue, 8500);
+  assert.equal(brief.metrics.counterSaleCount, 4);
+  assert.equal(brief.metrics.onlineRevenue, 1500);
+  assert.equal(brief.metrics.revenueChangePercent, 100);
+  assert.equal(brief.counterTopProducts[0].name, 'GYPSY LOCS');
+  assert.ok(brief.actions.some((action) => action.href === '/dashboard/sales-hub'));
+});
+
+test('buildOperationsBrief excludes unselected sources from totals and output', () => {
+  const brief = buildOperationsBrief({
+    currentOrders: [{ total: 5000, status: 'pending' }],
+    currentCounter: { revenue: 8500, saleCount: 4, itemCount: 16 },
+    lowStockProducts: [{ _id: 'p1', name: 'Low stock', stock: 1 }],
+    sources: ['counter'],
+  });
+
+  assert.equal(brief.metrics.revenue, 8500);
+  assert.equal(brief.metrics.onlineRevenue, 0);
+  assert.equal(brief.metrics.lowStockCount, 0);
+  assert.equal(brief.lowStockProducts.length, 0);
+  assert.equal(brief.metrics.openOrderCount, 0);
+});
