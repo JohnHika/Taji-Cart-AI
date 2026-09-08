@@ -60,7 +60,6 @@ const FeatureReleases               = lazyWithRetry(() => import('../pages/admin
 const HairstyleTryOn               = lazyWithRetry(() => import('../pages/admin/HairstyleTryOn'));
 const AdminControlCenter            = lazyWithRetry(() => import('../pages/admin/AdminControlCenter'));
 const AdminAiInsights                = lazyWithRetry(() => import('../pages/admin/AdminAiInsights'));
-const StoreInventory                 = lazyWithRetry(() => import('../pages/admin/StoreInventory'));
 const CommunityPerks                = lazyWithRetry(() => import('../pages/CommunityPerks'));
 const POSDashboard                  = lazyWithRetry(() => import('../pages/POSDashboard'));
 const POSSales                      = lazyWithRetry(() => import('../pages/POSSales'));
@@ -259,7 +258,6 @@ const router = createBrowserRouter([
           { path: 'stock-value',            element: <PrivateRoute requireAdmin={true}>{S(StockValue)}</PrivateRoute> },
           { path: 'admin-control-center',   element: <PrivateRoute requireAdmin={true}>{S(AdminControlCenter)}</PrivateRoute> },
           { path: 'admin-ai-insights',       element: <PrivateRoute requireAdmin={true}>{S(AdminAiInsights)}</PrivateRoute> },
-          { path: 'store-inventory',         element: <PrivateRoute requireAdmin={true}>{S(StoreInventory)}</PrivateRoute> },
           { path: 'feature-releases',        element: <PrivateRoute requireAdmin={true}>{S(FeatureReleases)}</PrivateRoute> },
           { path: 'ai-style-tryon',         element: <PrivateRoute requireAdmin={true}>{S(GatedHairstyleTryOn)}</PrivateRoute> },
           { path: 'myorders',               element: <PrivateRoute>{S(MyOrders)}</PrivateRoute> },

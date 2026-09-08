@@ -10,8 +10,6 @@ import { launchStorePortal } from '../utils/storePortalAccess';
 // or to non-admin accounts. The server then creates a short-lived, one-time
 // handoff; this shortcut grants no authority by itself.
 const TRIGGER_SEQUENCE = 'n.store123';
-export const STORE_GATE_SESSION_KEY = 'storeGateUnlocked';
-
 const AdminSecretGate = () => {
   const user = useSelector((state) => state.user);
   const bufferRef = useRef('');
