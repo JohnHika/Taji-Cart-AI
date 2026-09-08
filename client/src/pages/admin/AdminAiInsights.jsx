@@ -7,6 +7,7 @@ import {
 import { Link, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import Axios from '../../utils/Axios';
+import AiMarkdown from '../../components/AiMarkdown';
 
 const formatKes = (value) => `KES ${Number(value || 0).toLocaleString()}`;
 
@@ -331,11 +332,13 @@ const AdminAiInsights = () => {
                     <h2 className="mt-0.5 font-bold text-charcoal dark:text-white">What the selected data says</h2>
                   </div>
                 </div>
-                <p className="mt-4 whitespace-pre-line text-sm leading-6 text-brown-700 dark:text-white/70">
-                  {brief.narrative?.available
-                    ? brief.narrative.text
-                    : `Live data is ready. ${brief.narrative?.reason || 'Ask a question above for an owner-focused analysis.'}`}
-                </p>
+                {brief.narrative?.available ? (
+                  <AiMarkdown className="mt-4" text={brief.narrative.text} />
+                ) : (
+                  <p className="mt-4 text-sm leading-6 text-brown-700 dark:text-white/70">
+                    {`Live data is ready. ${brief.narrative?.reason || 'Ask a question above for an owner-focused analysis.'}`}
+                  </p>
+                )}
               </div>
 
               <div className={`${sectionShell} p-5`}>
@@ -493,9 +496,11 @@ const AdminAiInsights = () => {
                   </span>
                 )}
               </div>
-              <p className="mt-3 whitespace-pre-line text-sm leading-6 text-brown-700 dark:text-white/70">
-                {answer.available ? answer.text : answer.reason}
-              </p>
+              {answer.available ? (
+                <AiMarkdown className="mt-3" text={answer.text} />
+              ) : (
+                <p className="mt-3 text-sm leading-6 text-brown-700 dark:text-white/70">{answer.reason}</p>
+              )}
             </div>
           )}
         </section>
