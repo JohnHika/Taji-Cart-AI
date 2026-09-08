@@ -1,5 +1,6 @@
 import ProductModel from '../models/product.model.js';
 import AdminActionLogModel from '../models/adminActionLog.model.js';
+import InventoryMovementModel from '../models/inventoryMovement.model.js';
 
 const asInt = (value) => {
     const num = Number(value);
@@ -79,6 +80,7 @@ export const receiveWarehouseStock = async (request, response) => {
             after: { warehouseStock: updated.warehouseStock },
             reason,
         });
+        await InventoryMovementModel.create({ product: productId, type: 'warehouse_receipt', warehouseDelta: quantity, reason, actorId: request.userId });
 
         return response.json({ success: true, data: updated });
     } catch (error) {
@@ -124,6 +126,7 @@ export const dispatchWarehouseStockToShop = async ({ productId, quantity, actorT
         after: { warehouseStock: updated.warehouseStock, stock: updated.stock },
         reason,
     });
+    await InventoryMovementModel.create({ product: productId, type: 'warehouse_to_shop', warehouseDelta: -qty, shopDelta: qty, reason, actorId });
 
     return { ok: true, product: updated };
 };

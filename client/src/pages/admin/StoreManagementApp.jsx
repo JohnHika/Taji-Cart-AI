@@ -22,6 +22,7 @@ const areas = [
   { id: 'inventory', label: 'Inventory', icon: FaWarehouse },
   { id: 'replenishment', label: 'Replenishment', icon: FaBoxes },
   { id: 'purchasing', label: 'Purchasing', icon: FaClipboardList },
+  { id: 'stock-counts', label: 'Stock counts', icon: FaCheckCircle },
   { id: 'sales', label: 'Sales intelligence', icon: FaChartLine },
   { id: 'fulfillment', label: 'Fulfillment', icon: FaTruck },
   { id: 'team', label: 'Team & controls', icon: FaUsers },
@@ -88,6 +89,15 @@ PurchasingDesk.propTypes = {
   loading: PropTypes.bool.isRequired,
 };
 
+const StockCountDesk = ({ stockControl, startCount, finalizeCount, busy, loading }) => {
+  const activeCount = (stockControl.counts || []).find((count) => count.status === 'in_progress');
+  const [enteredCounts, setEnteredCounts] = useState({});
+  const valueFor = (line) => enteredCounts[String(line.product)] ?? line.countedQuantity ?? line.expectedQuantity;
+  return <section className="space-y-5"><div className="relative overflow-hidden rounded-[30px] bg-[#12302c] px-5 py-6 text-white shadow-[0_28px_60px_-32px_rgba(10,45,39,0.9)] sm:px-7"><div className="absolute -right-10 -top-12 h-52 w-52 rounded-full bg-emerald-300/10 blur-3xl"/><div className="relative flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between"><div><p className="text-[10px] font-black uppercase tracking-[0.18em] text-emerald-200">Inventory accuracy</p><h2 className="mt-2 text-2xl font-black tracking-tight sm:text-3xl">Count the shelf. Reconcile the system.</h2><p className="mt-2 max-w-xl text-sm leading-6 text-white/65">A count locks the expected quantity at the start, then records every confirmed variance in the audit ledger.</p></div><div className="flex flex-wrap gap-2"><button type="button" disabled={busy || Boolean(activeCount)} onClick={() => startCount('shop')} className="rounded-xl bg-white px-4 py-2.5 text-sm font-black text-[#12302c] disabled:opacity-50">Start shop count</button><button type="button" disabled={busy || Boolean(activeCount)} onClick={() => startCount('warehouse')} className="rounded-xl border border-white/25 px-4 py-2.5 text-sm font-black text-white disabled:opacity-50">Start backroom count</button></div></div></div>{activeCount ? <section className={`${shell} overflow-hidden`}><div className="flex flex-wrap items-end justify-between gap-3 border-b border-brown-100 px-5 py-5 dark:border-dm-border"><div><p className={label}>{activeCount.location} count · {activeCount.number}</p><h3 className="mt-1 text-lg font-black text-charcoal dark:text-white">Enter physical quantities</h3></div><button type="button" disabled={busy} onClick={() => finalizeCount(activeCount, activeCount.lines.map((line) => ({ productId: line.product, countedQuantity: valueFor(line) })))} className="rounded-xl bg-[#12302c] px-4 py-2.5 text-sm font-bold text-white disabled:opacity-50">Finalize and post variances</button></div><div className="max-h-[34rem] overflow-auto"><table className="w-full min-w-[540px] text-left text-sm"><thead className="sticky top-0 bg-ivory text-[10px] font-black uppercase tracking-wide text-brown-400 dark:bg-dm-card-2"><tr><th className="px-5 py-3">Product</th><th className="px-5 py-3 text-right">System</th><th className="px-5 py-3 text-right">Physical</th></tr></thead><tbody>{activeCount.lines.map((line) => <tr key={String(line.product)} className="border-t border-brown-100 dark:border-dm-border"><td className="px-5 py-3"><p className="font-bold text-charcoal dark:text-white">{line.productName}</p><p className="text-xs text-brown-500">{line.sku || 'No SKU'}</p></td><td className="px-5 py-3 text-right font-bold text-brown-600">{line.expectedQuantity}</td><td className="px-5 py-3 text-right"><input type="number" min="0" value={valueFor(line)} onChange={(event) => setEnteredCounts((current) => ({ ...current, [String(line.product)]: event.target.value }))} className="w-20 rounded-lg border border-brown-200 bg-ivory px-2 py-1.5 text-right font-bold outline-none focus:border-emerald-600 dark:border-dm-border dark:bg-dm-card-2"/></td></tr>)}</tbody></table></div></section> : <section className={`${shell} p-8 text-center`}><div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-700"><FaCheckCircle/></div><p className="mt-3 font-black text-charcoal dark:text-white">No count in progress</p><p className="mt-1 text-sm text-brown-500">Start a shop-floor or backroom count when the team is ready to verify physical stock.</p></section>}<section className={`${shell} overflow-hidden`}><div className="border-b border-brown-100 px-5 py-5 dark:border-dm-border"><p className={label}>Recent ledger</p><h3 className="mt-1 text-lg font-black text-charcoal dark:text-white">Stock activity with a reason</h3></div><div className="divide-y divide-brown-100 dark:divide-dm-border">{(stockControl.movements || []).slice(0, 8).map((movement) => <div key={movement._id} className="flex items-center justify-between gap-3 px-5 py-3"><span><span className="block text-sm font-bold text-charcoal dark:text-white">{movement.product?.name || 'Product'}</span><span className="mt-0.5 block text-xs capitalize text-brown-500">{movement.type.replaceAll('_', ' ')}</span></span><span className={`text-sm font-black ${(movement.warehouseDelta || movement.shopDelta) >= 0 ? 'text-emerald-700' : 'text-red-700'}`}>{movement.warehouseDelta ? `${movement.warehouseDelta > 0 ? '+' : ''}${movement.warehouseDelta} backroom` : `${movement.shopDelta > 0 ? '+' : ''}${movement.shopDelta} shop`}</span></div>)}{!loading && !(stockControl.movements || []).length && <p className="px-5 py-10 text-center text-sm text-brown-500">New receipts, transfers, and stocktake variances will appear here.</p>}</div></section></section>;
+};
+
+StockCountDesk.propTypes = { stockControl: PropTypes.object.isRequired, startCount: PropTypes.func.isRequired, finalizeCount: PropTypes.func.isRequired, busy: PropTypes.bool.isRequired, loading: PropTypes.bool.isRequired };
+
 const StorePortalGate = () => {
   const [state, setState] = useState(() => hasStorePortalAccess() ? 'ready' : (hasStorePortalHandoff() ? 'exchanging' : 'blocked'));
   const [message, setMessage] = useState('');
@@ -146,6 +156,7 @@ const StoreManagementWorkspace = () => {
   const [orders, setOrders] = useState([]);
   const [people, setPeople] = useState([]);
   const [procurement, setProcurement] = useState({ suppliers: 0, supplierList: [], purchaseOrders: [], openOrders: 0, inboundUnits: 0 });
+  const [stockControl, setStockControl] = useState({ counts: [], movements: [] });
   const [loading, setLoading] = useState(true);
   const [inventorySearch, setInventorySearch] = useState('');
   const [quantities, setQuantities] = useState({});
@@ -163,12 +174,13 @@ const StoreManagementWorkspace = () => {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const [briefResult, inventoryResult, ordersResult, peopleResult, procurementResult] = await Promise.allSettled([
+      const [briefResult, inventoryResult, ordersResult, peopleResult, procurementResult, stockControlResult] = await Promise.allSettled([
         Axios({ method: 'GET', url: '/api/admin/ai/brief', params: { range: 'today', sources: 'counter,online,inventory,delivery' } }),
         Axios({ method: 'GET', url: '/api/admin/warehouse/inventory', params: { limit: 100 } }),
         Axios({ method: 'GET', url: '/api/order/admin/all' }),
         Axios({ method: 'GET', url: '/api/user/admin/users' }),
         Axios({ method: 'GET', url: '/api/admin/procurement/dashboard' }),
+        Axios({ method: 'GET', url: '/api/admin/stock-control/dashboard' }),
       ]);
 
       if (briefResult.status === 'fulfilled') setBrief(briefResult.value.data?.data || null);
@@ -176,6 +188,7 @@ const StoreManagementWorkspace = () => {
       if (ordersResult.status === 'fulfilled') setOrders(ordersResult.value.data?.data || []);
       if (peopleResult.status === 'fulfilled') setPeople(peopleResult.value.data?.data || []);
       if (procurementResult.status === 'fulfilled') setProcurement(procurementResult.value.data?.data || { suppliers: 0, supplierList: [], purchaseOrders: [], openOrders: 0, inboundUnits: 0 });
+      if (stockControlResult.status === 'fulfilled') setStockControl(stockControlResult.value.data?.data || { counts: [], movements: [] });
 
       if (briefResult.status === 'rejected' && inventoryResult.status === 'rejected') {
         throw briefResult.reason;
@@ -297,6 +310,22 @@ const StoreManagementWorkspace = () => {
       toast.error(error.response?.data?.message || 'Purchase order could not be updated.');
     } finally { setProcurementBusy(false); }
   };
+  const startCount = async (location) => {
+    setProcurementBusy(true);
+    try {
+      await Axios({ method: 'POST', url: '/api/admin/stock-control/counts', data: { location } });
+      toast.success(`${location === 'warehouse' ? 'Backroom' : 'Shop'} count started.`);
+      load();
+    } catch (error) { toast.error(error.response?.data?.message || 'Stock count could not be started.'); } finally { setProcurementBusy(false); }
+  };
+  const finalizeCount = async (count, lines) => {
+    setProcurementBusy(true);
+    try {
+      await Axios({ method: 'POST', url: `/api/admin/stock-control/counts/${count._id}/finalize`, data: { lines } });
+      toast.success('Stock count finalized and variances recorded.');
+      load();
+    } catch (error) { toast.error(error.response?.data?.message || 'Stock count could not be finalized.'); } finally { setProcurementBusy(false); }
+  };
 
   const areaContent = {
     overview: <>
@@ -323,6 +352,7 @@ const StoreManagementWorkspace = () => {
   };
 
   areaContent.purchasing = <PurchasingDesk procurement={procurement} inventory={inventory} supplierDraft={supplierDraft} setSupplierDraft={setSupplierDraft} purchaseDraft={purchaseDraft} setPurchaseDraft={setPurchaseDraft} createSupplier={createSupplier} createPurchaseOrder={createPurchaseOrder} advancePurchaseOrder={advancePurchaseOrder} busy={procurementBusy} loading={loading} />;
+  areaContent['stock-counts'] = <StockCountDesk stockControl={stockControl} startCount={startCount} finalizeCount={finalizeCount} busy={procurementBusy} loading={loading} />;
 
   if (area === 'assistant') {
     return (

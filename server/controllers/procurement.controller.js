@@ -2,6 +2,7 @@ import ProductModel from '../models/product.model.js';
 import SupplierModel from '../models/supplier.model.js';
 import PurchaseOrderModel from '../models/purchaseOrder.model.js';
 import AdminActionLogModel from '../models/adminActionLog.model.js';
+import InventoryMovementModel from '../models/inventoryMovement.model.js';
 
 const asPositiveInt = (value) => {
   const parsed = Number(value);
@@ -139,6 +140,14 @@ export const receivePurchaseOrder = async (request, response) => {
     purchaseOrder.status = allReceived ? 'received' : 'partially_received';
     purchaseOrder.receivedAt = new Date();
     await purchaseOrder.save();
+    await InventoryMovementModel.insertMany(changes.map(({ line, quantity }) => ({
+      product: line.product,
+      type: 'purchase_receipt',
+      warehouseDelta: quantity,
+      reference: { model: 'PurchaseOrder', id: purchaseOrder._id, number: purchaseOrder.number },
+      reason: `Received from purchase order ${purchaseOrder.number}`,
+      actorId: request.userId,
+    })));
     await audit({ actorType: 'admin', actorId: request.userId, action: 'receive_purchase_order', target: { model: 'PurchaseOrder', id: purchaseOrder._id }, after: { status: purchaseOrder.status, lines: changes.map(({ line, quantity }) => ({ product: line.productName, quantity })) } });
     return response.json({ success: true, data: purchaseOrder });
   } catch (error) {
