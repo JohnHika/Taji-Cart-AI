@@ -43,6 +43,7 @@ import shareRouter from './route/share.route.js';
 import supportRouter from './route/support.route.js';
 import adminAiRouter from './route/adminAi.route.js';
 import warehouseRouter from './route/warehouse.route.js';
+import procurementRouter from './route/procurement.route.js';
 import storePortalRouter from './route/storePortal.route.js';
 
 // ── Controllers used directly on admin routes ───────────────────────────────
@@ -196,6 +197,7 @@ app.use('/api/driver-financials', driverFinancialRoutes);
 app.use('/api/driver-performance', driverPerformanceRoutes);
 app.use('/api/admin/ai', adminAiRouter);
 app.use('/api/admin/warehouse', warehouseRouter);
+app.use('/api/admin/procurement', procurementRouter);
 app.use('/api/admin/store-portal', storePortalRouter);
 
 // ── Admin loyalty routes ─────────────────────────────────────────────────────

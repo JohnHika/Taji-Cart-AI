@@ -32,7 +32,7 @@ export const getWarehouseInventory = async (request, response) => {
 
         const [products, total] = await Promise.all([
             ProductModel.find(filter)
-                .select('name sku stock warehouseStock publish')
+                .select('name sku barcode stock warehouseStock costPrice price publish')
                 .sort({ warehouseStock: -1, name: 1 })
                 .skip((page - 1) * limit)
                 .limit(limit)
