@@ -20,7 +20,7 @@ const AdminAiInsights = () => {
   const loadBrief = useCallback(async () => {
     setLoading(true);
     try {
-      const response = await Axios.get('/api/admin/ai/brief');
+      const response = await Axios({ method: 'GET', url: '/api/admin/ai/brief' });
       setBrief(response.data?.data || null);
     } catch (error) {
       console.error('Failed to load admin AI brief:', error);
