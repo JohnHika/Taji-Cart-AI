@@ -1,7 +1,7 @@
 ﻿import { useCallback, useEffect, useState } from 'react';
 import {
   FaArrowLeft, FaArrowDown, FaArrowUp, FaBoxes, FaBrain, FaChartLine,
-  FaCheck, FaClipboardList, FaExclamationTriangle, FaGlobeAfrica,
+  FaCheck, FaChevronDown, FaClipboardList, FaExclamationTriangle, FaGlobeAfrica,
   FaRoute, FaSearch, FaShoppingBag, FaStore, FaSync, FaTimes, FaUser,
 } from 'react-icons/fa';
 import { Link, useNavigate } from 'react-router-dom';
@@ -64,6 +64,7 @@ const AdminAiInsights = () => {
   const [loading, setLoading] = useState(true);
   const [asking, setAsking] = useState(false);
   const [loadError, setLoadError] = useState(null);
+  const [showContext, setShowContext] = useState(false);
 
   const loadBrief = useCallback(async () => {
     setLoading(true);
@@ -216,64 +217,12 @@ const AdminAiInsights = () => {
       <main className="mx-auto max-w-7xl p-4 sm:p-6">
       <div className="grid gap-4 sm:gap-5 xl:grid-cols-[minmax(0,1fr)_336px] xl:items-start">
       <div className="space-y-4 sm:space-y-5">
-        <section className={`${sectionShell} p-3 sm:p-4`} title="The copilot only sees the sources you select.">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <span className={labelClass}>Analysis scope</span>
-            <span className="rounded-full bg-plum-50 px-2.5 py-1 text-[11px] font-semibold text-plum-700 dark:bg-plum-900/30 dark:text-plum-200">
-              {sources.length} of {scopes.length} sources
-            </span>
-          </div>
-
-          <div className="mt-3 grid gap-4 lg:grid-cols-[auto_1fr]">
-            <div>
-              <p className="mb-2 text-xs font-bold uppercase tracking-wide text-brown-400 dark:text-white/40">Time range</p>
-              <div className="flex flex-wrap gap-2">
-                {ranges.map((item) => (
-                  <button
-                    key={item.id}
-                    type="button"
-                    onClick={() => setRange(item.id)}
-                    className={`rounded-xl px-3 py-2 text-sm font-semibold transition ${
-                      range === item.id
-                        ? 'bg-plum-700 text-white shadow-sm'
-                        : 'bg-ivory text-brown-600 hover:bg-plum-50 dark:bg-dm-card-2 dark:text-white/70'
-                    }`}
-                  >
-                    {item.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-            <div>
-              <p className="mb-2 text-xs font-bold uppercase tracking-wide text-brown-400 dark:text-white/40">Include business data</p>
-              <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
-                {scopes.map((scope) => {
-                  const Icon = scope.icon;
-                  const selected = sources.includes(scope.id);
-                  return (
-                    <button
-                      key={scope.id}
-                      type="button"
-                      onClick={() => toggleSource(scope.id)}
-                      className={`flex items-center gap-2 rounded-xl border p-2.5 text-left transition ${
-                        selected
-                          ? 'border-plum-300 bg-plum-50 text-plum-800 dark:border-plum-700 dark:bg-plum-900/20 dark:text-plum-100'
-                          : 'border-brown-100 text-brown-500 hover:bg-ivory dark:border-dm-border dark:text-white/50 dark:hover:bg-dm-card-2'
-                      }`}
-                    >
-                      <span className={`flex h-7 w-7 items-center justify-center rounded-lg ${selected ? 'bg-plum-700 text-white' : 'bg-brown-100 text-brown-500 dark:bg-dm-card-2'}`}>
-                        {selected ? <FaCheck size={11} /> : <Icon size={12} />}
-                      </span>
-                      <span className="min-w-0">
-                        <span className="block text-xs font-bold">{scope.label}</span>
-                        <span className="block truncate text-[11px] opacity-70">{scope.hint}</span>
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          </div>
+        <section className={`${sectionShell} overflow-hidden`} title="The copilot only sees the sources you select.">
+          <button type="button" onClick={() => setShowContext((current) => !current)} className="flex w-full items-center justify-between gap-3 p-4 text-left hover:bg-plum-50/40 dark:hover:bg-dm-card-2">
+            <span><span className={labelClass}>Analysis context</span><span className="mt-1 block text-sm font-bold text-charcoal dark:text-white">{ranges.find((item) => item.id === range)?.label} · {sources.length === scopes.length ? 'All business data' : `${sources.length} selected source${sources.length === 1 ? '' : 's'}`}</span></span>
+            <span className="flex items-center gap-2 text-xs font-bold text-plum-700 dark:text-plum-300">{showContext ? 'Done' : 'Adjust'} <FaChevronDown className={showContext ? 'rotate-180 transition-transform' : 'transition-transform'} size={12} /></span>
+          </button>
+          {showContext && <div className="border-t border-brown-100 p-4 dark:border-dm-border"><div className="grid gap-4 lg:grid-cols-[auto_1fr]"><div><p className="mb-2 text-xs font-bold uppercase tracking-wide text-brown-400 dark:text-white/40">Time range</p><div className="flex flex-wrap gap-2">{ranges.map((item) => <button key={item.id} type="button" onClick={() => setRange(item.id)} className={`rounded-xl px-3 py-2 text-sm font-semibold transition ${range === item.id ? 'bg-plum-700 text-white shadow-sm' : 'bg-ivory text-brown-600 hover:bg-plum-50 dark:bg-dm-card-2 dark:text-white/70'}`}>{item.label}</button>)}</div></div><div><p className="mb-2 text-xs font-bold uppercase tracking-wide text-brown-400 dark:text-white/40">Include business data</p><div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">{scopes.map((scope) => { const Icon = scope.icon; const selected = sources.includes(scope.id); return <button key={scope.id} type="button" onClick={() => toggleSource(scope.id)} className={`flex items-center gap-2 rounded-xl border p-2.5 text-left transition ${selected ? 'border-plum-300 bg-plum-50 text-plum-800 dark:border-plum-700 dark:bg-plum-900/20 dark:text-plum-100' : 'border-brown-100 text-brown-500 hover:bg-ivory dark:border-dm-border dark:text-white/50 dark:hover:bg-dm-card-2'}`}><span className={`flex h-7 w-7 items-center justify-center rounded-lg ${selected ? 'bg-plum-700 text-white' : 'bg-brown-100 text-brown-500 dark:bg-dm-card-2'}`}>{selected ? <FaCheck size={11} /> : <Icon size={12} />}</span><span className="min-w-0"><span className="block text-xs font-bold">{scope.label}</span><span className="block truncate text-[11px] opacity-70">{scope.hint}</span></span></button>; })}</div></div></div></div>}
         </section>
 
         {loading && !brief ? (
@@ -434,13 +383,13 @@ const AdminAiInsights = () => {
         )}
       </div>
 
-      <aside className="xl:sticky xl:top-20">
-        <section className={`${sectionShell} border-plum-100 p-4 dark:border-plum-900/50 sm:p-5`}>
+      <aside className="order-first xl:order-none xl:sticky xl:top-20">
+        <section className={`${sectionShell} overflow-hidden border-plum-100 p-0 dark:border-plum-900/50`}>
           <div className="flex items-start gap-3">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-plum-100 text-plum-700 dark:bg-plum-900/30 dark:text-plum-300">
+            <div className="m-4 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-plum-100 text-plum-700 dark:bg-plum-900/30 dark:text-plum-300 sm:m-5">
               <FaSearch />
             </div>
-            <div>
+            <div className="min-w-0 py-4 pr-4 sm:py-5 sm:pr-5">
               <h2 className="font-bold text-charcoal dark:text-white">Ask the copilot</h2>
               <p className="mt-0.5 text-xs text-brown-500 dark:text-white/50">
                 Ask about the selected business data, or opt into outside market research.
@@ -448,7 +397,7 @@ const AdminAiInsights = () => {
             </div>
           </div>
 
-          <form className="mt-4" onSubmit={askCopilot}>
+          <form className="border-t border-brown-100 p-4 sm:p-5 dark:border-dm-border" onSubmit={askCopilot}>
             <textarea
               value={question}
               onChange={(event) => setQuestion(event.target.value)}

@@ -6,6 +6,7 @@ import {
   FaCalendarAlt,
   FaCamera,
   FaChartBar,
+  FaChevronDown,
   FaCheckCircle,
   FaCreditCard,
   FaExclamationTriangle,
@@ -296,7 +297,7 @@ const POSDashboard = () => {
   const [analytics, setAnalytics] = useState(null);
   const [analyticsAccessDenied, setAnalyticsAccessDenied] = useState(false);
   const [recentSales, setRecentSales] = useState([]);
-  const [recentSalesScope, setRecentSalesScope] = useState('mine'); // 'mine' | 'shop'
+  const [recentSalesScope, setRecentSalesScope] = useState('shop'); // 'mine' | 'shop'
   const [showReceiptModal, setShowReceiptModal] = useState(false);
   const [selectedSale, setSelectedSale] = useState(null);
   const selectedSalePaymentProofs = useMemo(() => getSalePaymentProofs(selectedSale), [selectedSale]);
@@ -314,6 +315,7 @@ const POSDashboard = () => {
   const [voidLoading, setVoidLoading] = useState(false);
   const [recentSalesView, setRecentSalesView] = useState('list'); // 'list' | 'grid'
   const [recentSalesPage, setRecentSalesPage] = useState(1);
+  const [showAdvancedAnalytics, setShowAdvancedAnalytics] = useState(false);
 
   // Wait for session hydration before deciding access, and allow admins to use sales tools.
   useEffect(() => {
@@ -631,32 +633,31 @@ const POSDashboard = () => {
   return (
     <div className="min-h-screen w-full max-w-full overflow-x-hidden bg-brown-50 dark:bg-dm-surface p-4 pb-24 lg:pb-6">
       {/* Header */}
-      <div className="mb-6">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
+      <div className="mb-5 overflow-hidden rounded-3xl bg-gradient-to-br from-[#351126] via-plum-800 to-[#704352] p-5 text-white shadow-lg sm:p-6">
+        <div className="flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
           <div>
-            <h1 className="text-2xl font-black text-charcoal dark:text-white tracking-tight">Sales Hub</h1>
-            <p className="text-brown-500 dark:text-white/40">
-              Welcome back, {user.name} | {user.staff_branch || 'Main Store'}
-            </p>
+            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-gold-200">{user.staff_branch || 'Main Store'} · live trade desk</p>
+            <h1 className="mt-2 text-2xl font-black tracking-tight sm:text-3xl">Sales Hub</h1>
+            <p className="mt-1 text-sm text-white/70">Counter first. See today’s trade, open a sale, then review the detail only when you need it.</p>
           </div>
-          <div className="mt-4 sm:mt-0 flex flex-col sm:flex-row gap-3">
+          <div className="flex flex-wrap gap-2">
             <button
               onClick={() => navigate('/dashboard/whatsapp-order')}
-              className="px-5 py-2.5 bg-green-600 text-white rounded-pill hover:bg-green-700 transition-colors flex items-center justify-center font-semibold shadow-sm"
+              className="flex items-center justify-center rounded-xl bg-green-600 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-green-700"
             >
               <FaWhatsapp className="mr-2" />
               New WhatsApp Order
             </button>
             <button
               onClick={() => navigate('/dashboard/sales-counter')}
-              className="px-5 py-2.5 bg-plum-700 text-white rounded-pill hover:bg-plum-800 transition-colors flex items-center justify-center font-semibold shadow-sm"
+              className="flex items-center justify-center rounded-xl bg-white px-4 py-2.5 text-sm font-bold text-plum-800 transition hover:bg-ivory"
             >
               <FaShoppingCart className="mr-2" />
               Open Sales Counter
             </button>
             <button
               onClick={() => navigate('/dashboard/returns-exchanges')}
-              className="px-5 py-2.5 bg-white text-plum-700 border border-plum-200 rounded-pill hover:bg-plum-50 transition-colors flex items-center justify-center font-semibold shadow-sm dark:bg-dm-card dark:border-dm-border dark:text-plum-300 dark:hover:bg-dm-card-2"
+              className="flex items-center justify-center rounded-xl border border-white/20 bg-white/10 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-white/20"
             >
               <FaUndo className="mr-2" />
               Returns & Exchanges
@@ -664,7 +665,7 @@ const POSDashboard = () => {
             {isAdmin(user) && (
               <button
                 onClick={() => navigate('/dashboard/eod-reports')}
-                className="px-5 py-2.5 bg-white text-plum-700 border border-plum-200 rounded-pill hover:bg-plum-50 transition-colors flex items-center justify-center font-semibold shadow-sm dark:bg-dm-card dark:border-dm-border dark:text-plum-300 dark:hover:bg-dm-card-2"
+                className="flex items-center justify-center rounded-xl border border-white/20 bg-white/10 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-white/20"
               >
                 <FaChartBar className="mr-2" />
                 Weekly/Monthly Reports
@@ -678,9 +679,10 @@ const POSDashboard = () => {
         <div className="rounded-2xl bg-white p-5 shadow-sm dark:bg-dm-card sm:p-6">
           <div className="mb-5 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div>
-              <h3 className="text-base font-bold tracking-tight text-charcoal dark:text-white">Daily Summary</h3>
+              <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-plum-600 dark:text-plum-300">Today at the counter</p>
+              <h3 className="mt-1 text-xl font-black tracking-tight text-charcoal dark:text-white">Trading snapshot</h3>
               <p className="mt-1 text-sm text-brown-500 dark:text-white/45">
-                Choose a trading day and review the counter performance without leaving the hub.
+                Choose a trading day, then use the live sales list below to follow what is happening now.
               </p>
             </div>
 
@@ -791,7 +793,8 @@ const POSDashboard = () => {
         <div className="rounded-2xl bg-white p-5 shadow-sm dark:bg-dm-card sm:p-6">
           <div className="mb-4 flex flex-col gap-4">
             <div>
-              <h3 className="text-base font-bold tracking-tight text-charcoal dark:text-white">Sales Analytics</h3>
+              <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-plum-600 dark:text-plum-300">Trade pattern</p>
+              <h3 className="mt-1 text-xl font-black tracking-tight text-charcoal dark:text-white">When the shop is moving</h3>
               <p className="mt-1 text-sm text-brown-500 dark:text-white/45">
                 Performance snapshot for the {analyticsPeriodLabel}.
               </p>
@@ -929,7 +932,18 @@ const POSDashboard = () => {
         </div>
       )}
 
-      {dailySummary && (
+      <div className="mb-6 flex justify-center">
+        <button
+          type="button"
+          onClick={() => setShowAdvancedAnalytics((current) => !current)}
+          className="inline-flex items-center gap-2 rounded-xl border border-brown-200 bg-white px-4 py-2.5 text-sm font-bold text-plum-700 shadow-sm transition hover:bg-plum-50 dark:border-dm-border dark:bg-dm-card dark:text-plum-300 dark:hover:bg-dm-card-2"
+        >
+          {showAdvancedAnalytics ? 'Hide detailed analytics' : 'Open detailed analytics'}
+          <FaChevronDown className={showAdvancedAnalytics ? 'rotate-180 transition-transform' : 'transition-transform'} size={12} />
+        </button>
+      </div>
+
+      {showAdvancedAnalytics && dailySummary && (
         <div className="mb-6 grid gap-6 lg:grid-cols-2">
           <div className="rounded-2xl bg-white p-5 shadow-sm dark:bg-dm-card sm:p-6">
             <div className="mb-4 flex items-center justify-between gap-3">
@@ -1049,6 +1063,7 @@ const POSDashboard = () => {
         </div>
       )}
 
+      {showAdvancedAnalytics && (
       <div className="mb-6 grid gap-6 xl:grid-cols-[minmax(0,1.15fr)_minmax(320px,0.85fr)]">
         <div className="rounded-2xl bg-white p-5 shadow-sm dark:bg-dm-card sm:p-6">
           <div className="mb-4 flex items-center justify-between gap-3">
@@ -1120,9 +1135,10 @@ const POSDashboard = () => {
           </div>
         </div>
       </div>
+      )}
 
       {/* Recent Sales */}
-      <div className="bg-white dark:bg-dm-card rounded-2xl shadow-sm p-4 sm:p-6">
+      <div id="recent-sales" className="bg-white dark:bg-dm-card rounded-3xl shadow-sm ring-1 ring-brown-100 p-4 sm:p-6 dark:ring-dm-border">
         <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h3 className="text-base font-bold text-charcoal dark:text-white tracking-tight">
