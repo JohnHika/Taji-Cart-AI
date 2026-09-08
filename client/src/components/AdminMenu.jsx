@@ -7,6 +7,7 @@ import {
   FaCashRegister,
   FaChartLine,
   FaCheck,
+  FaChevronDown,
   FaClipboardList,
   FaCog,
   FaCrown,
@@ -103,6 +104,29 @@ const AdminMenu = ({ close, forLightPanel = false }) => {
     );
   };
 
+  const MenuGroup = ({ label, icon: Icon, routes, children }) => {
+    const isActive = routes.some((route) => isLinkActive(route));
+
+    return (
+      <details open={isActive} className="group mx-2 mt-1 rounded-xl">
+        <summary
+          className={`flex cursor-pointer list-none items-center gap-2.5 rounded-pill px-4 py-2.5 text-sm font-semibold transition-colors [&::-webkit-details-marker]:hidden ${
+            forLightPanel
+              ? 'text-brown-700 hover:bg-plum-50 hover:text-plum-700 dark:text-white/80 dark:hover:bg-plum-900/30 dark:hover:text-plum-200'
+              : 'text-white/80 hover:bg-plum-800/75 hover:text-white'
+          }`}
+        >
+          <Icon size={15} className={iconMuted} />
+          <span className="min-w-0 flex-1 truncate">{label}</span>
+          <FaChevronDown size={12} className="shrink-0 transition-transform group-open:rotate-180" />
+        </summary>
+        <div className="mt-0.5 space-y-0.5 pb-1">
+          {children}
+        </div>
+      </details>
+    );
+  };
+
   const handleLogout = async () => {
     try {
       const response = await Axios({ ...SummaryApi.logout });
@@ -171,59 +195,80 @@ const AdminMenu = ({ close, forLightPanel = false }) => {
       <div className={dividerClass} />
 
       <nav className="mt-2 flex min-w-0 flex-col gap-0.5 overflow-x-hidden text-sm">
-        <p className={sectionClass}>Dashboard</p>
-        <MenuLink to="/dashboard" icon={FaTachometerAlt} label="Dashboard overview" exact />
-        <MenuLink to="/dashboard/admin-control-center" icon={FaTachometerAlt} label="Admin control center" />
+        <p className={sectionClass}>Owner workspace</p>
+        <MenuLink to="/dashboard/admin-control-center" icon={FaTachometerAlt} label="Command center" />
         <MenuLink to="/dashboard/admin-ai-insights" icon={FaBrain} label="AI Operations Copilot" />
-        <MenuLink to="/dashboard/profile" icon={FaUser} label="My profile" />
-
-        <p className={sectionClass}>User management</p>
-        <MenuLink to="/dashboard/users-admin" icon={FaUsers} label="User management" />
-        <MenuLink to="/dashboard/staff/dashboard" icon={FaUserTie} label="Staff dashboard" />
-
-        <p className={sectionClass}>Sales</p>
-        <MenuLink to="/dashboard/sales-counter" icon={FaCashRegister} label="Sales counter" />
         <MenuLink to="/dashboard/sales-hub" icon={FaStore} label="Sales hub" />
-        <MenuLink to="/dashboard/sales-history" icon={FaHistory} label="Sales history" />
-        <MenuLink to="/dashboard/returns-exchanges" icon={FaUndo} label="Returns & exchanges" />
+        <MenuLink to="/dashboard/sales-counter" icon={FaCashRegister} label="Sales counter" />
 
-        <p className={sectionClass}>Products & categories</p>
-        <MenuLink to="/dashboard/category" icon={FaListAlt} label="Category" />
-        <MenuLink to="/dashboard/delivery-zones" icon={FaRoute} label="Delivery Zones" />
-        <MenuLink to="/dashboard/subcategory" icon={FaLayerGroup} label="Sub category" />
-        <MenuLink to="/dashboard/upload-product" icon={FaUpload} label="Upload product" />
-        <MenuLink to="/dashboard/product" icon={FaBoxOpen} label="Product" />
-        <MenuLink to="/dashboard/catalog-quality" icon={FaEyeSlash} label="Catalog quality" />
-        <MenuLink to="/dashboard/stock-value" icon={FaWarehouse} label="Stock value" />
+        <MenuGroup
+          label="Sales & orders"
+          icon={FaClipboardList}
+          routes={['/dashboard/allorders', '/dashboard/sales-history', '/dashboard/returns-exchanges', '/dashboard/eod-reports']}
+        >
+          <MenuLink to="/dashboard/allorders" icon={FaClipboardList} label="All orders" />
+          <MenuLink to="/dashboard/sales-history" icon={FaHistory} label="Sales history" />
+          <MenuLink to="/dashboard/returns-exchanges" icon={FaUndo} label="Returns & exchanges" />
+          <MenuLink to="/dashboard/eod-reports" icon={FaChartLine} label="Weekly/monthly reports" />
+        </MenuGroup>
 
-        <p className={sectionClass}>Marketing & community</p>
-        <MenuLink to="/dashboard/loyalty-program-admin" icon={FaCrown} label="Loyalty program" />
-        <MenuLink to="/dashboard/admin-community-perks" icon={FaGift} label="Manage community perks" />
-        <MenuLink to="/dashboard/community-perks" icon={FaTrophy} label="Community perks" />
-        <MenuLink to="/dashboard/active-campaigns" icon={FaBullhorn} label="Active campaigns" />
+        <MenuGroup
+          label="Catalog & inventory"
+          icon={FaBoxOpen}
+          routes={['/dashboard/category', '/dashboard/subcategory', '/dashboard/upload-product', '/dashboard/product', '/dashboard/catalog-quality', '/dashboard/stock-value']}
+        >
+          <MenuLink to="/dashboard/upload-product" icon={FaUpload} label="Add a product" />
+          <MenuLink to="/dashboard/product" icon={FaBoxOpen} label="Products" />
+          <MenuLink to="/dashboard/catalog-quality" icon={FaEyeSlash} label="Catalog quality" />
+          <MenuLink to="/dashboard/stock-value" icon={FaWarehouse} label="Stock value" />
+          <MenuLink to="/dashboard/category" icon={FaListAlt} label="Categories" />
+          <MenuLink to="/dashboard/subcategory" icon={FaLayerGroup} label="Subcategories" />
+        </MenuGroup>
 
-        <p className={sectionClass}>Orders & delivery</p>
-        <MenuLink to="/dashboard/allorders" icon={FaClipboardList} label="All orders" />
-        <MenuLink to="/dashboard/feature-releases" icon={FaRocket} label="Feature releases" />
-        <MenuLink to="/dashboard/ai-style-tryon" icon={FaMagic} label="AI Try-On" />
-        <MenuLink to="/dashboard/eod-reports" icon={FaChartLine} label="Weekly/monthly reports" />
-        <MenuLink to="/dashboard/driver-verification" icon={FaIdCard} label="Driver verification" />
-        <MenuLink to="/dashboard/myorders" icon={FaShoppingBag} label="My orders" />
-        <MenuLink to="/dashboard/address" icon={FaMapMarkerAlt} label="Save address" />
+        <MenuGroup
+          label="Customers & growth"
+          icon={FaUsers}
+          routes={['/dashboard/users-admin', '/dashboard/staff/dashboard', '/dashboard/loyalty-program-admin', '/dashboard/admin-community-perks', '/dashboard/community-perks', '/dashboard/active-campaigns']}
+        >
+          <MenuLink to="/dashboard/users-admin" icon={FaUsers} label="Customers & staff" />
+          <MenuLink to="/dashboard/staff/dashboard" icon={FaUserTie} label="Staff dashboard" />
+          <MenuLink to="/dashboard/loyalty-program-admin" icon={FaCrown} label="Loyalty program" />
+          <MenuLink to="/dashboard/admin-community-perks" icon={FaGift} label="Manage community perks" />
+          <MenuLink to="/dashboard/community-perks" icon={FaTrophy} label="Community perks" />
+          <MenuLink to="/dashboard/active-campaigns" icon={FaBullhorn} label="Active campaigns" />
+        </MenuGroup>
 
-        <p className={sectionClass}>Staff functions</p>
-        <MenuLink to="/dashboard/staff/pending-pickups" icon={FaStore} label="Pending pickups" />
-        <MenuLink to="/dashboard/staff/delivery/pending" icon={FaTruck} label="Pending deliveries" />
-        <MenuLink to="/dashboard/staff/verify-pickup" icon={FaCheck} label="Verify pickup" />
-        <MenuLink to="/dashboard/staff/completed-verifications" icon={FaHistory} label="Verification history" />
-        <MenuLink to="/dashboard/staff/delivery" icon={FaCog} label="Delivery management" />
-        <MenuLink to="/dashboard/staff/counter-fulfillment" icon={FaTruck} label="Sales counter deliveries" />
+        <MenuGroup
+          label="Delivery & fulfilment"
+          icon={FaTruck}
+          routes={['/dashboard/delivery-zones', '/dashboard/driver-verification', '/dashboard/staff/pending-pickups', '/dashboard/staff/delivery/pending', '/dashboard/staff/verify-pickup', '/dashboard/staff/completed-verifications', '/dashboard/staff/delivery', '/dashboard/staff/counter-fulfillment']}
+        >
+          <MenuLink to="/dashboard/delivery-zones" icon={FaRoute} label="Delivery zones" />
+          <MenuLink to="/dashboard/driver-verification" icon={FaIdCard} label="Driver verification" />
+          <MenuLink to="/dashboard/staff/pending-pickups" icon={FaStore} label="Pending pickups" />
+          <MenuLink to="/dashboard/staff/delivery/pending" icon={FaTruck} label="Pending deliveries" />
+          <MenuLink to="/dashboard/staff/verify-pickup" icon={FaCheck} label="Verify pickup" />
+          <MenuLink to="/dashboard/staff/completed-verifications" icon={FaHistory} label="Verification history" />
+          <MenuLink to="/dashboard/staff/delivery" icon={FaCog} label="Delivery management" />
+          <MenuLink to="/dashboard/staff/counter-fulfillment" icon={FaTruck} label="Counter deliveries" />
+        </MenuGroup>
 
-        <p className={sectionClass}>Support</p>
+        <MenuGroup
+          label="Experiments & settings"
+          icon={FaRocket}
+          routes={['/dashboard/feature-releases', '/dashboard/ai-style-tryon', '/dashboard/profile', '/dashboard/myorders', '/dashboard/address']}
+        >
+          <MenuLink to="/dashboard/feature-releases" icon={FaRocket} label="Feature releases" />
+          <MenuLink to="/dashboard/ai-style-tryon" icon={FaMagic} label="AI Try-On" />
+          <MenuLink to="/dashboard/profile" icon={FaUser} label="My profile" />
+          <MenuLink to="/dashboard/myorders" icon={FaShoppingBag} label="My orders" />
+          <MenuLink to="/dashboard/address" icon={FaMapMarkerAlt} label="Saved addresses" />
+        </MenuGroup>
+
         <button
           type="button"
           onClick={() => setReportIssueOpen(true)}
-          className={`${linkBase} w-full text-left`}
+          className={`${linkBase} mt-1 w-full text-left`}
         >
           <FaExclamationCircle size={15} className={iconMuted} />
           <span className="min-w-0 flex-1 truncate">Report an issue</span>
