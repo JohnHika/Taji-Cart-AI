@@ -2,7 +2,7 @@
 import {
   FaArrowLeft, FaArrowDown, FaArrowUp, FaBoxes, FaBrain, FaChartLine,
   FaCheck, FaClipboardList, FaExclamationTriangle, FaGlobeAfrica,
-  FaRoute, FaSearch, FaShoppingBag, FaStore, FaSync,
+  FaRoute, FaSearch, FaShoppingBag, FaStore, FaSync, FaTimes, FaUser,
 } from 'react-icons/fa';
 import { Link, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
@@ -59,7 +59,7 @@ const AdminAiInsights = () => {
   const [range, setRange] = useState('today');
   const [sources, setSources] = useState(scopes.map((scope) => scope.id));
   const [question, setQuestion] = useState('');
-  const [answer, setAnswer] = useState(null);
+  const [turns, setTurns] = useState([]);
   const [webSearch, setWebSearch] = useState(false);
   const [loading, setLoading] = useState(true);
   const [asking, setAsking] = useState(false);
@@ -97,19 +97,27 @@ const AdminAiInsights = () => {
 
   const askCopilot = async (event) => {
     event.preventDefault();
-    if (question.trim().length < 3) {
+    const trimmedQuestion = question.trim();
+    if (trimmedQuestion.length < 3) {
       toast.error('Type a business question first.');
       return;
     }
+    // Flatten prior turns into plain {role, content} history for the server —
+    // it only needs enough context for follow-up questions to make sense.
+    const history = turns.flatMap((turn) => [
+      { role: 'user', content: turn.question },
+      ...(turn.answer?.available ? [{ role: 'assistant', content: turn.answer.text }] : []),
+    ]);
     setAsking(true);
     try {
       const response = await Axios({
         method: 'POST',
         url: '/api/admin/ai/ask',
-        data: { question: question.trim(), range, sources, webSearch },
+        data: { question: trimmedQuestion, range, sources, webSearch, history },
       });
       const data = response.data?.data;
-      setAnswer(data?.answer || null);
+      setTurns((current) => [...current, { question: trimmedQuestion, answer: data?.answer || null }]);
+      setQuestion('');
       if (data?.brief) setBrief((current) => ({ ...data.brief, narrative: current?.narrative }));
     } catch (error) {
       console.error('Failed to ask admin AI:', error);
@@ -489,22 +497,49 @@ const AdminAiInsights = () => {
             )}
           </form>
 
-          {answer && (
-            <div className="mt-5 rounded-2xl border border-plum-100 bg-plum-50/50 p-4 dark:border-plum-900/50 dark:bg-plum-900/10">
-              <div className="flex items-center gap-2">
-                <FaBrain className="text-plum-700 dark:text-plum-300" size={14} />
-                <h3 className="text-sm font-bold text-charcoal dark:text-white">Copilot answer</h3>
-                {answer.webSearch && (
-                  <span className="rounded-pill bg-white px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-plum-700 dark:bg-dm-card-2 dark:text-plum-200">
-                    Web researched
-                  </span>
-                )}
-              </div>
-              {answer.available ? (
-                <AiMarkdown className="mt-3" text={answer.text} />
-              ) : (
-                <p className="mt-3 text-sm leading-6 text-brown-700 dark:text-white/70">{answer.reason}</p>
-              )}
+          {turns.length > 0 && (
+            <div className="mt-5 max-h-[32rem] space-y-3 overflow-y-auto pr-1">
+              {turns.map((turn, index) => (
+                <div key={`${turn.question}-${index}`} className="space-y-2">
+                  <div className="flex items-start gap-2 rounded-2xl bg-ivory px-3 py-2 dark:bg-dm-card-2">
+                    <FaUser className="mt-0.5 shrink-0 text-brown-400 dark:text-white/40" size={11} />
+                    <p className="text-sm text-charcoal dark:text-white">{turn.question}</p>
+                  </div>
+
+                  <div className="rounded-2xl border border-plum-100 bg-plum-50/50 p-4 dark:border-plum-900/50 dark:bg-plum-900/10">
+                    <div className="flex items-center gap-2">
+                      <FaBrain className="text-plum-700 dark:text-plum-300" size={14} />
+                      <h3 className="text-sm font-bold text-charcoal dark:text-white">Copilot</h3>
+                      {turn.answer?.webSearch && (
+                        <span className="rounded-pill bg-white px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-plum-700 dark:bg-dm-card-2 dark:text-plum-200">
+                          Web researched
+                        </span>
+                      )}
+                    </div>
+                    {turn.answer?.available ? (
+                      <AiMarkdown className="mt-3" text={turn.answer.text} />
+                    ) : (
+                      <p className="mt-3 text-sm leading-6 text-brown-700 dark:text-white/70">{turn.answer?.reason || 'No answer available.'}</p>
+                    )}
+
+                    {turn.answer?.actions?.length > 0 && (
+                      <div className="mt-3 space-y-1.5 border-t border-plum-100 pt-3 dark:border-plum-900/50">
+                        <p className="text-[11px] font-bold uppercase tracking-wide text-plum-600 dark:text-plum-300">Actions taken</p>
+                        {turn.answer.actions.map((action, actionIndex) => (
+                          <div key={`${action.tool}-${actionIndex}`} className="flex items-start gap-2 text-xs">
+                            {action.ok ? (
+                              <FaCheck className="mt-0.5 shrink-0 text-green-600 dark:text-green-400" size={10} />
+                            ) : (
+                              <FaTimes className="mt-0.5 shrink-0 text-red-600 dark:text-red-400" size={10} />
+                            )}
+                            <span className="text-brown-600 dark:text-white/60">{action.summary}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
             </div>
           )}
         </section>

@@ -5,8 +5,11 @@ import { askAdminAi, getAdminAiBrief } from '../controllers/adminAi.controller.j
 
 const router = Router();
 
-// Keep this surface deliberately small and read-only. The assistant can
-// recommend a next step, but it must never make a commercial change itself.
+// /brief is always read-only (runs on page load, not a specific question).
+// /ask may take capped, audited autonomous actions when
+// ADMIN_AI_AUTONOMOUS_WRITES=true and the OpenAI provider is configured —
+// see adminAi.controller.js for the tool allowlist and caps. Unset/false
+// keeps this endpoint exactly as read-only as /brief.
 router.get('/brief', auth, admin, getAdminAiBrief);
 router.post('/ask', auth, admin, askAdminAi);
 

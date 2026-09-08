@@ -42,6 +42,7 @@ import merchantFeedRouter from './route/merchantFeed.route.js';
 import shareRouter from './route/share.route.js';
 import supportRouter from './route/support.route.js';
 import adminAiRouter from './route/adminAi.route.js';
+import warehouseRouter from './route/warehouse.route.js';
 
 // ── Controllers used directly on admin routes ───────────────────────────────
 import {
@@ -192,6 +193,7 @@ app.use('/api/driver-verification', driverVerificationRoutes);
 app.use('/api/driver-financials', driverFinancialRoutes);
 app.use('/api/driver-performance', driverPerformanceRoutes);
 app.use('/api/admin/ai', adminAiRouter);
+app.use('/api/admin/warehouse', warehouseRouter);
 
 // ── Admin loyalty routes ─────────────────────────────────────────────────────
 app.get('/api/admin/loyalty/cards', auth, admin, getLoyaltyCards);

@@ -1,6 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { buildOperationsBrief } from './adminAi.controller.js';
+import {
+  buildOperationsBrief,
+  isStockDeltaWithinCap,
+  isPriceChangeWithinCap,
+  isOrderStatusTransitionAllowed,
+} from './adminAi.controller.js';
 
 test('buildOperationsBrief groups actionable stock and order risks without taking action', () => {
   const brief = buildOperationsBrief({
@@ -53,4 +58,32 @@ test('buildOperationsBrief excludes unselected sources from totals and output', 
   assert.equal(brief.metrics.lowStockCount, 0);
   assert.equal(brief.lowStockProducts.length, 0);
   assert.equal(brief.metrics.openOrderCount, 0);
+});
+
+test('isStockDeltaWithinCap allows deltas up to +/-25 and rejects beyond that', () => {
+  assert.equal(isStockDeltaWithinCap(25), true);
+  assert.equal(isStockDeltaWithinCap(-25), true);
+  assert.equal(isStockDeltaWithinCap(1), true);
+  assert.equal(isStockDeltaWithinCap(26), false);
+  assert.equal(isStockDeltaWithinCap(-26), false);
+  assert.equal(isStockDeltaWithinCap(0), false);
+  assert.equal(isStockDeltaWithinCap(NaN), false);
+});
+
+test('isPriceChangeWithinCap allows moves up to 15% and rejects beyond that', () => {
+  assert.equal(isPriceChangeWithinCap(1000, 1150), true);
+  assert.equal(isPriceChangeWithinCap(1000, 850), true);
+  assert.equal(isPriceChangeWithinCap(1000, 1151), false);
+  assert.equal(isPriceChangeWithinCap(1000, 849), false);
+  assert.equal(isPriceChangeWithinCap(1000, -5), false);
+  assert.equal(isPriceChangeWithinCap(1000, 0), false);
+});
+
+test('isOrderStatusTransitionAllowed rejects cancellations, delivery states, and payment-adjacent moves', () => {
+  assert.equal(isOrderStatusTransitionAllowed('pending', 'processing'), true);
+  assert.equal(isOrderStatusTransitionAllowed('processing', 'ready_for_pickup'), true);
+  assert.equal(isOrderStatusTransitionAllowed('processing', 'cancelled'), false);
+  assert.equal(isOrderStatusTransitionAllowed('delivered', 'processing'), false);
+  assert.equal(isOrderStatusTransitionAllowed('out_for_delivery', 'delivered'), false);
+  assert.equal(isOrderStatusTransitionAllowed('dispatched', 'ready_for_pickup'), false);
 });

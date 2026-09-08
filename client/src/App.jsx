@@ -12,6 +12,7 @@ import DashboardMobileHeader from './components/DashboardMobileHeader';
 import Footer from './components/Footer';
 import Header from './components/Header';
 import WhatsAppOrderWidget from './components/WhatsAppOrderWidget';
+import AdminSecretGate from './components/AdminSecretGate';
 import GlobalProvider from './provider/GlobalProvider';
 import { WhatsAppOrderProvider } from './provider/WhatsAppOrderProvider';
 import { fetchCartItems } from './store/cartProduct';
@@ -353,6 +354,7 @@ function App() {
         {showStoreChrome && <BottomNavigation />}
         <Toaster />
         <ToastContainer position="top-right" autoClose={3000} />
+        <AdminSecretGate />
         {showStoreChrome && location.pathname !== '/checkout' && location.pathname !== '/dashboard/checkout' && user?._id && <CartMobileLink />}
         {showStoreChrome && <WhatsAppOrderWidget />}
         {/* ChatbotAI hidden: AI feature not yet complete */}
