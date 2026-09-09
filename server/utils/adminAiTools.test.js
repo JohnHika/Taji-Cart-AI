@@ -10,6 +10,9 @@ import {
   isOrderStatusTransitionAllowed,
   isReorderDraftStatusAllowed,
   isLoyaltyPointsDeltaWithinCap,
+  parseNairobiDayStart,
+  tokenizeForProductMatch,
+  matchCatalogProducts,
 } from './adminAiTools.js';
 
 test('isReorderDraftStatusAllowed only allows resolving to ordered or dismissed', () => {
@@ -64,12 +67,95 @@ test('every read and write tool definition is in Anthropic {name, description, i
 test('read tools expose the expected names, including the new domains', () => {
   const names = READ_TOOL_DEFINITIONS.map((tool) => tool.name);
   for (const expected of [
-    'query_products', 'query_orders', 'query_sales', 'query_customer', 'query_loyalty_card',
-    'query_inventory_movements', 'query_stock_counts', 'query_purchase_orders', 'query_suppliers',
-    'query_drivers', 'query_admin_action_log',
+    'query_products', 'query_orders', 'query_sales', 'query_product_sales_history', 'query_customer',
+    'query_loyalty_card', 'query_inventory_movements', 'query_stock_counts', 'query_purchase_orders',
+    'query_suppliers', 'query_drivers', 'query_admin_action_log',
   ]) {
     assert.ok(names.includes(expected), `expected ${expected} in READ_TOOL_DEFINITIONS`);
   }
+});
+
+// query_product_sales_history's Sale aggregation always queries the
+// database (even to report a clean "no match"), so the full tool cannot be
+// exercised via executeAiTool() without a real MongoDB connection -- this
+// repo has no existing mongodb-memory-server (or similar) test-DB pattern
+// (checked: no *.test.js anywhere under server/ imports it -- only
+// server/config/memoryMongoDB.js uses it, as an app-level offline-dev
+// fallback on a fixed port, not a test harness), so DB-backed coverage of
+// the Sale aggregation itself (units/revenue/transaction totals) is a
+// follow-up. The catalog fuzzy-matching and date-boundary logic that caused
+// the actual reported bug, however, are pure functions (matchCatalogProducts,
+// tokenizeForProductMatch, parseNairobiDayStart) and ARE fully covered below,
+// including the exact real-catalog collision (verified against the live
+// products_seed.json, 520 products) that an earlier version of this fix
+// missed: a query like "French 14" tying across 14/18/24-inch variants
+// because of a SKU color-code suffix ("...-C14") that coincidentally
+// contains the queried size number.
+test('query_product_sales_history is defined with the expected schema', () => {
+  const definition = READ_TOOL_DEFINITIONS.find((tool) => tool.name === 'query_product_sales_history');
+  assert.ok(definition, 'query_product_sales_history should be in READ_TOOL_DEFINITIONS');
+  assert.equal(definition.input_schema.type, 'object');
+  assert.ok(definition.input_schema.properties.productQuery, 'should expose a productQuery field');
+  assert.ok(definition.input_schema.properties.startDate, 'should expose a startDate field');
+  assert.ok(definition.input_schema.properties.endDate, 'should expose an endDate field');
+  assert.deepEqual(definition.input_schema.required, ['productQuery']);
+});
+
+test('query_product_sales_history rejects a call with an empty productQuery before touching the database', async () => {
+  const result = await executeAiTool('query_product_sales_history', { productQuery: '   ' });
+  assert.equal(result.ok, false);
+  assert.match(result.summary, /provide a productQuery/);
+  assert.equal(result.type, 'read');
+});
+
+// Regression fixture reproducing the exact shape of the real bug (found via
+// adversarial review, then confirmed against the live 520-product catalog):
+// this catalog writes some sizes glued ("14INCH", "18INCH") and one spaced
+// ("24 INCH"), and at least one 18-inch SKU's color code happens to be
+// "C14" -- a naive digit/letter-boundary split alone turns that into a
+// stray "14" token, which would tie the 18-inch item against a "French 14"
+// query on top of the correct 14-inch matches.
+const FRENCH_CURL_FIXTURE = [
+  { _id: '14a', name: 'FRENCH CURL 14INCH', sku: 'FRENCH-CURL-14INCH-1B' },
+  { _id: '14b', name: 'FRENCH CURL 14INCH', sku: 'FRENCH-CURL-14INCH-613' },
+  { _id: '18a', name: 'FRENCH CURL 18INCH', sku: 'FRENCH-CURL-18INCH-1B' },
+  { _id: '18b-collision', name: 'FRENCH CURL 18INCH', sku: 'FRENCH-CURL-18INCH-C14' },
+  { _id: '24a', name: 'FRENCH CURL 24 INCH', sku: 'FRENCH-CURL-24-INCH-1B' },
+  { _id: 'unrelated', name: 'GYPSY LOCS 14INCH', sku: 'GYPSY-LOCS-14INCH-1B' },
+];
+
+test('matchCatalogProducts("French 14") matches only the 14-inch variants -- not 18-inch, 24-inch, or an unrelated product, and not a color-code collision', () => {
+  const winners = matchCatalogProducts(tokenizeForProductMatch('French 14'), FRENCH_CURL_FIXTURE);
+  assert.deepEqual(winners.map((product) => product._id).sort(), ['14a', '14b']);
+});
+
+test('matchCatalogProducts finds a product by its exact SKU', () => {
+  const winners = matchCatalogProducts(tokenizeForProductMatch('FRENCH-CURL-18INCH-1B'), FRENCH_CURL_FIXTURE);
+  assert.deepEqual(winners.map((product) => product._id), ['18a']);
+});
+
+test('matchCatalogProducts returns nothing for a query unrelated to the catalog', () => {
+  assert.deepEqual(matchCatalogProducts(tokenizeForProductMatch('xyz nonexistent widget'), FRENCH_CURL_FIXTURE), []);
+});
+
+test('parseNairobiDayStart resolves a YYYY-MM-DD date to Nairobi midnight expressed in UTC (Nairobi is UTC+3), not UTC midnight', () => {
+  assert.equal(parseNairobiDayStart('2026-08-17').toISOString(), '2026-08-16T21:00:00.000Z');
+});
+
+test('parseNairobiDayStart returns null for invalid, empty, or missing input rather than throwing', () => {
+  assert.equal(parseNairobiDayStart(''), null);
+  assert.equal(parseNairobiDayStart(undefined), null);
+  assert.equal(parseNairobiDayStart('not-a-date'), null);
+});
+
+test('Nairobi day-boundary fix: a 10am-Nairobi sale on the last day of a range is included, where the old naive UTC-midnight boundary would have wrongly excluded it', () => {
+  const saleAt = new Date('2026-08-31T07:00:00.000Z'); // 10:00 Nairobi time on Aug 31
+  const nairobiDayStart = parseNairobiDayStart('2026-08-31');
+  const nairobiNextDayStart = parseNairobiDayStart('2026-09-01');
+  assert.ok(saleAt >= nairobiDayStart && saleAt < nairobiNextDayStart, 'Nairobi-aware boundaries should include this sale in the Aug 31 range');
+
+  const naiveUtcMidnight = new Date('2026-08-31'); // what the retired `new Date(endDate)` used as its $lte boundary
+  assert.ok(!(saleAt <= naiveUtcMidnight), 'demonstrates the old naive boundary would have wrongly excluded this same sale');
 });
 
 test('write tools expose the expected names, including the 3 new ones', () => {

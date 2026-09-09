@@ -1,29 +1,12 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {
-  buildOperationsBrief,
-  extractProductLookupTokens,
-  parseQuestionStartDate,
-} from './adminAi.controller.js';
+import { buildOperationsBrief } from './adminAi.controller.js';
 
-test('extractProductLookupTokens preserves a requested product and removes question wording', () => {
-  assert.deepEqual(
-    extractProductLookupTokens('FRENCH CURL 14INCH since September 14 chech for me how many sale we have made'),
-    ['french', 'curl', '14inch'],
-  );
-});
-
-test('parseQuestionStartDate uses the most recent past September 14 when no year is provided', () => {
-  const start = parseQuestionStartDate(
-    'FRENCH CURL 14INCH since September 14',
-    new Date('2026-09-09T08:00:00.000Z'),
-  );
-  assert.equal(start?.toISOString(), '2025-09-13T21:00:00.000Z');
-});
-
-test('parseQuestionStartDate rejects an invalid calendar date', () => {
-  assert.equal(parseQuestionStartDate('sales since February 31, 2026'), null);
-});
+// Product-sales-history lookup (formerly a regex pre-gate here, tested above
+// this comment in earlier versions of this file) is now the
+// query_product_sales_history tool in server/utils/adminAiTools.js, called by
+// the model itself rather than pre-parsed from the raw question -- see
+// server/utils/adminAiTools.test.js for its coverage.
 
 test('buildOperationsBrief groups actionable stock and order risks without taking action', () => {
   const brief = buildOperationsBrief({

@@ -16,7 +16,11 @@ import UserModel from '../models/user.model.js';
 // Kept local (not imported from adminAi.controller.js) to avoid a circular
 // module dependency -- that controller imports the tool system from here.
 const asMoney = (value) => Math.round(Number(value || 0));
+const asCount = (value) => Number(value || 0);
 const formatKes = (value) => `KES ${new Intl.NumberFormat('en-KE').format(asMoney(value))}`;
+const dateLabel = (date) => new Intl.DateTimeFormat('en-KE', {
+  timeZone: 'Africa/Nairobi', dateStyle: 'medium', timeStyle: 'short',
+}).format(new Date(date));
 
 // ── This module is the entire surface the AI copilot can touch on the store's
 // database. Every capability here is a named, capped tool -- never a raw
@@ -36,6 +40,77 @@ const dateRangeFilter = (field, { startDate, endDate } = {}) => {
   if (startDate) range.$gte = new Date(startDate);
   if (endDate) range.$lte = new Date(endDate);
   return Object.keys(range).length ? { [field]: range } : {};
+};
+
+// Nairobi-local day boundaries (Nairobi is UTC+3) -- a plain `new
+// Date('2026-08-31')` resolves to UTC midnight, i.e. 03:00 Nairobi time,
+// silently dropping most of that Nairobi-local day from range queries.
+// Mirrors the Nairobi-aware math the rest of this codebase's date handling
+// already uses (see getPeriod/nairobiDayStart in adminAi.controller.js).
+// Invalid/unparseable input resolves to null rather than throwing, so a bad
+// date degrades to "no date filter" instead of failing the whole lookup.
+// Exported (pure, no I/O) so this boundary math is unit-tested directly.
+const NAIROBI_OFFSET_MS = 3 * 60 * 60 * 1000;
+export const parseNairobiDayStart = (value) => {
+  const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(value || '').trim());
+  if (!match) return null;
+  const [, year, month, day] = match;
+  const result = new Date(Date.UTC(Number(year), Number(month) - 1, Number(day)) - NAIROBI_OFFSET_MS);
+  return Number.isNaN(result.getTime()) ? null : result;
+};
+
+// A digit run immediately followed by a 2+ letter run is split before
+// tokenizing (e.g. "14INCH" -> "14" + "inch") because this catalog writes
+// sizes both glued ("14INCH", "18INCH") and spaced ("24 INCH") -- without
+// the split, "14" never appears as its own token against a glued size, so a
+// query like "French 14" can't distinguish the 14-inch item from
+// 18-inch/24-inch ones. The 2+ letter threshold (a real unit word, not a
+// single letter) deliberately leaves short digit+letter colour codes like
+// "1B" glued as one token -- splitting those too (an earlier version of
+// this fix did, symmetrically, for both digit->letter and letter->digit)
+// destroys them into single characters that get filtered out entirely,
+// making an exact-SKU search unable to tell colour variants apart. There is
+// no letter->digit split for the same reason: letter-prefixed colour codes
+// like "B6"/"C10"/"T33" must stay intact. Exported (pure) so the tokenizer
+// and matcher below are unit-tested directly.
+export const tokenizeForProductMatch = (value) => String(value || '')
+  .replace(/(\d)([a-z]{2,})/gi, '$1 $2')
+  .toLowerCase()
+  .replace(/[^a-z0-9]+/g, ' ')
+  .split(' ')
+  .map((token) => token.trim())
+  .filter((token) => token.length > 1);
+
+const isNumericToken = (token) => /^\d+$/.test(token);
+
+// Token-overlap match against name+SKU. `queryTokens` must already be
+// tokenizeForProductMatch(query) output; `catalog` is a plain array of
+// {name, sku, ...} (a lean() Product query result, or plain test fixtures).
+// A purely numeric query token (a size, e.g. "14") is only matched against
+// the product NAME, never the SKU: SKU color-code suffixes routinely contain
+// unrelated numbers after the same digit/letter split (e.g. SKU "...-C14"
+// -> tokens "c","14"), which would otherwise tie an 18-inch or 24-inch
+// item's color-code "14" against a size query for "14" and blend three
+// different sizes' totals into one silently-wrong answer -- reproduced and
+// confirmed against the real 520-item catalog (products_seed.json) before
+// landing this fix; see server/utils/adminAiTools.test.js for the locked-in
+// regression case.
+export const matchCatalogProducts = (queryTokens, catalog) => {
+  if (!queryTokens.length) return [];
+  const candidates = catalog
+    .map((product) => {
+      const nameWords = new Set(tokenizeForProductMatch(product.name));
+      const allWords = new Set(tokenizeForProductMatch(`${product.name} ${product.sku}`));
+      const matchedTokens = queryTokens.filter((token) => (isNumericToken(token) ? nameWords : allWords).has(token));
+      return { product, matchedTokens, score: matchedTokens.length / queryTokens.length };
+    })
+    .filter(({ matchedTokens, score }) => matchedTokens.length >= 1 && score >= 0.5)
+    .sort((left, right) => right.score - left.score || String(left.product.name).localeCompare(String(right.product.name)));
+  if (!candidates.length) return [];
+  const strongestScore = candidates[0].score;
+  // Keep equally specific variants (for example B6, C10, C11), while not
+  // broadening a named product into loosely related items.
+  return candidates.filter(({ score }) => score === strongestScore).map(({ product }) => product);
 };
 
 const logAiAction = ({ action, target, before, after, reason }) =>
@@ -271,6 +346,140 @@ const READ_TOOLS = [
         .lean();
       console.log('[adminAi] query_sales', JSON.stringify({ filter, count: rows.length }));
       return { ok: true, summary: `Found ${rows.length} sale${rows.length === 1 ? '' : 's'}.`, data: rows };
+    },
+  },
+  {
+    name: 'query_product_sales_history',
+    description: 'Look up units sold, revenue, matching transaction count, and last-sold date for ONE specific named product, optionally restricted to a date range. This is the preferred, authoritative source whenever the owner asks how many of a specific product have sold, its sales history, or when it last sold -- prefer it over estimating from query_sales. It does its own fuzzy matching against the catalogue, so pass the owner\'s wording for the product unmodified rather than guessing the exact catalogue name.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        productQuery: { type: 'string', description: "The product name/SKU/description in the owner's own words, e.g. 'French 14' or 'BW-18'. Do not pre-clean it or guess the exact catalogue name -- this tool does its own matching." },
+        startDate: { type: 'string', description: "ISO date YYYY-MM-DD, e.g. '2026-08-17'. Resolve relative or day-first phrasing yourself (e.g. 'since 17 Aug', 'last week') using the operations snapshot's generatedAt as today; omit for all-time figures." },
+        endDate: { type: 'string', description: "ISO date YYYY-MM-DD, e.g. '2026-09-09'. Omit for up to now." },
+      },
+      required: ['productQuery'],
+    },
+    handler: async ({ productQuery, startDate, endDate } = {}) => {
+      const query = String(productQuery || '').trim();
+      if (!query) {
+        return { ok: false, summary: 'query_product_sales_history rejected: provide a productQuery.' };
+      }
+
+      const resolvedStartDate = parseNairobiDayStart(startDate);
+      const endDateDayAfter = parseNairobiDayStart(endDate);
+      const resolvedEndDateExclusive = endDateDayAfter ? new Date(endDateDayAfter.getTime() + 24 * 60 * 60 * 1000) : null;
+      const resolvedEndDateDisplay = resolvedEndDateExclusive ? new Date(resolvedEndDateExclusive.getTime() - 1) : null;
+
+      const tokens = tokenizeForProductMatch(query);
+      let products = [];
+      if (tokens.length) {
+        const catalog = await ProductModel.find({}).select('name sku').lean();
+        products = matchCatalogProducts(tokens, catalog);
+      }
+
+      const baseData = {
+        matched: false,
+        productQuery: query,
+        resolvedStartDate: resolvedStartDate ? resolvedStartDate.toISOString() : null,
+        resolvedEndDate: resolvedEndDateDisplay ? resolvedEndDateDisplay.toISOString() : null,
+        variants: [],
+        totals: { units: 0, revenue: 0, transactions: 0 },
+        latestSale: null,
+      };
+
+      if (!products.length) {
+        console.log('[adminAi] query_product_sales_history', JSON.stringify({ productQuery: query, matched: false }));
+        return { ok: true, summary: `No catalogue item matched "${query}".`, data: baseData };
+      }
+
+      const productIds = products.map((product) => product._id);
+      const saleDateFilter = {};
+      if (resolvedStartDate) saleDateFilter.$gte = resolvedStartDate;
+      if (resolvedEndDateExclusive) saleDateFilter.$lt = resolvedEndDateExclusive;
+      const saleFilter = {
+        isVoided: { $ne: true },
+        'items.product': { $in: productIds },
+        ...(Object.keys(saleDateFilter).length ? { saleDate: saleDateFilter } : {}),
+      };
+      // saleFilter matches at the Sale-document level (before $unwind), so
+      // each matching receipt is counted exactly once here even if it
+      // contains two or more of the tied matched variants (e.g. two colors
+      // of the same 14-inch item in one sale) -- summing each variant's own
+      // transactionCount instead would double-count that receipt.
+      const distinctTransactionCount = await Sale.countDocuments(saleFilter);
+      const rows = await Sale.aggregate([
+        { $match: saleFilter },
+        { $unwind: '$items' },
+        { $match: { 'items.product': { $in: productIds } } },
+        { $sort: { saleDate: -1 } },
+        {
+          $group: {
+            _id: { product: '$items.product', sale: '$_id' },
+            name: { $first: '$items.name' },
+            sku: { $first: '$items.sku' },
+            quantity: { $sum: '$items.quantity' },
+            revenue: { $sum: '$items.total' },
+            saleDate: { $first: '$saleDate' },
+            saleNumber: { $first: '$saleNumber' },
+          },
+        },
+        { $sort: { saleDate: -1 } },
+        {
+          $group: {
+            _id: '$_id.product',
+            name: { $first: '$name' },
+            sku: { $first: '$sku' },
+            quantity: { $sum: '$quantity' },
+            revenue: { $sum: '$revenue' },
+            transactionCount: { $sum: 1 },
+            lastSoldAt: { $first: '$saleDate' },
+            lastSaleNumber: { $first: '$saleNumber' },
+          },
+        },
+      ]);
+
+      const byProductId = new Map(rows.map((row) => [String(row._id), row]));
+      const variants = products.map((product) => {
+        const row = byProductId.get(String(product._id));
+        return {
+          id: String(product._id),
+          name: row?.name || product.name,
+          sku: row?.sku || product.sku || '',
+          quantity: asCount(row?.quantity),
+          revenue: asMoney(row?.revenue),
+          transactionCount: asCount(row?.transactionCount),
+          lastSoldAt: row?.lastSoldAt || null,
+          lastSaleNumber: row?.lastSaleNumber || '',
+        };
+      });
+      const totals = variants.reduce((acc, variant) => ({
+        units: acc.units + variant.quantity,
+        revenue: acc.revenue + variant.revenue,
+      }), { units: 0, revenue: 0 });
+      totals.transactions = asCount(distinctTransactionCount);
+      const latestSale = variants
+        .filter((variant) => variant.lastSoldAt)
+        .sort((left, right) => new Date(right.lastSoldAt) - new Date(left.lastSoldAt))[0] || null;
+
+      const periodLabel = resolvedStartDate || resolvedEndDateDisplay
+        ? `between ${resolvedStartDate ? dateLabel(resolvedStartDate) : 'the start of records'} and ${resolvedEndDateDisplay ? dateLabel(resolvedEndDateDisplay) : 'now'}`
+        : 'across all recorded sales';
+      const variantNames = variants.map((variant) => (variant.sku ? `${variant.name} (${variant.sku})` : variant.name)).join(', ');
+      const summary = `Matched "${query}" to ${variants.length} catalogue item${variants.length === 1 ? '' : 's'} (${variantNames}): ${totals.units} units, ${formatKes(totals.revenue)} revenue, ${totals.transactions} matching transaction${totals.transactions === 1 ? '' : 's'} ${periodLabel}${latestSale ? `; latest sale ${dateLabel(latestSale.lastSoldAt)}${latestSale.lastSaleNumber ? ` (receipt ${latestSale.lastSaleNumber})` : ''}` : '; no matching sales in this period'}.`;
+
+      console.log('[adminAi] query_product_sales_history', JSON.stringify({ productQuery: query, matched: true, productCount: products.length, units: totals.units }));
+      return {
+        ok: true,
+        summary,
+        data: {
+          ...baseData,
+          matched: true,
+          variants,
+          totals: { units: totals.units, revenue: asMoney(totals.revenue), transactions: totals.transactions },
+          latestSale,
+        },
+      };
     },
   },
   {
