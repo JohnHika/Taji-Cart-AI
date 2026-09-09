@@ -12,6 +12,18 @@ const OPEN_ORDER_STATUSES = ['pending', 'processing', 'ready_for_pickup', ...ACT
 const QWEN_REGION_HOSTS = { singapore: 'ap-southeast-1', beijing: 'cn-beijing', hongkong: 'cn-hongkong', tokyo: 'ap-northeast-1', frankfurt: 'eu-central-1' };
 const ALL_SOURCES = ['counter', 'online', 'inventory', 'delivery'];
 const RANGE_DAYS = { today: 1, '7d': 7, '30d': 30, '90d': 90 };
+const MONTH_INDEX = {
+  jan: 0, january: 0, feb: 1, february: 1, mar: 2, march: 2, apr: 3, april: 3,
+  may: 4, jun: 5, june: 5, jul: 6, july: 6, aug: 7, august: 7,
+  sep: 8, sept: 8, september: 8, oct: 9, october: 9, nov: 10, november: 10,
+  dec: 11, december: 11,
+};
+const PRODUCT_LOOKUP_STOP_WORDS = new Set([
+  'a', 'an', 'and', 'are', 'batch', 'check', 'chech', 'did', 'do', 'for', 'from', 'have',
+  'history', 'how', 'in', 'last', 'made', 'many', 'me', 'of', 'on', 'please', 'sale', 'sales',
+  'since', 'sold', 'the', 'to', 'total', 'was', 'we', 'when', 'with', 'what', 'which', 'you',
+  ...Object.keys(MONTH_INDEX),
+]);
 
 const asMoney = (value) => Math.round(Number(value || 0));
 const asCount = (value) => Number(value || 0);
@@ -31,6 +43,55 @@ const nairobiDayStart = (date = new Date()) => {
   const getPart = (type) => Number(parts.find((part) => part.type === type)?.value || 0);
   return new Date(Date.UTC(getPart('year'), getPart('month') - 1, getPart('day')) - (3 * 60 * 60 * 1000));
 };
+
+const nairobiDateParts = (date = new Date()) => {
+  const parts = new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'Africa/Nairobi', year: 'numeric', month: '2-digit', day: '2-digit',
+  }).formatToParts(date);
+  const getPart = (type) => Number(parts.find((part) => part.type === type)?.value || 0);
+  return { year: getPart('year'), month: getPart('month'), day: getPart('day') };
+};
+
+const nairobiCalendarDate = (year, monthIndex, day) => new Date(Date.UTC(year, monthIndex, day) - (3 * 60 * 60 * 1000));
+
+// Supports owner wording such as "since September 14". If no year is stated,
+// use the most recent occurrence rather than accidentally querying a future date.
+export const parseQuestionStartDate = (question, now = new Date()) => {
+  const match = String(question || '').match(/\b(?:since|from)\s+([a-z]+)\s+(\d{1,2})(?:st|nd|rd|th)?(?:,?\s+(\d{4}))?/i);
+  if (!match) return null;
+  const monthIndex = MONTH_INDEX[match[1].toLowerCase()];
+  const day = Number(match[2]);
+  if (monthIndex === undefined || day < 1 || day > 31) return null;
+
+  const today = nairobiDateParts(now);
+  let year = match[3] ? Number(match[3]) : today.year;
+  let result = nairobiCalendarDate(year, monthIndex, day);
+  if (!match[3] && result > now) {
+    year -= 1;
+    result = nairobiCalendarDate(year, monthIndex, day);
+  }
+  const actual = nairobiDateParts(result);
+  return Number.isNaN(result.getTime()) || actual.year !== year || actual.month !== monthIndex + 1 || actual.day !== day
+    ? null
+    : result;
+};
+
+export const extractProductLookupTokens = (question) => String(question || '')
+  .toLowerCase()
+  .replace(/\b(?:since|from)\s+[a-z]+\s+\d{1,2}(?:st|nd|rd|th)?(?:,?\s+\d{4})?/g, ' ')
+  .replace(/[^a-z0-9]+/g, ' ')
+  .split(' ')
+  .map((token) => token.trim())
+  .filter((token) => token.length > 1 && !PRODUCT_LOOKUP_STOP_WORDS.has(token));
+
+const asksForProductSalesHistory = (question) => (
+  /\b(sale|sales|sold|revenue|last\s+(?:sale|batch)|sales\s+history)\b/i.test(String(question || '')) &&
+  extractProductLookupTokens(question).length >= 2
+);
+
+const dateLabel = (date) => new Intl.DateTimeFormat('en-KE', {
+  timeZone: 'Africa/Nairobi', dateStyle: 'medium', timeStyle: 'short',
+}).format(new Date(date));
 
 const getPeriod = (requestedRange) => {
   const range = normalizeRange(requestedRange);
@@ -99,6 +160,137 @@ const periodCounterTopProducts = (start, end) => Sale.aggregate([
   { $sort: { quantity: -1, revenue: -1 } },
   { $limit: 5 },
 ]);
+
+const normalizeProductText = (value) => String(value || '')
+  .toLowerCase()
+  .replace(/[^a-z0-9]+/g, ' ')
+  .trim();
+
+const formatKes = (value) => `KES ${new Intl.NumberFormat('en-KE').format(asMoney(value))}`;
+
+const findProductsForSalesQuestion = async (question) => {
+  if (!asksForProductSalesHistory(question)) return null;
+
+  const tokens = extractProductLookupTokens(question);
+  const catalog = await ProductModel.find({}).select('name sku').lean();
+  const candidates = catalog
+    .map((product) => {
+      const words = new Set(normalizeProductText(`${product.name} ${product.sku}`).split(' ').filter(Boolean));
+      const matchedTokens = tokens.filter((token) => words.has(token));
+      return { product, matchedTokens, score: matchedTokens.length / tokens.length };
+    })
+    .filter(({ matchedTokens, score }) => matchedTokens.length >= 2 && score >= 0.67)
+    .sort((left, right) => right.score - left.score || String(left.product.name).localeCompare(String(right.product.name)));
+
+  if (!candidates.length) return { tokens, products: [] };
+  const strongestScore = candidates[0].score;
+  return {
+    tokens,
+    // Keep equally specific variants (for example B6, C10, C11), while not
+    // broadening a named product into loosely related catalogue entries.
+    products: candidates
+      .filter(({ score }) => score === strongestScore)
+      .map(({ product }) => product),
+  };
+};
+
+const lookupProductSalesHistory = async (question) => {
+  const productMatch = await findProductsForSalesQuestion(question);
+  if (!productMatch) return null;
+
+  const startDate = parseQuestionStartDate(question);
+  const products = productMatch.products;
+  if (!products.length) return { tokens: productMatch.tokens, products: [], startDate, variants: [] };
+
+  const productIds = products.map((product) => product._id);
+  const saleFilter = {
+    isVoided: { $ne: true },
+    'items.product': { $in: productIds },
+    ...(startDate ? { saleDate: { $gte: startDate } } : {}),
+  };
+  const rows = await Sale.aggregate([
+    { $match: saleFilter },
+    { $unwind: '$items' },
+    { $match: { 'items.product': { $in: productIds } } },
+    { $sort: { saleDate: -1 } },
+    {
+      $group: {
+        _id: { product: '$items.product', sale: '$_id' },
+        name: { $first: '$items.name' },
+        sku: { $first: '$items.sku' },
+        quantity: { $sum: '$items.quantity' },
+        revenue: { $sum: '$items.total' },
+        saleDate: { $first: '$saleDate' },
+        saleNumber: { $first: '$saleNumber' },
+      },
+    },
+    { $sort: { saleDate: -1 } },
+    {
+      $group: {
+        _id: '$_id.product',
+        name: { $first: '$name' },
+        sku: { $first: '$sku' },
+        quantity: { $sum: '$quantity' },
+        revenue: { $sum: '$revenue' },
+        transactionCount: { $sum: 1 },
+        lastSoldAt: { $first: '$saleDate' },
+        lastSaleNumber: { $first: '$saleNumber' },
+      },
+    },
+  ]);
+  const byProductId = new Map(rows.map((row) => [String(row._id), row]));
+  const variants = products.map((product) => {
+    const row = byProductId.get(String(product._id));
+    return {
+      id: String(product._id),
+      name: row?.name || product.name,
+      sku: row?.sku || product.sku || '',
+      quantity: asCount(row?.quantity),
+      revenue: asMoney(row?.revenue),
+      transactionCount: asCount(row?.transactionCount),
+      lastSoldAt: row?.lastSoldAt || null,
+      lastSaleNumber: row?.lastSaleNumber || '',
+    };
+  });
+  const latestSale = variants
+    .filter((variant) => variant.lastSoldAt)
+    .sort((left, right) => new Date(right.lastSoldAt) - new Date(left.lastSoldAt))[0] || null;
+
+  return { tokens: productMatch.tokens, products, startDate, variants, latestSale };
+};
+
+const formatProductSalesHistoryAnswer = (history) => {
+  const requestedProduct = history.tokens.join(' ').toUpperCase();
+  const period = history.startDate ? `since ${dateLabel(history.startDate)}` : 'across all recorded sales';
+  if (!history.products.length) {
+    return `I could not match **${requestedProduct || 'that product'}** to a catalogue item. Try the product name or SKU exactly as it appears in Catalog.`;
+  }
+
+  const units = history.variants.reduce((total, variant) => total + variant.quantity, 0);
+  const revenue = history.variants.reduce((total, variant) => total + variant.revenue, 0);
+  const transactions = history.variants.reduce((total, variant) => total + variant.transactionCount, 0);
+  const lines = [
+    `**${requestedProduct} — sales history**`,
+    '',
+    `For non-voided sales ${period}:`,
+    `- **${units} units** sold`,
+    `- **${formatKes(revenue)}** in product-line revenue`,
+    `- **${transactions} matching sale transaction${transactions === 1 ? '' : 's'}**`,
+  ];
+
+  if (history.latestSale) {
+    lines.push(`- **Latest matching sale:** ${dateLabel(history.latestSale.lastSoldAt)}${history.latestSale.lastSaleNumber ? ` · receipt ${history.latestSale.lastSaleNumber}` : ''}`);
+  } else {
+    lines.push('- **Latest matching sale:** none in this period');
+  }
+
+  lines.push('', '**By variant**');
+  for (const variant of history.variants) {
+    lines.push(`- ${variant.name}${variant.sku ? ` (${variant.sku})` : ''}: ${variant.quantity} units · ${formatKes(variant.revenue)}${variant.lastSoldAt ? ` · last sold ${dateLabel(variant.lastSoldAt)}` : ''}`);
+  }
+  lines.push('', '_Sales records do not store inventory batch identifiers, so “last batch sold” is reported as the latest matching sale transaction._');
+  return lines.join('\n');
+};
 
 const summarizeOrders = (orders) => ({
   revenue: orders.reduce((total, order) => total + asMoney(order.total), 0),
@@ -539,7 +731,18 @@ const MAX_TOOL_ITERATIONS = 4;
 // human explicitly triggered this turn. Offers autonomous tools when
 // ADMIN_AI_AUTONOMOUS_WRITES=true and the provider is our own OpenAI
 // integration; otherwise behaves exactly like createAiNarrative.
-const answerAdminQuestion = async (brief, { question, webSearch = false, history = [] } = {}) => {
+const answerAdminQuestion = async (brief, { question, webSearch = false, history = [], productSalesHistory = null } = {}) => {
+  // Product-history answers must come from the source records, not a compact
+  // operations snapshot that may omit the requested product or period.
+  if (productSalesHistory) {
+    return {
+      available: true,
+      provider: 'database',
+      webSearch: false,
+      text: formatProductSalesHistoryAnswer(productSalesHistory),
+      actions: [],
+    };
+  }
   if (process.env.ADMIN_AI_ENABLED !== 'true') {
     return { available: false, reason: 'Set ADMIN_AI_ENABLED=true to enable the AI narrative.' };
   }
@@ -663,8 +866,16 @@ export const askAdminAi = async (request, response) => {
   }
   const history = Array.isArray(request.body?.history) ? request.body.history : [];
   try {
-    const brief = await loadOperationsSnapshot({ range: request.body?.range, sources: request.body?.sources });
-    const answer = await answerAdminQuestion(brief, { question, webSearch: request.body?.webSearch === true, history });
+    const [brief, productSalesHistory] = await Promise.all([
+      loadOperationsSnapshot({ range: request.body?.range, sources: request.body?.sources }),
+      lookupProductSalesHistory(question),
+    ]);
+    const answer = await answerAdminQuestion(brief, {
+      question,
+      webSearch: request.body?.webSearch === true,
+      history,
+      productSalesHistory,
+    });
     return response.json({ success: true, data: { brief, answer } });
   } catch (error) {
     console.error('Failed to answer admin AI question:', error);
