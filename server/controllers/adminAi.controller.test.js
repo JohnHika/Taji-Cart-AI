@@ -5,11 +5,6 @@ import {
   extractProductLookupTokens,
   parseQuestionStartDate,
 } from './adminAi.controller.js';
-import {
-  isStockDeltaWithinCap,
-  isPriceChangeWithinCap,
-  isOrderStatusTransitionAllowed,
-} from '../utils/adminAiTools.js';
 
 test('extractProductLookupTokens preserves a requested product and removes question wording', () => {
   assert.deepEqual(
@@ -83,30 +78,6 @@ test('buildOperationsBrief excludes unselected sources from totals and output', 
   assert.equal(brief.metrics.openOrderCount, 0);
 });
 
-test('isStockDeltaWithinCap allows deltas up to +/-25 and rejects beyond that', () => {
-  assert.equal(isStockDeltaWithinCap(25), true);
-  assert.equal(isStockDeltaWithinCap(-25), true);
-  assert.equal(isStockDeltaWithinCap(1), true);
-  assert.equal(isStockDeltaWithinCap(26), false);
-  assert.equal(isStockDeltaWithinCap(-26), false);
-  assert.equal(isStockDeltaWithinCap(0), false);
-  assert.equal(isStockDeltaWithinCap(NaN), false);
-});
-
-test('isPriceChangeWithinCap allows moves up to 15% and rejects beyond that', () => {
-  assert.equal(isPriceChangeWithinCap(1000, 1150), true);
-  assert.equal(isPriceChangeWithinCap(1000, 850), true);
-  assert.equal(isPriceChangeWithinCap(1000, 1151), false);
-  assert.equal(isPriceChangeWithinCap(1000, 849), false);
-  assert.equal(isPriceChangeWithinCap(1000, -5), false);
-  assert.equal(isPriceChangeWithinCap(1000, 0), false);
-});
-
-test('isOrderStatusTransitionAllowed rejects cancellations, delivery states, and payment-adjacent moves', () => {
-  assert.equal(isOrderStatusTransitionAllowed('pending', 'processing'), true);
-  assert.equal(isOrderStatusTransitionAllowed('processing', 'ready_for_pickup'), true);
-  assert.equal(isOrderStatusTransitionAllowed('processing', 'cancelled'), false);
-  assert.equal(isOrderStatusTransitionAllowed('delivered', 'processing'), false);
-  assert.equal(isOrderStatusTransitionAllowed('out_for_delivery', 'delivered'), false);
-  assert.equal(isOrderStatusTransitionAllowed('dispatched', 'ready_for_pickup'), false);
-});
+// Write-tool cap predicates (isStockDeltaWithinCap etc.) now live in and are
+// tested by server/utils/adminAiTools.test.js, alongside the rest of the
+// tool system -- not duplicated here.
