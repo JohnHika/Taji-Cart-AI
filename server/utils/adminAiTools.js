@@ -275,19 +275,20 @@ const READ_TOOLS = [
   },
   {
     name: 'query_customer',
-    description: 'Look up ONE customer by an exact email, userId, or mobile number you already have -- never a name-only or open-ended search. Returns contact info, order count, and loyalty summary. Cannot be used to list or browse customers.',
+    description: 'Look up a customer by an exact email, userId, or mobile number, or by a partial name you already have from the conversation -- never an unprompted, open-ended browse. Returns up to 5 matches with contact info, order count, and loyalty summary. Cannot be used to dump or enumerate the customer list.',
     input_schema: {
       type: 'object',
       properties: {
         email: { type: 'string' },
         userId: { type: 'string' },
         mobile: { type: 'string' },
+        name: { type: 'string', description: 'Partial, case-insensitive name match. Use only when you already have a name to search for, not to browse.' },
       },
       required: [],
     },
-    handler: async ({ email, userId, mobile } = {}) => {
-      if (!email && !userId && !mobile) {
-        return { ok: false, summary: 'query_customer rejected: provide an exact email, userId, or mobile number.' };
+    handler: async ({ email, userId, mobile, name } = {}) => {
+      if (!email && !userId && !mobile && !name) {
+        return { ok: false, summary: 'query_customer rejected: provide an exact email, userId, mobile number, or a name to search for.' };
       }
       let filter;
       if (userId) {
@@ -295,8 +296,10 @@ const READ_TOOLS = [
         filter = { _id: userId };
       } else if (email) {
         filter = { email: String(email).trim().toLowerCase() };
-      } else {
+      } else if (mobile) {
         filter = { mobile: String(mobile).trim() };
+      } else {
+        filter = { name: new RegExp(escapeRegExp(name), 'i') };
       }
       const users = await UserModel.find(filter).select('name email mobile status createdAt orderHistory').limit(5).lean();
       if (!users.length) return { ok: true, summary: 'No matching customer found.', data: [] };
@@ -316,7 +319,7 @@ const READ_TOOLS = [
           loyaltyPoints: card?.points ?? null,
         };
       });
-      console.log('[adminAi] query_customer', JSON.stringify({ hasEmail: Boolean(email), hasUserId: Boolean(userId), hasMobile: Boolean(mobile), count: data.length }));
+      console.log('[adminAi] query_customer', JSON.stringify({ hasEmail: Boolean(email), hasUserId: Boolean(userId), hasMobile: Boolean(mobile), hasName: Boolean(name), count: data.length }));
       return { ok: true, summary: `Found ${data.length} matching customer${data.length === 1 ? '' : 's'}.`, data };
     },
   },
@@ -350,9 +353,21 @@ const READ_TOOLS = [
 // Only ever offered when ADMIN_AI_AUTONOMOUS_WRITES=true. Every tool below
 // mutates exactly one document, is capped, and is written to AdminActionLog
 // (executed or rejected) with the model's stated reason.
-const AI_STOCK_DELTA_CAP = 25;
-const AI_PRICE_CHANGE_CAP_PCT = 0.15;
-const AI_LOYALTY_POINTS_DELTA_CAP = 500;
+//
+// Caps are a backstop against a single catastrophic call (a hallucinated
+// value, a bad prompt injection), not a target -- the system prompt tells the
+// model to reason about the right number for the situation, not default to
+// the ceiling. They're env-tunable (not a recompile) because what's
+// "reasonable" for a small hair-products retailer is a business call, not a
+// hardcoded one -- the numbers below are defaults sized for that business,
+// not conservative bank-grade limits.
+const positiveNumberEnv = (name, fallback) => {
+  const parsed = Number(process.env[name]);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+};
+const AI_STOCK_DELTA_CAP = positiveNumberEnv('ADMIN_AI_STOCK_CAP', 500);
+const AI_PRICE_CHANGE_CAP_PCT = positiveNumberEnv('ADMIN_AI_PRICE_CAP_PCT', 0.6);
+const AI_LOYALTY_POINTS_DELTA_CAP = positiveNumberEnv('ADMIN_AI_LOYALTY_POINTS_CAP', 5000);
 // Deliberately excludes 'cancelled', 'delivered', 'dispatched', 'driver_assigned',
 // 'out_for_delivery', 'nearby' and anything payment-adjacent: those carry real
 // side effects (stock restore, driver capacity, rider-call preconditions) or
