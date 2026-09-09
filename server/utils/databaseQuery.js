@@ -1,5 +1,6 @@
 import Category from '../models/category.model.js';
 import Product from '../models/product.model.js';
+import { getCustomerProductFilter } from '../controllers/catalogQuality.controller.js';
 
 // Import models with try/catch to handle missing models
 let Review, Promotion, Order;
@@ -30,7 +31,7 @@ try {
 export const getProducts = async (filters = {}, limit = 50) => {
   try {
     // Build query from filters
-    const query = {};
+    const query = await getCustomerProductFilter();
     
     // Add name search if provided
     if (filters.name) {
@@ -87,10 +88,11 @@ export const getProduct = async (identifier) => {
     
     if (typeof identifier === 'string') {
       // If it's a string, try to find by ID
-      product = await Product.findById(identifier).populate('category', 'name');
+      product = await Product.findOne({ _id: identifier, ...(await getCustomerProductFilter()) }).populate('category', 'name');
     } else if (typeof identifier === 'object' && identifier.name) {
       // If it's an object with name, search by name
-      product = await Product.findOne({ 
+      product = await Product.findOne({
+        ...(await getCustomerProductFilter()),
         name: { $regex: identifier.name, $options: 'i' } 
       }).populate('category', 'name');
     }
@@ -229,7 +231,7 @@ export const searchProducts = async (searchQuery, limit = 10) => {
     // Falls back to regex if text index not available or yields no results
     let products = [];
     try {
-      const textQuery = { $text: { $search: raw } };
+      const textQuery = { ...(await getCustomerProductFilter()), $text: { $search: raw } };
       products = await Product.find(textQuery)
         .populate('category', 'name')
         .limit(limit);
@@ -254,7 +256,7 @@ export const searchProducts = async (searchQuery, limit = 10) => {
         ]
       }));
 
-      const fallbackQuery = { $and: regexConds };
+      const fallbackQuery = { ...(await getCustomerProductFilter()), $and: regexConds };
 
       products = await Product.find(fallbackQuery)
         .populate('category', 'name')
@@ -290,8 +292,10 @@ export const getProductsByBudget = async (budget, categoryName = null, currency 
     }
     
     // Create query using the price (already in KES or converted to KES)
+    const customerProductFilter = await getCustomerProductFilter();
     const query = {
-      price: { $lte: maxPrice * 1.1 } // Allow 10% above budget for options
+      ...customerProductFilter,
+      price: { ...customerProductFilter.price, $lte: maxPrice * 1.1 } // Allow 10% above budget for options
     };
     
     // Add category filter if provided - more flexible matching using regex
@@ -399,7 +403,8 @@ export const getProductsByBudget = async (budget, categoryName = null, currency 
           console.log(`Category "${categoryCheck.name}" exists but no products found within budget ${currency} ${budget}`);
           
           // Check for any products in this category regardless of price
-          const anyProducts = await Product.find({ 
+          const anyProducts = await Product.find({
+            ...customerProductFilter,
             category: query.category 
           }).limit(1);
           
@@ -409,7 +414,8 @@ export const getProductsByBudget = async (budget, categoryName = null, currency 
             console.log(`Category "${categoryCheck.name}" has products, but none within budget`);
             
             // Get cheapest product in this category
-            const cheapestProduct = await Product.find({ 
+            const cheapestProduct = await Product.find({
+              ...customerProductFilter,
               category: query.category 
             })
             .sort({ price: 1 })

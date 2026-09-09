@@ -32,6 +32,7 @@ const initialValue = {
     isAdmin: false,
     isStaff: false,
     isDelivery: false,
+    staffPermissions: [],
     accountType: "",
     isAuthenticated: false,
 }
@@ -101,6 +102,7 @@ const userSlice  = createSlice({
             state.isAdmin = parseBooleanFlag(userData?.isAdmin)
             state.isStaff = parseBooleanFlag(userData?.isStaff)
             state.isDelivery = parseBooleanFlag(userData?.isDelivery)
+            state.staffPermissions = Array.isArray(userData?.staffPermissions) ? userData.staffPermissions : []
             state.accountType = userData?.accountType || ''
             state.isAuthenticated = true;
         },
@@ -128,6 +130,7 @@ const userSlice  = createSlice({
             state.isAdmin = false
             state.isStaff = false
             state.isDelivery = false
+            state.staffPermissions = []
             state.accountType = ""
             state.isAuthenticated = false;
         },
@@ -146,6 +149,7 @@ const userSlice  = createSlice({
             state.isAdmin = false;
             state.isStaff = false;
             state.isDelivery = false;
+            state.staffPermissions = [];
             state.accountType = '';
         },
     }

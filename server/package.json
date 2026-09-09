@@ -16,6 +16,8 @@
     "recommendation-train": "python ./recommendation/train_model.py",
     "recommendation-debug": "python -m recommendation.data_collector_debug",
     "seed:hair": "node seed/hairSeedData.js",
+    "seed:delivery-zones": "node seed/deliveryZoneSeedData.js",
+    "seed:sacco-operators": "node seed/saccoOperatorSeedData.js",
     "import:excel": "node seed/importFromExcel.js",
     "catalog:descriptions": "node scripts/generateHairDescriptions.js",
     "catalog:descriptions:dry": "node scripts/generateHairDescriptions.js --dry-run"
@@ -48,7 +50,7 @@
     "morgan": "^1.10.0",
     "multer": "^1.4.5-lts.1",
     "node-open-geocoder": "^4.0.1",
-    "nodemailer": "^8.0.4",
+    "nodemailer": "^9.0.6",
     "nodemon": "^3.1.4",
     "openai": "^4.58.1",
     "passport": "^0.7.0",

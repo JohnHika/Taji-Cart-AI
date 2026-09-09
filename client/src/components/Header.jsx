@@ -23,7 +23,7 @@ import UserMenu from './UserMenu';
 const navLinks = [
   { label: 'Shop', path: '/' },
   { label: 'Collections', path: '/collections' },
-  { label: 'Best Sellers', path: '/search?q=' },
+  { label: 'Best Sellers', path: '/#best-sellers' },
 ];
 
 const Header = () => {
@@ -43,8 +43,8 @@ const Header = () => {
   const redirectToLoginPage = () => navigate('/login');
 
   const isActive = (path) => {
-    if (path === '/search?q=') {
-      return location.pathname === '/search';
+    if (path === '/#best-sellers') {
+      return location.pathname === '/' && location.hash === '#best-sellers';
     }
     return location.pathname === path || location.pathname.startsWith(`${path}/`);
   };

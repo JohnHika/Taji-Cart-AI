@@ -36,8 +36,8 @@ const Pagination = ({ currentPage, totalPages, onPageChange }) => {
   }
   
   return (
-    <nav>
-      <ul className="flex">
+    <nav aria-label="Pagination" className="flex items-center justify-between gap-3 sm:block">
+      <ul className="hidden sm:flex">
         {/* Previous button */}
         <li>
           <button
@@ -88,6 +88,27 @@ const Pagination = ({ currentPage, totalPages, onPageChange }) => {
           </button>
         </li>
       </ul>
+      <div className="flex w-full items-center justify-between gap-3 sm:hidden">
+        <button
+          type="button"
+          onClick={() => onPageChange(currentPage - 1)}
+          disabled={currentPage === 1}
+          className="inline-flex min-h-10 items-center rounded-md border border-brown-200 bg-white px-4 py-2 text-sm font-medium text-charcoal transition-colors hover:bg-ivory disabled:cursor-not-allowed disabled:opacity-50 dark:border-dm-border dark:bg-dm-card-2 dark:text-white dark:hover:bg-dm-border"
+        >
+          Previous
+        </button>
+        <span className="text-sm font-medium text-charcoal dark:text-white/70">
+          Page {currentPage} of {totalPages}
+        </span>
+        <button
+          type="button"
+          onClick={() => onPageChange(currentPage + 1)}
+          disabled={currentPage === totalPages}
+          className="inline-flex min-h-10 items-center rounded-md border border-brown-200 bg-white px-4 py-2 text-sm font-medium text-charcoal transition-colors hover:bg-ivory disabled:cursor-not-allowed disabled:opacity-50 dark:border-dm-border dark:bg-dm-card-2 dark:text-white dark:hover:bg-dm-border"
+        >
+          Next
+        </button>
+      </div>
     </nav>
   );
 };

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { FaEdit, FaEye, FaFilter, FaPlus, FaSearch, FaSortAmountDown, FaSortAmountUp, FaTrash } from 'react-icons/fa';
 import { Link } from 'react-router-dom';
+import toast from 'react-hot-toast';
 import SummaryApi from '../common/SummaryApi';
 import ExportButton from '../components/ExportButton';
 import LoadingSpinner from '../components/LoadingSpinner';
@@ -9,7 +10,11 @@ import WatermarkedImage from '../components/WatermarkedImage';
 import Axios from '../utils/Axios';
 import AxiosToastError from '../utils/AxiosToastError';
 import { DisplayPriceInShillings } from '../utils/DisplayPriceInShillings';
+import { getAdminProductPage } from '../utils/adminProductPresentation';
 import { exportToExcel, exportToCSV, exportToPDF, exportToWord, exportToJSON } from '../utils/exportUtils';
+
+const PRODUCTS_PER_PAGE = 12;
+const PRODUCT_VIEW_PREFERENCE = 'adminProductViewMode';
 
 const normalizeSearchValue = (value = '') => String(value ?? '')
   .toLowerCase()
@@ -46,12 +51,12 @@ const DashboardProduct = () => {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
-  const [productsPerPage] = useState(10);
   const [sortBy, setSortBy] = useState('createdAt');
   const [sortOrder, setSortOrder] = useState('desc');
   const [filterCategory, setFilterCategory] = useState('');
   const [categories, setCategories] = useState([]);
   const [selectedProducts, setSelectedProducts] = useState([]);
+  const [exporting, setExporting] = useState(false);
   const [stats, setStats] = useState({
     total: 0,
     inStock: 0,
@@ -60,8 +65,12 @@ const DashboardProduct = () => {
     unpriced: 0
   });
   const [showUnpricedOnly, setShowUnpricedOnly] = useState(false);
+  const [stockFilter, setStockFilter] = useState('all'); // 'all' | 'inStock' | 'lowStock' | 'outOfStock'
   const [isMobileView, setIsMobileView] = useState(false);
-  const [viewMode, setViewMode] = useState('table'); // 'table' or 'grid'
+  const [viewMode, setViewMode] = useState('grid'); // 'table' or 'grid'
+  const [wholesaleStackDiscounts, setWholesaleStackDiscounts] = useState(false);
+  const [wholesaleSettingsLoading, setWholesaleSettingsLoading] = useState(false);
+  const [catalogAccessDenied, setCatalogAccessDenied] = useState(false);
   
   // Function to calculate price with discount
   const pricewithDiscount = (price, discount) => {
@@ -79,9 +88,10 @@ const DashboardProduct = () => {
       });
       
       if (response.data.success) {
+        setCatalogAccessDenied(false);
         const productData = response.data.data || [];
         setProducts(productData);
-        
+
         setStats({
           total: productData.length,
           inStock: productData.filter(p => p.stock > 10).length,
@@ -93,8 +103,12 @@ const DashboardProduct = () => {
         setProducts([]);
       }
     } catch (error) {
-      console.error("Error fetching products:", error);
-      AxiosToastError(error);
+      if (error?.response?.status === 403) {
+        setCatalogAccessDenied(true);
+      } else {
+        console.error("Error fetching products:", error);
+        AxiosToastError(error);
+      }
     } finally {
       setLoading(false);
     }
@@ -105,12 +119,42 @@ const DashboardProduct = () => {
       const response = await Axios({
         ...SummaryApi.getAllCategory
       });
-      
+
       if (response.data.success) {
         setCategories(response.data.data || []);
       }
     } catch (error) {
       console.error("Error fetching categories:", error);
+    }
+  };
+
+  const fetchWholesaleSettings = async () => {
+    try {
+      const response = await Axios(SummaryApi.getWholesalePricingSettings);
+      if (response.data.success) {
+        setWholesaleStackDiscounts(Boolean(response.data.data?.stackDiscounts));
+      }
+    } catch (error) {
+      console.error("Error fetching wholesale pricing settings:", error);
+    }
+  };
+
+  const handleToggleWholesaleStacking = async () => {
+    const nextValue = !wholesaleStackDiscounts;
+    try {
+      setWholesaleSettingsLoading(true);
+      const response = await Axios({
+        ...SummaryApi.updateWholesalePricingSettings,
+        data: { stackDiscounts: nextValue }
+      });
+      if (response.data.success) {
+        setWholesaleStackDiscounts(nextValue);
+        toast.success(response.data.message);
+      }
+    } catch (error) {
+      AxiosToastError(error);
+    } finally {
+      setWholesaleSettingsLoading(false);
     }
   };
 
@@ -120,14 +164,14 @@ const DashboardProduct = () => {
     };
     
     // Get the saved preference from localStorage, or use defaults
-    const savedViewMode = localStorage.getItem('preferredViewMode');
+    const savedViewMode = localStorage.getItem(PRODUCT_VIEW_PREFERENCE);
     if (savedViewMode) {
       setViewMode(savedViewMode);
     } else {
       // Only set a default on first load - don't override user preference
-      const defaultMode = window.innerWidth < 768 ? 'grid' : 'table';
+      const defaultMode = 'grid';
       setViewMode(defaultMode);
-      localStorage.setItem('preferredViewMode', defaultMode);
+      localStorage.setItem(PRODUCT_VIEW_PREFERENCE, defaultMode);
     }
     
     checkMobileView();
@@ -141,11 +185,12 @@ const DashboardProduct = () => {
   useEffect(() => {
     fetchProducts();
     fetchCategories();
+    fetchWholesaleSettings();
   }, []);
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm, filterCategory, showUnpricedOnly]);
+  }, [searchTerm, filterCategory, showUnpricedOnly, stockFilter]);
 
   const handleDeleteProduct = async (productId) => {
     if (!window.confirm("Are you sure you want to delete this product?")) {
@@ -213,7 +258,13 @@ const DashboardProduct = () => {
 
       const matchesUnpriced = !showUnpricedOnly || !product.price || Number(product.price) === 0;
 
-      return matchesSearch && matchesCategory && matchesUnpriced;
+      const matchesStock =
+        stockFilter === 'all' ||
+        (stockFilter === 'inStock' && product.stock > 10) ||
+        (stockFilter === 'lowStock' && product.stock > 0 && product.stock <= 10) ||
+        (stockFilter === 'outOfStock' && product.stock === 0);
+
+      return matchesSearch && matchesCategory && matchesUnpriced && matchesStock;
     })
     .sort((a, b) => {
       const getValue = (obj, path) => {
@@ -233,16 +284,24 @@ const DashboardProduct = () => {
       }
     });
 
-  const indexOfLastProduct = currentPage * productsPerPage;
-  const indexOfFirstProduct = indexOfLastProduct - productsPerPage;
-  const currentProducts = filteredProducts.slice(indexOfFirstProduct, indexOfLastProduct);
-  const totalPages = Math.max(1, Math.ceil(filteredProducts.length / productsPerPage));
+  const productPage = getAdminProductPage(filteredProducts, currentPage, PRODUCTS_PER_PAGE);
+  const {
+    currentPage: resolvedCurrentPage,
+    currentProducts,
+    totalItems,
+    totalPages,
+    startItem,
+    endItem,
+  } = {
+    ...productPage,
+    currentProducts: productPage.items,
+  };
 
   useEffect(() => {
-    if (currentPage > totalPages) {
-      setCurrentPage(totalPages);
+    if (currentPage !== resolvedCurrentPage) {
+      setCurrentPage(resolvedCurrentPage);
     }
-  }, [currentPage, totalPages]);
+  }, [currentPage, resolvedCurrentPage]);
 
   const handleSelectAll = () => {
     if (selectedProducts.length === currentProducts.length) {
@@ -263,28 +322,25 @@ const DashboardProduct = () => {
   const toggleViewMode = () => {
     const newMode = viewMode === 'table' ? 'grid' : 'table';
     setViewMode(newMode);
-    localStorage.setItem('preferredViewMode', newMode);
+    localStorage.setItem(PRODUCT_VIEW_PREFERENCE, newMode);
   };
 
-  const handleExport = (format) => {
-    const exportData = products.map(product => ({
-      name: product.name || '',
-      sku: product.sku || '',
-      price: product.price || 0,
-      stock: product.stock || 0,
-      unit: product.unit || '',
-      description: product.description || '',
-      category: product.category?.map(cat => cat?.name || '').join(', ') || '',
-      createdAt: product.createdAt ? new Date(product.createdAt).toLocaleString() : '',
-      updatedAt: product.updatedAt ? new Date(product.updatedAt).toLocaleString() : ''
-    }));
-    switch (format) {
-      case 'excel': exportToExcel(exportData, 'products'); break;
-      case 'csv':   exportToCSV(exportData, 'products'); break;
-      case 'pdf':   exportToPDF(exportData, 'products'); break;
-      case 'word':  exportToWord(exportData, 'products'); break;
-      case 'json':  exportToJSON(exportData, 'products'); break;
-      default: break;
+  const handleExport = async (format) => {
+    try {
+      setExporting(true);
+      switch (format) {
+        case 'excel': await exportToExcel(products, 'taji-cart-products'); break;
+        case 'csv':   exportToCSV(products, 'taji-cart-products'); break;
+        case 'pdf':   exportToPDF(products, 'taji-cart-products'); break;
+        case 'word':  exportToWord(products, 'taji-cart-products'); break;
+        case 'json':  exportToJSON(products, 'taji-cart-products'); break;
+        default: break;
+      }
+      toast.success(`Exported ${products.length} product${products.length === 1 ? '' : 's'} as ${format.toUpperCase()}`);
+    } catch (error) {
+      toast.error(error?.message || 'Export failed. Please try again.');
+    } finally {
+      setExporting(false);
     }
   };
 
@@ -296,13 +352,14 @@ const DashboardProduct = () => {
           {!isMobileView && (
             <button
               onClick={toggleViewMode}
+              aria-pressed={viewMode === 'grid'}
               className="bg-brown-100 dark:bg-dm-card-2 hover:bg-brown-100 dark:hover:bg-dm-card-2 text-charcoal dark:text-white px-3 py-2 rounded-md flex items-center transition-colors duration-200"
               title={viewMode === 'table' ? 'Switch to Grid View' : 'Switch to Table View'}
             >
               {viewMode === 'table' ? 'Grid View' : 'Table View'}
             </button>
           )}
-          <ExportButton data={products} onExport={handleExport} />
+          <ExportButton data={products} onExport={handleExport} exporting={exporting} />
           <Link 
             to="/dashboard/upload-product" 
             className="bg-plum-700 hover:bg-plum-600 text-white px-3 sm:px-4 py-2 rounded-md flex items-center transition-colors duration-200"
@@ -313,26 +370,77 @@ const DashboardProduct = () => {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-2 sm:gap-4 mb-4 sm:mb-6">
-        <div className="bg-white dark:bg-dm-card p-3 sm:p-4 rounded-lg shadow border-l-4 border-plum-600 dark:border-plum-400 transition-colors duration-200">
-          <p className="text-brown-400 dark:text-white/40 text-xs sm:text-sm">Total Products</p>
-          <p className="text-xl sm:text-2xl font-bold dark:text-white">{stats.total}</p>
-        </div>
-        <div className="bg-white dark:bg-dm-card p-3 sm:p-4 rounded-lg shadow border-l-4 border-green-500 dark:border-green-400 transition-colors duration-200">
-          <p className="text-brown-400 dark:text-white/40 text-xs sm:text-sm">In Stock</p>
-          <p className="text-xl sm:text-2xl font-bold dark:text-white">{stats.inStock}</p>
-        </div>
-        <div className="bg-white dark:bg-dm-card p-3 sm:p-4 rounded-lg shadow border-l-4 border-yellow-500 dark:border-yellow-400 transition-colors duration-200">
-          <p className="text-brown-400 dark:text-white/40 text-xs sm:text-sm">Low Stock</p>
-          <p className="text-xl sm:text-2xl font-bold dark:text-white">{stats.lowStock}</p>
-        </div>
-        <div className="bg-white dark:bg-dm-card p-3 sm:p-4 rounded-lg shadow border-l-4 border-red-500 dark:border-red-400 transition-colors duration-200">
-          <p className="text-brown-400 dark:text-white/40 text-xs sm:text-sm">Out of Stock</p>
-          <p className="text-xl sm:text-2xl font-bold dark:text-white">{stats.outOfStock}</p>
+      <div className="mb-4 sm:mb-6 flex items-center justify-between gap-4 rounded-lg border border-gold-200 dark:border-gold-600/30 bg-gold-50/60 dark:bg-gold-600/10 p-3 sm:p-4">
+        <div>
+          <p className="text-sm font-semibold text-charcoal dark:text-white">Wholesale pricing</p>
+          <p className="text-xs text-brown-500 dark:text-white/50 mt-0.5">
+            Orders totaling more than 50 items auto-apply each product's wholesale price (Edit Product). Stack product/Royal discounts on top of it?
+          </p>
         </div>
         <button
           type="button"
-          onClick={() => setShowUnpricedOnly(prev => !prev)}
+          onClick={handleToggleWholesaleStacking}
+          disabled={wholesaleSettingsLoading}
+          aria-pressed={wholesaleStackDiscounts}
+          className={`shrink-0 relative inline-flex h-7 w-12 items-center rounded-full transition-colors disabled:opacity-60 ${
+            wholesaleStackDiscounts ? 'bg-plum-600' : 'bg-brown-200 dark:bg-dm-border'
+          }`}
+          title={wholesaleStackDiscounts ? 'Discounts stack on top of wholesale price' : 'Wholesale price is used as the final price'}
+        >
+          <span className={`inline-block h-5 w-5 transform rounded-full bg-white transition-transform ${
+            wholesaleStackDiscounts ? 'translate-x-6' : 'translate-x-1'
+          }`} />
+        </button>
+      </div>
+
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-2 sm:gap-4 mb-4 sm:mb-6">
+        <button
+          type="button"
+          onClick={() => { setStockFilter('all'); setShowUnpricedOnly(false); }}
+          className={`text-left bg-white dark:bg-dm-card p-3 sm:p-4 rounded-lg shadow border-l-4 transition-colors duration-200 border-plum-600 dark:border-plum-400 ${
+            stockFilter === 'all' && !showUnpricedOnly ? 'ring-2 ring-plum-400/50' : ''
+          }`}
+          title="Click to clear all card filters"
+        >
+          <p className="text-brown-400 dark:text-white/40 text-xs sm:text-sm">Total Products</p>
+          <p className="text-xl sm:text-2xl font-bold dark:text-white">{stats.total}</p>
+        </button>
+        <button
+          type="button"
+          onClick={() => { setStockFilter(prev => prev === 'inStock' ? 'all' : 'inStock'); setShowUnpricedOnly(false); }}
+          className={`text-left bg-white dark:bg-dm-card p-3 sm:p-4 rounded-lg shadow border-l-4 transition-colors duration-200 border-green-500 dark:border-green-400 ${
+            stockFilter === 'inStock' ? 'ring-2 ring-green-400/50' : ''
+          }`}
+          title="Click to filter products that are in stock"
+        >
+          <p className="text-brown-400 dark:text-white/40 text-xs sm:text-sm">In Stock</p>
+          <p className="text-xl sm:text-2xl font-bold dark:text-white">{stats.inStock}</p>
+        </button>
+        <button
+          type="button"
+          onClick={() => { setStockFilter(prev => prev === 'lowStock' ? 'all' : 'lowStock'); setShowUnpricedOnly(false); }}
+          className={`text-left bg-white dark:bg-dm-card p-3 sm:p-4 rounded-lg shadow border-l-4 transition-colors duration-200 border-yellow-500 dark:border-yellow-400 ${
+            stockFilter === 'lowStock' ? 'ring-2 ring-yellow-400/50' : ''
+          }`}
+          title="Click to filter products that are low on stock (1-10)"
+        >
+          <p className="text-brown-400 dark:text-white/40 text-xs sm:text-sm">Low Stock</p>
+          <p className="text-xl sm:text-2xl font-bold dark:text-white">{stats.lowStock}</p>
+        </button>
+        <button
+          type="button"
+          onClick={() => { setStockFilter(prev => prev === 'outOfStock' ? 'all' : 'outOfStock'); setShowUnpricedOnly(false); }}
+          className={`text-left bg-white dark:bg-dm-card p-3 sm:p-4 rounded-lg shadow border-l-4 transition-colors duration-200 border-red-500 dark:border-red-400 ${
+            stockFilter === 'outOfStock' ? 'ring-2 ring-red-400/50' : ''
+          }`}
+          title="Click to filter products that are out of stock"
+        >
+          <p className="text-brown-400 dark:text-white/40 text-xs sm:text-sm">Out of Stock</p>
+          <p className="text-xl sm:text-2xl font-bold dark:text-white">{stats.outOfStock}</p>
+        </button>
+        <button
+          type="button"
+          onClick={() => { setShowUnpricedOnly(prev => !prev); setStockFilter('all'); }}
           className={`text-left bg-white dark:bg-dm-card p-3 sm:p-4 rounded-lg shadow border-l-4 transition-colors duration-200 ${
             showUnpricedOnly
               ? 'border-gold-500 ring-2 ring-gold-400/50'
@@ -345,14 +453,17 @@ const DashboardProduct = () => {
         </button>
       </div>
 
-      {showUnpricedOnly && (
+      {(showUnpricedOnly || stockFilter !== 'all') && (
         <div className="mb-4 flex items-center justify-between gap-3 rounded-lg bg-gold-100 dark:bg-gold-600/10 border border-gold-300 dark:border-gold-600/30 px-3 py-2 sm:px-4">
           <p className="text-xs sm:text-sm text-gold-700 dark:text-gold-300">
-            Showing only products with no selling price set.
+            {showUnpricedOnly && 'Showing only products with no selling price set.'}
+            {stockFilter === 'inStock' && 'Showing only products that are in stock.'}
+            {stockFilter === 'lowStock' && 'Showing only products that are low on stock (1-10 left).'}
+            {stockFilter === 'outOfStock' && 'Showing only products that are out of stock.'}
           </p>
           <button
             type="button"
-            onClick={() => setShowUnpricedOnly(false)}
+            onClick={() => { setShowUnpricedOnly(false); setStockFilter('all'); }}
             className="text-xs sm:text-sm font-semibold text-gold-700 dark:text-gold-300 underline underline-offset-2 shrink-0"
           >
             Clear filter
@@ -404,11 +515,15 @@ const DashboardProduct = () => {
         <div className="flex justify-center items-center h-64">
           <LoadingSpinner />
         </div>
+      ) : catalogAccessDenied ? (
+        <div className="rounded-2xl border border-dashed border-amber-300 bg-amber-50 px-4 py-10 text-center text-sm text-amber-700 dark:border-amber-700/50 dark:bg-amber-900/20 dark:text-amber-300">
+          You do not have permission to manage the product catalog. Ask an admin to grant &ldquo;Add, edit, and remove products/categories&rdquo; under Manage Role.
+        </div>
       ) : (
         <>
           {/* Product grid view for mobile/small screens */}
           {(viewMode === 'grid' || isMobileView) && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 min-[480px]:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-4">
               {currentProducts.length === 0 ? (
                 <div className="col-span-full text-center py-10 text-brown-400 dark:text-white/40">
                   No products found
@@ -417,7 +532,7 @@ const DashboardProduct = () => {
                 currentProducts.map(product => (
                   <div 
                     key={product._id} 
-                    className="bg-white dark:bg-dm-card rounded-lg shadow overflow-hidden border border-brown-100 dark:border-dm-border hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1"
+                    className="min-w-0 bg-white dark:bg-dm-card rounded-lg shadow overflow-hidden border border-brown-100 dark:border-dm-border hover:shadow-lg transition-shadow duration-200"
                   >
                     <div className="relative h-48 bg-brown-50 dark:bg-dm-card-2">
                       <WatermarkedImage
@@ -675,39 +790,19 @@ const DashboardProduct = () => {
             </div>
           )}
           
-          {filteredProducts.length > productsPerPage && (
-            <div className="mt-4 px-4 py-3 flex items-center justify-between border-t border-brown-100 dark:border-dm-border bg-white dark:bg-dm-card rounded-lg shadow">
-              <div className="flex-1 flex justify-between sm:hidden">
-                <button
-                  onClick={() => setCurrentPage(currentPage > 1 ? currentPage - 1 : 1)}
-                  disabled={currentPage === 1}
-                  className="relative inline-flex items-center px-4 py-2 border border-brown-200 text-sm font-medium rounded-md text-charcoal bg-white hover:bg-ivory disabled:opacity-50 disabled:cursor-not-allowed dark:bg-dm-card-2 dark:border-dm-border dark:text-white dark:hover:bg-dm-border"
-                >
-                  Previous
-                </button>
-                <button
-                  onClick={() => setCurrentPage(currentPage < totalPages ? currentPage + 1 : totalPages)}
-                  disabled={currentPage === totalPages}
-                  className="ml-3 relative inline-flex items-center px-4 py-2 border border-brown-200 text-sm font-medium rounded-md text-charcoal bg-white hover:bg-ivory disabled:opacity-50 disabled:cursor-not-allowed dark:bg-dm-card-2 dark:border-dm-border dark:text-white dark:hover:bg-dm-border"
-                >
-                  Next
-                </button>
-              </div>
-              <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
-                <div>
-                  <p className="text-sm text-charcoal dark:text-white/55">
-                    Showing <span className="font-medium">{indexOfFirstProduct + 1}</span> to <span className="font-medium">{Math.min(indexOfLastProduct, filteredProducts.length)}</span> of{' '}
-                    <span className="font-medium">{filteredProducts.length}</span> results
-                  </p>
-                </div>
-                <div>
-                  <Pagination 
-                    currentPage={currentPage}
-                    totalPages={totalPages}
-                    onPageChange={setCurrentPage}
-                  />
-                </div>
-              </div>
+          {totalItems > 0 && (
+            <div className="mt-4 px-3 py-3 sm:px-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between border-t border-brown-100 dark:border-dm-border bg-white dark:bg-dm-card rounded-lg shadow">
+              <p className="text-sm text-charcoal dark:text-white/55" aria-live="polite">
+                Showing <span className="font-semibold">{startItem}</span>–<span className="font-semibold">{endItem}</span> of{' '}
+                <span className="font-semibold">{totalItems}</span> products
+              </p>
+              {totalPages > 1 && (
+                <Pagination
+                  currentPage={resolvedCurrentPage}
+                  totalPages={totalPages}
+                  onPageChange={setCurrentPage}
+                />
+              )}
             </div>
           )}
         </>

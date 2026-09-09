@@ -33,6 +33,13 @@ const orderSchema = new mongoose.Schema({
         type: String,
         default: ""
     },
+    // How this order was placed. 'whatsapp' means staff transcribed it from a
+    // WhatsApp conversation on the customer's behalf (see guestCheckoutController).
+    source: {
+        type: String,
+        enum: ['web', 'whatsapp'],
+        default: 'web'
+    },
     delivery_address: {
         type: mongoose.Schema.ObjectId,
         ref: 'address'
@@ -55,7 +62,7 @@ const orderSchema = new mongoose.Schema({
     },
     fulfillment_type: {
         type: String,
-        enum: ['delivery', 'pickup'],
+        enum: ['delivery', 'pickup', 'sacco_pickup'],
         default: 'delivery'
     },
     deliveryInstructions: {
@@ -70,10 +77,40 @@ const orderSchema = new mongoose.Schema({
         type: String,
         default: ""
     },
+    // Snapshot of the chosen SACCO/coach operator for fulfillment_type
+    // 'sacco_pickup' — recorded by name (not a hard ref) since the operator
+    // list is reference data staff may edit or retire over time, and past
+    // orders should stay readable regardless.
+    sacco_operator: {
+        type: mongoose.Schema.ObjectId,
+        ref: 'saccoOperator'
+    },
+    sacco_operator_name: {
+        type: String,
+        default: ''
+    },
+    sacco_destination_town: {
+        type: String,
+        default: ''
+    },
     delivery_mode: {
         type: String,
-        enum: ['standard', 'foot', 'walking', 'walker', ''],
+        enum: ['standard', 'foot', 'bike', 'walking', 'walker', ''],
         default: 'standard'
+    },
+    // Zone reference + snapshot for bike (zone-fare) delivery. Snapshotting
+    // name/fare keeps historical orders readable even if the zone is later
+    // renamed, re-priced, or deactivated.
+    delivery_zone: {
+        type: mongoose.Schema.ObjectId,
+        ref: 'deliveryZone'
+    },
+    delivery_zone_name: {
+        type: String,
+        default: ''
+    },
+    delivery_zone_fare: {
+        type: Number
     },
     customer_location: {
         lat: Number,
@@ -121,6 +158,13 @@ const orderSchema = new mongoose.Schema({
     deliveryPersonnel: {
         type: mongoose.Schema.ObjectId,
         ref: 'DeliveryPersonnel'
+    },
+    riderCallConfirmedAt: {
+        type: Date
+    },
+    riderCallConfirmedBy: {
+        type: mongoose.Schema.ObjectId,
+        ref: 'User'
     },
     dispatchInfo: {
         dispatchedAt: { type: Date },

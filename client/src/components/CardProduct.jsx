@@ -1,87 +1,132 @@
 import PropTypes from 'prop-types';
+import { motion, useReducedMotion } from 'framer-motion';
+import { FaStar } from 'react-icons/fa';
 import { Link } from 'react-router-dom';
 import { DisplayPriceInShillings } from '../utils/DisplayPriceInShillings';
 import { pricewithDiscount } from '../utils/PriceWithDiscount';
+import { getRatingSummary, getStockPresentation } from '../utils/productCardPresentation';
+import { getProductNavigationOptions } from '../utils/productRouteScroll';
 import { valideURLConvert } from '../utils/valideURLConvert';
 import AddToCartButton from './AddToCartButton';
 import WatermarkedImage from './WatermarkedImage';
 import WishlistButton from './WishlistButton';
+import WhatsAppOrderButton from './WhatsAppOrderButton';
 
 const CardProduct = ({ data }) => {
+  const reduceMotion = useReducedMotion();
   const hasValidPrice = Number.isFinite(Number(data.price));
   const discountedPrice = hasValidPrice ? pricewithDiscount(data.price, data.discount) : null;
   const hasDiscount = data.discount > 0;
-  const isOutOfStock = Number(data.stock) === 0;
+  const stock = getStockPresentation(data.stock);
+  const rating = getRatingSummary(data);
   const unitName = typeof data.unit === 'string' ? data.unit : data.unit?.[0]?.name;
+  const productUrl = `/product/${encodeURIComponent(valideURLConvert(data.name))}-${data._id}`;
+  const isUnavailable = stock.tone === 'unavailable';
+
+  const stockTone = {
+    available: 'text-emerald-700 dark:text-emerald-300',
+    low: 'text-gold-600 dark:text-gold-300',
+    unavailable: 'text-red-600 dark:text-red-400',
+  }[stock.tone];
 
   return (
-    <Link
-      to={`/product/${encodeURIComponent(valideURLConvert(data.name))}-${data._id}`}
-      className="group flex h-full w-[150px] flex-col overflow-hidden rounded-lg border border-brown-200 bg-white transition-shadow duration-200 hover:shadow-md dark:border-dm-border dark:bg-dm-card sm:w-[172px] md:w-[192px] lg:w-[212px]"
+    <motion.article
+      className="group relative flex w-[154px] flex-col overflow-hidden rounded-card border border-brown-200 bg-white shadow-sm transition-shadow duration-200 hover:shadow-md dark:border-dm-border dark:bg-dm-card sm:w-[176px] md:w-[196px] lg:w-[216px]"
+      initial={reduceMotion ? false : { opacity: 0, y: 10 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, amount: 0.2 }}
+      transition={{ duration: 0.28, ease: 'easeOut' }}
+      whileHover={reduceMotion ? undefined : { y: -3 }}
     >
-      <div className="relative">
+      <Link to={productUrl} {...getProductNavigationOptions()} className="block" aria-label={`View ${data.name}`}>
         <WatermarkedImage
           src={data.image?.[0]}
           alt={data.name}
-          className="aspect-[3/4] w-full overflow-hidden bg-ivory dark:bg-dm-card-2"
-          imgClassName="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
-          watermarkClassName="w-[18%] max-w-[44px] opacity-70 bottom-1.5 right-1.5"
+          className="aspect-square w-full overflow-hidden bg-ivory dark:bg-dm-card-2 xs:aspect-[4/5] sm:aspect-[3/4]"
+          imgClassName={`h-full w-full object-cover ${isUnavailable ? 'opacity-60 saturate-50' : ''} ${reduceMotion ? '' : 'transition-transform duration-300 group-hover:scale-[1.03]'}`}
+          watermarkClassName="bottom-1.5 right-1.5 w-[18%] max-w-[44px] opacity-70"
         />
-        <WishlistButton productId={data._id} className="absolute right-1.5 top-1.5 sm:right-2 sm:top-2" />
-      </div>
+      </Link>
+      <WishlistButton
+        productId={data._id}
+        className="absolute right-2 top-2 h-9 w-9 border border-brown-100/80 dark:border-dm-border"
+      />
 
-      <div className="flex flex-1 flex-col p-2.5 sm:p-3">
-        <p
-          className="line-clamp-2 min-h-[2.4em] text-xs font-semibold leading-snug text-charcoal group-hover:text-plum-700 dark:text-white dark:group-hover:text-plum-200 sm:text-sm"
+      {/* Discount badge — anchored top-left over the photo, high-contrast so a
+          sale is visible while scrolling, not a quiet "% off" hiding in the
+          price row. */}
+      {hasDiscount && hasValidPrice && (
+        <span className="absolute left-2 top-2 rounded-full bg-red-600 px-2 py-0.5 text-[10px] font-black uppercase tracking-wide text-white shadow-sm">
+          -{data.discount}%
+        </span>
+      )}
+
+      {/* Out-of-stock flag — the dimmed photo plus this flag means the state
+          is readable at a glance, without reading the small red text below. */}
+      {isUnavailable && (
+        <span className="absolute bottom-2 left-2 rounded-full bg-charcoal/80 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white backdrop-blur-sm">
+          Sold out
+        </span>
+      )}
+
+      <div className="p-2 sm:p-3">
+        <Link
+          to={productUrl}
+          {...getProductNavigationOptions()}
+          className="line-clamp-2 min-h-[2.4em] text-[11px] font-semibold leading-snug text-charcoal transition-colors hover:text-plum-700 dark:text-white dark:hover:text-plum-200 sm:text-sm"
           title={data.name}
         >
           {data.name}
-        </p>
+        </Link>
 
-        {unitName && (
-          <p className="mt-0.5 hidden text-xs text-brown-400 dark:text-white/40 sm:block">
-            {unitName}
-          </p>
-        )}
+        <div className="mt-1 flex min-h-4 items-center">
+          {rating ? (
+            <span className="inline-flex min-w-0 items-center gap-1 text-[11px] text-brown-500 dark:text-white/55" title={rating.label}>
+              <FaStar className="shrink-0 text-gold-500" size={12} aria-hidden="true" />
+              <span className="font-semibold text-charcoal dark:text-white">{rating.average}</span>
+              <span className="truncate">({rating.count})</span>
+            </span>
+          ) : (
+            <span className="text-[11px] text-brown-400 dark:text-white/40">No ratings yet</span>
+          )}
+        </div>
 
-        <div className="mt-auto pt-2">
-          <div className="flex min-w-0 flex-wrap items-baseline gap-x-2 gap-y-1">
+        <div className="mt-0.5 flex min-h-4 items-center justify-between gap-2 text-[10px] sm:text-[11px]">
+          <span className="truncate text-brown-400 dark:text-white/40">{unitName || 'Hair product'}</span>
+          <span className={`shrink-0 font-semibold ${stockTone}`}>{stock.label}</span>
+        </div>
+
+        <div className="mt-1.5 border-t border-brown-100 pt-1.5 dark:border-dm-border sm:mt-2 sm:pt-2">
+          <div className="flex min-w-0 flex-wrap items-baseline justify-between gap-x-2 gap-y-1">
             {hasValidPrice ? (
-              <>
-                <span className="font-price text-sm font-semibold text-charcoal dark:text-white sm:text-base">
+              <div className="min-w-0">
+                <span className="font-price text-sm font-bold text-charcoal dark:text-white sm:text-base">
                   {DisplayPriceInShillings(hasDiscount ? discountedPrice : data.price)}
                 </span>
                 {hasDiscount && (
-                  <span className="text-xs text-brown-400 line-through dark:text-white/45">
+                  <span className="ml-1.5 text-[11px] text-brown-400 line-through dark:text-white/45">
                     {DisplayPriceInShillings(data.price)}
                   </span>
                 )}
-              </>
+              </div>
             ) : (
-              <span className="text-xs font-medium text-brown-500 dark:text-white/55">
-                Price coming soon
-              </span>
+              <span className="text-xs font-medium text-brown-500 dark:text-white/55">Price coming soon</span>
             )}
           </div>
 
-          {hasDiscount && hasValidPrice && (
-            <span className="mt-1 inline-block text-[11px] font-semibold text-gold-600 dark:text-gold-300">
-              {data.discount}% off
-            </span>
-          )}
-
-          <div className="mt-2 w-full" onClick={(e) => e.preventDefault()}>
-            {!hasValidPrice ? null : isOutOfStock ? (
-              <p className="text-left text-[11px] font-medium text-red-500 dark:text-red-400">
-                Out of stock
-              </p>
-            ) : (
-              <AddToCartButton data={data} />
-            )}
-          </div>
+          {hasValidPrice && !isUnavailable ? (
+            <div className="mt-1.5 flex w-full gap-1.5 sm:mt-2 sm:gap-2">
+              <div className="min-w-0 flex-1">
+                <AddToCartButton data={data} className="min-h-11" />
+              </div>
+              <WhatsAppOrderButton product={data} className="h-11 w-11 shrink-0 rounded-lg" />
+            </div>
+          ) : hasValidPrice ? (
+            <p className="mt-2 text-left text-[11px] font-semibold text-red-600 dark:text-red-400">This style is currently unavailable</p>
+          ) : null}
         </div>
       </div>
-    </Link>
+    </motion.article>
   );
 };
 

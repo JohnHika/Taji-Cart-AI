@@ -28,6 +28,7 @@ import { buildApiUrl } from '../../common/apiBaseUrl';
 import useCriteriaGate from '../../hooks/useCriteriaGate';
 import useMobile from '../../hooks/useMobile';
 import Axios from '../../utils/Axios';
+import { getOrderActionHint } from '../../utils/orderManagementPresentation';
 
 // Simple date formatter function as fallback if date-fns is not available
 const formatDate = (dateString) => {
@@ -41,6 +42,7 @@ const OrderDetailModal = ({ order, onClose, onStatusChange, onDispatchStateSync 
   const [selectedDriver, setSelectedDriver] = useState('');
   const [loadingDrivers, setLoadingDrivers] = useState(false);
   const [dispatchingOrder, setDispatchingOrder] = useState(false);
+  const [changingStatus, setChangingStatus] = useState(false);
   const { ensureCriteria, gateModal } = useCriteriaGate();
   
   // Fetch available drivers when the order is in shipped status
@@ -61,11 +63,11 @@ const OrderDetailModal = ({ order, onClose, onStatusChange, onDispatchStateSync 
       if (response.data.success) {
         setAvailableDrivers(response.data.data || []);
       } else {
-        toast.error('Failed to load available drivers');
+        toast.error(response.data.message || 'Failed to load available drivers');
       }
     } catch (error) {
       console.error('Error fetching available drivers:', error);
-      toast.error('Failed to load available drivers');
+      toast.error(error?.response?.data?.message || 'Failed to load available drivers');
     } finally {
       setLoadingDrivers(false);
     }
@@ -128,9 +130,20 @@ const OrderDetailModal = ({ order, onClose, onStatusChange, onDispatchStateSync 
     }
   };
   
-  const handleStatusChange = (e) => {
+  const handleStatusChange = async (e) => {
     const newStatus = e.target.value;
-    onStatusChange(order._id, newStatus);
+    const riderCallConfirmed = newStatus === 'nearby';
+
+    if (riderCallConfirmed && !window.confirm('Confirm that the rider has called the customer before marking this order as nearby.')) {
+      return;
+    }
+
+    setChangingStatus(true);
+    try {
+      await onStatusChange(order._id, newStatus, { riderCallConfirmed });
+    } finally {
+      setChangingStatus(false);
+    }
   };
 
   if (!order) return null;
@@ -146,7 +159,7 @@ const OrderDetailModal = ({ order, onClose, onStatusChange, onDispatchStateSync 
       <div className="bg-white dark:bg-dm-card rounded-card border border-brown-100 dark:border-dm-border max-w-4xl w-full max-h-[92dvh] overflow-y-auto shadow-xl">
         <div className="flex items-start justify-between gap-3 p-4 sm:p-6 border-b border-brown-100 dark:border-dm-border">
           <h2 className="text-base sm:text-xl font-bold text-charcoal dark:text-white">
-            Order: {order.orderId || order._id.substring(order._id.length - 8)}
+            Order: {order.orderId || order._id?.substring(order._id.length - 8)}
           </h2>
           <button
             onClick={onClose}
@@ -173,7 +186,9 @@ const OrderDetailModal = ({ order, onClose, onStatusChange, onDispatchStateSync 
                <FaInfoCircle className="mr-2" />
               }
               <div>
-                <p className="font-medium">Status: {order.status.charAt(0).toUpperCase() + order.status.slice(1).replace('_', ' ')}</p>
+                <p className="font-medium">
+                  Status: {order.status === 'POS' ? 'Completed (counter sale)' : order.status.charAt(0).toUpperCase() + order.status.slice(1).replace('_', ' ')}
+                </p>
                 {order.statusHistory && order.statusHistory.length > 0 && (
                   <p className="text-sm mt-1">Last updated: {
                     typeof format === 'function'
@@ -184,11 +199,12 @@ const OrderDetailModal = ({ order, onClose, onStatusChange, onDispatchStateSync 
               </div>
             </div>
             
-            {order.status !== 'delivered' && order.status !== 'cancelled' && (
+            {order.status !== 'delivered' && order.status !== 'cancelled' && order.status !== 'POS' && (
               <select
-                className="w-full sm:w-auto border border-brown-200 dark:border-dm-border p-2 rounded-lg bg-white dark:bg-dm-card text-charcoal dark:text-white text-sm"
+                className="w-full sm:w-auto border border-brown-200 dark:border-dm-border p-2 rounded-lg bg-white dark:bg-dm-card text-charcoal dark:text-white text-sm disabled:opacity-60"
                 value={order.status}
                 onChange={handleStatusChange}
+                disabled={changingStatus}
               >
                 <option value="pending">Pending</option>
                 <option value="processing">Processing</option>
@@ -284,7 +300,9 @@ const OrderDetailModal = ({ order, onClose, onStatusChange, onDispatchStateSync 
               ) : (
                 <div className="flex items-center space-x-2 text-brown-500 dark:text-white/55">
                   <span className="w-3 h-3 rounded-full inline-block bg-gold-500"></span>
-                  <p className="font-medium">{order.status.charAt(0).toUpperCase() + order.status.slice(1).replace('_', ' ')}</p>
+                  <p className="font-medium">
+                    {order.status === 'POS' ? 'Sold at counter' : order.status.charAt(0).toUpperCase() + order.status.slice(1).replace('_', ' ')}
+                  </p>
                   <p className="text-sm">
                     {typeof format === 'function'
                       ? format(new Date(order.createdAt), 'PPP p')
@@ -430,26 +448,28 @@ const OrderDetailModal = ({ order, onClose, onStatusChange, onDispatchStateSync 
                 <div className="text-sm space-y-2">
                   <div>
                     <span className="text-brown-500 dark:text-white/55">Name:</span>
-                    <span className="ml-2 font-medium dark:text-white">{order.userId?.name || 'Not Available'}</span>
+                    <span className="ml-2 font-medium dark:text-white">{order.userId?.name || order.customer?.name || 'Not Available'}</span>
                   </div>
                   <div>
                     <span className="text-brown-500 dark:text-white/55">Email:</span>
-                    <span className="ml-2 dark:text-white">{order.userId?.email || 'Not Available'}</span>
+                    <span className="ml-2 dark:text-white">{order.userId?.email || order.customer?.email || 'Not Available'}</span>
                   </div>
                   <div>
                     <span className="text-brown-500 dark:text-white/55">Phone:</span>
-                    <span className="ml-2 dark:text-white">{order.userId?.mobile || order.delivery_address?.phoneNumber || 'Not Available'}</span>
+                    <span className="ml-2 dark:text-white">{order.userId?.mobile || order.delivery_address?.phoneNumber || order.customer?.phone || 'Not Available'}</span>
                   </div>
                 </div>
               </div>
 
               <div className="flex-1 min-w-[250px]">
                 <h4 className="text-sm font-medium mb-2 dark:text-white flex items-center">
-                  <FaMapMarkerAlt className="mr-2 text-brown-400 dark:text-white/40" /> 
-                  {order.fulfillment_type === 'pickup' ? 'Pickup Location' : 'Shipping Address'}
+                  <FaMapMarkerAlt className="mr-2 text-brown-400 dark:text-white/40" />
+                  {order.status === 'POS' ? 'Fulfillment' : order.fulfillment_type === 'pickup' ? 'Pickup Location' : 'Shipping Address'}
                 </h4>
                 <div className="text-sm dark:text-white/70 bg-white dark:bg-dm-card p-3 rounded-md">
-                  {order.fulfillment_type === 'pickup' ? (
+                  {order.status === 'POS' ? (
+                    <p className="font-medium">In-store purchase{order.cashier ? ` · rung up by ${order.cashier}` : ''}</p>
+                  ) : order.fulfillment_type === 'pickup' ? (
                     <div>
                       <p className="font-medium">{order.pickup_location}</p>
                       {order.pickup_instructions && (
@@ -636,15 +656,19 @@ const OrderDetailModal = ({ order, onClose, onStatusChange, onDispatchStateSync 
                   <tr>
                     <td colSpan="3" className="px-2 sm:px-4 py-1.5 sm:py-2 text-right dark:text-white/70">Subtotal:</td>
                     <td className="px-2 sm:px-4 py-1.5 sm:py-2 font-medium dark:text-white">
-                      KSh {Number(order.subTotalAmt || order.subTotal || 0).toLocaleString()}
+                      KSh {Number(order.subTotalAmt || order.subTotal || order.totalAmt || order.totalPrice || 0).toLocaleString()}
                     </td>
                   </tr>
-                  <tr>
-                    <td colSpan="3" className="px-2 sm:px-4 py-1.5 sm:py-2 text-right dark:text-white/70">Shipping:</td>
-                    <td className="px-2 sm:px-4 py-1.5 sm:py-2 font-medium dark:text-white">
-                      KSh {Number(order.shippingPrice || 0).toLocaleString()}
-                    </td>
-                  </tr>
+                  {Number(order.deliveryCharge || 0) > 0 && (
+                    <tr>
+                      <td colSpan="3" className="px-2 sm:px-4 py-1.5 sm:py-2 text-right dark:text-white/70">
+                        Delivery (rider):
+                      </td>
+                      <td className="px-2 sm:px-4 py-1.5 sm:py-2 font-medium dark:text-white">
+                        KSh {Number(order.deliveryCharge || 0).toLocaleString()}
+                      </td>
+                    </tr>
+                  )}
                   <tr>
                     <td colSpan="3" className="px-2 sm:px-4 py-1.5 sm:py-2 text-right font-medium dark:text-white">Total:</td>
                     <td className="px-2 sm:px-4 py-1.5 sm:py-2 font-bold dark:text-white">
@@ -871,7 +895,7 @@ const AllOrdersAdmin = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [activeTab, setActiveTab] = useState('all');
-  const [showStatistics, setShowStatistics] = useState(true);
+  const [showStatistics, setShowStatistics] = useState(() => !isCompactLayout);
   const [dateScope, setDateScope] = useState('day');
   const [selectedDay, setSelectedDay] = useState(() => new Date().toISOString().split('T')[0]);
   const [selectedMonth, setSelectedMonth] = useState(() => new Date().toISOString().slice(0, 7));
@@ -882,6 +906,11 @@ const AllOrdersAdmin = () => {
   
   // Add new state for fulfillment filtering
   const [fulfillmentFilter, setFulfillmentFilter] = useState('all');
+
+  // Walk-in (counter/POS) vs Online (website/WhatsApp) order source filter —
+  // a separate axis from order status, since online orders themselves span
+  // every status (pending, shipped, delivered, etc.).
+  const [sourceFilter, setSourceFilter] = useState('all'); // 'all' | 'walkin' | 'online'
   
   // Add new state for view mode
   const [viewMode, setViewMode] = useState('table'); // 'table' or 'grid'
@@ -893,6 +922,10 @@ const AllOrdersAdmin = () => {
 
   useEffect(() => {
     setViewMode(isCompactLayout ? 'grid' : 'table');
+  }, [isCompactLayout]);
+
+  useEffect(() => {
+    if (isCompactLayout) setShowStatistics(false);
   }, [isCompactLayout]);
 
   const allOrders = useMemo(() => {
@@ -938,11 +971,11 @@ const AllOrdersAdmin = () => {
       if (response.data.success) {
         setOnlineOrders(response.data.data || []);
       } else {
-        toast.error('Failed to load orders');
+        toast.error(response.data.message || 'Failed to load orders');
       }
     } catch (error) {
       console.error('Error fetching orders:', error);
-      toast.error('Failed to load orders');
+      toast.error(error?.response?.data?.message || 'Failed to load orders');
     } finally {
       setLoading(false);
     }
@@ -970,10 +1003,12 @@ const AllOrdersAdmin = () => {
             status: 'POS',
             paymentStatus: 'paid',
             totalAmt: sale.total,
+            subTotalAmt: sale.subtotal,
+            deliveryCharge: sale.deliveryCharge || 0,
             saleDate: sale.saleDate,
             createdAt: sale.saleDate,
             customer: {
-              name: sale.customer?.name || sale.customerName || 'Walk-in Customer',
+              name: sale.customer?.name || sale.customerName || (sale.saleSource === 'online' ? 'Online Customer' : 'Walk-in Customer'),
               email: sale.customer?.email || 'N/A',
               phone: sale.customer?.phone || sale.customerPhone || 'N/A'
             },
@@ -989,6 +1024,7 @@ const AllOrdersAdmin = () => {
             paymentMethod: sale.paymentMethod,
             cashier: sale.cashierName,
             isPOSSale: true,
+            saleSource: sale.saleSource || 'walkin',
             source: 'POS'
           }));
 
@@ -1002,7 +1038,7 @@ const AllOrdersAdmin = () => {
     }
   };
   
-  const updateOrderStatus = async (orderId, status) => {
+  const updateOrderStatus = async (orderId, status, options = {}) => {
     const patchOrderState = (targetOrderId, updates) => {
       setOnlineOrders(prevOrders =>
         prevOrders.map(order =>
@@ -1021,9 +1057,9 @@ const AllOrdersAdmin = () => {
       const response = await Axios({
         url: `/api/order/status/${orderId}`,
         method: 'PUT',
-        data: { status }
+        data: { status, ...options }
       });
-      
+
       if (response.data.success) {
         toast.success('Order status updated successfully');
         patchOrderState(orderId, { status });
@@ -1032,7 +1068,17 @@ const AllOrdersAdmin = () => {
       }
     } catch (error) {
       console.error('Error updating order status:', error);
-      toast.error('Failed to update order status');
+      if (error?.response?.status === 404) {
+        // The order no longer exists server-side — most likely this list is
+        // stale (e.g. loaded before the order was deleted elsewhere). Drop it
+        // from the visible list so it can't be clicked again, and tell the
+        // admin plainly rather than the generic failure message.
+        toast.error('This order no longer exists. Refresh the page to see the current list.');
+        setOnlineOrders((prevOrders) => prevOrders.filter((order) => order._id !== orderId));
+        setSelectedOrder((current) => (current && current._id === orderId ? null : current));
+      } else {
+        toast.error(error?.response?.data?.message || 'Failed to update order status');
+      }
     }
   };
   
@@ -1085,7 +1131,7 @@ const AllOrdersAdmin = () => {
         (order.fulfillment_type === 'delivery' || order.deliveryMethod === 'delivery');
       
       // Then filter by search term if provided
-      const searchMatch = 
+      const searchMatch =
         !searchTerm ? true : (
         // Check all relevant fields for matches, including customer info from POS sales
         (order.userId?.name?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
@@ -1098,8 +1144,12 @@ const AllOrdersAdmin = () => {
         (order.paymentMethod?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
         (order.cashier?.toLowerCase() || '').includes(searchTerm.toLowerCase())
       );
-      
-      return statusMatch && searchMatch && fulfillmentMatch;
+
+      // Then filter by walk-in vs online source if not "all"
+      const sourceMatch =
+        sourceFilter === 'all' ? true : getOrderSource(order) === sourceFilter;
+
+      return statusMatch && searchMatch && fulfillmentMatch && sourceMatch;
     });
   };
   
@@ -1109,6 +1159,16 @@ const AllOrdersAdmin = () => {
   const indexOfFirstOrder = indexOfLastOrder - ordersPerPage;
   const currentOrders = filteredOrders.slice(indexOfFirstOrder, indexOfLastOrder);
   const totalPages = Math.ceil(filteredOrders.length / ordersPerPage);
+
+  // If the list shrinks (filter change, a stale order removed after a 404,
+  // a refresh with fewer results) and currentPage now points past the end,
+  // snap back to the last real page instead of leaving the admin stranded
+  // on a blank page with no visible way back.
+  useEffect(() => {
+    if (totalPages > 0 && currentPage > totalPages) {
+      setCurrentPage(totalPages);
+    }
+  }, [currentPage, totalPages]);
   
   const renderStatusBadge = (status) => {
     const statusColor = getStatusColor(status);
@@ -1128,6 +1188,35 @@ const AllOrdersAdmin = () => {
     } else {
       return 'Delivery';
     }
+  };
+
+  // Walk-in = customer was physically at the counter. Online = a website/
+  // WhatsApp order, whether the customer checked out themselves (a real
+  // Order) or staff recorded/charged it at the counter on their behalf (a
+  // POS Sale explicitly marked saleSource: 'online' by the cashier).
+  const getOrderSource = (order) => {
+    if (order.isPOSSale || order.status === 'POS') {
+      return order.saleSource === 'online' ? 'online' : 'walkin';
+    }
+    return 'online';
+  };
+
+  const ORDER_SOURCE_BADGE = {
+    walkin: { letter: 'W', label: 'Walk-in', className: 'bg-gold-100 text-gold-700 dark:bg-gold-600/20 dark:text-gold-300' },
+    online: { letter: 'O', label: 'Online', className: 'bg-plum-100 text-plum-700 dark:bg-plum-900/30 dark:text-plum-200' },
+  };
+
+  const OrderSourceBadge = ({ order }) => {
+    const source = ORDER_SOURCE_BADGE[getOrderSource(order)];
+    return (
+      <span
+        title={source.label}
+        aria-label={source.label}
+        className={`inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold ${source.className}`}
+      >
+        {source.letter}
+      </span>
+    );
   };
   
   // Helper function to get style for fulfillment badges
@@ -1245,7 +1334,7 @@ const AllOrdersAdmin = () => {
       {/* Order Filters, Search and View Toggle */}
       <div className="mb-6 flex flex-col gap-4">
         {/* Filter tabs */}
-        <div className="flex flex-wrap gap-2 pb-1">
+        <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
           {statusTabs.map((tab) => (
             <button
               key={tab.key}
@@ -1263,11 +1352,33 @@ const AllOrdersAdmin = () => {
             </button>
           ))}
         </div>
-        
+
+        {/* Walk-in vs Online source filter — separate axis from order status */}
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-xs font-semibold uppercase tracking-wide text-brown-400 dark:text-white/40">Source</span>
+          {[
+            { key: 'all', label: 'All' },
+            { key: 'walkin', label: 'Walk-in (W)' },
+            { key: 'online', label: 'Online (O)' },
+          ].map((opt) => (
+            <button
+              key={opt.key}
+              onClick={() => { setSourceFilter(opt.key); setCurrentPage(1); }}
+              className={`rounded-full px-3 py-1.5 text-xs font-semibold transition ${
+                sourceFilter === opt.key
+                  ? 'bg-plum-700 text-white'
+                  : 'bg-brown-100 dark:bg-dm-card-2 text-charcoal dark:text-white hover:bg-brown-200 dark:hover:bg-dm-border'
+              }`}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+
         {/* Search and Controls Row */}
         <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-[auto_180px_minmax(0,1fr)_auto] md:items-center lg:items-center">
           {/* View Toggle */}
-          <div className="flex items-center gap-2 self-start">
+          <div className="hidden items-center gap-2 self-start lg:flex">
             <button
               onClick={() => setViewMode('table')}
               disabled={isCompactLayout}
@@ -1369,9 +1480,10 @@ const AllOrdersAdmin = () => {
                     <tr key={order._id} className="hover:bg-ivory dark:hover:bg-dm-card-2 cursor-pointer" onClick={() => setSelectedOrder(order)}>
                       {/* Order ID column with type badge */}
                       <td className="px-4 py-3">
-                        <div className="flex items-center">
+                        <div className="flex items-center gap-2">
+                          <OrderSourceBadge order={order} />
                           <span className={`w-2 h-2 rounded-full mr-2 ${
-                            getFulfillmentType(order) === 'Pickup' ? 'bg-gold-500' : 
+                            getFulfillmentType(order) === 'Pickup' ? 'bg-gold-500' :
                             getFulfillmentType(order) === 'POS' ? 'bg-plum-700' : 'bg-plum-500'
                           }`}></span>
                           <div>
@@ -1463,8 +1575,9 @@ const AllOrdersAdmin = () => {
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
                       <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-brown-500 dark:text-white/45">
+                        <OrderSourceBadge order={order} />
                         <span className={`inline-block h-2.5 w-2.5 rounded-full ${
-                          getFulfillmentType(order) === 'Pickup' ? 'bg-gold-500' : 
+                          getFulfillmentType(order) === 'Pickup' ? 'bg-gold-500' :
                           getFulfillmentType(order) === 'POS' ? 'bg-plum-700' : 'bg-plum-500'
                         }`}></span>
                         <span>{getFulfillmentType(order)}</span>
@@ -1474,6 +1587,9 @@ const AllOrdersAdmin = () => {
                       <div className="text-xs text-brown-400 dark:text-white/40">
                         {format(new Date(order.saleDate || order.createdAt), 'dd MMM yyyy')} • {format(new Date(order.saleDate || order.createdAt), 'HH:mm')}
                       </div>
+                      <p className="mt-2 text-xs font-medium text-plum-700 dark:text-plum-300">
+                        {getOrderActionHint(order)}
+                      </p>
                     </div>
 
                     <div className="text-right">
@@ -1510,12 +1626,13 @@ const AllOrdersAdmin = () => {
                   </div>
                 </div>
 
-                <div className="mt-auto border-t border-brown-100 bg-ivory px-4 py-3 dark:border-dm-border dark:bg-dm-card-2 flex justify-end">
+                <div className="mt-auto flex border-t border-brown-100 bg-ivory px-4 py-3 dark:border-dm-border dark:bg-dm-card-2">
                   <button 
-                    className="rounded-xl bg-plum-100 px-3 py-1.5 text-sm font-medium text-plum-700 hover:bg-plum-200 dark:bg-plum-900/30 dark:text-plum-200 dark:hover:bg-plum-800/60"
+                    className="w-full rounded-xl bg-plum-100 px-3 py-2 text-sm font-semibold text-plum-700 transition-colors hover:bg-plum-200 dark:bg-plum-900/30 dark:text-plum-200 dark:hover:bg-plum-800/60"
                     onClick={(e) => { e.stopPropagation(); setSelectedOrder(order); }}
+                    aria-label={`Open order ${order.orderId || order._id?.substring(order._id.length - 8)}`}
                   >
-                    View Details
+                    Open order
                   </button>
                 </div>
               </div>

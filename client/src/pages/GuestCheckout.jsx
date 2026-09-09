@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useRef } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { FaStore, FaCheckCircle, FaLock } from 'react-icons/fa';
@@ -41,9 +41,52 @@ function GuestCheckout() {
     pickup_location: '',
     customerLocation: null,
     deliveryInstructions: '',
+    deliveryZoneId: '',
   });
 
+  const [deliveryZones, setDeliveryZones] = useState([]);
+  const [deliveryZonesLoading, setDeliveryZonesLoading] = useState(false);
+
   const footDeliveryEligibility = getFootDeliveryEligibility(formData.customerLocation);
+  const isBikeDelivery = formData.delivery_mode === 'bike';
+
+  useEffect(() => {
+    if (formData.delivery_mode !== 'bike' || deliveryZones.length > 0) {
+      return;
+    }
+
+    const fetchZones = async () => {
+      try {
+        setDeliveryZonesLoading(true);
+        const response = await Axios({ ...SummaryApi.getDeliveryZones });
+        if (response.data.success) {
+          setDeliveryZones(response.data.data || []);
+        }
+      } catch (error) {
+        AxiosToastError(error);
+      } finally {
+        setDeliveryZonesLoading(false);
+      }
+    };
+
+    fetchZones();
+  }, [formData.delivery_mode, deliveryZones.length]);
+
+  const selectedDeliveryZone = useMemo(
+    () => deliveryZones.find((zone) => zone._id === formData.deliveryZoneId) || null,
+    [deliveryZones, formData.deliveryZoneId]
+  );
+
+  const zonesByCorridor = useMemo(() => {
+    const groups = new Map();
+    deliveryZones.forEach((zone) => {
+      if (!groups.has(zone.corridor)) {
+        groups.set(zone.corridor, []);
+      }
+      groups.get(zone.corridor).push(zone);
+    });
+    return Array.from(groups.entries()).sort(([a], [b]) => a.localeCompare(b));
+  }, [deliveryZones]);
 
   const total = useMemo(() => cart.reduce((sum, item) => {
     const price = item.productId?.price || item.price || 0;
@@ -54,7 +97,11 @@ function GuestCheckout() {
 
   // Delivery needs address form; pickup does not
   const isDelivery = formData.fulfillment_type === 'delivery';
-  const deliveryCharge = isDelivery ? DEFAULT_DELIVERY_CHARGE : 0;
+  // Display only — the server always recomputes this from the authoritative
+  // zone fare or the flat default, never trusting a client-supplied amount.
+  const deliveryCharge = isDelivery
+    ? (isBikeDelivery && selectedDeliveryZone ? selectedDeliveryZone.fare : DEFAULT_DELIVERY_CHARGE)
+    : 0;
   const orderTotal = total + deliveryCharge;
 
   // Delivery needs address form + location; pickup does not
@@ -62,13 +109,17 @@ function GuestCheckout() {
     if (!formData.guestEmail || !formData.guestPhone) return false;
     if (isDelivery) {
       if (!formData.firstName || !formData.lastName || !formData.address || !formData.city) return false;
-      if (!formData.customerLocation) return false;
-      if (!footDeliveryEligibility.eligible) return false;
+      if (isBikeDelivery) {
+        if (!formData.deliveryZoneId) return false;
+      } else {
+        if (!formData.customerLocation) return false;
+        if (!footDeliveryEligibility.eligible) return false;
+      }
     } else {
       if (!formData.pickup_location) return false;
     }
     return true;
-  }, [formData, isDelivery, footDeliveryEligibility]);
+  }, [formData, isDelivery, isBikeDelivery, footDeliveryEligibility]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -97,9 +148,13 @@ function GuestCheckout() {
     if (isDelivery) {
       if (!formData.firstName || !formData.lastName) { toast.error('Please enter your full name'); return false; }
       if (!formData.address || !formData.city) { toast.error('Please fill in your delivery address'); return false; }
-      if (!formData.customerLocation) { toast.error('Delivery requires your live location within Nairobi CBD'); setShowLocationModal(true); return false; }
-      if (!formData.deliveryInstructions?.trim()) { toast.error('Please enter exact delivery instructions so the rider can find you'); setShowLocationModal(true); return false; }
-      if (!footDeliveryEligibility.eligible) { toast.error(`Delivery is only available within Nairobi CBD (${NAIROBI_CBD_RADIUS_KM}km radius)`); setShowLocationModal(true); return false; }
+      if (isBikeDelivery) {
+        if (!formData.deliveryZoneId) { toast.error('Please select your delivery zone'); return false; }
+      } else {
+        if (!formData.customerLocation) { toast.error('Delivery requires your live location within Nairobi CBD'); setShowLocationModal(true); return false; }
+        if (!formData.deliveryInstructions?.trim()) { toast.error('Please enter exact delivery instructions so the rider can find you'); setShowLocationModal(true); return false; }
+        if (!footDeliveryEligibility.eligible) { toast.error(`Delivery is only available within Nairobi CBD (${NAIROBI_CBD_RADIUS_KM}km radius)`); setShowLocationModal(true); return false; }
+      }
     } else {
       if (!formData.pickup_location) { toast.error('Please select a pickup location'); return false; }
     }
@@ -132,6 +187,7 @@ function GuestCheckout() {
           },
           fulfillment_type: formData.fulfillment_type,
           delivery_mode: formData.delivery_mode,
+          deliveryZoneId: isDelivery && isBikeDelivery ? formData.deliveryZoneId : undefined,
           deliveryCharge: deliveryCharge,
           totalAmt: orderTotal,
           customerLocation: formData.customerLocation,
@@ -324,10 +380,11 @@ function GuestCheckout() {
                 {/* Delivery type */}
                 <div className="mt-4 p-3 bg-white dark:bg-dm-card rounded-card border border-brown-100 dark:border-dm-border">
                   <p className="text-sm font-semibold text-charcoal dark:text-white mb-3">Delivery Type</p>
-                  <div className="grid sm:grid-cols-2 gap-3">
+                  <div className="grid sm:grid-cols-3 gap-3">
                     {[
                       { value: 'standard', label: 'Standard Delivery', desc: `Available within Nairobi CBD (${NAIROBI_CBD_RADIUS_KM}km radius).` },
                       { value: 'foot', label: 'Delivery by Foot', desc: `Only within Nairobi CBD (${NAIROBI_CBD_RADIUS_KM}km radius).` },
+                      { value: 'bike', label: 'Bike Delivery', desc: 'Flat fare by zone, wider Nairobi coverage.' },
                     ].map(opt => (
                       <label
                         key={opt.value}
@@ -344,8 +401,37 @@ function GuestCheckout() {
                     ))}
                   </div>
 
-                  {/* Location capture required for every delivery order */}
-                  {isDelivery && (
+                  {/* Bike delivery: zone picker instead of GPS/CBD-radius eligibility */}
+                  {isDelivery && isBikeDelivery && (
+                    <div className="mt-3 space-y-2">
+                      <label className={labelCls}>Select your zone</label>
+                      <select
+                        value={formData.deliveryZoneId}
+                        onChange={(e) => setFormData(prev => ({ ...prev, deliveryZoneId: e.target.value }))}
+                        disabled={deliveryZonesLoading}
+                        className={inputCls}
+                      >
+                        <option value=''>{deliveryZonesLoading ? 'Loading zones...' : 'Select your zone'}</option>
+                        {zonesByCorridor.map(([corridor, zones]) => (
+                          <optgroup key={corridor} label={corridor}>
+                            {zones.map((zone) => (
+                              <option key={zone._id} value={zone._id}>
+                                {zone.name} — KES {zone.fare.toLocaleString()}
+                              </option>
+                            ))}
+                          </optgroup>
+                        ))}
+                      </select>
+                      <p className="text-xs text-brown-500 dark:text-white/50">
+                        {selectedDeliveryZone
+                          ? `Fare for ${selectedDeliveryZone.name}: KES ${selectedDeliveryZone.fare.toLocaleString()}`
+                          : 'Pick the zone closest to your delivery address — the rider bills a flat fare per zone.'}
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Location capture required for standard/foot delivery */}
+                  {isDelivery && !isBikeDelivery && (
                     <div className="mt-3 space-y-2">
                       <button
                         type="button"
@@ -466,6 +552,7 @@ function GuestCheckout() {
                 <span className="text-xs font-normal opacity-60">
                   {!formData.guestEmail || !formData.guestPhone ? 'Fill contact info' :
                    isDelivery && (!formData.firstName || !formData.address) ? 'Fill delivery address' :
+                   isDelivery && isBikeDelivery && !formData.deliveryZoneId ? 'Select delivery zone' :
                    !isDelivery && !formData.pickup_location ? 'Select pickup location' : ''}
                 </span>
               )}

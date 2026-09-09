@@ -1,13 +1,29 @@
 import mongoose from 'mongoose';
-import sendEmail from '../config/sendEmail.js';
 import DeliveryPersonnelModel from '../models/deliverypersonnel.model.js';
 import NotificationModel from '../models/notification.model.js';
 import { default as Order, default as OrderModel } from '../models/order.model.js';
 import User from '../models/user.model.js';
 import { emitNewDeliveryAssigned, emitOrderStatusUpdated, getIO } from '../socket/socket.js';
-import { nawiriBrand } from '../utils/brand.js';
-import { isFootDeliveryMode } from '../utils/cbdDelivery.js';
-import { renderOrderNoticeEmail } from '../utils/emailTemplates.js';
+import { isBikeDeliveryMode, isFootDeliveryMode } from '../utils/cbdDelivery.js';
+import { sendCsv } from '../utils/csv.js';
+
+// Resolves the driver-facing delivery mode label, including zone info for
+// bike (zone-fare) deliveries so riders know which flat fare applies.
+const formatDeliveryModeForDriver = (order) => {
+  if (isBikeDeliveryMode(order.delivery_mode)) {
+    return {
+      deliveryMode: 'bike',
+      deliveryZoneName: order.delivery_zone_name || '',
+      deliveryZoneFare: order.delivery_zone_fare ?? null,
+    };
+  }
+  return {
+    deliveryMode: isFootDeliveryMode(order.delivery_mode) ? 'foot' : 'standard',
+  };
+};
+import { buildRiderCallMessage, notifyCustomerRiderWillCall } from '../utils/deliveryRiderCall.js';
+import { notifyCustomerOrderDispatched } from '../utils/orderDispatchNotify.js';
+import { getOrderIdentifierQuery } from '../utils/orderIdentifier.js';
 
 const DELIVERY_DRIVER_CAPACITY = 3;
 const DISPATCH_CONFLICT_STATUSES = ['dispatched', 'driver_assigned', 'out_for_delivery', 'nearby', 'delivered', 'cancelled'];
@@ -243,27 +259,6 @@ const formatStaffDeliveryOrder = (order) => ({
   } : null
 });
 
-const sendDispatchUpdateEmail = async (order, user) => {
-  if (!user?.email) {
-    return;
-  }
-
-  await sendEmail({
-    sendTo: user.email,
-    subject: `Order dispatched - ${nawiriBrand.shortName}`,
-    html: renderOrderNoticeEmail({
-      name: user.name,
-      title: 'Your order has been dispatched',
-      intro: 'Your order is now in our delivery workflow and will be assigned to a rider shortly.',
-      orderId: order.orderId || order._id?.toString(),
-      total: `KES ${Number(order.totalAmt || order.total || 0).toLocaleString()}`,
-      fulfillmentType: 'Delivery',
-      ctaLabel: 'Track your order',
-      ctaUrl: nawiriBrand.websiteUrl,
-    })
-  });
-};
-
 const buildEstimatedDeliveryTime = () => {
   const estimatedDelivery = new Date();
   estimatedDelivery.setMinutes(estimatedDelivery.getMinutes() + 45);
@@ -422,7 +417,10 @@ const getAssignableDriverQuery = ({ requireVerified = false, requireOnline = fal
 };
 
 const findAssignmentFailure = async (orderId) => {
-  const order = await Order.findById(orderId).select('status fulfillment_type deliveryMethod deliveryPersonnel');
+  const orderQuery = getOrderIdentifierQuery(orderId);
+  const order = orderQuery
+    ? await Order.findOne(orderQuery).select('status fulfillment_type deliveryMethod deliveryPersonnel')
+    : null;
 
   if (!order) {
     return {
@@ -550,9 +548,17 @@ const assignOrderToDriver = async ({
 }) => {
   const estimatedDelivery = buildEstimatedDeliveryTime();
 
+  // Accepts either a real Mongo _id or the human-readable orderId string —
+  // callers include the admin All Orders page, which sources its identifier
+  // from an aggregation grouped by orderId (so its "_id" is that string).
+  const orderQuery = getOrderIdentifierQuery(orderId);
+  if (!orderQuery) {
+    return { ok: false, status: 400, message: 'Invalid order ID' };
+  }
+
   const order = await Order.findOneAndUpdate(
     {
-      _id: orderId,
+      ...orderQuery,
       status: 'dispatched',
       $and: [DELIVERY_ORDER_FILTER, isUnassignedDeliveryOrderFilter]
     },
@@ -647,7 +653,7 @@ const formatAvailableDeliveryOrder = (order) => ({
   items: formatDeliveryItems(order),
   total: order.totalAmt || order.total || 0,
   paymentStatus: order.payment_status || order.paymentStatus || 'unknown',
-  deliveryMode: isFootDeliveryMode(order.delivery_mode) ? 'foot' : 'standard',
+  ...formatDeliveryModeForDriver(order),
   createdAt: order.createdAt,
   updatedAt: order.updatedAt,
   dispatchedAt: order.dispatchInfo?.dispatchedAt || null
@@ -826,7 +832,7 @@ export const getActiveOrders = async (req, res) => {
             coordinates: order.delivery_address?.coordinates || null,
             deliveryNotes: order.delivery_address?.deliveryInstructions || '',
             total: order.totalAmt,
-            deliveryMode: isFootDeliveryMode(order.delivery_mode) ? 'foot' : 'standard',
+            ...formatDeliveryModeForDriver(order),
             createdAt: order.createdAt,
             currentLocation: order.currentLocation || null,
             estimatedDeliveryTime: order.estimatedDeliveryTime
@@ -1116,12 +1122,8 @@ export const exportDeliveryHistory = async (req, res) => {
         amount: order.totalAmt
     }));
     
-    const csvEscape = (value) => {
-      const text = value == null ? '' : String(value);
-      return /[",\r\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
-    };
     const headers = ['Order ID', 'Created At', 'Delivered At', 'Customer Name', 'Customer Phone', 'Delivery Address', 'Status', 'Amount'];
-    const csv = [headers, ...exportData.map((row) => [
+    const rows = exportData.map((row) => [
       row.orderId,
       row.createdAt instanceof Date ? row.createdAt.toISOString() : row.createdAt,
       row.deliveredAt instanceof Date ? row.deliveredAt.toISOString() : row.deliveredAt,
@@ -1130,13 +1132,9 @@ export const exportDeliveryHistory = async (req, res) => {
       row.deliveryAddress,
       row.status,
       row.amount
-    ])]
-      .map((row) => row.map(csvEscape).join(','))
-      .join('\r\n');
+    ]);
 
-    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
-    res.setHeader('Content-Disposition', 'attachment; filename="delivery-history.csv"');
-    return res.status(200).send(`\uFEFF${csv}`);
+    return sendCsv(res, 'delivery-history.csv', headers, rows);
   } catch (error) {
     console.error('Error exporting delivery history:', error);
     return res.status(500).json({
@@ -1150,7 +1148,7 @@ export const exportDeliveryHistory = async (req, res) => {
 export const updateOrderStatus = async (req, res) => {
   try {
     const driverId = req.userId;
-    const { orderId, status } = req.body;
+    const { orderId, status, riderCallConfirmed } = req.body;
     
     if (!orderId || !status) {
         return res.status(400).json({
@@ -1185,6 +1183,13 @@ export const updateOrderStatus = async (req, res) => {
         });
     }
 
+    if (status === 'nearby' && !order.riderCallConfirmedAt && riderCallConfirmed !== true) {
+      return res.status(400).json({
+        success: false,
+        message: 'Confirm that you have called the customer before marking this delivery as nearby'
+      });
+    }
+
     const transitions = {
       driver_assigned: ['out_for_delivery'],
       out_for_delivery: ['nearby', 'delivered'],
@@ -1200,6 +1205,10 @@ export const updateOrderStatus = async (req, res) => {
     const changedAt = new Date();
     const updateFields = { status };
     if (status === 'delivered') updateFields.deliveredAt = changedAt;
+    if (status === 'nearby' && !order.riderCallConfirmedAt) {
+      updateFields.riderCallConfirmedAt = changedAt;
+      updateFields.riderCallConfirmedBy = driverId;
+    }
 
     await OrderModel.updateMany(
       { orderId: order.orderId, deliveryPersonnel: personnelFilter },
@@ -1218,6 +1227,30 @@ export const updateOrderStatus = async (req, res) => {
 
     order.status = status;
     if (status === 'delivered') order.deliveredAt = changedAt;
+    if (updateFields.riderCallConfirmedAt) {
+      order.riderCallConfirmedAt = updateFields.riderCallConfirmedAt;
+      order.riderCallConfirmedBy = driverId;
+    }
+
+    if (status === 'nearby') {
+      const customer = order.userId
+        ? await User.findById(order.userId).select('name email mobile phone')
+        : null;
+      const message = buildRiderCallMessage(order.orderId || order._id?.toString());
+
+      await createNotificationIfPossible({
+        type: 'order_update',
+        title: 'Your rider is nearby',
+        message,
+        isRead: false,
+        userId: order.userId
+      }, 'rider-call notification');
+
+      const deliveryNotice = await notifyCustomerRiderWillCall({ order, customer });
+      if (deliveryNotice.results.some((result) => result.status === 'rejected')) {
+        console.error('One or more rider-call delivery notices could not be sent');
+      }
+    }
     
     if (status === 'delivered') {
       // Release driver capacity now that this delivery is complete
@@ -1617,13 +1650,19 @@ export const dispatchOrder = async (req, res) => {
       });
     }
 
-    if (!mongoose.isValidObjectId(orderId)) {
+    // Accepts either a real Mongo _id or the human-readable orderId string —
+    // callers like the admin All Orders page source their identifier from an
+    // aggregation grouped by orderId, so its "_id" field is that string, not
+    // a real ObjectId.
+    const orderQuery = getOrderIdentifierQuery(orderId);
+
+    if (!orderQuery) {
       return res.status(400).json({
         success: false,
         message: 'Invalid order ID'
       });
     }
-    
+
     // Get staff information for the record
     const staff = await User.findById(staffId).select('name email');
     
@@ -1639,7 +1678,7 @@ export const dispatchOrder = async (req, res) => {
 
     const order = await Order.findOneAndUpdate(
       {
-        _id: orderId,
+        ...orderQuery,
         $or: [
           { fulfillment_type: 'delivery' },
           { deliveryMethod: 'delivery' }
@@ -1671,7 +1710,7 @@ export const dispatchOrder = async (req, res) => {
     );
 
     if (!order) {
-      const existingOrder = await Order.findById(orderId).select('status fulfillment_type deliveryMethod');
+      const existingOrder = await Order.findOne(orderQuery).select('status fulfillment_type deliveryMethod');
 
       if (!existingOrder) {
         return res.status(404).json({
@@ -1709,13 +1748,20 @@ export const dispatchOrder = async (req, res) => {
       userId: order.userId
     }, 'dispatch notification');
 
-    if (order.userId) {
-      try {
-        const customer = await User.findById(order.userId).select('name email');
-        await sendDispatchUpdateEmail(order, customer);
-      } catch (emailError) {
-        console.log('Could not send dispatch email:', emailError.message);
-      }
+    try {
+      const customer = order.userId
+        ? await User.findById(order.userId).select('name email mobile phone')
+        : null;
+      await notifyCustomerOrderDispatched({
+        orderNumber: order.orderId || order._id?.toString(),
+        total: `KES ${Number(order.totalAmt || order.total || 0).toLocaleString()}`,
+        fulfillmentType: 'delivery',
+        customerName: customer?.name || order.guestShipping?.name,
+        customerEmail: customer?.email || order.guestEmail,
+        customerPhone: customer?.mobile || customer?.phone || order.guestPhone || order.guestShipping?.phone,
+      });
+    } catch (dispatchNoticeError) {
+      console.log('Could not send dispatch notice:', dispatchNoticeError.message);
     }
 
     emitOrderStatusUpdated(order);
@@ -1870,8 +1916,19 @@ export const manuallyAssignDriver = async (req, res) => {
         message: 'Order ID and Driver ID are required'
       });
     }
-    
-    const order = await Order.findById(orderId).select('status fulfillment_type deliveryMethod deliveryPersonnel');
+
+    // Accepts either a real Mongo _id or the human-readable orderId string —
+    // see the matching comment in dispatchOrder above.
+    const orderQuery = getOrderIdentifierQuery(orderId);
+
+    if (!orderQuery) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid order ID'
+      });
+    }
+
+    const order = await Order.findOne(orderQuery).select('status fulfillment_type deliveryMethod deliveryPersonnel');
 
     if (!order) {
       return res.status(404).json({
@@ -2267,6 +2324,58 @@ export const getCompletedDeliveriesForStaff = async (req, res) => {
     return res.status(500).json({
       success: false,
       message: 'Error fetching completed deliveries',
+      error: error.message
+    });
+  }
+};
+
+// CSV export of completed deliveries for staff/admin (gated by delivery.export)
+export const exportCompletedDeliveriesForStaff = async (req, res) => {
+  try {
+    const { startDate, endDate } = req.query;
+    const query = buildDeliveryQuery({
+      status: 'delivered'
+    });
+
+    if (startDate || endDate) {
+      query.deliveredAt = {};
+      if (startDate) query.deliveredAt.$gte = new Date(startDate);
+      if (endDate) query.deliveredAt.$lte = new Date(endDate);
+    }
+
+    const orders = await Order.find(query)
+      .populate('userId', 'name email mobile phone')
+      .populate('delivery_address')
+      .populate({
+        path: 'deliveryPersonnel',
+        populate: {
+          path: 'userId',
+          select: 'name email mobile phone'
+        }
+      })
+      .sort({ deliveredAt: -1, updatedAt: -1 })
+      .limit(1000);
+
+    const formatted = collapseOrderLines(orders).map(formatStaffDeliveryOrder);
+
+    const headers = ['Order ID', 'Status', 'Customer Name', 'Customer Phone', 'Delivery Address', 'Driver', 'Total', 'Delivered At'];
+    const rows = formatted.map((order) => [
+      order.orderId,
+      order.status,
+      order.customer?.name || '',
+      order.customer?.phone || '',
+      [order.deliveryAddress?.street, order.deliveryAddress?.city].filter(Boolean).join(', '),
+      order.driver?.name || '',
+      order.total,
+      order.deliveredAt instanceof Date ? order.deliveredAt.toISOString() : order.deliveredAt
+    ]);
+
+    return sendCsv(res, 'completed-deliveries.csv', headers, rows);
+  } catch (error) {
+    console.error('Error exporting completed deliveries for staff:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Error exporting completed deliveries',
       error: error.message
     });
   }

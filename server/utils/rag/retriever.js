@@ -1,4 +1,5 @@
 import Product from '../../models/product.model.js';
+import { getCustomerProductFilter } from '../../controllers/catalogQuality.controller.js';
 import { embedTexts } from './embedder.js';
 import { upsertProductChunks, topKSimilar } from './vectorStore.js';
 
@@ -15,7 +16,7 @@ function chunkText(text, chunkSize = 400) {
 export async function reindexAllProducts() {
   const provider = (process.env.RAG_EMBED_PROVIDER || 'openai').toLowerCase();
   const model = process.env.OPENAI_EMBED_MODEL || 'text-embedding-3-small';
-  const products = await Product.find({}).select('name description specs price brand category').populate('category','name');
+  const products = await Product.find(await getCustomerProductFilter()).select('name description specs price brand category').populate('category','name');
   let total = 0;
   for (const p of products) {
     const specText = p.specs && typeof p.specs === 'object' ? Object.entries(p.specs).map(([k,v])=>`${k}: ${v}`).join('\n') : '';

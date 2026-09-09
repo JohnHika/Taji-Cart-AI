@@ -105,6 +105,38 @@ const SummaryApi = {
         url: `${baseURL}/api/subcategory/update`,
         method: 'put'
     },
+    addDeliveryZone: {
+        url: `${baseURL}/api/delivery-zones/add`,
+        method: 'post'
+    },
+    getDeliveryZones: {
+        url: `${baseURL}/api/delivery-zones/get`,
+        method: 'get'
+    },
+    updateDeliveryZone: {
+        url: `${baseURL}/api/delivery-zones/update`,
+        method: 'put'
+    },
+    deleteDeliveryZone: {
+        url: `${baseURL}/api/delivery-zones/delete`,
+        method: 'delete'
+    },
+    addSaccoOperator: {
+        url: `${baseURL}/api/sacco-operators/add`,
+        method: 'post'
+    },
+    getSaccoOperators: {
+        url: `${baseURL}/api/sacco-operators/get`,
+        method: 'get'
+    },
+    updateSaccoOperator: {
+        url: `${baseURL}/api/sacco-operators/update`,
+        method: 'put'
+    },
+    deleteSaccoOperator: {
+        url: `${baseURL}/api/sacco-operators/delete`,
+        method: 'delete'
+    },
     deleteSubCategory: {
         url: `${baseURL}/api/subcategory/delete`,
         method: 'delete'
@@ -133,6 +165,10 @@ const SummaryApi = {
         url: `${baseURL}/api/product/get-product-details`,
         method: 'post'
     },
+    getAdminProductDetails: {
+        url: `${baseURL}/api/product/admin/detail`,
+        method: 'post'
+    },
     updateProductDetails: {
         url: `${baseURL}/api/product/update-product-details`,
         method: 'put'
@@ -140,6 +176,14 @@ const SummaryApi = {
     deleteProduct: {
         url: `${baseURL}/api/product/delete-product`,
         method: 'delete'
+    },
+    getWholesalePricingSettings: {
+        url: `${baseURL}/api/wholesale-pricing/settings`,
+        method: 'get'
+    },
+    updateWholesalePricingSettings: {
+        url: `${baseURL}/api/admin/wholesale-pricing/settings`,
+        method: 'put'
     },
     searchProduct: {
         url: `${baseURL}/api/product/search-product`,
@@ -206,10 +250,18 @@ const SummaryApi = {
         method: 'get'
     },
     getAllProducts: {
-        url: `${baseURL}/api/product/get`,
+        url: `${baseURL}/api/product/admin/all`,
         method: 'POST',
         data: {
         }
+    },
+    getCatalogQuality: {
+        url: `${baseURL}/api/product/admin/catalog-quality`,
+        method: 'GET'
+    },
+    updateCatalogQuality: {
+        url: `${baseURL}/api/product/admin/catalog-quality`,
+        method: 'PUT'
     },
     getUserRoyalCard: {
         url: `${baseURL}/api/loyalty/card`,
@@ -304,6 +356,8 @@ const SummaryApi = {
         url: `${baseURL}/api/pos/analytics`,
         method: 'GET'
     },
+    // Base URL — callers append `/${saleId}/void` (real route is
+    // PUT /api/pos/sale/:id/void)
     voidSale: {
         url: `${baseURL}/api/pos/sale`,
         method: 'PUT'
@@ -316,10 +370,44 @@ const SummaryApi = {
         url: `${baseURL}/api/pos/mpesa/stk-push`,
         method: 'POST'
     },
+    // End of Day — base URLs; callers append the date (and /reset) as needed
+    getEndOfDay: {
+        url: `${baseURL}/api/pos/eod`,
+        method: 'GET'
+    },
+    closeEndOfDay: {
+        url: `${baseURL}/api/pos/eod/close`,
+        method: 'POST'
+    },
+    resetEndOfDay: {
+        url: `${baseURL}/api/pos/eod`,
+        method: 'PUT'
+    },
     // Admin
     getUsers: {
         url: `${baseURL}/api/user/admin/users`,
         method: 'GET'
+    },
+    getStockValue: {
+        url: `${baseURL}/api/product/admin/stock-value`,
+        method: 'GET'
+    },
+    // Feature releases (admin-managed staged rollout).
+    // getVisibleFeatureFlags is public but admin-aware: the server returns
+    // released flags for everyone plus admin-only previews when signed in
+    // as admin. The :id endpoints below are built inline in the admin page
+    // from baseURL since SummaryApi entries are static objects.
+    getVisibleFeatureFlags: {
+        url: `${baseURL}/api/feature-flags`,
+        method: 'GET'
+    },
+    getAllFeatureFlags: {
+        url: `${baseURL}/api/feature-flags/all`,
+        method: 'GET'
+    },
+    createFeatureFlag: {
+        url: `${baseURL}/api/feature-flags`,
+        method: 'POST'
     },
     // Cart aliases (some files use addToCart / getCartItems)
     addToCart: {

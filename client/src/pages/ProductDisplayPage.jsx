@@ -16,6 +16,7 @@ import Axios from '../utils/Axios'
 import AxiosToastError from '../utils/AxiosToastError'
 import { DisplayPriceInShillings } from '../utils/DisplayPriceInShillings'
 import { pricewithDiscount } from '../utils/PriceWithDiscount'
+import { getProductNavigationOptions } from '../utils/productRouteScroll'
 import { valideURLConvert } from '../utils/valideURLConvert'
 import WatermarkedImage from '../components/WatermarkedImage'
 
@@ -191,6 +192,7 @@ const ProductDisplayPage = () => {
     if (productId) fetchProductDetails();
     else setError('Invalid product URL');
   }, [productId]);
+
 
   if (loading) {
     return (
@@ -649,7 +651,7 @@ const ProductDisplayPage = () => {
                         key={v._id}
                         disabled={isOOS}
                         onClick={() => {
-                          if (!isCurrent) navigate(`/product/${valideURLConvert(data.name)}-${v._id}`);
+                          if (!isCurrent) navigate(`/product/${valideURLConvert(data.name)}-${v._id}`, getProductNavigationOptions());
                         }}
                         title={`${v.color}${isOOS ? ' — Out of Stock' : ''}`}
                         className={`relative px-3 py-1.5 rounded-pill text-xs font-semibold border transition-all duration-150

@@ -1,6 +1,7 @@
 import { Router } from "express";
 import auth from "../middleware/auth.js";
-import { admin } from "../middleware/Admin.js";
+import staff from "../middleware/Staff.js";
+import { requireStaffPermission } from "../middleware/requireStaffPermission.js";
 import { AddSubCategoryController, deleteSubCategoryController, getSubCategoryController, updateSubCategoryController } from "../controllers/subCategory.controller.js";
 
 const subCategoryRouter = Router()
@@ -11,10 +12,10 @@ const cache = (req, res, next) => {
     next()
 }
 
-// Admin-only routes for subcategory management
-subCategoryRouter.post('/create', auth, admin, AddSubCategoryController)
+// Admin, or staff granted catalog.manage
+subCategoryRouter.post('/create', auth, staff, requireStaffPermission('catalog.manage'), AddSubCategoryController)
 subCategoryRouter.get('/get', cache, getSubCategoryController) // Changed from POST to GET
-subCategoryRouter.put('/update', auth, admin, updateSubCategoryController)
-subCategoryRouter.delete('/delete', auth, admin, deleteSubCategoryController)
+subCategoryRouter.put('/update', auth, staff, requireStaffPermission('catalog.manage'), updateSubCategoryController)
+subCategoryRouter.delete('/delete', auth, staff, requireStaffPermission('catalog.manage'), deleteSubCategoryController)
 
 export default subCategoryRouter

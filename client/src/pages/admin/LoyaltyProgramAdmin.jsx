@@ -59,7 +59,16 @@ const LoyaltyProgramAdmin = () => {
   const [benefitRangeSuccess, setBenefitRangeSuccess] = useState(false);
 
   // Add state for active tab
-  const [activeTab, setActiveTab] = useState('thresholds'); // 'thresholds', 'benefits', 'promotions'
+  const [activeTab, setActiveTab] = useState('thresholds'); // 'thresholds', 'benefits', 'promotions', 'access'
+
+  // Master on/off switch for the whole loyalty program, plus the list of
+  // customers individually granted access regardless of the switch.
+  const [programEnabled, setProgramEnabled] = useState(false);
+  const [isSettingsLoading, setIsSettingsLoading] = useState(false);
+  const [accessGrantedUsers, setAccessGrantedUsers] = useState([]);
+  const [isAccessListLoading, setIsAccessListLoading] = useState(false);
+  const [accessSearchTerm, setAccessSearchTerm] = useState('');
+  const [accessSearchResults, setAccessSearchResults] = useState([]);
 
   // Add state for refresh points modal
   const [refreshModalOpen, setRefreshModalOpen] = useState(false);
@@ -80,7 +89,9 @@ const LoyaltyProgramAdmin = () => {
     fetchLoyaltyStats();
     fetchTierThresholds();
     fetchBenefitRanges();
-    
+    fetchProgramSettings();
+    fetchAccessGrantedUsers();
+
     // Set up refresh interval for stats
     const refreshInterval = setInterval(() => {
       fetchLoyaltyStats();
@@ -382,18 +393,95 @@ const LoyaltyProgramAdmin = () => {
 
   const searchUsers = async () => {
     if (!userSearchTerm) return;
-    
+
     try {
       const response = await Axios({
         url: `/api/admin/users/search?term=${userSearchTerm}`,
         method: 'GET'
       });
-      
+
       if (response.data?.success) {
         setSearchUserResults(response.data.data);
       }
     } catch (error) {
       console.error('Error searching users:', error);
+    }
+  };
+
+  // Master switch: whole loyalty program on/off for everyone except
+  // individually granted customers.
+  const fetchProgramSettings = async () => {
+    try {
+      const response = await Axios({ url: '/api/admin/loyalty/settings', method: 'GET' });
+      if (response.data?.success) {
+        setProgramEnabled(Boolean(response.data.data?.enabled));
+      }
+    } catch (error) {
+      console.error('Error fetching loyalty program settings:', error);
+    }
+  };
+
+  const toggleProgramEnabled = async () => {
+    const nextValue = !programEnabled;
+    try {
+      setIsSettingsLoading(true);
+      const response = await Axios({
+        url: '/api/admin/loyalty/settings',
+        method: 'PUT',
+        data: { enabled: nextValue }
+      });
+      if (response.data?.success) {
+        setProgramEnabled(Boolean(response.data.data?.enabled));
+      }
+    } catch (error) {
+      console.error('Error updating loyalty program settings:', error);
+    } finally {
+      setIsSettingsLoading(false);
+    }
+  };
+
+  // Customers individually granted access regardless of the master switch.
+  const fetchAccessGrantedUsers = async () => {
+    try {
+      setIsAccessListLoading(true);
+      const response = await Axios({ url: '/api/admin/loyalty/access', method: 'GET' });
+      if (response.data?.success) {
+        setAccessGrantedUsers(response.data.data || []);
+      }
+    } catch (error) {
+      console.error('Error fetching loyalty access list:', error);
+    } finally {
+      setIsAccessListLoading(false);
+    }
+  };
+
+  const searchUsersForAccess = async () => {
+    if (!accessSearchTerm) return;
+    try {
+      const response = await Axios({
+        url: `/api/admin/users/search?term=${accessSearchTerm}`,
+        method: 'GET'
+      });
+      if (response.data?.success) {
+        setAccessSearchResults(response.data.data || []);
+      }
+    } catch (error) {
+      console.error('Error searching users for loyalty access:', error);
+    }
+  };
+
+  const setUserLoyaltyAccess = async (userId, granted) => {
+    try {
+      const response = await Axios({
+        url: `/api/admin/loyalty/access/${userId}`,
+        method: 'PUT',
+        data: { granted }
+      });
+      if (response.data?.success) {
+        fetchAccessGrantedUsers();
+      }
+    } catch (error) {
+      console.error('Error updating customer loyalty access:', error);
     }
   };
 
@@ -520,7 +608,40 @@ const LoyaltyProgramAdmin = () => {
   return (
     <div className="container mx-auto p-6 dark:bg-dm-surface dark:text-white">
       <h1 className="text-2xl font-bold mb-6 dark:text-white">Loyalty Program Management</h1>
-      
+
+      {/* Master switch */}
+      <div className={`mb-6 rounded-lg shadow p-4 flex items-center justify-between gap-4 border ${
+        programEnabled
+          ? 'bg-white dark:bg-dm-card border-brown-100 dark:border-dm-border'
+          : 'bg-amber-50 dark:bg-amber-900/10 border-amber-200 dark:border-amber-800'
+      }`}>
+        <div>
+          <h2 className="font-semibold dark:text-white">
+            Loyalty program is currently {programEnabled ? 'ON' : 'OFF'}
+          </h2>
+          <p className="text-sm text-brown-500 dark:text-white/55 mt-0.5">
+            {programEnabled
+              ? 'Every customer can see their Royal Card, earn points, and get their tier discount.'
+              : "Hidden for everyone — no card, no points, no discount. Customers granted exclusive access below still get the full program."}
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={toggleProgramEnabled}
+          disabled={isSettingsLoading}
+          className={`shrink-0 relative inline-flex h-8 w-14 items-center rounded-full transition-colors disabled:opacity-50 ${
+            programEnabled ? 'bg-primary-500' : 'bg-brown-300 dark:bg-dm-border'
+          }`}
+          aria-pressed={programEnabled}
+        >
+          <span
+            className={`inline-block h-6 w-6 transform rounded-full bg-white shadow transition-transform ${
+              programEnabled ? 'translate-x-7' : 'translate-x-1'
+            }`}
+          />
+        </button>
+      </div>
+
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4 mb-6">
         <div className="bg-white dark:bg-dm-card rounded-lg shadow p-4">
@@ -596,6 +717,16 @@ const LoyaltyProgramAdmin = () => {
               }`}
             >
               Special Tier Promotions
+            </button>
+            <button
+              onClick={() => setActiveTab('access')}
+              className={`py-4 px-6 font-medium text-sm border-b-2 ${
+                activeTab === 'access'
+                  ? 'border-primary-200 text-primary-200 dark:border-primary-400 dark:text-primary-400'
+                  : 'border-transparent text-brown-400 dark:text-white/40 hover:text-charcoal dark:hover:text-white hover:border-brown-100 dark:hover:border-dm-border'
+              }`}
+            >
+              Exclusive Access
             </button>
           </nav>
         </div>
@@ -996,8 +1127,86 @@ const LoyaltyProgramAdmin = () => {
             </div>
           </div>
         )}
+
+        {/* Exclusive Access Panel */}
+        {activeTab === 'access' && (
+          <div className="bg-white dark:bg-dm-card rounded-lg shadow p-6 mt-4">
+            <h2 className="text-lg font-semibold mb-1 dark:text-white">Exclusive Loyalty Access</h2>
+            <p className="text-sm text-brown-500 dark:text-white/55 mb-4">
+              Grant specific customers the loyalty program even while the master switch above is off.
+              They will see their Royal Card, earn points, and get their tier discount as usual — everyone else sees nothing.
+            </p>
+
+            <div className="flex flex-wrap gap-2 mb-4">
+              <input
+                type="text"
+                placeholder="Search customers by name or email..."
+                value={accessSearchTerm}
+                onChange={(e) => setAccessSearchTerm(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && searchUsersForAccess()}
+                className="flex-grow min-w-[200px] px-3 py-2 border border-brown-200 dark:border-dm-border dark:bg-dm-card-2 dark:text-white rounded-lg"
+              />
+              <button
+                onClick={searchUsersForAccess}
+                className="px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 flex items-center gap-2"
+              >
+                <FaSearch /> Search
+              </button>
+            </div>
+
+            {accessSearchResults.length > 0 && (
+              <div className="mb-6 border border-brown-100 dark:border-dm-border rounded-lg divide-y divide-brown-100 dark:divide-dm-border">
+                {accessSearchResults.map((result) => {
+                  const alreadyGranted = accessGrantedUsers.some((u) => u._id === result._id);
+                  return (
+                    <div key={result._id} className="flex items-center justify-between px-4 py-3">
+                      <div>
+                        <p className="font-medium dark:text-white">{result.name}</p>
+                        <p className="text-xs text-brown-400 dark:text-white/40">{result.email}</p>
+                      </div>
+                      <button
+                        onClick={() => setUserLoyaltyAccess(result._id, !alreadyGranted)}
+                        className={`px-3 py-1.5 rounded-lg text-sm font-medium ${
+                          alreadyGranted
+                            ? 'bg-brown-100 dark:bg-dm-card-2 text-charcoal dark:text-white/70 hover:bg-brown-200'
+                            : 'bg-green-600 text-white hover:bg-green-700'
+                        }`}
+                      >
+                        {alreadyGranted ? 'Revoke access' : 'Grant access'}
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            <h3 className="font-medium text-charcoal dark:text-white mb-2">
+              Customers with exclusive access {isAccessListLoading && <FaSpinner className="inline animate-spin ml-1" />}
+            </h3>
+            {accessGrantedUsers.length === 0 ? (
+              <p className="text-sm text-brown-400 dark:text-white/40">No customers have been individually granted access yet.</p>
+            ) : (
+              <div className="border border-brown-100 dark:border-dm-border rounded-lg divide-y divide-brown-100 dark:divide-dm-border">
+                {accessGrantedUsers.map((grantedUser) => (
+                  <div key={grantedUser._id} className="flex items-center justify-between px-4 py-3">
+                    <div>
+                      <p className="font-medium dark:text-white">{grantedUser.name}</p>
+                      <p className="text-xs text-brown-400 dark:text-white/40">{grantedUser.email}</p>
+                    </div>
+                    <button
+                      onClick={() => setUserLoyaltyAccess(grantedUser._id, false)}
+                      className="px-3 py-1.5 rounded-lg text-sm font-medium bg-red-50 text-red-600 hover:bg-red-100 dark:bg-red-900/20 dark:text-red-300"
+                    >
+                      Revoke access
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
       </div>
-      
+
       {/* Search and Filters */}
       <div className="flex flex-wrap items-center gap-4 mb-6">
         <div className="relative flex-grow max-w-md">

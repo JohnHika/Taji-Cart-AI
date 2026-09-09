@@ -10,6 +10,7 @@ import {
     getActiveDeliveriesForStaff,
     assignDeliveryPersonnel,
     getCompletedDeliveriesForStaff,
+    exportCompletedDeliveriesForStaff,
     getDispatchedOrders,
     dispatchOrder, // Import the new dispatch function
     exportDeliveryHistory,
@@ -90,6 +91,9 @@ deliveryRouter.get('/active-deliveries', auth, adminOrStaff, requireStaffPermiss
 
 // Get completed deliveries for staff/admin monitoring
 deliveryRouter.get('/completed-deliveries', auth, adminOrStaff, requireStaffPermission('delivery.view_history'), getCompletedDeliveriesForStaff);
+
+// CSV export of completed deliveries for staff/admin
+deliveryRouter.get('/completed-deliveries/export', auth, adminOrStaff, requireStaffPermission('delivery.export'), exportCompletedDeliveriesForStaff);
 
 // Manual assignment of a specific driver by admin/staff
 deliveryRouter.post('/assign-driver', auth, adminOrStaff, requireStaffPermission('delivery.assign_driver'), manuallyAssignDriver);

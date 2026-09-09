@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { motion, useReducedMotion } from 'framer-motion';
 import Barcode from 'react-barcode';
 import toast from 'react-hot-toast';
 import { FaCrown, FaGift, FaInfoCircle, FaPercent, FaSpinner, FaTruck, FaUserPlus } from 'react-icons/fa';
@@ -6,6 +7,7 @@ import QRCode from 'react-qr-code';
 import { useSelector } from 'react-redux';
 import { Link } from 'react-router-dom';
 import Axios from '../utils/Axios';
+import { getRoyalCardMotion } from '../utils/royalCardMotion';
 
 /**
  * Premium Royal Card component with credit-card inspired luxury design.
@@ -13,10 +15,13 @@ import Axios from '../utils/Axios';
  */
 const RoyalCard = () => {
   const user = useSelector(state => state.user);
+  const reduceMotion = useReducedMotion();
+  const cardMotion = getRoyalCardMotion(reduceMotion);
   const [cardData, setCardData] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [viewMode, setViewMode] = useState('barcode');
   const [fetchError, setFetchError] = useState(null);
+  const [hasAccess, setHasAccess] = useState(true);
   const [tierThresholds, setTierThresholds] = useState({
     bronzeThreshold: 500,
     silverThreshold: 1500,
@@ -57,7 +62,10 @@ const RoyalCard = () => {
         method: 'GET'
       });
 
-      if (response.data?.success) {
+      if (response.data?.hasAccess === false) {
+        setHasAccess(false);
+        setCardData(null);
+      } else if (response.data?.success) {
         setCardData(response.data.data);
       } else {
         setCardData({
@@ -189,6 +197,21 @@ const RoyalCard = () => {
     );
   }
 
+  // Loyalty program is off for this account (globally disabled and not
+  // individually granted) — show nothing resembling a working card.
+  if (user?._id && !hasAccess) {
+    return (
+      <div className="w-full max-w-md mx-auto p-6 text-center bg-brown-50 dark:bg-dm-card-2 border border-brown-100 dark:border-dm-border rounded-2xl">
+        <h3 className="font-playfair text-lg text-charcoal dark:text-white mb-2">
+          Royal Card
+        </h3>
+        <p className="text-sm text-brown-500 dark:text-white/55">
+          The loyalty program isn't available on this account right now.
+        </p>
+      </div>
+    );
+  }
+
   // Guest card (not logged in)
   if (!user?._id) {
     return (
@@ -299,11 +322,19 @@ const RoyalCard = () => {
       {/* Everything inside #loyalty-card-print is what actually prints — see .print-card-only in index.css */}
       <div id="loyalty-card-print">
       {/* Main Card */}
-      <div className={`relative aspect-[1.586/1] rounded-2xl overflow-hidden bg-gradient-to-br ${tierColors.bg} shadow-2xl`}>
+      <motion.div
+        className={`relative aspect-[1.586/1] overflow-hidden rounded-2xl bg-gradient-to-br ${tierColors.bg} shadow-card`}
+        {...cardMotion}
+        transition={{ duration: 0.3, ease: 'easeOut' }}
+      >
         {/* Gold shimmer effect for Gold/Platinum tiers */}
-        {tierColors.shimmer && (
-          <div 
-            className="absolute inset-0 opacity-30 pointer-events-none animate-gold-shimmer"
+        {tierColors.shimmer && !reduceMotion && (
+          <motion.div
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-0 opacity-30"
+            initial={{ x: '-110%' }}
+            animate={{ x: '110%' }}
+            transition={{ duration: 1.15, delay: 0.2, ease: 'easeOut' }}
             style={{
               background: 'linear-gradient(105deg, transparent 40%, rgba(201, 148, 58, 0.4) 45%, rgba(232, 196, 120, 0.5) 50%, rgba(201, 148, 58, 0.4) 55%, transparent 60%)',
               backgroundSize: '200% 100%'
@@ -399,7 +430,7 @@ const RoyalCard = () => {
             </span>
           </div>
         )}
-      </div>
+      </motion.div>
 
       {/* View toggle & barcode/QR section */}
       <div className="mt-4 bg-white dark:bg-dm-card rounded-2xl border border-brown-100 dark:border-dm-border shadow-card overflow-hidden">

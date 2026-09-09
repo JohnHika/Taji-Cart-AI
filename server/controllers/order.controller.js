@@ -11,17 +11,25 @@ import OrderModel from "../models/order.model.js";
 import ProductModel from "../models/product.model.js"; // Add this import
 import UserRewardModel from "../models/userreward.model.js";
 import UserModel from "../models/user.model.js";
+import AddressModel from "../models/address.model.js";
 import { getIO } from '../socket/socket.js'; // Add this import
+import SaccoOperatorModel from "../models/saccooperator.model.js";
 import {
-  DEFAULT_DELIVERY_CHARGE,
   extractCoordinatesFromPayload,
   getCbdFootDeliveryStatus,
   getDeliveryModeFromPayload,
+  isBikeDeliveryMode,
   isFootDeliveryMode,
+  SACCO_TERMINAL_DROPOFF_CHARGE,
 } from '../utils/cbdDelivery.js';
+import { resolveBikeDeliveryZone, resolveDeliveryCharge } from '../utils/deliveryFee.js';
 import { markRewardAsUsed, processOrderContribution } from './communitycampaign.controller.js'; // Add this import
 import { nawiriBrand } from "../utils/brand.js";
+import { buildRiderCallMessage, notifyCustomerRiderWillCall } from "../utils/deliveryRiderCall.js";
 import { renderOrderNoticeEmail } from "../utils/emailTemplates.js";
+import { getOrderIdentifierQuery } from "../utils/orderIdentifier.js";
+import { hasLoyaltyAccess } from "../utils/loyaltySettings.js";
+import { getEffectiveUnitPrice, getWholesalePricingSettings, isWholesaleEligible } from "../utils/wholesalePricing.js";
 
 // Add this helper function to better log objects
 const inspectObject = (obj) => util.inspect(obj, {depth: 3, colors: true});
@@ -121,8 +129,11 @@ const buildValidatedOrderPricing = async ({
   let royalDiscount = 0;
 
   if (userId && mongoose.Types.ObjectId.isValid(String(userId))) {
-    loyaltyCard = await LoyaltyCardModel.findOne({ userId });
-    royalDiscount = getRoyalDiscountRate(loyaltyCard?.tier);
+    const orderingUser = await UserModel.findById(userId).select('loyaltyAccessGranted').lean();
+    if (await hasLoyaltyAccess(orderingUser)) {
+      loyaltyCard = await LoyaltyCardModel.findOne({ userId });
+      royalDiscount = getRoyalDiscountRate(loyaltyCard?.tier);
+    }
   }
 
   const uniqueProductIds = [...new Set(
@@ -134,9 +145,16 @@ const buildValidatedOrderPricing = async ({
 
   const products = await ProductModel.find({
     _id: { $in: uniqueProductIds },
-  }).select('_id name image price discount stock').lean();
+  }).select('_id name image price discount wholesalePrice stock').lean();
 
   const productsById = new Map(products.map((product) => [String(product._id), product]));
+
+  // Wholesale eligibility is cart-wide: the total quantity across every line
+  // in the order, not any single product's quantity on its own.
+  const totalQuantity = orderItems.reduce((sum, item) => sum + getValidatedQuantity(item?.quantity), 0);
+  const wholesaleEligible = isWholesaleEligible(totalQuantity);
+  const wholesaleSettings = await getWholesalePricingSettings();
+
   let subTotalAmt = 0;
 
   const normalizedItems = orderItems.map((item) => {
@@ -162,7 +180,15 @@ const buildValidatedOrderPricing = async ({
       throw createOrderValidationError(`Insufficient stock for ${product.name}. Available: ${product.stock}, Requested: ${quantity}`);
     }
 
-    const unitPrice = pricewithDiscount(product.price, product.discount, royalDiscount);
+    const unitPrice = getEffectiveUnitPrice({
+      price: product.price,
+      discount: product.discount,
+      wholesalePrice: product.wholesalePrice,
+      royalDiscount,
+      wholesaleEligible,
+      stackDiscounts: wholesaleSettings.stackDiscounts,
+      pricewithDiscountFn: pricewithDiscount,
+    });
     subTotalAmt += unitPrice * quantity;
 
     return {
@@ -329,8 +355,22 @@ export async function checkoutController(request, response) {
             }
         }
         
-        const deliveryCharge = fulfillment_type === 'delivery' ? DEFAULT_DELIVERY_CHARGE : 0;
-        
+        let deliveryZone = null;
+        if (fulfillment_type === 'delivery' && isBikeDeliveryMode(deliveryMode)) {
+            const zoneResult = await resolveBikeDeliveryZone(request.body.deliveryZoneId);
+            if (!zoneResult.zone) {
+                return response.status(400).json({
+                    message: zoneResult.error,
+                    error: true,
+                    success: false,
+                    code: 'INVALID_DELIVERY_ZONE',
+                });
+            }
+            deliveryZone = zoneResult.zone;
+        }
+
+        const deliveryCharge = resolveDeliveryCharge({ fulfillmentType: fulfillment_type, deliveryZone });
+
         const {
             normalizedItems,
             subTotalAmt,
@@ -347,7 +387,7 @@ export async function checkoutController(request, response) {
             communityDiscountAmount,
             deliveryCharge,
         });
-        
+
         // All items in one checkout share the same orderId so reports can
         // deduplicate by orderId and avoid counting the total multiple times.
         const sharedOrderId = `ORD-${new mongoose.Types.ObjectId()}`;
@@ -367,13 +407,16 @@ export async function checkoutController(request, response) {
             pickup_location: pickup_location || '',
             pickup_instructions: pickup_instructions || '',
             delivery_mode: deliveryMode || 'standard',
+            delivery_zone: deliveryZone ? deliveryZone._id : undefined,
+            delivery_zone_name: deliveryZone ? deliveryZone.name : '',
+            delivery_zone_fare: deliveryZone ? deliveryZone.fare : undefined,
             customer_location: customerLocation || undefined,
             deliveryInstructions: request.body.deliveryInstructions || '',
             subTotalAmt: subTotalAmt,
             deliveryCharge: deliveryCharge,
             totalAmt: totalAmt,
         }));
-        
+
         const generatedOrder = await OrderModel.insertMany(payload);
 
         // Atomically reduce stock for each item, then flag low-stock items
@@ -486,6 +529,9 @@ export async function CashOnDeliveryOrderController(request, response) {
             fulfillment_type = 'delivery',
             pickup_location,
             pickup_instructions,
+            saccoOperatorId,
+            manualSaccoOperatorName,
+            saccoDestinationTown,
             usePoints = false,
             pointsUsed = 0,
             communityRewardId = null,
@@ -512,6 +558,46 @@ export async function CashOnDeliveryOrderController(request, response) {
             });
         }
 
+        let saccoOperator = null;
+        let manualSaccoOperator = '';
+        if (fulfillment_type === 'sacco_pickup') {
+            // Registered operator id, or a manually-typed name (operators not
+            // yet in the admin list). The order snapshot stores the name.
+            const manualName = typeof manualSaccoOperatorName === 'string' ? manualSaccoOperatorName.trim() : '';
+            if (saccoOperatorId && mongoose.Types.ObjectId.isValid(String(saccoOperatorId))) {
+                saccoOperator = await SaccoOperatorModel.findOne({ _id: saccoOperatorId, isActive: true });
+                if (!saccoOperator) {
+                    return response.status(400).json({
+                        message: "Selected operator is no longer available. Please pick another.",
+                        error: true,
+                        success: false,
+                        code: 'INVALID_SACCO_OPERATOR',
+                    });
+                }
+            } else if (manualName) {
+                manualSaccoOperator = manualName.slice(0, 120);
+            } else {
+                return response.status(400).json({
+                    message: "Please select a SACCO/coach operator",
+                    error: true,
+                    success: false,
+                    code: 'INVALID_SACCO_OPERATOR',
+                });
+            }
+            if (!saccoDestinationTown || !String(saccoDestinationTown).trim()) {
+                return response.status(400).json({
+                    message: "Please enter the destination town",
+                    error: true,
+                    success: false
+                });
+            }
+        }
+
+        // Single display name for customer-facing messages: the registered
+        // operator's name, or the manually-typed one for SACCOs not yet in
+        // the admin list (saccoOperator is null in that case).
+        const saccoOperatorDisplayName = saccoOperator ? saccoOperator.name : manualSaccoOperator;
+
         // Validate delivery location is within Nairobi CBD radius for foot delivery only
         if (fulfillment_type === 'delivery' && deliveryMode === 'foot') {
           const cbdStatus = getCbdFootDeliveryStatus(customerLocation)
@@ -535,7 +621,21 @@ export async function CashOnDeliveryOrderController(request, response) {
           }
         }
 
-        const deliveryCharge = fulfillment_type === 'delivery' ? DEFAULT_DELIVERY_CHARGE : 0;
+        let deliveryZone = null;
+        if (fulfillment_type === 'delivery' && isBikeDeliveryMode(deliveryMode)) {
+            const zoneResult = await resolveBikeDeliveryZone(request.body.deliveryZoneId);
+            if (!zoneResult.zone) {
+                return response.status(400).json({
+                    message: zoneResult.error,
+                    error: true,
+                    success: false,
+                    code: 'INVALID_DELIVERY_ZONE',
+                });
+            }
+            deliveryZone = zoneResult.zone;
+        }
+
+        const deliveryCharge = resolveDeliveryCharge({ fulfillmentType: fulfillment_type, deliveryZone });
 
         const {
             normalizedItems,
@@ -559,8 +659,8 @@ export async function CashOnDeliveryOrderController(request, response) {
             return Math.random().toString(36).substring(2, 8).toUpperCase();
         };
 
-        const pickupVerificationCode = fulfillment_type === 'pickup' 
-            ? generateVerificationCode() 
+        const pickupVerificationCode = fulfillment_type === 'pickup'
+            ? generateVerificationCode()
             : "";
 
         // All items in one checkout share the same orderId so reports can
@@ -576,15 +676,21 @@ export async function CashOnDeliveryOrderController(request, response) {
                 image: el.productId.image
             },
             paymentId: "",
-            payment_status: "CASH ON DELIVERY",
+            payment_status: fulfillment_type === 'sacco_pickup' ? "PAY AT SACCO TERMINAL" : "CASH ON DELIVERY",
             delivery_address: fulfillment_type === 'delivery' ? addressId : null,
             fulfillment_type: fulfillment_type || 'delivery',
             pickup_location: pickup_location || '',
             pickup_instructions: pickup_instructions || '',
             delivery_mode: deliveryMode || 'standard',
+            delivery_zone: deliveryZone ? deliveryZone._id : undefined,
+            delivery_zone_name: deliveryZone ? deliveryZone.name : '',
+            delivery_zone_fare: deliveryZone ? deliveryZone.fare : undefined,
             customer_location: customerLocation || undefined,
             deliveryInstructions: request.body.deliveryInstructions || '',
             pickupVerificationCode: pickupVerificationCode,
+            sacco_operator: saccoOperator ? saccoOperator._id : undefined,
+            sacco_operator_name: saccoOperator ? saccoOperator.name : manualSaccoOperator,
+            sacco_destination_town: fulfillment_type === 'sacco_pickup' ? saccoDestinationTown : '',
             subTotalAmt: subTotalAmt,
             deliveryCharge: deliveryCharge,
             totalAmt: totalAmt,
@@ -651,9 +757,11 @@ export async function CashOnDeliveryOrderController(request, response) {
         const orderNotification = {
             type: 'order_placed',
             title: 'Order Placed Successfully',
-            message: fulfillment_type === 'delivery' 
-                ? 'Your order has been placed and will be delivered soon.' 
-                : `Your order has been placed. You can pick it up at ${pickup_location}. Your verification code is ${pickupVerificationCode}`,
+            message: fulfillment_type === 'delivery'
+                ? 'Your order has been placed and will be delivered soon.'
+                : fulfillment_type === 'sacco_pickup'
+                    ? `Your order has been placed. Our rider will drop it at ${saccoOperatorDisplayName}'s terminal for ${saccoDestinationTown} and call you when they arrive. ${saccoOperatorDisplayName} will then tell you their own fee to carry it onward.`
+                    : `Your order has been placed. You can pick it up at ${pickup_location}. Your verification code is ${pickupVerificationCode}`,
             isRead: false,
             userId: userId
         };
@@ -664,10 +772,16 @@ export async function CashOnDeliveryOrderController(request, response) {
             try {
                 await sendOrderLifecycleEmail({
                     user: customer,
-                    title: fulfillment_type === 'pickup' ? 'Your pickup order is ready to track' : 'Your order has been placed',
+                    title: fulfillment_type === 'pickup'
+                        ? 'Your pickup order is ready to track'
+                        : fulfillment_type === 'sacco_pickup'
+                            ? 'Your order is headed to your SACCO terminal'
+                            : 'Your order has been placed',
                     intro: fulfillment_type === 'pickup'
                         ? `Your order is confirmed for pickup at ${pickup_location}. Keep the verification code below ready when collecting it.`
-                        : 'Thank you for shopping with Nawiri Hair Kenya. Your order is confirmed and our team is preparing it now.',
+                        : fulfillment_type === 'sacco_pickup'
+                            ? `Our rider is taking your order to ${saccoOperatorDisplayName}'s Nairobi terminal for ${saccoDestinationTown} (KES ${SACCO_TERMINAL_DROPOFF_CHARGE} shop-to-terminal fee, already included in your total). They'll call you once they're at the terminal to confirm drop-off — ${saccoOperatorDisplayName} will then tell you their own separate fee to carry it onward, which you or your receiver pay directly to them.`
+                            : 'Thank you for shopping with Nawiri Hair Kenya. Your order is confirmed and our team is preparing it now.',
                     orderId: payload[0].orderId,
                     totalAmt,
                     fulfillmentType: fulfillment_type || 'delivery',
@@ -756,36 +870,71 @@ export async function trackGuestOrderController(request, response) {
 // Guest Checkout Controller - allows users to purchase without logging in
 export async function guestCheckoutController(request, response) {
     try {
-  const { items, guestEmail, guestPhone, guestShipping, fulfillment_type = 'delivery', pickup_location = '' } = request.body
+  const { items, guestEmail, guestPhone, guestShipping, fulfillment_type = 'delivery', pickup_location = '', saccoOperatorId, manualSaccoOperatorName, saccoDestinationTown, source = 'web' } = request.body
     const deliveryMode = getDeliveryModeFromPayload(request.body)
     const customerLocation = extractCoordinatesFromPayload(request.body)
 
-        // Validate required fields
-    if (!guestEmail || !items) {
+        // Validate required fields — a guest needs a way to be reached, either
+        // an email (the original web-checkout flow) or a phone number (e.g.
+        // staff transcribing a WhatsApp order, where customers give a phone
+        // but rarely an email).
+    if ((!guestEmail && !guestPhone) || !items) {
             return response.status(400).json({
-        message: "Email and items are required",
+        message: "An email or phone number, plus items, are required",
                 error: true,
                 success: false
             })
         }
 
-        // Validate email format
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-        if (!emailRegex.test(guestEmail)) {
-            return response.status(400).json({
-                message: "Invalid email format",
-                error: true,
-                success: false
-            })
+        let saccoOperator = null;
+        let manualSaccoOperator = '';
+        if (fulfillment_type === 'sacco_pickup') {
+            // Either a registered operator id, or a manually-typed name for
+            // operators not in the admin list. The order snapshot records the
+            // name either way (see the schema note on sacco_operator_name).
+            const manualName = typeof manualSaccoOperatorName === 'string' ? manualSaccoOperatorName.trim() : '';
+            if (saccoOperatorId && mongoose.Types.ObjectId.isValid(String(saccoOperatorId))) {
+                saccoOperator = await SaccoOperatorModel.findOne({ _id: saccoOperatorId, isActive: true })
+                if (!saccoOperator) {
+                    return response.status(400).json({
+                        message: "Selected operator is no longer available. Please pick another.",
+                        error: true,
+                        success: false,
+                        code: 'INVALID_SACCO_OPERATOR',
+                    })
+                }
+            } else if (manualName) {
+                manualSaccoOperator = manualName.slice(0, 120);
+            } else {
+                return response.status(400).json({
+                    message: "Please select a SACCO/coach operator (or enter its name) and destination town",
+                    error: true,
+                    success: false,
+                    code: 'INVALID_SACCO_OPERATOR',
+                })
+            }
+            if (!saccoDestinationTown || !String(saccoDestinationTown).trim()) {
+                return response.status(400).json({
+                    message: "Enter the destination town",
+                    error: true,
+                    success: false,
+                    code: 'INVALID_SACCO_OPERATOR',
+                })
+            }
         }
 
-        const deliveryCharge = fulfillment_type === 'delivery' ? DEFAULT_DELIVERY_CHARGE : 0;
-
-        const {
-            normalizedItems,
-            subTotalAmt,
-            totalAmt,
-        } = await buildValidatedOrderPricing({ items, deliveryCharge })
+        // Validate email format only when an email was actually provided —
+        // phone-only guests (e.g. WhatsApp orders) skip this check entirely.
+        if (guestEmail) {
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+            if (!emailRegex.test(guestEmail)) {
+                return response.status(400).json({
+                    message: "Invalid email format",
+                    error: true,
+                    success: false
+                })
+            }
+        }
 
         // Validate delivery location is within Nairobi CBD radius for foot delivery only
         if (fulfillment_type === 'delivery' && deliveryMode === 'foot') {
@@ -810,6 +959,28 @@ export async function guestCheckoutController(request, response) {
           }
         }
 
+        let deliveryZone = null;
+        if (fulfillment_type === 'delivery' && isBikeDeliveryMode(deliveryMode)) {
+            const zoneResult = await resolveBikeDeliveryZone(request.body.deliveryZoneId);
+            if (!zoneResult.zone) {
+                return response.status(400).json({
+                    message: zoneResult.error,
+                    error: true,
+                    success: false,
+                    code: 'INVALID_DELIVERY_ZONE',
+                });
+            }
+            deliveryZone = zoneResult.zone;
+        }
+
+        const deliveryCharge = resolveDeliveryCharge({ fulfillmentType: fulfillment_type, deliveryZone });
+
+        const {
+            normalizedItems,
+            subTotalAmt,
+            totalAmt,
+        } = await buildValidatedOrderPricing({ items, deliveryCharge })
+
         const generateVerificationCode = () => {
             return Math.random().toString(36).substring(2, 8).toUpperCase()
         }
@@ -820,7 +991,7 @@ export async function guestCheckoutController(request, response) {
         const orderId = `ORD-${Date.now()}-${Math.random().toString(36).substring(2, 5).toUpperCase()}`
 
         // Create the order
-        const normalizedGuestEmail = guestEmail.toLowerCase().trim()
+        const normalizedGuestEmail = guestEmail ? guestEmail.toLowerCase().trim() : ''
 
         const generatedOrder = await OrderModel.create({
             orderId,
@@ -828,11 +999,19 @@ export async function guestCheckoutController(request, response) {
             guestEmail: normalizedGuestEmail,
             guestPhone: guestPhone || '',
             guestShipping: guestShipping || {},
+            source: ['web', 'whatsapp'].includes(source) ? source : 'web',
             fulfillment_type,
             delivery_mode: deliveryMode || 'standard',
+            delivery_zone: deliveryZone ? deliveryZone._id : undefined,
+            delivery_zone_name: deliveryZone ? deliveryZone.name : '',
+            delivery_zone_fare: deliveryZone ? deliveryZone.fare : undefined,
             pickup_location,
             customer_location: customerLocation || undefined,
             deliveryInstructions: request.body.deliveryInstructions || '',
+            sacco_operator: saccoOperator ? saccoOperator._id : undefined,
+            sacco_operator_name: saccoOperator ? saccoOperator.name : manualSaccoOperator,
+            sacco_destination_town: fulfillment_type === 'sacco_pickup' ? saccoDestinationTown : '',
+            payment_status: fulfillment_type === 'sacco_pickup' ? 'PAY AT SACCO TERMINAL' : '',
             product_details: {
                 name: normalizedItems.map(item => item.productId?.name || item.name || 'Product').join(', '),
                 image: normalizedItems[0]?.productId?.image || []
@@ -859,8 +1038,9 @@ export async function guestCheckoutController(request, response) {
             })
         }
 
-        // Send order confirmation email to guest
+        // Send order confirmation email to guest (skipped for phone-only guests)
         try {
+          if (guestEmail) {
             const customerName = guestShipping?.firstName || guestEmail.split('@')[0]
             await sendOrderLifecycleEmail({
                 user: {
@@ -875,6 +1055,7 @@ export async function guestCheckoutController(request, response) {
                 pickupLocation: pickup_location,
                 verificationCode: pickupVerificationCode
             })
+          }
 
             // Also send admin notification
             await sendEmail({
@@ -913,7 +1094,9 @@ export async function guestCheckoutController(request, response) {
         }
 
         return response.json({
-            message: "Guest order placed successfully! Check your email for confirmation.",
+            message: guestEmail
+                ? "Guest order placed successfully! Check your email for confirmation."
+                : "Order placed successfully!",
             error: false,
             success: true,
             data: {
@@ -1059,7 +1242,13 @@ const updateLoyaltyPoints = async (userId, orderAmount, orderId) => {
       console.log("Cannot update loyalty points: Invalid or null user ID");
       return;
     }
-    
+
+    const orderingUser = await UserModel.findById(userId).select('loyaltyAccessGranted').lean();
+    if (!(await hasLoyaltyAccess(orderingUser))) {
+      console.log(`Loyalty program disabled for user ${userId}: skipping points award`);
+      return;
+    }
+
     // Award 1 point per 100 spent
     const pointsToAward = Math.floor(orderAmount / 100);
     
@@ -1215,14 +1404,8 @@ const updateLoyaltyPoints = async (userId, orderAmount, orderId) => {
  */
 export async function getAllOrdersAdmin(request, response) {
   try {
-    // This endpoint should only be accessible by admins
-    if (!request.isAdmin && request.userRole !== 'admin') {
-      console.log(`Admin orders access denied: isAdmin=${request.isAdmin}, userRole=${request.userRole}`);
-      return response.status(403).json({
-        message: "Access denied. Admin privileges required.",
-        success: false
-      });
-    }
+    // Access control (admin, or staff granted order.view) is enforced by the
+    // route middleware (adminOrStaff + requireStaffPermission) before this runs.
 
     // Handle filtering by fulfillment type
     const { fulfillment_type, status } = request.query;
@@ -1274,22 +1457,26 @@ export async function getAllOrdersAdmin(request, response) {
       {
         $lookup: {
           from: 'users',
-          localField: 'userId',
-          foreignField: '_id',
-          as: 'userId',
-          pipeline: [{ $project: { name: 1, email: 1, mobile: 1, profile_pic: 1 } }]
+          let: { userId: '$userId' },
+          pipeline: [
+            { $match: { $expr: { $eq: ['$_id', '$$userId'] } } },
+            { $project: { name: 1, email: 1, mobile: 1, profile_pic: 1 } }
+          ],
+          as: 'userId'
         }
       },
-      { $unwind: { path: '$userId', preserveNullAndEmpty: true } },
+      { $unwind: { path: '$userId', preserveNullAndEmptyArrays: true } },
       {
         $lookup: {
           from: 'addresses',
-          localField: 'delivery_address',
-          foreignField: '_id',
+          let: { deliveryAddress: '$delivery_address' },
+          pipeline: [
+            { $match: { $expr: { $eq: ['$_id', '$$deliveryAddress'] } } }
+          ],
           as: 'delivery_address'
         }
       },
-      { $unwind: { path: '$delivery_address', preserveNullAndEmpty: true } }
+      { $unwind: { path: '$delivery_address', preserveNullAndEmptyArrays: true } }
     ];
 
     const orders = await OrderModel.aggregate(aggregatePipeline);
@@ -1301,6 +1488,7 @@ export async function getAllOrdersAdmin(request, response) {
     });
   } catch (error) {
     console.error("Error getting all orders:", error);
+    console.error("Error stack:", error.stack);
     return response.status(500).json({
       message: error.message || "Internal server error",
       success: false
@@ -1309,12 +1497,12 @@ export async function getAllOrdersAdmin(request, response) {
 }
 
 /**
- * Update order status (admin only)
+ * Update order status (admin, or staff granted order.update_status)
  */
 export async function updateOrderStatus(request, response) {
   try {
     const { id } = request.params;
-    const { status } = request.body;
+    const { status, riderCallConfirmed } = request.body;
     
     // Validate status
     const validStatuses = ['pending', 'processing', 'shipped', 'dispatched', 'driver_assigned', 'out_for_delivery', 'nearby', 'delivered', 'ready_for_pickup', 'picked_up', 'cancelled'];
@@ -1326,7 +1514,16 @@ export async function updateOrderStatus(request, response) {
       });
     }
     
-    const order = await OrderModel.findById(id);
+    const orderQuery = getOrderIdentifierQuery(id);
+
+    if (!orderQuery) {
+      return response.status(400).json({
+        message: "Order ID is required",
+        success: false
+      });
+    }
+
+    const order = await OrderModel.findOne(orderQuery);
     
     if (!order) {
       return response.status(404).json({
@@ -1336,6 +1533,13 @@ export async function updateOrderStatus(request, response) {
     }
     
     const previousStatus = order.status;
+
+    if (status === 'nearby' && !order.riderCallConfirmedAt && riderCallConfirmed !== true) {
+      return response.status(400).json({
+        message: 'Confirm that the rider has called the customer before marking this delivery as nearby',
+        success: false
+      });
+    }
 
     // Restore stock for ALL line-item docs in this order when cancelling
     if (status === 'cancelled' && previousStatus !== 'cancelled') {
@@ -1360,6 +1564,10 @@ export async function updateOrderStatus(request, response) {
     const updateFields = { status };
     if (status === 'delivered') {
       updateFields.deliveredAt = new Date();
+    }
+    if (status === 'nearby' && !order.riderCallConfirmedAt) {
+      updateFields.riderCallConfirmedAt = new Date();
+      updateFields.riderCallConfirmedBy = request.userId;
     }
 
     await OrderModel.updateMany(
@@ -1419,6 +1627,9 @@ export async function updateOrderStatus(request, response) {
         case 'delivered':
           notificationMessage = "Your order has been delivered";
           break;
+        case 'nearby':
+          notificationMessage = buildRiderCallMessage(order.orderId || order._id?.toString());
+          break;
         case 'cancelled':
           notificationMessage = "Your order has been cancelled";
           break;
@@ -1436,6 +1647,21 @@ export async function updateOrderStatus(request, response) {
     } catch (notificationError) {
       console.error("Error creating order status notification:", notificationError);
       // Continue with the response even if notification fails
+    }
+
+    if (status === 'nearby') {
+      try {
+        const customer = order.userId
+          ? await UserModel.findById(order.userId).select('name email mobile phone')
+          : null;
+        const deliveryNotice = await notifyCustomerRiderWillCall({ order, customer });
+
+        if (deliveryNotice.results.some((result) => result.status === 'rejected')) {
+          console.error('One or more rider-call delivery notices could not be sent');
+        }
+      } catch (deliveryNoticeError) {
+        console.error('Error sending rider-call delivery notice:', deliveryNoticeError);
+      }
     }
     
     return response.json({
@@ -1457,19 +1683,25 @@ export async function getOrderTrackingDetails(request, response) {
     try {
         const { id } = request.params;
         
-        // Validate if ID is in correct format
-        if (!id.match(/^[0-9a-fA-F]{24}$/)) {
+        if (!id || typeof id !== 'string') {
             return response.status(400).json({
-                message: "Invalid order ID format",
+                message: "Order ID is required",
                 success: false,
                 errorCode: "INVALID_ID_FORMAT"
             });
         }
-        
+
+        // Orders expose both MongoDB `_id` values and customer-facing `orderId`
+        // values such as `ORD-6a54e51bc74c4203c2075899`. Tracking links may use
+        // either form, so resolve the identifier before applying authorization.
+        const orderQuery = mongoose.Types.ObjectId.isValid(id)
+            ? { _id: id }
+            : { orderId: id.trim() };
+
         // Fetch order with populated delivery personnel and status history
-        const order = await OrderModel.findById(id)
+        const order = await OrderModel.findOne(orderQuery)
             .populate('deliveryPersonnel')
-          .populate('productId', 'name price image')
+            .populate('productId', 'name price image')
             .populate('delivery_address');
         
         if (!order) {
@@ -1921,7 +2153,7 @@ export async function getMostRecentOrder(request, response) {
           as: 'delivery_address'
         }
       },
-      { $unwind: { path: '$delivery_address', preserveNullAndEmpty: true } }
+      { $unwind: { path: '$delivery_address', preserveNullAndEmptyArrays: true } }
     ]);
 
     if (!results.length) {

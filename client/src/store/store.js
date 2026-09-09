@@ -5,6 +5,7 @@ import cartReducer from './cartProduct'
 import addressReducer from './addressSlice'
 import orderReducer from './orderSlice'
 import wishlistReducer from './wishlistSlice'
+import featureFlagReducer from './featureFlagSlice'
 // import themeReducer from './themeSlice' // Comment this line
 
 export const store = configureStore({
@@ -15,6 +16,7 @@ export const store = configureStore({
     addresses: addressReducer,  // Make sure this name matches what you use in useSelector
     orders: orderReducer,
     wishlist: wishlistReducer,
+    featureFlags: featureFlagReducer,
     // theme: themeReducer // Comment this line
   },
 })

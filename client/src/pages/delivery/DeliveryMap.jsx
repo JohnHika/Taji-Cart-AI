@@ -302,6 +302,11 @@ const DeliveryMap = () => {
       return;
     }
 
+    const riderCallConfirmed = newStatus === 'nearby';
+    if (riderCallConfirmed && !window.confirm('Confirm that you have called the customer and told them you are nearby.')) {
+      return false;
+    }
+
     try {
       const response = await Axios({
         url: '/api/delivery/update-status',
@@ -309,7 +314,8 @@ const DeliveryMap = () => {
         data: {
           orderId,
           status: newStatus,
-          notifyCustomer: true // Enable customer notifications
+          notifyCustomer: true, // Enable customer notifications
+          riderCallConfirmed
         }
       });
       
@@ -340,12 +346,15 @@ const DeliveryMap = () => {
         } else {
           setActiveDeliveries(updatedActiveDeliveries);
         }
+        return true;
       } else {
         toast.error(response.data.message || 'Failed to update order status');
+        return false;
       }
     } catch (error) {
       console.error('Error updating order status:', error);
       AxiosToastError(error);
+      return false;
     }
   };
 

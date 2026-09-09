@@ -8,6 +8,7 @@ import Product from '../models/product.model.js';
 import User from '../models/user.model.js';
 import { generateResponse } from '../utils/localChatbot.js';
 import { ragAnswer } from '../utils/rag/pipeline.js';
+import { getCustomerProductFilter } from './catalogQuality.controller.js';
 // Remove Deepgram import and add Whisper
 import { transcribeAudioWithWhisper } from '../utils/whisperTranscription.js';
 // Import ffmpeg packages
@@ -23,6 +24,11 @@ ffmpeg.setFfmpegPath(ffmpegInstaller.path);
 let productCache = null;
 let categoryCache = null;
 let lastCacheUpdate = null;
+
+export const invalidateProductCache = () => {
+  productCache = null;
+  lastCacheUpdate = null;
+};
 
 // Refresh cache every hour
 const CACHE_TTL = 60 * 60 * 1000; // 1 hour in milliseconds
@@ -87,7 +93,7 @@ export const closeInactiveSessions = async () => {
 const refreshCache = async () => {
   try {
     // Get all products with relevant fields for the chatbot
-    const products = await Product.find({})
+    const products = await Product.find(await getCustomerProductFilter())
       .populate('category', 'name')
       .sort({ soldCount: -1 })
       .select('name price description tags category subcategory stock brand specs');
@@ -291,7 +297,7 @@ export const processMessage = async (req, res) => {
           if (rag?.hits?.length) {
             // Include compact product info for the UI
             const ids = rag.hits.map(h => String(h.product)).filter(Boolean);
-            const prods = await Product.find({ _id: { $in: ids } })
+            const prods = await Product.find({ _id: { $in: ids }, ...(await getCustomerProductFilter()) })
               .select('name price image stock')
               .lean();
             const compact = prods.map(p => ({

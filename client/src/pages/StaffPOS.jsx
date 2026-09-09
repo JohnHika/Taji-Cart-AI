@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
 import QRCode from 'qrcode';
 import { 
+  FaArrowLeft,
   FaBarcode, 
   FaCalculator, 
   FaMoneyBillAlt, 
@@ -33,6 +34,7 @@ import { nawiriBrand } from '../config/brand';
 import Axios from '../utils/Axios';
 import AxiosToastError from '../utils/AxiosToastError';
 import { DisplayPriceInShillings } from '../utils/DisplayPriceInShillings';
+import { isWholesaleEligible } from '../utils/wholesalePricing';
 import isStaff from '../utils/isStaff';
 
 const SALES_RECORDS_LABEL = 'Sales Records';
@@ -65,8 +67,8 @@ const StaffPOS = () => {
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [barcode, setBarcode] = useState('');
-  const [showSearchExpanded, setShowSearchExpanded] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
+
   const [orderNote, setOrderNote] = useState('');
   const [applyTax, setApplyTax] = useState(false);
   const [showProductScanner, setShowProductScanner] = useState(false);
@@ -305,12 +307,14 @@ const StaffPOS = () => {
 
     const existingItem = cart.find(item => item._id === product._id);
 
-    // Only block if stock is a real positive number and we've exceeded it.
-    // Zero or null stock = allowed (POS can sell into negative for later reconciliation).
+    // Block once stock is tracked and the requested quantity would meet/exceed
+    // it — including when stock is already 0, not just when it's positive.
     const currentQty = existingItem?.quantity || 0;
     const stockLevel = product.stock != null ? Number(product.stock) : null;
-    if (stockLevel !== null && stockLevel > 0 && currentQty >= stockLevel) {
-      toast.error(`Only ${stockLevel} unit(s) of "${product.name}" left in stock`);
+    if (stockLevel !== null && currentQty >= stockLevel) {
+      toast.error(stockLevel > 0
+        ? `Only ${stockLevel} unit(s) of "${product.name}" left in stock`
+        : `"${product.name}" is out of stock`);
       return;
     }
     
@@ -336,8 +340,10 @@ const StaffPOS = () => {
 
     const matchingItem = cart.find(item => item._id === productId);
     const stockLevel = matchingItem?.stock != null ? Number(matchingItem.stock) : null;
-    if (matchingItem && stockLevel !== null && stockLevel > 0 && newQuantity > stockLevel) {
-      toast.error(`Only ${stockLevel} unit(s) of ${matchingItem.name} are available`);
+    if (matchingItem && stockLevel !== null && newQuantity > stockLevel) {
+      toast.error(stockLevel > 0
+        ? `Only ${stockLevel} unit(s) of ${matchingItem.name} are available`
+        : `${matchingItem.name} is out of stock`);
       return;
     }
     
@@ -353,10 +359,28 @@ const StaffPOS = () => {
     setCart(cart.filter(item => item._id !== productId));
   };
 
+  // Wholesale eligibility is basket-wide: total quantity across every line,
+  // not any single product's quantity. Crossing the threshold auto-applies
+  // each eligible product's wholesalePrice for the rest of this sale.
+  const wholesaleEligible = useMemo(
+    () => isWholesaleEligible(cart.reduce((sum, item) => sum + item.quantity, 0)),
+    [cart]
+  );
+
+  const pricedCart = useMemo(() => cart.map((item) => {
+    const hasWholesalePrice = item.wholesalePrice !== undefined && item.wholesalePrice !== null && Number(item.wholesalePrice) > 0;
+    const wholesaleApplied = wholesaleEligible && hasWholesalePrice;
+    return {
+      ...item,
+      effectivePrice: wholesaleApplied ? Number(item.wholesalePrice) : item.price,
+      wholesaleApplied,
+    };
+  }), [cart, wholesaleEligible]);
+
   // Calculate totals
   const calculateTotals = () => {
-    const lineTotals = cart.map(item => {
-      const lineSub = item.price * item.quantity;
+    const lineTotals = pricedCart.map(item => {
+      const lineSub = item.effectivePrice * item.quantity;
       const lineDiscountPct = item.discountPct ? Math.min(100, Math.max(0, item.discountPct)) : 0;
       const lineDiscount = lineSub * (lineDiscountPct / 100);
       return { lineSub, lineDiscount };
@@ -937,14 +961,14 @@ const StaffPOS = () => {
       
       // Create sale record
       const saleData = {
-        items: cart.map(item => ({
+        items: pricedCart.map(item => ({
           product: item._id,
           sku: item.sku || '',
           name: item.name,
-          price: item.price,
+          price: item.effectivePrice,
           quantity: item.quantity,
           discountPct: item.discountPct || 0,
-          total: item.price * item.quantity
+          total: item.effectivePrice * item.quantity
         })),
         customer: customer?._id || null,
         customerName: (customer?.name || walkInName || '').trim(),
@@ -1077,7 +1101,7 @@ const StaffPOS = () => {
       line,
     ];
     const cust = (sale.customerName || sale.customerPhone)
-      ? [`Customer: ${sale.customerName || 'Walk-in'}${sale.customerPhone ? ` | Phone: ${sale.customerPhone}` : ''}`, line]
+      ? [`Customer: ${sale.customerName || (sale.saleSource === 'online' ? 'Online' : 'Walk-in')}${sale.customerPhone ? ` | Phone: ${sale.customerPhone}` : ''}`, line]
       : [];
     const items = sale.items.map(it => {
       const left = `${it.quantity} x ${it.name}`;
@@ -1443,30 +1467,51 @@ const StaffPOS = () => {
         </div>
       )}
       {/* Header / Toolbar */}
-      <div className="bg-white/90 backdrop-blur dark:bg-dm-card sticky top-0 z-30 border-b border-brown-100 dark:border-dm-border">
-        {/* Row 1 — title + utility buttons */}
-        <div className="px-3 sm:px-4 pt-3 pb-2 flex items-center justify-between gap-2">
-          <div className="min-w-0">
-            <h1 className="text-base sm:text-xl font-bold text-charcoal dark:text-white leading-tight">NAWIRI Hair Sales Counter</h1>
-            <p className="text-[11px] text-brown-400 dark:text-white/40 truncate">{user.name} · {user.staff_branch || 'Main Store'}</p>
-          </div>
-          <div className="flex items-center gap-1.5 shrink-0">
-            <button onClick={() => setShowParkedDrawer(true)} title="Held sales" className="flex items-center justify-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-brown-200 dark:border-dm-border hover:bg-ivory dark:hover:bg-dm-card-2 text-sm">
-              <FaListUl className="text-brown-500 dark:text-white/60" /> <span className="hidden sm:inline text-xs">Held</span>
+      <div className="sticky top-0 z-30 border-b border-brown-100 bg-white dark:border-dm-border dark:bg-dm-card">
+        {/* Row 1 — back navigation, title, and utility actions */}
+        <div className="flex items-center justify-between gap-3 px-3 pb-2 pt-3 sm:px-4">
+          <div className="flex min-w-0 items-center gap-2">
+            <button
+              type="button"
+              onClick={() => navigate('/dashboard/pos-dashboard')}
+              className="inline-flex shrink-0 items-center gap-1.5 rounded-xl border border-brown-200 px-2.5 py-2 text-xs font-semibold text-brown-700 transition-colors hover:border-plum-300 hover:bg-plum-50 hover:text-plum-700 dark:border-dm-border dark:text-white/70 dark:hover:bg-dm-card-2 dark:hover:text-white sm:px-3"
+              aria-label="Back to Sales Hub"
+            >
+              <FaArrowLeft size={12} />
+              <span className="hidden sm:inline">Back to Sales Hub</span>
+              <span className="sm:hidden">Back</span>
             </button>
-            <button onClick={() => setShowHelp(true)} title="Help" className="flex items-center justify-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-brown-200 dark:border-dm-border hover:bg-ivory dark:hover:bg-dm-card-2 text-sm">
-              <FaQuestionCircle className="text-brown-500 dark:text-white/60" /> <span className="hidden sm:inline text-xs">Help</span>
+            <div className="hidden h-7 w-px bg-brown-200 dark:bg-dm-border sm:block" />
+            <div className="flex min-w-0 items-center gap-2">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gold-500 text-white shadow-sm">
+                <FaShoppingCart size={16} />
+              </div>
+              <div className="min-w-0">
+                <h1 className="truncate text-base font-bold leading-tight text-charcoal dark:text-white sm:text-xl">Sales Counter</h1>
+                <p className="truncate text-[11px] text-brown-400 dark:text-white/40">{user.name} · {user.staff_branch || 'Main Store'}</p>
+              </div>
+            </div>
+          </div>
+          <div className="flex shrink-0 items-center gap-1.5">
+            <button onClick={() => setShowParkedDrawer(true)} title="Held sales" className="flex items-center justify-center gap-1.5 rounded-xl border border-brown-200 px-2.5 py-2 text-sm text-brown-600 transition-colors hover:bg-ivory dark:border-dm-border dark:text-white/60 dark:hover:bg-dm-card-2">
+              <FaListUl /> <span className="hidden text-xs sm:inline">Held</span>
+            </button>
+            <button onClick={() => setShowHelp(true)} title="Help" className="flex items-center justify-center gap-1.5 rounded-xl border border-brown-200 px-2.5 py-2 text-sm text-brown-600 transition-colors hover:bg-ivory dark:border-dm-border dark:text-white/60 dark:hover:bg-dm-card-2">
+              <FaQuestionCircle /> <span className="hidden text-xs sm:inline">Help</span>
             </button>
           </div>
         </div>
-        {/* Row 2 — total + charge button (always visible, prominent) */}
-        <div className="px-3 sm:px-4 pb-3 flex items-center gap-3">
-          <div className="flex-1 min-w-0">
-            <div className="text-2xl sm:text-3xl font-extrabold text-charcoal dark:text-white tabular-nums">{DisplayPriceInShillings(calculateTotals().total)}</div>
-            <div className="text-xs text-brown-400 dark:text-white/40 mt-0.5">{calculateTotals().itemCount} {calculateTotals().itemCount === 1 ? 'item' : 'items'}</div>
+        {/* Row 2 — current basket total and primary checkout action */}
+        <div className="flex items-center gap-3 px-3 pb-3 sm:px-4">
+          <div className="min-w-0 flex-1">
+            <div className="flex items-baseline gap-2">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-brown-400 dark:text-white/35">Current sale</span>
+              <span className="text-xs text-brown-400 dark:text-white/35">· {calculateTotals().itemCount} {calculateTotals().itemCount === 1 ? 'item' : 'items'}</span>
+            </div>
+            <div className="mt-0.5 text-2xl font-extrabold tabular-nums text-charcoal dark:text-white sm:text-3xl">{DisplayPriceInShillings(calculateTotals().total)}</div>
           </div>
-          <button onClick={() => setShowPaymentModal(true)} disabled={cart.length===0} className="hidden md:inline-flex items-center px-5 py-2.5 rounded-xl bg-primary-600 hover:bg-primary-700 active:scale-95 text-white font-semibold text-sm transition-all disabled:opacity-40 disabled:cursor-not-allowed shadow-md">
-            Charge (F4)
+          <button onClick={() => setShowPaymentModal(true)} disabled={cart.length === 0} className="hidden items-center rounded-xl bg-plum-700 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-plum-800 disabled:cursor-not-allowed disabled:opacity-40 md:inline-flex">
+            Charge <span className="ml-1 text-plum-100">(F4)</span>
           </button>
         </div>
       </div>
@@ -1474,53 +1519,39 @@ const StaffPOS = () => {
       <div className="flex min-h-[calc(100dvh-72px)] flex-col xl:flex-row">
         {/* Left Panel - Products */}
         <div className="flex-1 min-w-0 p-3 sm:p-4 xl:overflow-hidden">
-          {/* Search / Scan Toolbar — icon buttons, expandable */}
-          <div className="flex items-center gap-2 mb-3">
-            {/* Search icon button — toggles expandable input */}
-            <button
-              onClick={() => setShowSearchExpanded(prev => !prev)}
-              title="Search products"
-              className={`p-2.5 rounded-xl shadow-sm border transition-colors flex-shrink-0 ${
-                (showSearchExpanded || searchTerm)
-                  ? 'bg-plum-600 text-white border-plum-600'
-                  : 'bg-white dark:bg-dm-card text-brown-400 dark:text-white/60 border-blush-200 dark:border-dm-border hover:text-plum-600 hover:border-plum-300 dark:hover:text-plum-300'
-              }`}
-            >
-              <FaSearch size={16} />
-            </button>
-
-            {/* Expandable search / barcode input */}
-            {showSearchExpanded && (
-              <div className="flex-1 relative">
-                <input
-                  type="text"
-                  autoFocus
-                  placeholder="Search or scan barcode / SKU…"
-                  value={searchTerm}
-                  onChange={(e) => { setSearchTerm(e.target.value); setBarcode(e.target.value); }}
-                  onKeyDown={(e) => { if (e.key === 'Enter') addByBarcode(searchTerm.trim()); }}
-                  ref={searchRef}
-                  className="w-full pl-4 pr-9 py-2.5 border border-blush-200 dark:border-dm-border rounded-pill bg-white dark:bg-dm-card-2 focus:ring-2 focus:ring-plum-500 text-charcoal dark:text-white placeholder:text-brown-300 outline-none text-sm shadow-sm"
-                />
-                {searchTerm && (
-                  <button
-                    onClick={() => { setSearchTerm(''); setBarcode(''); }}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-brown-300 hover:text-brown-500"
-                  >
-                    <FaTimes size={13} />
-                  </button>
-                )}
-              </div>
-            )}
-
-            {/* QR / Camera icon button */}
+          {/* Search / scan toolbar — always visible for fast counter use */}
+          <div className="mb-3 flex items-center gap-2">
+            <div className="relative min-w-0 flex-1">
+              <FaSearch className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-brown-400" />
+              <input
+                type="text"
+                placeholder="Search product, SKU or barcode…"
+                value={searchTerm}
+                onChange={(e) => { setSearchTerm(e.target.value); setBarcode(e.target.value); }}
+                onKeyDown={(e) => { if (e.key === 'Enter') addByBarcode(searchTerm.trim()); }}
+                ref={searchRef}
+                className="w-full rounded-xl border border-brown-200 bg-white py-3 pl-9 pr-10 text-sm text-charcoal shadow-sm outline-none transition-colors placeholder:text-brown-300 focus:border-plum-500 focus:ring-2 focus:ring-plum-100 dark:border-dm-border dark:bg-dm-card-2 dark:text-white dark:placeholder:text-white/30 dark:focus:ring-plum-900/30"
+                aria-label="Search products, SKU or barcode"
+              />
+              {searchTerm && (
+                <button
+                  type="button"
+                  onClick={() => { setSearchTerm(''); setBarcode(''); }}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full p-1 text-brown-300 hover:bg-brown-100 hover:text-brown-600 dark:hover:bg-dm-border"
+                  aria-label="Clear product search"
+                >
+                  <FaTimes size={13} />
+                </button>
+              )}
+            </div>
             <button
               type="button"
               onClick={openProductScanner}
               title="Scan with camera"
-              className="p-2.5 rounded-xl bg-white dark:bg-dm-card shadow-sm border border-blush-200 dark:border-dm-border text-brown-400 dark:text-white/60 hover:text-primary-600 dark:hover:text-primary-300 hover:border-primary-300 transition-colors flex-shrink-0 ml-auto"
+              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-brown-200 bg-white text-brown-500 shadow-sm transition-colors hover:border-plum-300 hover:text-plum-700 dark:border-dm-border dark:bg-dm-card dark:text-white/60 dark:hover:text-plum-300"
+              aria-label="Scan product barcode with camera"
             >
-              <FaQrcode size={16} />
+              <FaQrcode size={17} />
             </button>
           </div>
 
@@ -1687,7 +1718,7 @@ Applied: {discount}% loyalty discount applied to cart
               </div>
             ) : (
               <div className="space-y-2">
-                {cart.map(item => (
+                {pricedCart.map(item => (
                   <div key={item._id} className="border border-brown-100 dark:border-dm-border rounded-card p-3 bg-white dark:bg-dm-card">
                     <div className="flex gap-3 min-w-0">
                       <div className="w-12 h-12 rounded-lg bg-blush-50 dark:bg-dm-card-2 overflow-hidden flex-shrink-0">
@@ -1701,6 +1732,9 @@ Applied: {discount}% loyalty discount applied to cart
                             <h4 className="font-medium text-sm text-charcoal dark:text-white truncate" title={item.name}>{item.name}</h4>
                             {item._isPromotional && (
                               <span className="flex-shrink-0 text-[10px] px-1.5 py-0.5 bg-plum-100 dark:bg-plum-900/30 text-plum-700 dark:text-plum-300 rounded-full font-semibold leading-none">FREE</span>
+                            )}
+                            {item.wholesaleApplied && (
+                              <span className="flex-shrink-0 text-[10px] px-1.5 py-0.5 bg-gold-100/70 dark:bg-gold-600/15 text-gold-700 dark:text-gold-300 rounded-full font-semibold leading-none">WHOLESALE</span>
                             )}
                           </div>
                           <button onClick={() => removeFromCart(item._id)} className="text-blush-400 hover:text-red-500 flex-shrink-0 transition-colors"><FaTrash size={13} /></button>
@@ -1717,9 +1751,9 @@ Applied: {discount}% loyalty discount applied to cart
                             <button onClick={() => updateQuantity(item._id, item.quantity + 1)} className="w-6 h-6 rounded-full bg-blush-100 dark:bg-dm-card-2 flex items-center justify-center text-plum-600 dark:text-plum-300"><FaPlus size={9} /></button>
                           </div>
                           <div className="text-right min-w-0">
-                            <p className="font-price text-sm font-semibold text-gold-600 dark:text-gold-400 truncate">{DisplayPriceInShillings(item.price * item.quantity)}</p>
+                            <p className="font-price text-sm font-semibold text-gold-600 dark:text-gold-400 truncate">{DisplayPriceInShillings(item.effectivePrice * item.quantity)}</p>
                             <div className="flex items-center justify-end gap-1.5 text-xs text-brown-400 dark:text-white/40">
-                              <span className="truncate">{DisplayPriceInShillings(item.price)} ea</span>
+                              <span className="truncate">{DisplayPriceInShillings(item.effectivePrice)} ea</span>
                               <span>|</span>
                               <span className="flex items-center gap-0.5"><FaPercent size={9} />
                                 <input type="number" min="0" max="100" value={item.discountPct || ''} onChange={(e)=> setCart(prev=>prev.map(it => it._id===item._id ? { ...it, discountPct: Math.max(0, Math.min(100, parseFloat(e.target.value || '0'))) } : it))} className="w-10 text-right border border-blush-200 dark:border-dm-border rounded px-1 bg-white dark:bg-dm-card text-charcoal dark:text-white" placeholder="0" />
@@ -2268,10 +2302,11 @@ Applied: {discount}% loyalty discount applied to cart
               </label>
               <input
                 ref={photoInputRef}
+                id="payment-proof-input-staff-pos"
                 type="file"
                 accept="image/*"
                 capture="environment"
-                className="hidden"
+                style={{ position: 'absolute', left: '-9999px' }}
                 onChange={(e) => {
                   const file = e.target.files?.[0];
                   if (file) {
@@ -2296,14 +2331,16 @@ Applied: {discount}% loyalty discount applied to cart
                   </div>
                 </div>
               ) : (
-                <button
-                  type="button"
-                  onClick={() => photoInputRef.current?.click()}
-                  className="w-full flex items-center justify-center gap-2 py-3 border-2 border-dashed border-blush-300 dark:border-dm-border rounded-xl text-brown-400 dark:text-white/40 hover:border-plum-400 hover:text-plum-600 dark:hover:border-plum-600 dark:hover:text-plum-300 transition-colors"
+                // A <label htmlFor> (not a button + ref.click()) so iOS Safari treats
+                // opening the camera as a direct user gesture — a JS-triggered click()
+                // on a display:none input gets silently blocked on iOS.
+                <label
+                  htmlFor="payment-proof-input-staff-pos"
+                  className="w-full flex items-center justify-center gap-2 py-3 border-2 border-dashed border-blush-300 dark:border-dm-border rounded-xl text-brown-400 dark:text-white/40 hover:border-plum-400 hover:text-plum-600 dark:hover:border-plum-600 dark:hover:text-plum-300 transition-colors cursor-pointer"
                 >
                   <FaCamera size={14} />
                   <span className="text-sm">Take / Attach Photo</span>
-                </button>
+                </label>
               )}
             </div>
 
@@ -2397,8 +2434,8 @@ Applied: {discount}% loyalty discount applied to cart
                   const promoProduct = { ...zeroPriceProduct, _isPromotional: true };
                   const existing = cart.find(i => i._id === promoProduct._id);
                   const stockLevel = promoProduct.stock != null ? Number(promoProduct.stock) : null;
-                  if (stockLevel !== null && stockLevel > 0 && (existing?.quantity || 0) >= stockLevel) {
-                    toast.error(`Only ${stockLevel} unit(s) left in stock`);
+                  if (stockLevel !== null && (existing?.quantity || 0) >= stockLevel) {
+                    toast.error(stockLevel > 0 ? `Only ${stockLevel} unit(s) left in stock` : `${promoProduct.name} is out of stock`);
                     setZeroPriceProduct(null);
                     return;
                   }

@@ -13,6 +13,7 @@ const HomeProductShelf = ({
   viewAllTo = '',
   viewAllState,
   viewAllLabel = 'See All',
+  sectionId,
 }) => {
   const containerRef = useRef(null);
 
@@ -26,7 +27,7 @@ const HomeProductShelf = ({
   };
 
   return (
-    <section className="mb-8 sm:mb-12">
+    <section id={sectionId} className="mb-8 sm:mb-12 scroll-mt-24">
       <div className="mb-4 flex items-end justify-between gap-3 sm:mb-5">
         <div className="min-w-0">
           <h2 className="text-xl font-bold text-charcoal dark:text-white sm:text-2xl">{title}</h2>
@@ -47,9 +48,15 @@ const HomeProductShelf = ({
       </div>
 
       <div className="relative">
+        {/* Right-edge fade hints there's more to scroll — the scroll arrows
+            below were previously lg:only, so on phones/tablets (most
+            shoppers, and where only ~2 cards fit on screen at once) there
+            was no visual cue at all that the row scrolls. */}
+        <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-10 bg-gradient-to-l from-white to-transparent dark:from-dm-surface sm:w-16 lg:hidden" />
+
         <div
           ref={containerRef}
-          className="flex gap-3 overflow-x-auto scroll-smooth pb-4 scrollbar-hide sm:gap-4 lg:gap-5 snap-x snap-mandatory"
+          className="flex gap-3 overflow-x-auto scroll-smooth pb-4 sm:gap-4 lg:gap-5 snap-x snap-mandatory"
         >
           {(loading ? Array.from({ length: 5 }) : products).map((item, index) => (
             <div
@@ -83,6 +90,13 @@ const HomeProductShelf = ({
           </button>
         </div>
       </div>
+
+      {!loading && products.length > 2 && (
+        <p className="mt-2 flex items-center gap-1.5 text-xs font-medium text-brown-400 dark:text-white/40 lg:hidden">
+          <FaAngleRight size={10} className="animate-pulse" />
+          Swipe to see {products.length - 2} more
+        </p>
+      )}
     </section>
   );
 };
@@ -95,6 +109,7 @@ HomeProductShelf.propTypes = {
   viewAllTo: PropTypes.string,
   viewAllState: PropTypes.object,
   viewAllLabel: PropTypes.string,
+  sectionId: PropTypes.string,
 };
 
 export default HomeProductShelf;

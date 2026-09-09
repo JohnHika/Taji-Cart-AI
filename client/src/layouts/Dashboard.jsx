@@ -1,9 +1,9 @@
-import React from 'react'
 import { useSelector } from 'react-redux'
 import { Outlet, useLocation } from 'react-router-dom'
 import AdminMenu from '../components/AdminMenu'
 import UserMenu from '../components/UserMenu'
 import isadmin from '../utils/isAdmin'
+import { getPOSOverflowClass } from '../utils/posLayout'
 
 const Dashboard = () => {
   const user = useSelector(state => state.user)
@@ -21,7 +21,7 @@ const Dashboard = () => {
   
   return (
     <section className={`w-full max-w-full bg-ivory dark:bg-dm-surface transition-colors duration-200 ${isPOSFullScreen ? '' : 'lg:h-[100dvh] lg:overflow-hidden'}`}>
-        <div className={`${isPOSFullScreen ? 'grid w-full max-w-full grid-cols-1 p-0' : 'container mx-auto grid w-full max-w-full items-start p-3 lg:h-full lg:grid-cols-[minmax(0,248px)_minmax(0,1fr)] lg:gap-3 lg:overflow-hidden'}`}>
+        <div className={`${isPOSFullScreen ? 'grid w-full max-w-full grid-cols-1 p-0' : 'mx-auto grid w-full max-w-full items-start p-0 sm:p-2 lg:h-full lg:grid-cols-[minmax(0,248px)_minmax(0,1fr)] lg:gap-3 lg:p-3 lg:overflow-hidden'}`}>
                 {!isPOSFullScreen && (
                   <aside className='hidden min-w-0 lg:block lg:h-full lg:overflow-hidden'>
                     <div className='h-full overflow-hidden border-r border-brown-100 pr-2 dark:border-dm-border'>
@@ -33,7 +33,7 @@ const Dashboard = () => {
                 )}
 
                 {/**right for content */}
-                <div className={`min-w-0 max-w-full overflow-x-hidden bg-white dark:bg-dm-card ${isPOSFullScreen ? 'min-h-[calc(100vh-0px)]' : 'min-h-[75vh] pb-24 lg:h-full lg:min-h-0 lg:overflow-y-auto lg:overscroll-contain lg:pb-6'}`}>
+                <div className={`min-w-0 max-w-full ${getPOSOverflowClass(isPOSFullScreen)} bg-white dark:bg-dm-card ${isPOSFullScreen ? 'min-h-[calc(100vh-0px)]' : 'min-h-[75vh] pb-20 sm:rounded-2xl sm:pb-24 lg:h-full lg:min-h-0 lg:overflow-y-auto lg:overscroll-contain lg:rounded-3xl lg:pb-6'}`}>
                     <Outlet/>
                 </div>
         </div>

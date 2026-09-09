@@ -20,8 +20,12 @@ const JengaPayment = ({
   fulfillment_type = 'delivery',
   pickup_location = '',
   pickup_instructions = '',
+  saccoOperatorId = '',
+  saccoDestinationTown = '',
   deliveryCharge = 0,
   deliveryInstructions = '',
+  deliveryMode = 'standard',
+  deliveryZoneId = '',
 }) => {
   const [phoneNumber, setPhoneNumber] = useState('');
   const [stage, setStage] = useState('idle'); // idle | initiating | pending | done
@@ -114,8 +118,12 @@ const JengaPayment = ({
           fulfillment_type,
           pickup_location,
           pickup_instructions,
+          saccoOperatorId,
+          saccoDestinationTown,
           deliveryCharge,
           deliveryInstructions,
+          delivery_mode: fulfillment_type === 'delivery' ? deliveryMode : 'standard',
+          deliveryZoneId: fulfillment_type === 'delivery' && deliveryMode === 'bike' ? deliveryZoneId : undefined,
         },
         requestLockKey: `payment:jenga:${phoneNumber}:${totalAmount}:${addressId || pickup_location || 'pickup'}`,
       });

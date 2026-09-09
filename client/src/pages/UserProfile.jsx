@@ -24,6 +24,7 @@ import UserProfileAvatarEdit from '../components/UserProfileAvatarEdit';
 import { setUserDetails } from '../store/userSlice'; // Changed from setUser to setUserDetails
 import Axios from '../utils/Axios';
 import { getAccountTypeMeta } from '../utils/userRole';
+import { useGlobalContext } from '../provider/GlobalProvider';
 
 const UserProfile = () => {
   console.log("UserProfile component rendering");
@@ -34,6 +35,8 @@ const UserProfile = () => {
     return state.user;
   });
   const dispatch = useDispatch();
+  const { royalCardData } = useGlobalContext();
+  const hasLoyaltyAccess = Boolean(royalCardData);
   const [activeTab, setActiveTab] = useState('profile'); // 'profile', 'royal', or 'security'
 
   useEffect(() => {
@@ -401,18 +404,20 @@ const UserProfile = () => {
                 <FaUser className="text-xs sm:text-base shrink-0" /> 
                 <span>Profile</span>
               </button>
-              <button
-                type="button"
-                onClick={() => setActiveTab('royal')}
-                className={`relative py-2.5 sm:py-3 px-3 sm:px-5 font-semibold text-xs sm:text-sm rounded-t-xl sm:rounded-t-2xl transition-all duration-200 flex items-center gap-1.5 sm:gap-2 shrink-0 ${
-                  activeTab === 'royal'
-                    ? 'bg-ivory dark:bg-dm-surface/80 text-plum-800 dark:text-white shadow-[0_-6px_20px_rgba(0,0,0,0.12)] z-10 scale-[1.02]'
-                    : 'text-white/80 hover:text-white hover:bg-white/8 active:bg-white/15'
-                }`}
-              >
-                <FaCrown className="text-gold-400 text-xs sm:text-base shrink-0" /> 
-                <span>Royal Card</span>
-              </button>
+              {hasLoyaltyAccess && (
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('royal')}
+                  className={`relative py-2.5 sm:py-3 px-3 sm:px-5 font-semibold text-xs sm:text-sm rounded-t-xl sm:rounded-t-2xl transition-all duration-200 flex items-center gap-1.5 sm:gap-2 shrink-0 ${
+                    activeTab === 'royal'
+                      ? 'bg-ivory dark:bg-dm-surface/80 text-plum-800 dark:text-white shadow-[0_-6px_20px_rgba(0,0,0,0.12)] z-10 scale-[1.02]'
+                      : 'text-white/80 hover:text-white hover:bg-white/8 active:bg-white/15'
+                  }`}
+                >
+                  <FaCrown className="text-gold-400 text-xs sm:text-base shrink-0" />
+                  <span>Royal Card</span>
+                </button>
+              )}
               <button
                 type="button"
                 onClick={() => setActiveTab('security')}

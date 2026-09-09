@@ -13,17 +13,54 @@ import ProductModel from '../models/product.model.js';
 import CartProductModel from '../models/cartproduct.model.js';
 import UserModel from '../models/user.model.js';
 import NotificationModel from '../models/notification.model.js';
+import DeliveryZoneModel from '../models/deliveryzone.model.js';
+import SaccoOperatorModel from '../models/saccooperator.model.js';
 import { normalizeKenyanPhone, isValidAmount, amountsMatch } from '../utils/jengaValidation.js';
 import {
   DEFAULT_DELIVERY_CHARGE,
   extractCoordinatesFromPayload,
   getCbdFootDeliveryStatus,
+  getDeliveryModeFromPayload,
+  isBikeDeliveryMode,
+  SACCO_TERMINAL_DROPOFF_CHARGE,
 } from '../utils/cbdDelivery.js';
+import { getEffectiveUnitPrice, getWholesalePricingSettings, isWholesaleEligible } from '../utils/wholesalePricing.js';
 
 // buildValidatedOrderPricing / pricewithDiscount live in order.controller.js but
 // aren't exported there — re-derive the pieces this controller needs directly
 // against ProductModel to keep this module self-contained.
 const roundMoney = (amount = 0) => Number(Number(amount || 0).toFixed(2));
+
+// Jenga's account-based settlement flow has no status-query API and doesn't
+// document a signature on its inbound callback (unlike Stripe-style HMAC
+// webhooks) — so orderReference alone (client-visible, needed for polling)
+// isn't enough to trust a callback. Appending a shared secret to the
+// callBackUrl we register per-request means a forged callback also needs to
+// know this value, which never reaches the client. Optional but strongly
+// recommended: set JENGA_CALLBACK_SECRET in the environment.
+let warnedMissingJengaCallbackSecret = false;
+const buildJengaCallbackUrl = (baseUrl) => {
+  const secret = process.env.JENGA_CALLBACK_SECRET;
+  if (!secret) {
+    if (!warnedMissingJengaCallbackSecret) {
+      console.warn('JENGA_CALLBACK_SECRET is not set — Jenga payment callbacks are unauthenticated. Set this env var to harden against forged "payment successful" callbacks.');
+      warnedMissingJengaCallbackSecret = true;
+    }
+    return baseUrl;
+  }
+  const separator = baseUrl.includes('?') ? '&' : '?';
+  return `${baseUrl}${separator}token=${encodeURIComponent(secret)}`;
+};
+
+// Mirrors pricewithDiscount() in order.controller.js — this module doesn't
+// apply royal loyalty discounts (Jenga checkout runs before that lookup), so
+// the signature only takes price/discount.
+const pricewithDiscount = (price, dis = 0) => {
+  const basePrice = Number(price || 0);
+  const productDiscount = Math.max(0, Number(dis || 0));
+  const discountAmount = Math.round((basePrice * productDiscount) / 100);
+  return Math.max(0, basePrice - discountAmount);
+};
 
 // Jenga requires payment.ref to be 6-20 alphanumeric characters (no separators).
 // Epoch seconds (not ms) fits in 10 digits; combined with a 4-char random
@@ -48,9 +85,16 @@ const priceItems = async (items) => {
   )];
 
   const products = await ProductModel.find({ _id: { $in: productIds } })
-    .select('_id name image price discount stock')
+    .select('_id name image price discount wholesalePrice stock')
     .lean();
   const productsById = new Map(products.map((p) => [String(p._id), p]));
+
+  const totalQuantity = orderItems.reduce(
+    (sum, item) => sum + Math.max(0, Math.floor(Number(item?.quantity) || 0)),
+    0
+  );
+  const wholesaleEligible = isWholesaleEligible(totalQuantity);
+  const wholesaleSettings = await getWholesalePricingSettings();
 
   let subTotalAmt = 0;
   const normalizedItems = orderItems.map((item) => {
@@ -75,8 +119,14 @@ const priceItems = async (items) => {
       throw err;
     }
 
-    const discountAmount = Math.round((product.price * Math.max(0, Number(product.discount || 0))) / 100);
-    const unitPrice = Math.max(0, product.price - discountAmount);
+    const unitPrice = getEffectiveUnitPrice({
+      price: product.price,
+      discount: product.discount,
+      wholesalePrice: product.wholesalePrice,
+      wholesaleEligible,
+      stackDiscounts: wholesaleSettings.stackDiscounts,
+      pricewithDiscountFn: pricewithDiscount,
+    });
     subTotalAmt += unitPrice * quantity;
 
     return { productId: product, quantity };
@@ -100,10 +150,12 @@ export const initiateJengaPayment = async (request, response) => {
       fulfillment_type = 'delivery',
       pickup_location,
       pickup_instructions,
+      saccoOperatorId,
+      saccoDestinationTown,
       phoneNumber,
-      deliveryCharge: requestedDeliveryCharge,
     } = request.body;
 
+    const deliveryMode = getDeliveryModeFromPayload(request.body);
     const customerLocation = extractCoordinatesFromPayload(request.body);
 
     const normalizedPhone = normalizeKenyanPhone(phoneNumber);
@@ -122,6 +174,27 @@ export const initiateJengaPayment = async (request, response) => {
       return response.status(400).json({ message: 'Pickup location is required for pickup orders', error: true, success: false });
     }
 
+    let saccoOperator = null;
+    if (fulfillment_type === 'sacco_pickup') {
+      if (!saccoOperatorId || !mongoose.Types.ObjectId.isValid(String(saccoOperatorId)) || !saccoDestinationTown) {
+        return response.status(400).json({
+          message: 'Please select a SACCO/coach operator and destination town',
+          error: true,
+          success: false,
+          code: 'INVALID_SACCO_OPERATOR',
+        });
+      }
+      saccoOperator = await SaccoOperatorModel.findOne({ _id: saccoOperatorId, isActive: true });
+      if (!saccoOperator) {
+        return response.status(400).json({
+          message: 'Selected operator is no longer available. Please pick another.',
+          error: true,
+          success: false,
+          code: 'INVALID_SACCO_OPERATOR',
+        });
+      }
+    }
+
     if (fulfillment_type === 'delivery' && deliveryMode === 'foot') {
       const cbdStatus = getCbdFootDeliveryStatus(customerLocation);
       if (!cbdStatus.allowed) {
@@ -132,10 +205,37 @@ export const initiateJengaPayment = async (request, response) => {
       }
     }
 
+    let deliveryZone = null;
+    if (fulfillment_type === 'delivery' && isBikeDeliveryMode(deliveryMode)) {
+      const zoneId = request.body.deliveryZoneId;
+      if (!zoneId || !mongoose.Types.ObjectId.isValid(String(zoneId))) {
+        return response.status(400).json({
+          message: 'Please select a delivery zone for bike delivery.',
+          error: true,
+          success: false,
+          code: 'INVALID_DELIVERY_ZONE',
+        });
+      }
+      deliveryZone = await DeliveryZoneModel.findOne({ _id: zoneId, isActive: true });
+      if (!deliveryZone) {
+        return response.status(400).json({
+          message: 'Selected delivery zone is no longer available. Please pick another zone.',
+          error: true,
+          success: false,
+          code: 'INVALID_DELIVERY_ZONE',
+        });
+      }
+    }
+
     const { normalizedItems, subTotalAmt } = await priceItems(list_items);
+    // Never trust a client-supplied deliveryCharge — recompute from the
+    // authoritative zone fare or the flat default, same as the other
+    // order-creation paths in order.controller.js.
     const deliveryCharge = fulfillment_type === 'delivery'
-      ? Number(requestedDeliveryCharge || DEFAULT_DELIVERY_CHARGE)
-      : 0;
+      ? (deliveryZone ? deliveryZone.fare : DEFAULT_DELIVERY_CHARGE)
+      : fulfillment_type === 'sacco_pickup'
+        ? SACCO_TERMINAL_DROPOFF_CHARGE
+        : 0;
     const totalAmt = roundMoney(subTotalAmt + deliveryCharge);
 
     if (!isValidAmount(totalAmt)) {
@@ -157,10 +257,16 @@ export const initiateJengaPayment = async (request, response) => {
       delivery_address: fulfillment_type === 'delivery' ? addressId : null,
       fulfillment_type,
       delivery_mode: deliveryMode || 'standard',
+      delivery_zone: deliveryZone ? deliveryZone._id : undefined,
+      delivery_zone_name: deliveryZone ? deliveryZone.name : '',
+      delivery_zone_fare: deliveryZone ? deliveryZone.fare : undefined,
       customer_location: customerLocation || undefined,
       deliveryInstructions: request.body.deliveryInstructions || '',
       pickup_location: pickup_location || '',
       pickup_instructions: pickup_instructions || '',
+      sacco_operator: saccoOperator ? saccoOperator._id : undefined,
+      sacco_operator_name: saccoOperator ? saccoOperator.name : '',
+      sacco_destination_town: fulfillment_type === 'sacco_pickup' ? saccoDestinationTown : '',
       subTotalAmt,
       deliveryCharge,
       totalAmt,
@@ -180,7 +286,7 @@ export const initiateJengaPayment = async (request, response) => {
 
     const merchantAccountNumber = requireEnv('JENGA_ACCOUNT_NUMBER');
     const merchantName = requireEnv('JENGA_MERCHANT_NAME');
-    const callbackUrl = requireEnv('JENGA_CALLBACK_URL');
+    const callbackUrl = buildJengaCallbackUrl(requireEnv('JENGA_CALLBACK_URL'));
 
     const token = await getAuthToken();
     const signature = signStkPushRequest({
@@ -459,6 +565,14 @@ export const getJengaPaymentStatus = async (request, response) => {
  */
 export const handleJengaCallback = async (request, response) => {
   try {
+    const expectedToken = process.env.JENGA_CALLBACK_SECRET;
+    if (expectedToken && request.query?.token !== expectedToken) {
+      console.error('Jenga callback rejected: missing/incorrect token');
+      // 200 (not 401) so a genuine misconfiguration doesn't trigger Jenga's
+      // retry storm — this is logged for investigation either way.
+      return response.status(200).json({ success: true });
+    }
+
     const callbackData = request.body;
     const orderReference = callbackData?.transactionReference;
 

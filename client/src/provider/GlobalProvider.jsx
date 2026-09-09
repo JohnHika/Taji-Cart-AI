@@ -10,6 +10,7 @@ import Axios from "../utils/Axios";
 import AxiosToastError from "../utils/AxiosToastError";
 import { clearAuthStorage } from "../utils/authStorage";
 import { getRoyalCardDiscount, pricewithDiscount } from "../utils/PriceWithDiscount";
+import { getEffectiveUnitPrice, isWholesaleEligible } from "../utils/wholesalePricing";
 
 // Default context value to prevent undefined destructuring during concurrent rendering
 const defaultContextValue = {
@@ -23,7 +24,9 @@ const defaultContextValue = {
     notDiscountTotalPrice: 0,
     fetchOrder: () => {},
     royalCardData: null,
-    royalDiscount: 0
+    royalDiscount: 0,
+    wholesaleEligible: false,
+    wholesaleStackDiscounts: false
 };
 
 const globalContext = createContext(defaultContextValue);
@@ -36,6 +39,7 @@ const GlobalProvider = ({ children }) => {
     const [notDiscountTotalPrice, setNotDiscountTotalPrice] = useState(0);
     const [royalCardData, setRoyalCardData] = useState(null);
     const [royalDiscount, setRoyalDiscount] = useState(0);
+    const [wholesaleStackDiscounts, setWholesaleStackDiscounts] = useState(false);
     const cart = useSelector(state => state.cartItem?.cart || []);
     const user = useSelector(state => state?.user);
 
@@ -59,7 +63,7 @@ const GlobalProvider = ({ children }) => {
                 method: 'GET'
             });
 
-            if (response.data?.success) {
+            if (response.data?.success && response.data?.hasAccess !== false) {
                 const cardData = response.data.data;
                 setRoyalCardData(cardData);
 
@@ -67,6 +71,9 @@ const GlobalProvider = ({ children }) => {
                 const discount = getRoyalCardDiscount(cardData.tier);
                 setRoyalDiscount(discount);
                 console.log(`Applied Royal card discount: ${discount}% (${cardData.tier} tier)`);
+            } else {
+                setRoyalCardData(null);
+                setRoyalDiscount(0);
             }
         } catch (error) {
             console.error("Error fetching Royal card data:", error);
@@ -169,19 +176,43 @@ const GlobalProvider = ({ children }) => {
         }
     };
 
+    // Wholesale pricing's stacking rule is an admin-configurable, storewide
+    // toggle (see Product admin page) — fetch it once; it rarely changes.
+    useEffect(() => {
+        const fetchWholesaleSettings = async () => {
+            try {
+                const response = await Axios(SummaryApi.getWholesalePricingSettings);
+                if (response.data?.success) {
+                    setWholesaleStackDiscounts(Boolean(response.data.data?.stackDiscounts));
+                }
+            } catch (error) {
+                // Non-fatal — falls back to the default (no stacking) if this fails.
+                console.error("Error fetching wholesale pricing settings:", error);
+            }
+        };
+        fetchWholesaleSettings();
+    }, []);
+
     useEffect(() => {
         const qty = cart.reduce((preve, curr) => {
             return preve + curr.quantity;
         }, 0);
         setTotalQty(qty);
 
+        // Cart-wide: once total quantity across every line exceeds the
+        // threshold, every line with a wholesalePrice set becomes eligible.
+        const wholesaleEligible = isWholesaleEligible(qty);
+
         const tPrice = cart.reduce((preve, curr) => {
-            // Apply both product discount and Royal card discount
-            const priceAfterDiscount = pricewithDiscount(
-                curr?.productId?.price,
-                curr?.productId?.discount,
-                royalDiscount // Apply Royal card discount
-            );
+            const priceAfterDiscount = getEffectiveUnitPrice({
+                price: curr?.productId?.price,
+                discount: curr?.productId?.discount,
+                wholesalePrice: curr?.productId?.wholesalePrice,
+                royalDiscount,
+                wholesaleEligible,
+                stackDiscounts: wholesaleStackDiscounts,
+                pricewithDiscountFn: pricewithDiscount,
+            });
 
             return preve + (priceAfterDiscount * curr.quantity);
         }, 0);
@@ -192,7 +223,7 @@ const GlobalProvider = ({ children }) => {
             return preve + (price * curr.quantity);
         }, 0);
         setNotDiscountTotalPrice(notDiscountPrice);
-    }, [cart, royalDiscount]); // Added royalDiscount as dependency
+    }, [cart, royalDiscount, wholesaleStackDiscounts]);
 
     const handleLogoutOut = async () => {
         try {
@@ -275,7 +306,9 @@ const GlobalProvider = ({ children }) => {
         notDiscountTotalPrice,
         fetchOrder,
         royalCardData,
-        royalDiscount
+        royalDiscount,
+        wholesaleEligible: isWholesaleEligible(totalQty),
+        wholesaleStackDiscounts
     };
 
     return (

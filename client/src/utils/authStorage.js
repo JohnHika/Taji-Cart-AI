@@ -14,6 +14,13 @@ export const getStoredAccessToken = () => {
 
 export const hasStoredAccessToken = () => Boolean(getStoredAccessToken());
 
+// Network and server errors must not sign a customer out. Only a server-confirmed
+// authentication rejection means the saved session is no longer usable.
+export const isAuthSessionError = (error) => {
+    const status = error?.response?.status;
+    return status === 401 || status === 403;
+};
+
 export const getStoredRefreshToken = () => {
     if (typeof window === 'undefined') {
         return '';
@@ -31,7 +38,8 @@ export const getRememberMe = () => {
         return false;
     }
 
-    return localStorage.getItem('rememberMe') === 'true';
+    // Customer sessions persist by default. A customer can opt out on a shared device.
+    return localStorage.getItem('rememberMe') !== 'false';
 };
 
 export const setRememberMe = (value) => {
@@ -39,11 +47,7 @@ export const setRememberMe = (value) => {
         return;
     }
 
-    if (value) {
-        localStorage.setItem('rememberMe', 'true');
-    } else {
-        localStorage.removeItem('rememberMe');
-    }
+    localStorage.setItem('rememberMe', value ? 'true' : 'false');
 };
 
 export const saveTokens = ({ accessToken, refreshToken, rememberMe }) => {

@@ -2,6 +2,7 @@ import React from 'react';
 import toast from 'react-hot-toast';
 import {
   FaBoxes,
+  FaBoxOpen,
   FaBullhorn,
   FaCog,
   FaClipboardCheck,
@@ -9,6 +10,8 @@ import {
   FaCrown,
   FaGift,
   FaHistory,
+  FaLayerGroup,
+  FaListAlt,
   FaMapMarkedAlt,
   FaMapMarkerAlt,
   FaQrcode,
@@ -18,6 +21,8 @@ import {
   FaStar,
   FaTachometerAlt,
   FaTruck,
+  FaUndo,
+  FaUpload,
   FaUser,
   FaUserTie
 } from 'react-icons/fa';
@@ -32,17 +37,23 @@ import AxiosToastError from '../utils/AxiosToastError';
 import { clearAuthStorage } from '../utils/authStorage';
 import isadmin from '../utils/isAdmin';
 import isStaff from '../utils/isStaff';
+import { useGlobalContext } from '../provider/GlobalProvider';
 
 const UserMenu = ({ close, variant = 'dropdown' }) => {
   const user = useSelector((state) => state.user);
   const location = useLocation();
   const dispatch = useDispatch();
   const navigate = useNavigate();
+  const { royalCardData } = useGlobalContext();
   const isAdmin = isadmin(user);
   const isDelivery = user?.role === 'delivery' || user?.isDelivery === true;
   const showStaffFunctions = isStaff(user) && !isAdmin;
   const isSidebar = variant === 'sidebar';
   const useSlimDashboardNav = showStaffFunctions || isDelivery;
+  const hasLoyaltyAccess = Boolean(royalCardData);
+  const canManageExchanges = isAdmin || (user?.staffPermissions || []).includes('exchange.manage');
+  const canManageCounterFulfillment = isAdmin || (user?.staffPermissions || []).includes('pos.manage_fulfillment');
+  const canManageCatalog = isAdmin || (user?.staffPermissions || []).includes('catalog.manage');
 
   const sectionClass = 'min-w-0 px-4 py-1 mt-3 mb-0.5 text-xs font-semibold uppercase tracking-[0.14em] leading-tight text-brown-500 dark:text-white/45 whitespace-normal break-words';
 
@@ -159,10 +170,24 @@ const UserMenu = ({ close, variant = 'dropdown' }) => {
                 <MenuLink to="/dashboard/staff/dashboard" icon={FaUserTie} label="Staff dashboard" />
                 <MenuLink to="/dashboard/sales-counter" icon={FaShoppingBag} label="Sales counter" />
                 <MenuLink to="/dashboard/sales-history" icon={FaHistory} label="Sales history" />
+                {canManageExchanges && (
+                  <MenuLink to="/dashboard/returns-exchanges" icon={FaUndo} label="Returns & exchanges" />
+                )}
                 <MenuLink to="/dashboard/staff/verify-pickup" icon={FaQrcode} label="Verify pickup" />
                 <MenuLink to="/dashboard/staff/pending-pickups" icon={FaBoxes} label="Pending pickups" />
                 <MenuLink to="/dashboard/staff/completed-verifications" icon={FaClipboardCheck} label="Verification history" />
                 <MenuLink to="/dashboard/staff/delivery" icon={FaCog} label="Delivery management" />
+                {canManageCounterFulfillment && (
+                  <MenuLink to="/dashboard/staff/counter-fulfillment" icon={FaTruck} label="Sales counter deliveries" />
+                )}
+                {canManageCatalog && (
+                  <>
+                    <MenuLink to="/dashboard/product" icon={FaBoxOpen} label="Products" />
+                    <MenuLink to="/dashboard/upload-product" icon={FaUpload} label="Upload product" />
+                    <MenuLink to="/dashboard/category" icon={FaListAlt} label="Category" />
+                    <MenuLink to="/dashboard/subcategory" icon={FaLayerGroup} label="Sub category" />
+                  </>
+                )}
               </>
             )}
 
@@ -189,10 +214,14 @@ const UserMenu = ({ close, variant = 'dropdown' }) => {
             <MenuLink to="/dashboard/address" icon={FaMapMarkerAlt} label="My addresses" />
 
             <p className={sectionClass}>Rewards & community</p>
-            <MenuLink to="/dashboard/loyalty-program" icon={FaCrown} label="Loyalty program" />
+            {hasLoyaltyAccess && (
+              <MenuLink to="/dashboard/loyalty-program" icon={FaCrown} label="Loyalty program" />
+            )}
             <MenuLink to="/dashboard/community-perks" icon={FaGift} label="Community perks" />
             <MenuLink to="/dashboard/active-campaigns" icon={FaBullhorn} label="Active campaigns" />
-            <MenuLink to="/dashboard/profile#royal" icon={FaStar} label="Royal card" />
+            {hasLoyaltyAccess && (
+              <MenuLink to="/dashboard/profile#royal" icon={FaStar} label="Royal card" />
+            )}
           </>
         )}
 

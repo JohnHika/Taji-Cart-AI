@@ -26,6 +26,7 @@ const EditProductAdmin = ({ close ,data : propsData,fetchProductData}) => {
     unit: propsData.unit,
     stock: propsData.stock,
     price: propsData.price,
+    wholesalePrice: propsData.wholesalePrice ?? "",
     discount: propsData.discount,
     description: propsData.description,
     more_details: propsData.more_details || {},
@@ -117,6 +118,13 @@ const EditProductAdmin = ({ close ,data : propsData,fetchProductData}) => {
     e.preventDefault()
     console.log("data", data)
 
+    if (data.wholesalePrice !== "" && data.wholesalePrice !== null && data.wholesalePrice !== undefined) {
+      if (Number(data.wholesalePrice) >= Number(data.price)) {
+        successAlert("Wholesale price must be lower than the retail price", "error")
+        return
+      }
+    }
+
     try {
       const response = await Axios({
         ...SummaryApi.updateProductDetails,
@@ -141,6 +149,7 @@ const EditProductAdmin = ({ close ,data : propsData,fetchProductData}) => {
           unit: "",
           stock: "",
           price: "",
+          wholesalePrice: "",
           discount: "",
           description: "",
           more_details: {},
@@ -406,6 +415,25 @@ const EditProductAdmin = ({ close ,data : propsData,fetchProductData}) => {
                   required
                   className='bg-plum-50/80 p-2 outline-none border focus-within:border-plum-500 rounded'
                 />
+              </div>
+
+              <div className='grid gap-1'>
+                <label htmlFor='wholesalePrice' className='font-medium'>Wholesale Price</label>
+                <input
+                  id='wholesalePrice'
+                  type='number'
+                  placeholder='Optional bulk-buyer price'
+                  name='wholesalePrice'
+                  value={data.wholesalePrice}
+                  onChange={handleChange}
+                  min="0"
+                  className='bg-plum-50/80 p-2 outline-none border focus-within:border-plum-500 rounded'
+                />
+                {data.wholesalePrice !== "" && data.price !== "" && Number(data.wholesalePrice) >= Number(data.price) ? (
+                  <p className='text-xs text-red-500'>Must be lower than the retail price</p>
+                ) : (
+                  <p className='text-xs text-neutral-400'>Optional. Must be lower than the retail price.</p>
+                )}
               </div>
 
               <div className='grid gap-1'>

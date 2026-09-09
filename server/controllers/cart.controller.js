@@ -1,5 +1,7 @@
 import CartProductModel from "../models/cartproduct.model.js";
 import UserModel from "../models/user.model.js";
+import ProductModel from '../models/product.model.js';
+import { getCustomerProductFilter } from './catalogQuality.controller.js';
 
 const VARIANT_FIELDS = ['color', 'length', 'density', 'laceSpecification'];
 
@@ -49,12 +51,25 @@ export const addToCartItemController = async(request,response)=>{
         const normalizedSku = normalizeText(sku)
         const normalizedSelectedVariant = normalizeSelectedVariant(selectedVariant)
         const selectedVariantKey = buildSelectedVariantKey(normalizedSelectedVariant)
-        
+
         if(!productId){
             return response.status(402).json({
                 message : "Provide productId",
                 error : true,
                 success : false
+            })
+        }
+
+        const customerVisibleProduct = await ProductModel.findOne({
+            _id: productId,
+            ...(await getCustomerProductFilter())
+        }).select('_id')
+
+        if (!customerVisibleProduct) {
+            return response.status(404).json({
+                message: 'This product is not currently available to customers',
+                error: true,
+                success: false
             })
         }
 
@@ -133,10 +148,10 @@ export const getCartItemController = async(request,response)=>{
 
         const cartItem =  await CartProductModel.find({
             userId : userId
-        }).populate('productId')
+        }).populate({ path: 'productId', match: await getCustomerProductFilter() })
 
         return response.json({
-            data : cartItem,
+            data : cartItem.filter((item) => item.productId),
             error : false,
             success : true
         })

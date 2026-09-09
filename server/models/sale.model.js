@@ -49,6 +49,96 @@ const saleSchema = new mongoose.Schema({
     type: String,
     default: ''
   },
+  fulfillment_type: {
+    type: String,
+    enum: ['in_store', 'pickup', 'delivery'],
+    default: 'in_store'
+  },
+  // Whether the customer is physically at the counter (walk-in) or this sale
+  // is staff recording/charging a website/WhatsApp order at the counter on
+  // the customer's behalf (online) — distinct from fulfillment_type, which
+  // covers how the item is handed over, not how the order originated.
+  saleSource: {
+    type: String,
+    enum: ['walkin', 'online'],
+    default: 'walkin'
+  },
+  // Only meaningful when fulfillment_type === 'delivery'. Snapshots
+  // zone/SACCO name+fare (mirroring Order) so the sale stays readable even
+  // if the zone/operator is later renamed, re-priced, or deactivated.
+  delivery_mode: {
+    type: String,
+    enum: ['standard', 'bike', 'sacco', ''],
+    default: ''
+  },
+  delivery_zone: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'deliveryZone'
+  },
+  delivery_zone_name: {
+    type: String,
+    default: ''
+  },
+  delivery_zone_fare: {
+    type: Number
+  },
+  sacco_operator: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'saccoOperator'
+  },
+  sacco_operator_name: {
+    type: String,
+    default: ''
+  },
+  sacco_destination_town: {
+    type: String,
+    default: ''
+  },
+  deliveryCharge: {
+    type: Number,
+    default: 0
+  },
+  // Tracks a counter sale through to actual handover once fulfillment_type
+  // is 'pickup' or 'delivery' — previously a Sale had no lifecycle beyond
+  // checkout, so a customer who paid at the counter for later pickup/delivery
+  // fell into a gap no staff page could see. 'n/a' covers in_store sales,
+  // which are handed over immediately at checkout and need no tracking.
+  fulfillmentStatus: {
+    type: String,
+    enum: ['n/a', 'awaiting_pickup', 'awaiting_delivery', 'picked_up', 'dispatched', 'delivered', 'cancelled'],
+    default: 'n/a'
+  },
+  // Short code the customer is given on the receipt for a pickup sale,
+  // mirroring Order.pickupCode — shown back to staff at handover time.
+  pickupCode: {
+    type: String,
+    default: ''
+  },
+  // Free text staff can capture about the delivery arrangement made with
+  // the customer at checkout (e.g. "wants it delivered tomorrow afternoon").
+  deliveryNote: {
+    type: String,
+    default: ''
+  },
+  // The date the customer asked for delivery — a customer can buy today and
+  // ask for delivery tomorrow (or later). Defaults to the sale date itself
+  // (same-day) when not explicitly set, so every delivery sale has a date
+  // to sort/filter the fulfillment queue by, not just whoever happened to
+  // add a free-text note.
+  deliveryScheduledDate: {
+    type: Date
+  },
+  fulfilledBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
+  },
+  fulfilledByName: {
+    type: String,
+    default: ''
+  },
+  fulfilledAt: {
+    type: Date
+  },
   subtotal: {
     type: Number,
     required: true
@@ -67,14 +157,23 @@ const saleSchema = new mongoose.Schema({
   },
   paymentMethod: {
     type: String,
-    enum: ['cash', 'card', 'mobile', 'split'],
+    enum: ['cash', 'equity', 'split', 'text_forwarded'],
     required: true
   },
   payments: [{
-    method: { type: String, enum: ['cash', 'card', 'mobile'], required: true },
+    method: { type: String, enum: ['cash', 'equity', 'text_forwarded'], required: true },
     amount: { type: Number, required: true },
     phone: { type: String },
-    checkoutRequestId: { type: String }
+    checkoutRequestId: { type: String },
+    proofImageUrl: { type: String },
+    // Raw confirmation SMS text for a text_forwarded payment — the text
+    // equivalent of proofImageUrl, used when the customer's confirmation
+    // (e.g. an M-Pesa/bank SMS) was relayed to a staff member as text
+    // (forwarded by the admin, or copy-pasted) rather than a screenshot.
+    forwardedText: { type: String },
+    approved: { type: Boolean, default: false },
+    approvedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    approvedAt: { type: Date }
   }],
   amountTendered: {
     type: Number,
@@ -144,6 +243,7 @@ saleSchema.index({ saleDate: -1 });
 saleSchema.index({ cashier: 1, saleDate: -1 });
 saleSchema.index({ customer: 1, saleDate: -1 });
 saleSchema.index({ branch: 1, saleDate: -1 });
+saleSchema.index({ branch: 1, fulfillmentStatus: 1 });
 
 // Virtual for calculating total items
 saleSchema.virtual('totalItems').get(function() {
@@ -154,10 +254,11 @@ saleSchema.virtual('totalItems').get(function() {
 saleSchema.pre('save', function(next) {
   // Calculate subtotal from items
   this.subtotal = this.items.reduce((sum, item) => sum + item.total, 0);
-  
-  // Calculate final total after discount plus tax
+
+  // Calculate final total after discount, tax, and delivery charge
   const taxVal = typeof this.tax === 'number' ? this.tax : 0;
-  this.total = Math.max(0, (this.subtotal - (this.discount || 0)) + taxVal);
+  const deliveryVal = typeof this.deliveryCharge === 'number' ? this.deliveryCharge : 0;
+  this.total = Math.max(0, (this.subtotal - (this.discount || 0)) + taxVal + deliveryVal);
   
   // Calculate change for cash payments; preserve provided values for split
   if (this.paymentMethod === 'cash') {
@@ -203,20 +304,25 @@ saleSchema.statics.getSummary = async function(startDate, endDate, cashier = nul
             $cond: [{ $eq: ['$paymentMethod', 'cash'] }, '$total', 0]
           }
         },
-        cardSales: {
+        equitySales: {
           $sum: {
-            $cond: [{ $eq: ['$paymentMethod', 'card'] }, '$total', 0]
+            $cond: [{ $eq: ['$paymentMethod', 'equity'] }, '$total', 0]
           }
         },
-        mobileSales: {
+        splitSales: {
           $sum: {
-            $cond: [{ $eq: ['$paymentMethod', 'mobile'] }, '$total', 0]
+            $cond: [{ $eq: ['$paymentMethod', 'split'] }, '$total', 0]
+          }
+        },
+        textForwardedSales: {
+          $sum: {
+            $cond: [{ $eq: ['$paymentMethod', 'text_forwarded'] }, '$total', 0]
           }
         }
       }
     }
   ]);
-  
+
   return summary[0] || {
     totalSales: 0,
     totalTransactions: 0,
@@ -224,8 +330,9 @@ saleSchema.statics.getSummary = async function(startDate, endDate, cashier = nul
     totalItems: 0,
     totalDiscount: 0,
     cashSales: 0,
-    cardSales: 0,
-    mobileSales: 0
+    equitySales: 0,
+    splitSales: 0,
+    textForwardedSales: 0
   };
 };
 

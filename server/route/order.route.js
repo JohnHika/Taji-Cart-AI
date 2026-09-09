@@ -28,6 +28,15 @@ import { requireStaffPermission } from '../middleware/requireStaffPermission.js'
 
 const orderRouter = Router()
 
+// Allows admins through directly; otherwise falls back to the staff role
+// check so requireStaffPermission can gate on the specific permission.
+const adminOrStaff = (req, res, next) => {
+    if (req.isAdmin) {
+        return next();
+    }
+    return staff(req, res, next);
+};
+
 // User order routes
 orderRouter.post("/cash-on-delivery", auth, CashOnDeliveryOrderController)
 orderRouter.post('/checkout', auth, checkoutController) // Checkout with payment redirect
@@ -38,9 +47,9 @@ orderRouter.get("/details", auth, getOrderBySessionController)
 orderRouter.get("/recent", auth, getMostRecentOrder)
 orderRouter.get("/receipt", auth, getOrderBySessionController)
 
-// Admin order management routes
-orderRouter.get('/admin/all', auth, admin, getAllOrdersAdmin)
-orderRouter.put('/status/:id', auth, admin, updateOrderStatus)
+// Admin order management routes (staff with the matching permission may also access)
+orderRouter.get('/admin/all', auth, adminOrStaff, requireStaffPermission('order.view'), getAllOrdersAdmin)
+orderRouter.put('/status/:id', auth, adminOrStaff, requireStaffPermission('order.update_status'), updateOrderStatus)
 
 // Delivery tracking routes
 orderRouter.get("/track/:id", auth, getOrderTrackingDetails);

@@ -2,9 +2,10 @@ import cookieParser from 'cookie-parser';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import express from 'express';
-import rateLimit from 'express-rate-limit';
 import session from 'express-session';
 import passport from 'passport';
+import helmet from 'helmet';
+import { generalLimiter } from './middleware/rateLimiters.js';
 
 import connectDB from './config/connectDB.js';
 import './config/passport.js'; // registers passport strategies (side-effect only)
@@ -16,6 +17,11 @@ import categoryRouter from './route/category.route.js';
 import chatRoutes from './route/chat.route.js';
 import campaignRouter from './route/communitycampaign.routes.js';
 import deliveryRoutes from './route/delivery.route.js';
+import deliveryZoneRouter from './route/deliveryzone.route.js';
+import exchangeRouter from './route/exchange.route.js';
+import featureFlagRouter from './route/featureFlag.route.js';
+import tryonRouter from './route/tryon.route.js';
+import saccoOperatorRouter from './route/saccooperator.route.js';
 import driverVerificationRoutes from './route/driverVerification.route.js';
 import driverFinancialRoutes from './route/driverFinancial.route.js';
 import driverPerformanceRoutes from './route/driverPerformance.route.js';
@@ -32,29 +38,52 @@ import posRouter from './routes/pos.js';
 import mpesaRouter from './route/mpesa.route.js';
 import jengaRouter from './route/jenga.route.js';
 import sitemapRouter from './route/sitemap.route.js';
+import merchantFeedRouter from './route/merchantFeed.route.js';
 import shareRouter from './route/share.route.js';
 import supportRouter from './route/support.route.js';
+import adminAiRouter from './route/adminAi.route.js';
+import warehouseRouter from './route/warehouse.route.js';
+import procurementRouter from './route/procurement.route.js';
+import stockControlRouter from './route/stockControl.route.js';
+import storePortalRouter from './route/storePortal.route.js';
 
 // ── Controllers used directly on admin routes ───────────────────────────────
 import {
     getBenefitRanges,
+    getLoyaltyAccessListController,
     getLoyaltyCards,
+    getLoyaltyProgramSettingsController,
     getLoyaltyStats,
     getTierThresholds,
     getUserLoyaltyCard,
     recalculateAllTiers,
     refreshUserPoints,
     requestSecurityCode,
+    setUserLoyaltyAccessController,
     updateBenefitRanges,
+    updateLoyaltyProgramSettingsController,
     updateTierThresholds,
 } from './controllers/loyalty.controller.js';
 import { searchUsers } from './controllers/user.controller.js';
+import {
+    getWholesalePricingSettingsController,
+    updateWholesalePricingSettingsController,
+} from './controllers/wholesalePricing.controller.js';
 import { admin } from './middleware/Admin.js';
 import auth from './middleware/auth.js';
 
 dotenv.config();
 
 const app = express();
+
+// Baseline security headers (X-Content-Type-Options, X-Frame-Options, HSTS,
+// etc.) — was a listed dependency but never actually applied. CSP is left at
+// helmet's default; this is a JSON API (no HTML templates to protect), and
+// crossOriginResourcePolicy is relaxed since this API is intentionally
+// served cross-origin to the Vercel-hosted frontend (see CORS config below).
+app.use(helmet({
+    crossOriginResourcePolicy: { policy: 'cross-origin' },
+}));
 
 // Render (and similar platforms) terminate TLS and forward requests with
 // X-Forwarded-* headers. Trust the first proxy hop so express-rate-limit and
@@ -78,6 +107,7 @@ const allowedOrigins = [
     'https://nawiri-hair.vercel.app',
     'https://nawirihairke.com',
     'https://www.nawirihairke.com',
+    'https://store.nawirihairke.com',
     'https://www.nawirihair.com',
     'https://admin.nawirihair.com',
 ];
@@ -101,24 +131,31 @@ app.use(cors({
 app.options('*', cors());
 
 // ── Core middleware ──────────────────────────────────────────────────────────
-const limiter = rateLimit({
-    windowMs: 15 * 60 * 1000,
-    max: 200,
-    standardHeaders: true,
-    legacyHeaders: false,
-    message: 'Too many requests, please try again later',
-});
 // ── Health + root — must be BEFORE rate-limiter so self-pings always succeed ─
 app.get('/', (req, res) => res.json({ message: 'Taji Cart API is running ✅' }));
 app.get('/health', (_req, res) => res.status(200).json({ status: 'ok', uptime: process.uptime(), time: new Date().toISOString() }));
 
-app.use(limiter);
+app.use(generalLimiter);
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 app.use(passport.initialize());
+
+// A hardcoded fallback secret here would be sitting in this public repo's
+// history — anyone could forge session state signed with it. Fine for local
+// dev convenience; in production, missing this env var is a config error
+// that should fail loudly at boot, not silently run with a known secret.
+const resolveSessionSecret = () => {
+    if (process.env.SESSION_SECRET) return process.env.SESSION_SECRET;
+    if (process.env.NODE_ENV === 'production') {
+        console.error('FATAL: SESSION_SECRET is not set. Refusing to start in production with a publicly-known fallback session secret.');
+        process.exit(1);
+    }
+    return 'nawiri-session-fallback-dev'; // local dev only
+};
+
 app.use(session({
-  secret: process.env.SESSION_SECRET || 'nawiri-session-fallback-dev',
+  secret: resolveSessionSecret(),
   resave: false,
   saveUninitialized: false,
   cookie: { secure: process.env.NODE_ENV === 'production' },
@@ -127,6 +164,7 @@ app.use(session({
 // ── Routes ───────────────────────────────────────────────────────────────────
 
 app.use('/sitemap.xml', sitemapRouter);
+app.use('/merchant-feed.xml', merchantFeedRouter);
 app.use('/share', shareRouter);
 app.use('/api/user', userRouter);
 app.use('/api/auth', authRoutes);
@@ -140,12 +178,17 @@ app.use('/api/products', productRouter);
 app.use('/api/cart', cartRouter);
 app.use('/api/address', addressRouter);
 app.use('/api/order', orderRouter);
+app.use('/api/delivery-zones', deliveryZoneRouter);
+app.use('/api/sacco-operators', saccoOperatorRouter);
 app.use('/api/route-optimization', routeOptimizationRouter);
 app.use('/api/chat', chatRoutes);
 app.use('/api/loyalty', loyaltyRouter);
 app.use('/api', campaignRouter);
 app.use('/api/tracking', trackingRouter);
 app.use('/api/pos', posRouter);
+app.use('/api/exchanges', exchangeRouter);
+app.use('/api/feature-flags', featureFlagRouter);
+app.use('/api/tryon', tryonRouter);
 app.use('/api/mpesa', mpesaRouter);
 app.use('/api/jenga', jengaRouter);
 app.use('/api/support', supportRouter);
@@ -153,6 +196,11 @@ app.use('/api/delivery', deliveryRoutes);
 app.use('/api/driver-verification', driverVerificationRoutes);
 app.use('/api/driver-financials', driverFinancialRoutes);
 app.use('/api/driver-performance', driverPerformanceRoutes);
+app.use('/api/admin/ai', adminAiRouter);
+app.use('/api/admin/warehouse', warehouseRouter);
+app.use('/api/admin/procurement', procurementRouter);
+app.use('/api/admin/stock-control', stockControlRouter);
+app.use('/api/admin/store-portal', storePortalRouter);
 
 // ── Admin loyalty routes ─────────────────────────────────────────────────────
 app.get('/api/admin/loyalty/cards', auth, admin, getLoyaltyCards);
@@ -164,8 +212,18 @@ app.put('/api/admin/loyalty/benefit-ranges', auth, admin, updateBenefitRanges);
 app.post('/api/admin/loyalty/refresh-points', auth, admin, refreshUserPoints);
 app.post('/api/loyalty/request-security-code', auth, admin, requestSecurityCode);
 app.post('/api/admin/loyalty/recalculate-tiers', auth, admin, recalculateAllTiers);
+app.get('/api/admin/loyalty/settings', auth, admin, getLoyaltyProgramSettingsController);
+app.put('/api/admin/loyalty/settings', auth, admin, updateLoyaltyProgramSettingsController);
+app.get('/api/admin/loyalty/access', auth, admin, getLoyaltyAccessListController);
+app.put('/api/admin/loyalty/access/:userId', auth, admin, setUserLoyaltyAccessController);
 app.get('/api/admin/users/search', auth, admin, searchUsers);
 app.get('/api/users/:userId/loyalty-card', auth, getUserLoyaltyCard);
+
+// ── Wholesale pricing settings ──────────────────────────────────────────────
+// GET is public — the storefront cart needs it to preview the same price the
+// server will charge once an order's quantity crosses the wholesale threshold.
+app.get('/api/wholesale-pricing/settings', getWholesalePricingSettingsController);
+app.put('/api/admin/wholesale-pricing/settings', auth, admin, updateWholesalePricingSettingsController);
 
 // ── Global error handler ─────────────────────────────────────────────────────
 app.use((err, req, res, next) => {

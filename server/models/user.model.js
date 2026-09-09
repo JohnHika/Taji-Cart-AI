@@ -39,6 +39,20 @@ const userSchema = new mongoose.Schema({
         type : String,
         default : ""
     },
+    // The refresh token this one just replaced, plus when it was rotated out.
+    // A grace window (see authSession.js) lets it still be accepted briefly
+    // after rotation — closes a multi-tab/multi-device race where one tab
+    // refreshes first and a second tab's still-in-flight request would
+    // otherwise get hard-rejected and force an unexpected logout, even
+    // though the user never signed out anywhere.
+    previous_refresh_token : {
+        type : String,
+        default : ""
+    },
+    previous_refresh_token_rotated_at : {
+        type : Date,
+        default : null
+    },
     verify_email : {
         type : Boolean,
         default : false
@@ -51,6 +65,17 @@ const userSchema = new mongoose.Schema({
         type : String,
         enum : ["Active","Inactive","Suspended"],
         default : "Active"
+    },
+    // Brute-force protection: the only prior defense on login was a blanket
+    // 200-req/15min-per-IP rate limit, which does nothing against a patient
+    // single-IP attacker or a distributed one. Tracked per-account instead.
+    failedLoginAttempts : {
+        type : Number,
+        default : 0
+    },
+    lockedUntil : {
+        type : Date,
+        default : null
     },
     address_details : [
         {
@@ -112,6 +137,13 @@ const userSchema = new mongoose.Schema({
         changedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
         changedAt: { type: Date, default: Date.now }
     }],
+    // Exclusive access to the loyalty/Royal Card program for this individual
+    // customer, independent of the global LoyaltySettings master switch.
+    // See server/utils/loyaltySettings.js: hasLoyaltyAccess().
+    loyaltyAccessGranted: {
+        type: Boolean,
+        default: false
+    },
     googleId: {
         type: String,
         sparse: true,  // Allow null values but enforce uniqueness when present

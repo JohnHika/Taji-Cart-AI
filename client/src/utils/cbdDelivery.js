@@ -6,6 +6,12 @@ export const NAIROBI_CBD_CENTER = {
 export const NAIROBI_CBD_RADIUS_KM = 3;
 export const DEFAULT_DELIVERY_CHARGE = 100; // KES
 
+// Flat fee for the shop -> SACCO/coach terminal leg only. Must match
+// server/utils/cbdDelivery.js SACCO_TERMINAL_DROPOFF_CHARGE — the SACCO's
+// own terminal-to-destination parcel fee is separate and relayed by phone,
+// never collected through this app.
+export const SACCO_TERMINAL_DROPOFF_CHARGE = 100; // KES
+
 const toRadians = (value) => (value * Math.PI) / 180;
 
 export const haversineDistanceKm = (from, to) => {

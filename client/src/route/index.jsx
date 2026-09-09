@@ -1,8 +1,9 @@
 import React, { Suspense, useEffect } from 'react';
-import { createBrowserRouter, Navigate, useLocation } from 'react-router-dom';
+import { createBrowserRouter, Link, Navigate, useLocation } from 'react-router-dom';
 import App from '../App';
 import PrivateRoute from '../components/PrivateRoute';
 import lazyWithRetry from '../utils/lazyWithRetry';
+import FeatureGate from '../components/FeatureGate';
 
 // Eagerly loaded — tiny, needed on every route
 import CategoryFallbackErrorPage from '../components/CategoryFallbackErrorPage';
@@ -27,6 +28,8 @@ const GuestCheckout                 = lazyWithRetry(() => import('../pages/Guest
 const GuestOrderTracking            = lazyWithRetry(() => import('../pages/GuestOrderTracking'));
 const StaffPOS                      = lazyWithRetry(() => import('../pages/StaffPOS'));
 const SalesCounter                  = lazyWithRetry(() => import('../pages/SalesCounter'));
+const ReturnsExchanges              = lazyWithRetry(() => import('../pages/ReturnsExchanges'));
+const WhatsAppOrderForm             = lazyWithRetry(() => import('../pages/WhatsAppOrderForm'));
 const ProductListPage               = lazyWithRetry(() => import('../pages/ProductListPage'));
 const CartMobile                    = lazyWithRetry(() => import('../pages/CartMobile'));
 const UserMenuMobile                = lazyWithRetry(() => import('../pages/UserMenuMobile'));
@@ -43,12 +46,20 @@ const DashboardHome                 = lazyWithRetry(() => import('../pages/Dashb
 const DashboardCart                 = lazyWithRetry(() => import('../pages/DashboardCart'));
 const DashboardCheckout             = lazyWithRetry(() => import('../pages/DashboardCheckout'));
 const UploadProduct                 = lazyWithRetry(() => import('../pages/UploadProduct'));
+const CatalogQuality                = lazyWithRetry(() => import('../pages/CatalogQuality'));
 const CategoryPage                  = lazyWithRetry(() => import('../pages/CategoryPage'));
+const DeliveryZonesPage             = lazyWithRetry(() => import('../pages/DeliveryZonesPage'));
 const AllOrdersAdmin                = lazyWithRetry(() => import('../pages/admin/AllOrdersAdmin'));
+const EodReports                    = lazyWithRetry(() => import('../pages/admin/EodReports'));
 const LoyaltyProgramAdmin           = lazyWithRetry(() => import('../pages/admin/LoyaltyProgramAdmin'));
 const UsersAdmin                    = lazyWithRetry(() => import('../pages/admin/UsersAdmin'));
 const CommunityPerksAdmin           = lazyWithRetry(() => import('../pages/admin/CommunityPerksAdmin'));
 const DriverVerificationDashboard   = lazyWithRetry(() => import('../pages/admin/DriverVerificationDashboard'));
+const StockValue                    = lazyWithRetry(() => import('../pages/admin/StockValue'));
+const FeatureReleases               = lazyWithRetry(() => import('../pages/admin/FeatureReleases'));
+const HairstyleTryOn               = lazyWithRetry(() => import('../pages/admin/HairstyleTryOn'));
+const AdminControlCenter            = lazyWithRetry(() => import('../pages/admin/AdminControlCenter'));
+const AdminAiInsights                = lazyWithRetry(() => import('../pages/admin/AdminAiInsights'));
 const CommunityPerks                = lazyWithRetry(() => import('../pages/CommunityPerks'));
 const POSDashboard                  = lazyWithRetry(() => import('../pages/POSDashboard'));
 const POSSales                      = lazyWithRetry(() => import('../pages/POSSales'));
@@ -67,6 +78,7 @@ const ActiveDeliveriesManagement    = lazyWithRetry(() => import('../pages/staff
 const CompletedDeliveriesManagement = lazyWithRetry(() => import('../pages/staff/DeliveryManagement/CompletedDeliveries'));
 const DriversManagement             = lazyWithRetry(() => import('../pages/staff/DeliveryManagement/DriversManagement'));
 const PendingPickups                = lazyWithRetry(() => import('../pages/staff/PendingPickups'));
+const SalesCounterFulfillment       = lazyWithRetry(() => import('../pages/staff/SalesCounterFulfillment'));
 const VerificationHistory           = lazyWithRetry(() => import('../pages/staff/VerificationHistory'));
 const VerificationSuccess           = lazyWithRetry(() => import('../pages/staff/VerificationSuccess'));
 const VerifyPickup                  = lazyWithRetry(() => import('../pages/staff/VerifyPickup'));
@@ -83,6 +95,38 @@ const S = (Component) => (
   <Suspense fallback={<PageLoader />}>
     <Component />
   </Suspense>
+);
+
+// S() renders its argument as <Component />, so it must be given a component
+// REFERENCE, never a JSX element. Composing the feature gate into its own
+// component keeps that contract (passing the element directly made React try
+// to use a plain object as a component type, which threw and tripped the
+// app-level error boundary). showPreviewBadge is off because the page renders
+// its own, richer preview notice.
+//
+// The fallback matters: a gate with no fallback renders NOTHING when the flag
+// row is missing from the database, which looks like a broken blank page. An
+// admin who navigated here deliberately gets told exactly what to do instead.
+const TryOnUnavailable = () => (
+  <div className="mx-auto max-w-lg px-4 py-16 text-center">
+    <h2 className="text-lg font-bold text-charcoal dark:text-white">AI Try-On isn&apos;t switched on yet</h2>
+    <p className="mt-3 text-sm leading-relaxed text-brown-500 dark:text-white/60">
+      The <span className="font-mono text-xs">ai-style-tryon</span> feature isn&apos;t registered or is
+      currently disabled, so this tool is hidden. Open Feature Releases to register or re-enable it.
+    </p>
+    <Link
+      to="/dashboard/feature-releases"
+      className="mt-6 inline-block rounded-pill bg-plum-700 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-plum-600"
+    >
+      Go to Feature Releases
+    </Link>
+  </div>
+);
+
+const GatedHairstyleTryOn = () => (
+  <FeatureGate flagKey="ai-style-tryon" showPreviewBadge={false} fallback={<TryOnUnavailable />}>
+    <HairstyleTryOn />
+  </FeatureGate>
 );
 
 function LegacyCheckoutRedirect() {
@@ -106,6 +150,10 @@ const router = createBrowserRouter([
       { path: 'verification-otp',        element: S(OtpVerification) },
       { path: 'reset-password',          element: S(ResetPassword) },
       { path: 'social-auth-success',     element: S(SocialAuthSuccess) },
+      // Retire the former embedded inventory page. Old links deliberately
+      // return to the primary site; Store Management may only be opened via
+      // the admin hand-off triggered on the home page.
+      { path: 'dashboard/store-inventory', element: <Navigate to="/" replace /> },
       { path: 'search',                  element: S(SearchPage) },
       { path: 'order-tracking/:orderId', element: S(OrderTracking) },
       { path: 'product/:productId',      element: S(ProductDisplayPage) },
@@ -199,15 +247,23 @@ const router = createBrowserRouter([
           { path: 'profile',  element: S(UserProfile) },
           { path: 'cart',     element: S(DashboardCart) },
           { path: 'checkout', element: S(DashboardCheckout) },
-          { path: 'upload-product',         element: <PrivateRoute requireAdmin={true}>{S(UploadProduct)}</PrivateRoute> },
-          { path: 'product',                element: <PrivateRoute requireAdmin={true}>{S(ProductPage)}</PrivateRoute> },
-          { path: 'category',               element: <PrivateRoute requireAdmin={true}>{S(CategoryPage)}</PrivateRoute> },
-          { path: 'subcategory',            element: <PrivateRoute requireAdmin={true}>{S(SubCategoryPage)}</PrivateRoute> },
+          { path: 'upload-product',         element: <PrivateRoute requireStaff={true}>{S(UploadProduct)}</PrivateRoute> },
+          { path: 'product',                element: <PrivateRoute requireStaff={true}>{S(ProductPage)}</PrivateRoute> },
+          { path: 'catalog-quality',        element: <PrivateRoute requireAdmin={true}>{S(CatalogQuality)}</PrivateRoute> },
+          { path: 'category',               element: <PrivateRoute requireStaff={true}>{S(CategoryPage)}</PrivateRoute> },
+          { path: 'delivery-zones',         element: <PrivateRoute requireAdmin={true}>{S(DeliveryZonesPage)}</PrivateRoute> },
+          { path: 'subcategory',            element: <PrivateRoute requireStaff={true}>{S(SubCategoryPage)}</PrivateRoute> },
           { path: 'allorders',              element: <PrivateRoute requireAdmin={true}>{S(AllOrdersAdmin)}</PrivateRoute> },
+          { path: 'eod-reports',            element: <PrivateRoute requireAdmin={true}>{S(EodReports)}</PrivateRoute> },
           { path: 'loyalty-program-admin',  element: <PrivateRoute requireAdmin={true}>{S(LoyaltyProgramAdmin)}</PrivateRoute> },
           { path: 'users-admin',            element: <PrivateRoute requireAdmin={true}>{S(UsersAdmin)}</PrivateRoute> },
           { path: 'admin-community-perks',  element: <PrivateRoute requireAdmin={true}>{S(CommunityPerksAdmin)}</PrivateRoute> },
           { path: 'driver-verification',    element: <PrivateRoute requireAdmin={true}>{S(DriverVerificationDashboard)}</PrivateRoute> },
+          { path: 'stock-value',            element: <PrivateRoute requireAdmin={true}>{S(StockValue)}</PrivateRoute> },
+          { path: 'admin-control-center',   element: <PrivateRoute requireAdmin={true}>{S(AdminControlCenter)}</PrivateRoute> },
+          { path: 'admin-ai-insights',       element: <PrivateRoute requireAdmin={true}>{S(AdminAiInsights)}</PrivateRoute> },
+          { path: 'feature-releases',        element: <PrivateRoute requireAdmin={true}>{S(FeatureReleases)}</PrivateRoute> },
+          { path: 'ai-style-tryon',         element: <PrivateRoute requireAdmin={true}>{S(GatedHairstyleTryOn)}</PrivateRoute> },
           { path: 'myorders',               element: <PrivateRoute>{S(MyOrders)}</PrivateRoute> },
           { path: 'address',                element: <PrivateRoute>{S(Address)}</PrivateRoute> },
           { path: 'community-perks',        element: <PrivateRoute>{S(CommunityPerks)}</PrivateRoute> },
@@ -223,11 +279,14 @@ const router = createBrowserRouter([
           { path: 'staff',                       element: <PrivateRoute requireStaff={true}>{S(StaffDashboard)}</PrivateRoute> },
           { path: 'staff/dashboard',             element: <PrivateRoute requireStaff={true}>{S(StaffDashboard)}</PrivateRoute> },
           { path: 'staff/pending-pickups',       element: <PrivateRoute requireStaff={true}>{S(PendingPickups)}</PrivateRoute> },
+          { path: 'staff/counter-fulfillment',   element: <PrivateRoute requireStaff={true}>{S(SalesCounterFulfillment)}</PrivateRoute> },
           { path: 'staff/verify-pickup',         element: <PrivateRoute requireStaff={true}>{S(VerifyPickup)}</PrivateRoute> },
           { path: 'staff/completed-verifications', element: <PrivateRoute requireStaff={true}>{S(VerificationHistory)}</PrivateRoute> },
           { path: 'staff/verification-success',  element: <PrivateRoute requireStaff={true}>{S(VerificationSuccess)}</PrivateRoute> },
           { path: 'staff-pos',                   element: <PrivateRoute requireStaff={true}>{S(StaffPOS)}</PrivateRoute> },
           { path: 'sales-counter',               element: <PrivateRoute requireStaff={true}>{S(SalesCounter)}</PrivateRoute> },
+          { path: 'returns-exchanges',           element: <PrivateRoute requireStaff={true}>{S(ReturnsExchanges)}</PrivateRoute> },
+          { path: 'whatsapp-order',              element: <PrivateRoute requireStaff={true}>{S(WhatsAppOrderForm)}</PrivateRoute> },
           { path: 'pos-dashboard',               element: <PrivateRoute requireStaff={true}>{S(POSDashboard)}</PrivateRoute> },
           { path: 'sales-hub',                   element: <PrivateRoute requireStaff={true}>{S(POSDashboard)}</PrivateRoute> },
           { path: 'pos-sales',                   element: <PrivateRoute requireStaff={true}>{S(POSSales)}</PrivateRoute> },

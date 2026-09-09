@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
+import { motion, useReducedMotion } from 'framer-motion';
 import { Helmet } from 'react-helmet-async';
 import { FaUsers } from 'react-icons/fa';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import SummaryApi from '../common/SummaryApi';
 import CategoryBannerGrid from '../components/CategoryBannerGrid';
 import CommunityCampaignProgress from '../components/CommunityCampaignProgress';
@@ -11,6 +12,8 @@ import PWAInstallBanner from '../components/PWAInstallBanner';
 import TrustStrip from '../components/TrustStrip';
 import UserActiveCampaigns from '../components/UserActiveCampaigns';
 import Axios from '../utils/Axios';
+import { DisplayPriceInShillings } from '../utils/DisplayPriceInShillings';
+import { getProductNavigationOptions } from '../utils/productRouteScroll';
 import { valideURLConvert } from '../utils/valideURLConvert';
 
 const emptyHomeCatalog = {
@@ -22,19 +25,41 @@ const emptyHomeCatalog = {
 
 const Home = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [featuredCampaign, setFeaturedCampaign] = useState(null);
   const [loadingCampaign, setLoadingCampaign] = useState(true);
   const [homeCatalog, setHomeCatalog] = useState(emptyHomeCatalog);
   const [loadingCatalog, setLoadingCatalog] = useState(true);
+  const reduceMotion = useReducedMotion();
+  const reveal = (delay = 0) => ({
+    initial: reduceMotion ? false : { opacity: 0, y: 14 },
+    whileInView: { opacity: 1, y: 0 },
+    viewport: { once: true, amount: 0.15 },
+    transition: { duration: 0.42, delay: reduceMotion ? 0 : delay, ease: 'easeOut' },
+  });
 
   useEffect(() => {
     fetchHomeCatalog();
     fetchFeaturedCampaign();
   }, []);
 
+  // React Router doesn't auto-scroll to a #hash on navigation the way a
+  // traditional multi-page site does — needed so links like nav's "Best
+  // Sellers" (which points at /#best-sellers) actually land on that shelf
+  // instead of just the top of the page. Waits for the catalog to finish
+  // loading so the target section actually exists in the DOM first.
+  useEffect(() => {
+    if (loadingCatalog || !location.hash) return;
+    const target = document.querySelector(location.hash);
+    if (target) {
+      target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }, [loadingCatalog, location.hash]);
+
   const hasHomeContent =
     homeCatalog.categoryBanners.length > 0 ||
     homeCatalog.bestSellers.length > 0 ||
+    homeCatalog.bannerProducts.length > 0 ||
     homeCatalog.subcategoryShelves.length > 0;
 
   const fetchHomeCatalog = async () => {
@@ -173,10 +198,12 @@ const Home = () => {
         </script>
       </Helmet>
 
-      <HeroBanner bestSellers={homeCatalog.bestSellers} bannerProducts={homeCatalog.bannerProducts} />
+      <motion.div {...reveal()}>
+        <HeroBanner bestSellers={homeCatalog.bestSellers} bannerProducts={homeCatalog.bannerProducts} />
+      </motion.div>
 
       {/* Featured styles strip - shows variety immediately after the banner */}
-      <div className="border-y border-brown-200 bg-white dark:border-dm-border dark:bg-dm-card">
+      <motion.div {...reveal(0.04)} className="border-y border-brown-200 bg-white dark:border-dm-border dark:bg-dm-card">
         <div className="container mx-auto px-3 py-4 sm:px-4">
           <div className="mb-3 flex items-center justify-between">
             <span className="text-xs font-bold uppercase tracking-[0.2em] text-brown-500 dark:text-white/55">
@@ -193,16 +220,22 @@ const Home = () => {
             <div className="flex gap-3 overflow-x-auto pb-1 scrollbar-hide">
               {[...homeCatalog.bestSellers, ...homeCatalog.bannerProducts]
                 .filter((p) => p.image?.[0] && !p.image[0].includes('product-photo-pending'))
+                // Dedupe: a product can be both a best seller and a banner
+                // product — showing it twice in an 8-slot strip wastes a slot
+                // and looks like a data bug.
+                .filter((p, index, list) => list.findIndex((other) => other._id === p._id) === index)
                 .slice(0, 8)
                 .map((product) => {
                   const productUrl = product._id
                     ? `/product/${encodeURIComponent(valideURLConvert(product.name))}-${product._id}`
                     : '/collections';
+                  const hasValidPrice = Number.isFinite(Number(product.price));
                   return (
                     <Link
                       key={`trending-${product._id || product.name}`}
                       to={productUrl}
-                      className="group relative shrink-0 overflow-hidden rounded-lg bg-ivory shadow-sm dark:bg-dm-card-2"
+                      {...getProductNavigationOptions()}
+                      className="group relative shrink-0 overflow-hidden rounded-lg bg-ivory shadow-sm transition-shadow hover:shadow-md dark:bg-dm-card-2"
                       style={{ width: '110px', height: '130px' }}
                     >
                       <img
@@ -214,8 +247,13 @@ const Home = () => {
                           e.currentTarget.style.display = 'none';
                         }}
                       />
-                      <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-charcoal/70 to-transparent px-2 py-1.5">
+                      <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-charcoal/75 to-transparent px-2 py-1.5">
                         <p className="line-clamp-2 text-[10px] font-semibold leading-tight text-white">{product.name}</p>
+                        {hasValidPrice && (
+                          <p className="mt-0.5 text-[10px] font-bold text-gold-300">
+                            {DisplayPriceInShillings(product.price)}
+                          </p>
+                        )}
                       </div>
                     </Link>
                   );
@@ -225,7 +263,7 @@ const Home = () => {
             <div className="h-24 animate-pulse rounded-lg bg-brown-100 dark:bg-dm-card" />
           )}
         </div>
-      </div>
+      </motion.div>
 
       <div className="container mx-auto px-3 pt-8 sm:px-4 sm:pt-10">
         <div className="mb-5 flex flex-col gap-3 sm:mb-6 sm:flex-row sm:items-end sm:justify-between">
@@ -272,6 +310,7 @@ const Home = () => {
 
       <div className="container mx-auto px-3 py-8 sm:px-4 sm:py-10">
         <HomeProductShelf
+          sectionId="best-sellers"
           title="Best sellers"
           subtitle="Customer favourites worth adding to your collection."
           products={homeCatalog.bestSellers}

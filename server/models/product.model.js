@@ -96,6 +96,11 @@ const productSchema = new mongoose.Schema({
         required : true,
         description: "Retail selling price in Ksh"
     },
+    wholesalePrice : {
+        type : Number,
+        min : 0,
+        description: "Optional bulk/wholesale price in Ksh - must be lower than the retail price"
+    },
     discount : {
         type : Number,
         default : 0
@@ -106,6 +111,12 @@ const productSchema = new mongoose.Schema({
         type : Number,
         required : true,
         description: "Stock quantity available"
+    },
+    warehouseStock : {
+        type : Number,
+        default : 0,
+        min : 0,
+        description: "Backroom stock not yet dispatched to the live shop"
     },
     weight : {
         type : Number,
@@ -170,6 +181,20 @@ productSchema.index({
     },
     name: "ProductTextIndex"
 });
+
+productSchema.index({ publish: 1, stock: 1 });
+productSchema.index({ category: 1 });
+
+// Sales Counter's barcode/QR/SKU scanner (server/routes/pos.js /products/lookup)
+// matches case-insensitively on every scanned item. The unique indexes from
+// `unique: true` above use default (case-sensitive) collation, so a
+// case-insensitive regex match against them still falls back to a full
+// collection scan. Strength 2 collation makes the index itself
+// case-insensitive so an exact-match lookup is a true index seek.
+const caseInsensitiveCollation = { locale: 'en', strength: 2 };
+productSchema.index({ barcode: 1 }, { collation: caseInsensitiveCollation, name: 'barcode_ci', sparse: true });
+productSchema.index({ qrCode: 1 }, { collation: caseInsensitiveCollation, name: 'qrCode_ci', sparse: true });
+productSchema.index({ sku: 1 }, { collation: caseInsensitiveCollation, name: 'sku_ci', sparse: true });
 
 const ProductModel = mongoose.model('product',productSchema)
 

@@ -11,14 +11,20 @@ import CartMobileLink from './components/CartMobile';
 import DashboardMobileHeader from './components/DashboardMobileHeader';
 import Footer from './components/Footer';
 import Header from './components/Header';
+import WhatsAppOrderWidget from './components/WhatsAppOrderWidget';
+import AdminSecretGate from './components/AdminSecretGate';
+import StoreManagementApp from './pages/admin/StoreManagementApp';
 import GlobalProvider from './provider/GlobalProvider';
+import { WhatsAppOrderProvider } from './provider/WhatsAppOrderProvider';
 import { fetchCartItems } from './store/cartProduct';
 import { setAllCategory, setAllSubCategory, setLoadingCategory, setLoyaltyDetails } from './store/productSlice';
 import { setUserDetails } from './store/userSlice';
 import { fetchWishlist } from './store/wishlistSlice';
 import Axios from './utils/Axios';
-import { clearAuthStorage, getStoredAccessToken } from './utils/authStorage';
+import { clearAuthStorage, getStoredAccessToken, isAuthSessionError } from './utils/authStorage';
 import fetchUserDetails from './utils/fetchUserDetails';
+import { getPOSOverflowClass } from './utils/posLayout';
+import { isStorePortalHost } from './utils/storePortalAccess';
 
 // Error fallback component
 function ErrorFallback({ error }) {
@@ -63,10 +69,12 @@ function App() {
   const dispatch = useDispatch();
   const location = useLocation();
   const user = useSelector(state => state.user);
+  const storePortalHost = isStorePortalHost();
   const [isLoading, setIsLoading] = useState(true);
   const categories = useSelector(state => state.product.allCategory);
   const isFetchingProductsRef = useRef(false);
   const lastVisibilityFetchRef = useRef(0);
+  const lastUserRefreshRef = useRef(0);
 
   // Product/category fetching function
   const fetchProductData = async () => {
@@ -178,7 +186,11 @@ function App() {
         }
       } catch (error) {
         console.error("Session hydration error:", error);
-        clearAuthStorage();
+        if (isAuthSessionError(error)) {
+          clearAuthStorage();
+        } else {
+          console.warn('Keeping the saved session after a temporary hydration failure.');
+        }
       }
     };
 
@@ -222,6 +234,42 @@ function App() {
     document.addEventListener('visibilitychange', handleVisibilityChange);
     return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
   }, []);
+
+  // Re-fetch the logged-in user's own record (role/staffPermissions) so an
+  // admin granting/revoking a permission elsewhere takes effect without the
+  // affected staff member needing to log out and back in — the token
+  // auto-refresh alone only renews the JWT, it never re-reads permissions.
+  // Triggered whenever the tab becomes visible again, and after every
+  // background token refresh (for tabs that stay foregrounded a long time),
+  // sharing one 5-minute cooldown so it never fires more than that often.
+  useEffect(() => {
+    const refreshUserIfStale = async () => {
+      if (!getStoredAccessToken()) return;
+      const now = Date.now();
+      if (now - lastUserRefreshRef.current < 5 * 60 * 1000) return;
+      lastUserRefreshRef.current = now;
+
+      try {
+        const userDetails = await fetchUserDetails();
+        if (userDetails?.data) {
+          dispatch(setUserDetails(userDetails.data));
+        }
+      } catch (error) {
+        console.warn('Background user-details refresh failed:', error?.message);
+      }
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') refreshUserIfStale();
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('nawiri:token-refreshed', refreshUserIfStale);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('nawiri:token-refreshed', refreshUserIfStale);
+    };
+  }, [dispatch]);
 
 
   // Add a specific effect to handle dynamic routes
@@ -295,10 +343,12 @@ function App() {
   return (
     <ErrorBoundary FallbackComponent={ErrorFallback}>
       <GlobalProvider>
+        <WhatsAppOrderProvider>
+        {storePortalHost ? <StoreManagementApp /> : <>
         <ScrollRestoration />
         {isDashboardShell && !isPOSPage && <DashboardMobileHeader />}
         {showStoreChrome && <Header />}
-        <main className='min-h-[78vh] max-w-full overflow-x-hidden'>
+        <main className={`min-h-[78vh] max-w-full ${getPOSOverflowClass(isPOSPage)}`}>
           {/* Add suspense to catch lazy-loaded component errors */}
           <Suspense fallback={<div className="p-5 text-center">Loading...</div>}>
             <Outlet key={location.pathname} />
@@ -308,8 +358,12 @@ function App() {
         {showStoreChrome && <BottomNavigation />}
         <Toaster />
         <ToastContainer position="top-right" autoClose={3000} />
+        <AdminSecretGate />
         {showStoreChrome && location.pathname !== '/checkout' && location.pathname !== '/dashboard/checkout' && user?._id && <CartMobileLink />}
+        {showStoreChrome && <WhatsAppOrderWidget />}
         {/* ChatbotAI hidden: AI feature not yet complete */}
+        </>}
+        </WhatsAppOrderProvider>
       </GlobalProvider>
     </ErrorBoundary>
   );

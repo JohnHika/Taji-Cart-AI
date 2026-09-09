@@ -8,13 +8,16 @@ import {
     FaClipboardList,
     FaCog,
     FaCrown,
+    FaEyeSlash,
     FaGift,
     FaHistory,
     FaLayerGroup,
     FaListAlt,
     FaMapMarkedAlt,
     FaMapMarkerAlt,
+    FaMagic,
     FaQrcode,
+    FaRocket,
     FaShoppingBag,
     FaSignOutAlt,
     FaStore,
@@ -33,15 +36,19 @@ import { logout } from '../store/userSlice';
 import Axios from '../utils/Axios';
 import AxiosToastError from '../utils/AxiosToastError';
 import { clearAuthStorage } from '../utils/authStorage';
+import hasStaffPermission from '../utils/hasStaffPermission';
+import { useGlobalContext } from '../provider/GlobalProvider';
 
 const DashboardSidebar = ({ userRole, isStaff }) => {
   const user = useSelector(state => state.user);
   const location = useLocation();
   const dispatch = useDispatch();
   const navigate = useNavigate();
+  const { royalCardData } = useGlobalContext();
 
   const isAdmin = userRole === 'admin';
   const isDelivery = userRole === 'delivery';
+  const hasLoyaltyAccess = Boolean(royalCardData);
 
   const handleLogout = async () => {
     try {
@@ -128,7 +135,9 @@ const DashboardSidebar = ({ userRole, isStaff }) => {
         <MenuItem to="/dashboard/profile" icon={FaUser} label="My Profile" />
         <MenuItem to="/dashboard/myorders" icon={FaShoppingBag} label="My Orders" />
         <MenuItem to="/dashboard/address" icon={FaMapMarkerAlt} label="My Addresses" />
-        <MenuItem to="/dashboard/profile#royal" icon={FaCrown} label="Royal card" />
+        {hasLoyaltyAccess && (
+          <MenuItem to="/dashboard/profile#royal" icon={FaCrown} label="Royal card" />
+        )}
         <MenuItem to="/dashboard/community-perks" icon={FaTrophy} label="Community perks" />
         <MenuItem to="/dashboard/active-campaigns" icon={FaBullhorn} label="Active campaigns" />
 
@@ -139,11 +148,15 @@ const DashboardSidebar = ({ userRole, isStaff }) => {
             <MenuItem to="/dashboard/users-admin" icon={FaUsers} label="User Management" />
             <MenuItem to="/dashboard/staff/dashboard" icon={FaUserTie} label="Staff Dashboard" />
             <MenuItem to="/dashboard/category" icon={FaListAlt} label="Category" />
+            <MenuItem to="/dashboard/delivery-zones" icon={FaMapMarkedAlt} label="Delivery Zones" />
             <MenuItem to="/dashboard/subcategory" icon={FaLayerGroup} label="Sub Category" />
             <MenuItem to="/dashboard/upload-product" icon={FaUpload} label="Upload Product" />
             <MenuItem to="/dashboard/product" icon={FaBoxOpen} label="Products" />
+            <MenuItem to="/dashboard/catalog-quality" icon={FaEyeSlash} label="Catalog Quality" />
             <MenuItem to="/dashboard/loyalty-program-admin" icon={FaCrown} label="Loyalty Program" />
             <MenuItem to="/dashboard/admin-community-perks" icon={FaGift} label="Manage Perks" />
+            <MenuItem to="/dashboard/feature-releases" icon={FaRocket} label="Feature Releases" />
+            <MenuItem to="/dashboard/ai-style-tryon" icon={FaMagic} label="AI Try-On" />
             <MenuItem to="/dashboard/pickup-management" icon={FaStore} label="Pickup Management" />
             <MenuItem to="/dashboard/staff/delivery" icon={FaCog} label="Delivery Management" />
           </>
@@ -156,6 +169,16 @@ const DashboardSidebar = ({ userRole, isStaff }) => {
             <MenuItem to="/dashboard/staff/pending-pickups" icon={FaBoxes} label="Pending Pickups" />
             <MenuItem to="/dashboard/staff/delivery/pending" icon={FaTruck} label="Pending Deliveries" />
             <MenuItem to="/dashboard/staff/completed-verifications" icon={FaClipboardCheck} label="Verification History" />
+          </>
+        )}
+
+        {!isAdmin && isStaff && hasStaffPermission(user, 'catalog.manage') && (
+          <>
+            <SectionLabel title="Catalog" />
+            <MenuItem to="/dashboard/upload-product" icon={FaUpload} label="Upload Product" />
+            <MenuItem to="/dashboard/product" icon={FaBoxOpen} label="Products" />
+            <MenuItem to="/dashboard/category" icon={FaListAlt} label="Category" />
+            <MenuItem to="/dashboard/subcategory" icon={FaLayerGroup} label="Sub Category" />
           </>
         )}
 

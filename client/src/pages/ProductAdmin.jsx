@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { IoSearchOutline } from "react-icons/io5"
+import toast from 'react-hot-toast'
 import SummaryApi from '../common/SummaryApi'
 import Loading from '../components/Loading'
 import ProductCardAdmin from '../components/ProductCardAdmin'
@@ -20,6 +21,7 @@ const ProductAdmin = () => {
   const [loading,setLoading] = useState(false)
   const [totalPageCount,setTotalPageCount] = useState(1)
   const [search,setSearch] = useState("")
+  const [exporting, setExporting] = useState(false)
   
   const fetchProductData = async()=>{
     try {
@@ -68,49 +70,33 @@ const ProductAdmin = () => {
     setPage(1)
   }
 
-  const handleExport = (format) => {
-    // Prepare data for export - flatten the product data
-    const exportData = productData.map(product => ({
-      name: product.name || '',
-      sku: product.sku || '',
-      handle: product.handle || '',
-      barcode: product.barcode || '',
-      qrCode: product.qrCode || '',
-      price: product.price || 0,
-      costPrice: product.costPrice || 0,
-      discount: product.discount || 0,
-      stock: product.stock || 0,
-      unit: product.unit || '',
-      description: product.description || '',
-      category: product.category?.map(cat => cat?.name || '').join(', ') || '',
-      variants: product.variants ? `
-        Color: ${product.variants.color || 'N/A'}
-        Length: ${product.variants.length || 'N/A'}
-        Density: ${product.variants.density || 'N/A'}
-        Lace: ${product.variants.laceSpecification || 'N/A'}
-      ` : '',
-      createdAt: product.createdAt ? new Date(product.createdAt).toLocaleString() : '',
-      updatedAt: product.updatedAt ? new Date(product.updatedAt).toLocaleString() : ''
-    }));
-
-    switch (format) {
-      case 'excel':
-        exportToExcel(exportData, 'taji-cart-products');
-        break;
-      case 'pdf':
-        exportToPDF(exportData, 'taji-cart-products');
-        break;
-      case 'word':
-        exportToWord(exportData, 'taji-cart-products');
-        break;
-      case 'csv':
-        exportToCSV(exportData, 'taji-cart-products');
-        break;
-      case 'json':
-        exportToJSON(exportData, 'taji-cart-products');
-        break;
-      default:
-        break;
+  const handleExport = async (format) => {
+    try {
+      setExporting(true);
+      switch (format) {
+        case 'excel':
+          await exportToExcel(productData, 'taji-cart-products');
+          break;
+        case 'pdf':
+          exportToPDF(productData, 'taji-cart-products');
+          break;
+        case 'word':
+          exportToWord(productData, 'taji-cart-products');
+          break;
+        case 'csv':
+          exportToCSV(productData, 'taji-cart-products');
+          break;
+        case 'json':
+          exportToJSON(productData, 'taji-cart-products');
+          break;
+        default:
+          break;
+      }
+      toast.success(`Exported ${productData.length} product${productData.length === 1 ? '' : 's'} as ${format.toUpperCase()}`);
+    } catch (error) {
+      toast.error(error?.message || 'Export failed. Please try again.');
+    } finally {
+      setExporting(false);
     }
   };
 
@@ -147,6 +133,7 @@ const ProductAdmin = () => {
                   <ExportButton
                     data={productData}
                     onExport={handleExport}
+                    exporting={exporting}
                   />
                 </div>
         </div>
