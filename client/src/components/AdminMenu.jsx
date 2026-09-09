@@ -1,9 +1,9 @@
 ﻿import React, { useState } from 'react';
 import toast from 'react-hot-toast';
+import { FaWandMagicSparkles } from 'react-icons/fa6';
 import {
   FaBoxOpen,
   FaBullhorn,
-  FaBrain,
   FaCashRegister,
   FaChartLine,
   FaCheck,
@@ -197,7 +197,7 @@ const AdminMenu = ({ close, forLightPanel = false }) => {
       <nav className="mt-2 flex min-w-0 flex-col gap-0.5 overflow-x-hidden text-sm">
         <p className={sectionClass}>Owner workspace</p>
         <MenuLink to="/dashboard/admin-control-center" icon={FaTachometerAlt} label="Command center" />
-        <MenuLink to="/dashboard/admin-ai-insights" icon={FaBrain} label="AI Operations Copilot" />
+        <MenuLink to="/dashboard/admin-ai-insights" icon={FaWandMagicSparkles} label="AI Operations Copilot" />
         <MenuLink to="/dashboard/sales-hub" icon={FaStore} label="Sales hub" />
         <MenuLink to="/dashboard/sales-counter" icon={FaCashRegister} label="Sales counter" />
 

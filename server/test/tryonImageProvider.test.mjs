@@ -175,3 +175,76 @@ test('unknown providers are rejected instead of silently falling back', () => {
     (error) => error.statusCode === 500 && /openai.*gemini.*ollama.*qwen/i.test(error.message)
   );
 });
+
+test('qwen endpoint resolution covers workspace host, base override, and bad region', async () => {
+  // Workspace id + default region builds the Singapore workspace host.
+  let calls = [];
+  await generateTryOnImage({
+    prompt: 'p',
+    hairstyleImageUrl: 'https://res.cloudinary.com/demo/hairstyle.jpg',
+    env: { TRYON_IMAGE_PROVIDER: 'qwen', DASHSCOPE_API_KEY: 'sk-test', DASHSCOPE_WORKSPACE_ID: 'ws-abc' },
+    fetchImpl: async (url) => { calls.push(url); throw Object.assign(new Error('stop'), { statusCode: 599 }); },
+  }).catch(() => {});
+  assert.match(calls[0], /^https:\/\/ws-abc\.ap-southeast-1\.maas\.aliyuncs\.com\//);
+
+  // DASHSCOPE_BASE_URL overrides the host entirely (workspace host form).
+  calls = [];
+  await generateTryOnImage({
+    prompt: 'p',
+    hairstyleImageUrl: 'https://res.cloudinary.com/demo/hairstyle.jpg',
+    env: { TRYON_IMAGE_PROVIDER: 'qwen', DASHSCOPE_API_KEY: 'sk-test', DASHSCOPE_BASE_URL: 'https://custom.host.example/api/v1' },
+    fetchImpl: async (url) => { calls.push(url); throw Object.assign(new Error('stop'), { statusCode: 599 }); },
+  }).catch(() => {});
+  assert.equal(calls[0], 'https://custom.host.example/api/v1/services/aigc/multimodal-generation/generation');
+
+  // Missing workspace id fails closed with a setup error.
+  await assert.rejects(
+    () => generateTryOnImage({
+      prompt: 'p',
+      hairstyleImageUrl: 'https://res.cloudinary.com/demo/hairstyle.jpg',
+      env: { TRYON_IMAGE_PROVIDER: 'qwen', DASHSCOPE_API_KEY: 'sk-test' },
+      fetchImpl: async () => { throw new Error('should not be called'); },
+    }),
+    (error) => error.statusCode === 503 && /DASHSCOPE_WORKSPACE_ID/.test(error.message)
+  );
+
+  // An unrecognised region fails closed instead of building an unreachable host.
+  await assert.rejects(
+    () => generateTryOnImage({
+      prompt: 'p',
+      hairstyleImageUrl: 'https://res.cloudinary.com/demo/hairstyle.jpg',
+      env: { TRYON_IMAGE_PROVIDER: 'qwen', DASHSCOPE_API_KEY: 'sk-test', DASHSCOPE_WORKSPACE_ID: 'ws-abc', DASHSCOPE_REGION: 'mars-central-1' },
+      fetchImpl: async () => { throw new Error('should not be called'); },
+    }),
+    (error) => error.statusCode === 503 && /DASHSCOPE_REGION/.test(error.message)
+  );
+
+  // Documented region NAME (singapore) resolves to the raw region code.
+  calls = [];
+  await generateTryOnImage({
+    prompt: 'p',
+    hairstyleImageUrl: 'https://res.cloudinary.com/demo/hairstyle.jpg',
+    env: { TRYON_IMAGE_PROVIDER: 'qwen', DASHSCOPE_API_KEY: 'sk-test', DASHSCOPE_WORKSPACE_ID: 'ws-abc', DASHSCOPE_REGION: 'Singapore' },
+    fetchImpl: async (url) => { calls.push(url); throw Object.assign(new Error('stop'), { statusCode: 599 }); },
+  }).catch(() => {});
+  assert.match(calls[0], /^https:\/\/ws-abc\.ap-southeast-1\.maas\.aliyuncs\.com\//);
+});
+
+test('qwen rejects oversized generated images instead of buffering blindly', async () => {
+  const oversized = Buffer.alloc(8 * 1024 * 1024, 0x61);
+  await assert.rejects(
+    () => generateTryOnImage({
+      prompt: 'p',
+      hairstyleImageUrl: 'https://res.cloudinary.com/demo/hairstyle.jpg',
+      env: { TRYON_IMAGE_PROVIDER: 'qwen', DASHSCOPE_API_KEY: 'sk-test', DASHSCOPE_WORKSPACE_ID: 'ws-abc' },
+      fetchImpl: async () => ({
+        ok: true,
+        status: 200,
+        json: async () => ({ output: { choices: [{ message: { content: [{ image: 'https://oss.example.com/big.png' }] } }] } }),
+        headers: { get: () => 'image/png' },
+        arrayBuffer: async () => oversized.buffer.slice(0, oversized.length),
+      }),
+    }),
+    (error) => error.statusCode === 502 && /too large/.test(error.message)
+  );
+});

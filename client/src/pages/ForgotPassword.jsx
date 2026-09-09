@@ -1,14 +1,18 @@
 import React, { useState } from 'react';
 import toast from 'react-hot-toast';
 import { FaEnvelope } from "react-icons/fa";
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import SummaryApi from '../common/SummaryApi';
 import Axios from '../utils/Axios';
 import AxiosToastError from '../utils/AxiosToastError';
 
 const ForgotPassword = () => {
+    const location = useLocation()
+    // Pre-filled when arriving from Login's "set a password" prompt (e.g. a
+    // Google-linked account with no password yet) so the email doesn't need
+    // to be retyped.
     const [data, setData] = useState({
-        email: "",
+        email: location.state?.email || "",
     })
     const navigate = useNavigate()
 

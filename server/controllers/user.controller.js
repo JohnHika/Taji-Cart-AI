@@ -528,12 +528,17 @@ export async function loginController(request, response) {
         if (!hasStoredPassword) {
             const usesGoogleSignIn = user.authType === 'google' || Boolean(user.googleId)
 
+            // needsPasswordSetup lets the client offer a direct "set a
+            // password" path (reusing the existing forgot-password OTP flow)
+            // instead of a dead-end error — this account is real and active,
+            // it simply has no password to check yet.
             return response.status(400).json({
                 message: usesGoogleSignIn
-                    ? "This account uses Google sign-in. Please continue with Google or reset your password to enable email login."
-                    : "This account does not have a valid password saved yet. Please use Forgot password to set one before signing in.",
+                    ? "This account uses Google sign-in. Set a password to also sign in with email."
+                    : "This account does not have a password saved yet. Set one to sign in with email.",
                 error: true,
-                success: false
+                success: false,
+                needsPasswordSetup: true
             })
         }
 

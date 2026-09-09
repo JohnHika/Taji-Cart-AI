@@ -1,4 +1,4 @@
-import { Suspense, useEffect, useRef, useState } from 'react';
+import { Suspense, lazy, useEffect, useRef, useState } from 'react';
 import { ErrorBoundary } from 'react-error-boundary';
 import { Toaster } from 'react-hot-toast';
 import { useDispatch, useSelector } from 'react-redux';
@@ -13,7 +13,6 @@ import Footer from './components/Footer';
 import Header from './components/Header';
 import WhatsAppOrderWidget from './components/WhatsAppOrderWidget';
 import AdminSecretGate from './components/AdminSecretGate';
-import StoreManagementApp from './pages/admin/StoreManagementApp';
 import GlobalProvider from './provider/GlobalProvider';
 import { WhatsAppOrderProvider } from './provider/WhatsAppOrderProvider';
 import { fetchCartItems } from './store/cartProduct';
@@ -25,6 +24,10 @@ import { clearAuthStorage, getStoredAccessToken, isAuthSessionError } from './ut
 import fetchUserDetails from './utils/fetchUserDetails';
 import { getPOSOverflowClass } from './utils/posLayout';
 import { isStorePortalHost } from './utils/storePortalAccess';
+// Only ever rendered on the store.nawirihairke.com host (isStorePortalHost()) --
+// lazy so its dependencies (including recharts) never load for the customer
+// storefront, which shares this same build.
+const StoreManagementApp = lazy(() => import('./pages/admin/StoreManagementApp'));
 
 // Error fallback component
 function ErrorFallback({ error }) {
@@ -344,7 +347,7 @@ function App() {
     <ErrorBoundary FallbackComponent={ErrorFallback}>
       <GlobalProvider>
         <WhatsAppOrderProvider>
-        {storePortalHost ? <StoreManagementApp /> : <>
+        {storePortalHost ? <Suspense fallback={<div className="p-5 text-center">Loading...</div>}><StoreManagementApp /></Suspense> : <>
         <ScrollRestoration />
         {isDashboardShell && !isPOSPage && <DashboardMobileHeader />}
         {showStoreChrome && <Header />}

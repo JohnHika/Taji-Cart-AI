@@ -3,7 +3,7 @@ import TryOnResultModel from '../models/tryon.model.js';
 import ProductModel from '../models/product.model.js';
 import FeatureFlagModel from '../models/featureFlag.model.js';
 import { uploadFileToCloudinary } from '../utils/cloudinary.js';
-import { generateTryOnImage } from '../utils/tryonImageProvider.js';
+import { generateTryOnImage, getTryOnProvider } from '../utils/tryonImageProvider.js';
 
 // AI hairstyle try-on. Admin picks a product, adds a stronger hairstyle
 // reference and optionally a face photo, then the configured image provider
@@ -103,8 +103,11 @@ export const generateTryOn = async (req, res) => {
     // fallback so older product records still work.
     const referenceImageUrl = asImageUrl(hairstyleReferenceUrl, 'Hairstyle reference') || product.image[0];
     const faceUsedUrl = asImageUrl(faceImageUrl, 'Face photo');
-    const hairstyleImage = await fetchImageAsBuffer(referenceImageUrl);
-    const faceImage = faceUsedUrl ? await fetchImageAsBuffer(faceUsedUrl) : null;
+    // Qwen receives hosted URLs directly, so skip the buffer download for it
+    // (the other providers need the raw bytes).
+    const providerIsQwen = getTryOnProvider() === 'qwen';
+    const hairstyleImage = providerIsQwen ? null : await fetchImageAsBuffer(referenceImageUrl);
+    const faceImage = providerIsQwen || !faceUsedUrl ? null : await fetchImageAsBuffer(faceUsedUrl);
     const generated = await generateTryOnImage({
       prompt: buildPrompt({ hairstyleName: product.name, notes }),
       hairstyleImage,

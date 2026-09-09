@@ -1,5 +1,6 @@
 ﻿import React, { useEffect, useMemo, useState } from 'react';
-import { FaBarcode, FaBullhorn, FaBrain, FaCashRegister, FaClipboardList, FaSpinner, FaStore, FaUsers } from 'react-icons/fa';
+import { FaBarcode, FaBullhorn, FaCashRegister, FaClipboardList, FaSpinner, FaStore, FaUsers } from 'react-icons/fa';
+import { FaWandMagicSparkles } from 'react-icons/fa6';
 import { useSelector } from 'react-redux';
 import { Link, useNavigate } from 'react-router-dom';
 import SummaryApi from '../common/SummaryApi';
@@ -77,7 +78,7 @@ const AdminDashboard = () => {
       label: 'AI Operations Copilot',
       description: 'See counter and online sales, stock risk, and next actions in one read-only view.',
       path: '/dashboard/admin-ai-insights',
-      icon: FaBrain
+      icon: FaWandMagicSparkles
     },
     {
       label: 'Open Sales Counter',
