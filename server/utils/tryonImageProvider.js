@@ -32,7 +32,7 @@ export const assertTryOnProviderConfigured = (env = process.env) => {
   const model = getTryOnModel(env, provider);
   const requiredKey = provider === 'openai'
     ? 'OPENAI_API_KEY'
-    : provider === 'ollama' ? 'OLLAMA_API_KEY' : 'GEMINI_API_KEY or GOOGLE_API_KEY';
+    : provider === 'ollama' ? 'OLLAMA_API_KEY' : provider === 'qwen' ? 'DASHSCOPE_API_KEY' : 'GEMINI_API_KEY or GOOGLE_API_KEY';
   const hasKey = provider === 'openai'
     ? Boolean(env.OPENAI_API_KEY)
     : provider === 'ollama'
@@ -195,7 +195,15 @@ const resolveQwenEndpoint = (env) => {
     error.statusCode = 503;
     throw error;
   }
-  const region = String(env.DASHSCOPE_REGION || 'ap-southeast-1').trim();
+  const regionInput = String(env.DASHSCOPE_REGION || 'ap-southeast-1').trim().toLowerCase();
+  // Accept both the documented region names and the raw region codes; an
+  // unrecognised value would otherwise build a host DashScope can't reach.
+  const region = QWEN_REGION_HOSTS[regionInput] || (Object.values(QWEN_REGION_HOSTS).includes(regionInput) ? regionInput : null);
+  if (!region) {
+    const error = new Error(`DASHSCOPE_REGION must be one of: ${Object.keys(QWEN_REGION_HOSTS).join(', ')} (or a region code like ap-southeast-1 / cn-beijing).`);
+    error.statusCode = 503;
+    throw error;
+  }
   return `https://${workspaceId}.${region}.maas.aliyuncs.com/api/v1/services/aigc/multimodal-generation/generation`;
 };
 
@@ -253,6 +261,11 @@ const generateWithQwen = async ({ prompt, hairstyleImageUrl, faceImageUrl, model
     throw error;
   }
   const buffer = Buffer.from(await stored.arrayBuffer());
+  if (buffer.length > 7 * 1024 * 1024) {
+    const error = new Error('Generated image is too large to store (over 7MB). Try again.');
+    error.statusCode = 502;
+    throw error;
+  }
   const mimeType = (stored.headers?.get?.('content-type') || 'image/png').split(';')[0];
   return { base64: buffer.toString('base64'), mimeType };
 };

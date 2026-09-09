@@ -31,7 +31,7 @@ const WhatsAppOrderWidget = () => {
   const [customerPhone, setCustomerPhone] = useState('');
   const [fulfillmentMethod, setFulfillmentMethod] = useState('pickup');
   const [deliveryLocation, setDeliveryLocation] = useState('');
-  const [deliveryDetails, setDeliveryDetails] = useState({ mode: 'standard', zoneId: '', saccoOperatorId: '', saccoDestinationTown: '' });
+  const [deliveryDetails, setDeliveryDetails] = useState({ mode: 'standard', zoneId: '', saccoOperatorId: '', manualSaccoOperatorName: '', saccoDestinationTown: '' });
   const [deliveryFee, setDeliveryFee] = useState(0);
   const [resolvedDeliveryNames, setResolvedDeliveryNames] = useState({ zoneName: '', saccoOperatorName: '' });
   const [note, setNote] = useState('');
@@ -67,9 +67,16 @@ const WhatsAppOrderWidget = () => {
         toast.error('Select a delivery zone.');
         return;
       }
-      if (deliveryDetails.mode === 'sacco' && (!deliveryDetails.saccoOperatorId || !deliveryDetails.saccoDestinationTown.trim())) {
-        toast.error('Select a SACCO/coach operator and destination town.');
-        return;
+      if (deliveryDetails.mode === 'sacco') {
+        const isManualSacco = deliveryDetails.saccoOperatorId === '__manual__';
+        if (isManualSacco && !deliveryDetails.manualSaccoOperatorName.trim()) {
+          toast.error('Enter the SACCO/coach operator name.');
+          return;
+        }
+        if (!deliveryDetails.saccoOperatorId || !deliveryDetails.saccoDestinationTown.trim()) {
+          toast.error('Select a SACCO/coach operator and destination town.');
+          return;
+        }
       }
     }
 
@@ -309,7 +316,7 @@ const WhatsAppOrderWidget = () => {
                   setIsOpen(false);
                   setFulfillmentMethod('pickup');
                   setDeliveryLocation('');
-                  setDeliveryDetails({ mode: 'standard', zoneId: '', saccoOperatorId: '', saccoDestinationTown: '' });
+                  setDeliveryDetails({ mode: 'standard', zoneId: '', saccoOperatorId: '', manualSaccoOperatorName: '', saccoDestinationTown: '' });
                   setDeliveryFee(0);
                   setResolvedDeliveryNames({ zoneName: '', saccoOperatorName: '' });
                 }}

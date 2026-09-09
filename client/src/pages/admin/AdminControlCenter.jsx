@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
 import {
-  FaArrowLeft, FaArrowRight, FaBoxes, FaBoxOpen, FaBrain, FaBullhorn,
+  FaArrowLeft, FaArrowRight, FaBoxes, FaBoxOpen, FaBullhorn,
   FaChartLine, FaChevronDown, FaCrown, FaEyeSlash,
   FaGift, FaIdCard, FaLayerGroup, FaListAlt, FaRocket, FaRoute,
   FaShoppingBag, FaStore, FaSync, FaUpload, FaUsers, FaWarehouse,
 } from 'react-icons/fa';
+import { FaWandMagicSparkles } from 'react-icons/fa6';
 import { useSelector } from 'react-redux';
 import { Link, useNavigate } from 'react-router-dom';
 import Axios from '../../utils/Axios';
@@ -16,7 +17,7 @@ const formatKes = (value) => `KES ${Number(value || 0).toLocaleString()}`;
 
 const coreWorkflows = [
   { to: '/dashboard/sales-hub', icon: FaStore, title: 'Run the counter', text: 'Live transactions, receipts, payments and EOD', tone: 'bg-plum-700 text-white hover:bg-plum-600' },
-  { to: '/dashboard/admin-ai-insights', icon: FaBrain, title: 'Ask Nawiri AI', text: 'Understand today and decide the next move', tone: 'bg-gold-100 text-brown-900 hover:bg-gold-200 dark:bg-gold-900/30 dark:text-gold-100' },
+  { to: '/dashboard/admin-ai-insights', icon: FaWandMagicSparkles, title: 'Ask Nawiri AI', text: 'Understand today and decide the next move', tone: 'bg-gold-100 text-brown-900 hover:bg-gold-200 dark:bg-gold-900/30 dark:text-gold-100' },
   { to: '/dashboard/allorders', icon: FaShoppingBag, title: 'Manage orders', text: 'Online orders, pickup and delivery readiness', tone: 'bg-white text-charcoal ring-1 ring-brown-100 hover:bg-ivory dark:bg-dm-card-2 dark:text-white dark:ring-dm-border' },
   { to: '/dashboard/catalog-quality', icon: FaEyeSlash, title: 'Fix catalog health', text: 'Stock, missing detail and storefront readiness', tone: 'bg-white text-charcoal ring-1 ring-brown-100 hover:bg-ivory dark:bg-dm-card-2 dark:text-white dark:ring-dm-border' },
 ];
@@ -105,7 +106,7 @@ const AdminControlCenter = () => {
       <main className="admin-workspace__content">
         <section className="admin-hero">
           <div className="admin-hero__copy"><p className="admin-hero__eyebrow">Main Store · Today</p><h2 className="admin-hero__title">Good {user?.name?.split(' ')[0] || 'morning'}, run the store with clarity.</h2><p className="admin-hero__description">See today’s commercial health, work through what needs attention, and move directly into the task at hand.</p></div>
-          <div className="admin-hero__actions"><Link to="/dashboard/sales-counter" className="admin-hero__action admin-hero__action--primary"><FaStore size={13} />Open counter</Link><Link to="/dashboard/admin-ai-insights" className="admin-hero__action"><FaBrain size={13} />Ask copilot</Link></div>
+          <div className="admin-hero__actions"><Link to="/dashboard/sales-counter" className="admin-hero__action admin-hero__action--primary"><FaStore size={13} />Open counter</Link><Link to="/dashboard/admin-ai-insights" className="admin-hero__action"><FaWandMagicSparkles size={13} />Ask copilot</Link></div>
         </section>
 
         <section className="admin-stats" aria-label="Today’s store metrics">

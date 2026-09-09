@@ -12,6 +12,7 @@ import Sale from '../models/sale.model.js';
 import StockCountModel from '../models/stockCount.model.js';
 import SupplierModel from '../models/supplier.model.js';
 import UserModel from '../models/user.model.js';
+import { buildAbcClassification, buildDeadStockReport, buildReplenishmentQueue } from './inventoryIntelligence.js';
 
 // Kept local (not imported from adminAi.controller.js) to avoid a circular
 // module dependency -- that controller imports the tool system from here.
@@ -273,6 +274,78 @@ const READ_TOOLS = [
     }),
     summarize: (rows) => `Found ${rows.length} log entr${rows.length === 1 ? 'y' : 'ies'}.`,
   }),
+  {
+    name: 'query_reorder_recommendations',
+    description: 'The computed replenishment queue: every published product at or below its reorder point, with the reasoning behind it (sales velocity, supplier lead time, days of cover left) -- not just a stock-count list. Prefer this over guessing which products need reordering.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        urgencyAtLeast: { type: 'string', enum: ['low', 'high', 'critical'], description: 'Only return items at or above this urgency (critical = out of stock, high = will run out before the next delivery arrives, low = below reorder point but not urgent yet).' },
+        limit: { type: 'number', description: 'Max rows to return (default 20, hard cap 50).' },
+      },
+      required: [],
+    },
+    handler: async (args = {}) => {
+      const urgencyRank = { low: 0, high: 1, critical: 2 };
+      const queue = await buildReplenishmentQueue({});
+      const filtered = args.urgencyAtLeast
+        ? queue.filter((item) => urgencyRank[item.urgency] >= urgencyRank[args.urgencyAtLeast])
+        : queue;
+      const rows = filtered.slice(0, clampLimit(args.limit, 20, 50));
+      console.log('[adminAi] query_reorder_recommendations', JSON.stringify({ urgencyAtLeast: args.urgencyAtLeast, queueSize: queue.length, returned: rows.length }));
+      return {
+        ok: true,
+        summary: `${filtered.length} product${filtered.length === 1 ? '' : 's'} at or below their reorder point${args.urgencyAtLeast ? ` (${args.urgencyAtLeast}+ urgency)` : ''}${rows.length < filtered.length ? `; showing the ${rows.length} most urgent` : ''}.`,
+        data: rows,
+      };
+    },
+  },
+  {
+    name: 'query_dead_stock',
+    description: 'In-stock products that have not sold in 90+ days (or have never sold and are not brand new), ranked by KES value trapped in unsold units. Prefer this over guessing which products are dead stock or worth discounting/clearing.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        bucket: { type: 'string', enum: ['slow', 'dead', 'never_sold'], description: 'Only return this specific aging bucket (slow = 90-179 days since last sale, dead = 180+ days, never_sold = never sold and in the catalog long enough to count).' },
+        limit: { type: 'number', description: 'Max rows to return (default 20, hard cap 50).' },
+      },
+      required: [],
+    },
+    handler: async (args = {}) => {
+      const report = await buildDeadStockReport();
+      const filtered = args.bucket ? report.items.filter((item) => item.bucket === args.bucket) : report.items;
+      const rows = filtered.slice(0, clampLimit(args.limit, 20, 50));
+      console.log('[adminAi] query_dead_stock', JSON.stringify({ bucket: args.bucket, totalItems: report.items.length, returned: rows.length }));
+      return {
+        ok: true,
+        summary: `${filtered.length} product${filtered.length === 1 ? '' : 's'}${args.bucket ? ` in the "${args.bucket}" bucket` : ' not selling'}, ${formatKes(filtered.reduce((total, item) => total + item.trappedValue, 0))} of stock value trapped${rows.length < filtered.length ? `; showing the ${rows.length} highest-value` : ''}.`,
+        data: rows,
+      };
+    },
+  },
+  {
+    name: 'query_abc_classification',
+    description: 'Products ranked by annual consumption value (cost x sales velocity, not retail revenue) and grouped into A (top ~80% of value -- deserve tight stock control), B (next ~15%), or C (trailing ~5% -- fine with loose control). Prefer this over guessing which products matter most to the business.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        classification: { type: 'string', enum: ['A', 'B', 'C'], description: 'Only return products in this class.' },
+        limit: { type: 'number', description: 'Max rows to return (default 20, hard cap 50).' },
+      },
+      required: [],
+    },
+    handler: async (args = {}) => {
+      const result = await buildAbcClassification();
+      const filtered = args.classification ? result.items.filter((item) => item.classification === args.classification) : result.items;
+      const rows = filtered.slice(0, clampLimit(args.limit, 20, 50));
+      console.log('[adminAi] query_abc_classification', JSON.stringify({ classification: args.classification, totalItems: result.items.length, returned: rows.length }));
+      return {
+        ok: true,
+        summary: `${filtered.length} product${filtered.length === 1 ? '' : 's'}${args.classification ? ` in class ${args.classification}` : ''} (A: ${result.counts.A}, B: ${result.counts.B}, C: ${result.counts.C} across the catalogue)${rows.length < filtered.length ? `; showing the ${rows.length} highest-value` : ''}.`,
+        data: rows,
+      };
+    },
+  },
   {
     name: 'query_orders',
     description: 'Look up online orders by orderId, status, or date range. Returns one row per order (grouped from its line items), not raw payment data.',

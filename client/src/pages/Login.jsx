@@ -20,6 +20,10 @@ const Login = () => {
     const [data, setData] = useState({ email: "", password: "" });
     const [showPassword, setShowPassword] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
+    // Set when login fails because this account (often Google-linked) has no
+    // password yet — offers a direct path to set one instead of a dead-end
+    // error toast. Cleared on the next edit/attempt.
+    const [needsPasswordSetup, setNeedsPasswordSetup] = useState(false);
     const [rememberMe, setRememberMe] = useState(() => getRememberMe());
     const reduceMotion = useReducedMotion();
     const submitLockRef = useRef(false);
@@ -47,6 +51,7 @@ const Login = () => {
     const handleChange = (e) => {
         const { name, value } = e.target;
         setData(prev => ({ ...prev, [name]: value }));
+        if (needsPasswordSetup) setNeedsPasswordSetup(false);
     };
 
     const valideValue = Object.values(data).every(el => el);
@@ -56,6 +61,7 @@ const Login = () => {
         if (submitLockRef.current || isLoading) return;
         submitLockRef.current = true;
         setIsLoading(true);
+        setNeedsPasswordSetup(false);
         try {
             const response = await Axios({
                 ...SummaryApi.login,
@@ -63,7 +69,8 @@ const Login = () => {
                 requestLockKey: `auth:login:${data.email.trim().toLowerCase()}`
             });
             if (response.data.error) {
-                toast.error(response.data.message || "Login failed.");
+                if (response.data.needsPasswordSetup) setNeedsPasswordSetup(true);
+                else toast.error(response.data.message || "Login failed.");
                 setIsLoading(false);
                 return;
             }
@@ -94,7 +101,8 @@ const Login = () => {
                 navigate(`/verify-email?email=${encodeURIComponent(error.response.data.email || data.email.trim())}&sent=1`);
             } else if (error.response?.status === 400) {
                 const msg = error.response?.data?.message;
-                if (msg === "Incorrect password") toast.error("Incorrect password. Please try again.");
+                if (error.response?.data?.needsPasswordSetup) setNeedsPasswordSetup(true);
+                else if (msg === "Incorrect password") toast.error("Incorrect password. Please try again.");
                 else if (msg === "User not registered") toast.error("Email not registered. Please create an account.");
                 else toast.error(msg || "Login failed.");
             } else {
@@ -199,6 +207,23 @@ const Login = () => {
                                 </button>
                             </div>
                         </div>
+
+                        {/* Set-a-password prompt — shown instead of a dead-end error when this
+                            account (often Google-linked) has no password saved yet. */}
+                        {needsPasswordSetup && (
+                            <div className="flex flex-col gap-2 rounded-card border border-gold-300 bg-gold-50 dark:border-gold-700/50 dark:bg-gold-900/15 px-3.5 py-3">
+                                <p className="text-sm text-charcoal dark:text-white/85">
+                                    This account doesn't have a password yet — you can still sign in with Google, or set a password now to use email sign-in too.
+                                </p>
+                                <button
+                                    type="button"
+                                    onClick={() => navigate('/forgot-password', { state: { email: data.email.trim() } })}
+                                    className="self-start text-sm font-semibold text-plum-700 dark:text-plum-200 hover:underline underline-offset-2"
+                                >
+                                    Set a password →
+                                </button>
+                            </div>
+                        )}
 
                         {/* Remember me */}
                         <div className="flex items-center justify-between">

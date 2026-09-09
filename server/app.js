@@ -46,6 +46,7 @@ import warehouseRouter from './route/warehouse.route.js';
 import procurementRouter from './route/procurement.route.js';
 import stockControlRouter from './route/stockControl.route.js';
 import storePortalRouter from './route/storePortal.route.js';
+import inventoryIntelligenceRouter from './route/inventoryIntelligence.route.js';
 
 // ── Controllers used directly on admin routes ───────────────────────────────
 import {
@@ -201,6 +202,7 @@ app.use('/api/admin/warehouse', warehouseRouter);
 app.use('/api/admin/procurement', procurementRouter);
 app.use('/api/admin/stock-control', stockControlRouter);
 app.use('/api/admin/store-portal', storePortalRouter);
+app.use('/api/admin/inventory-intelligence', inventoryIntelligenceRouter);
 
 // ── Admin loyalty routes ─────────────────────────────────────────────────────
 app.get('/api/admin/loyalty/cards', auth, admin, getLoyaltyCards);
