@@ -3,8 +3,12 @@ import UserModel from "../models/user.model.js"
 import { PERSISTENT_SESSION_REFRESH_TOKEN_TTL } from './authSession.js'
 
 const genertedRefreshToken = async(userId)=>{
+    const signingSecret = process.env.SECRET_KEY_REFRESH_TOKEN || process.env.JWT_SECRET;
+    if (!signingSecret) {
+        throw new Error('Refresh token signing secret is not configured');
+    }
     const token = await jwt.sign({ _id : userId},  // Changing 'id' to '_id' for consistency
-        process.env.SECRET_KEY_REFRESH_TOKEN,
+        signingSecret,
         { expiresIn : PERSISTENT_SESSION_REFRESH_TOKEN_TTL }
     )
 

@@ -1,13 +1,17 @@
-﻿import { useCallback, useEffect, useState } from 'react';
+/* eslint-disable react/prop-types */
+import { useCallback, useEffect, useState } from 'react';
 import {
-  FaArrowLeft, FaArrowDown, FaArrowUp, FaBoxes, FaBrain, FaChartLine,
-  FaCheck, FaChevronDown, FaClipboardList, FaExclamationTriangle, FaGlobeAfrica,
-  FaRoute, FaSearch, FaShoppingBag, FaStore, FaSync, FaTimes, FaUser,
+  FaArrowDown, FaArrowLeft, FaArrowRight, FaArrowUp, FaBoxes, FaBrain,
+  FaChartLine, FaCheck, FaChevronDown, FaClipboardList, FaClock,
+  FaExclamationTriangle, FaGlobeAfrica, FaLightbulb, FaRoute, FaSearch,
+  FaShoppingBag, FaStore, FaSync, FaTimes, FaUser,
 } from 'react-icons/fa';
 import { Link, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import Axios from '../../utils/Axios';
 import AiMarkdown from '../../components/AiMarkdown';
+import '../../styles/AdminWorkspace.css';
+import '../../styles/AdminAiInsights.css';
 
 const formatKes = (value) => `KES ${Number(value || 0).toLocaleString()}`;
 
@@ -32,25 +36,40 @@ const quickQuestions = [
   'Compare the selected period with the previous one in plain language.',
 ];
 
-const toneFor = (level) => ({
-  urgent: 'border-red-200 bg-red-50 text-red-800 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-200',
-  attention: 'border-gold-200 bg-gold-50 text-brown-800 dark:border-gold-700/50 dark:bg-gold-900/20 dark:text-gold-100',
-  good: 'border-green-200 bg-green-50 text-green-800 dark:border-green-900/60 dark:bg-green-950/30 dark:text-green-200',
-}[level] || 'border-brown-200 bg-white text-charcoal dark:border-dm-border dark:bg-dm-card dark:text-white');
+const reviewTone = (level) => (level === 'urgent' ? 'urgent' : level === 'attention' ? 'attention' : 'good');
 
-const sectionShell = 'rounded-3xl border border-brown-100 bg-white shadow-sm dark:border-dm-border dark:bg-dm-card';
-const labelClass = 'text-[11px] font-bold uppercase tracking-wide text-brown-400 dark:text-white/40';
-const skeletonBlock = 'rounded-full bg-brown-100 dark:bg-dm-card-2';
+const MetricCard = ({ metric }) => {
+  const Icon = metric.icon;
+  const TrendIcon = metric.trend >= 0 ? FaArrowUp : FaArrowDown;
+  return (
+    <article className={`ai-metric ${metric.active === false ? 'ai-metric--muted' : ''} ${metric.highlight ? 'ai-metric--highlight' : ''}`}>
+      <div className="ai-metric__head"><span className="ai-metric__label">{metric.label}</span><Icon size={14} /></div>
+      <p className="ai-metric__value">{metric.value}</p>
+      <div className="ai-metric__footer">
+        {metric.trend !== undefined && metric.trend !== null
+          ? <span className={`ai-metric__trend ai-metric__trend--${metric.trend >= 0 ? 'up' : 'down'}`}><TrendIcon size={10} />{metric.hint}</span>
+          : <span className="ai-metric__hint">{metric.hint}</span>}
+      </div>
+    </article>
+  );
+};
 
-const MetricSkeleton = () => (
-  <div className={`${sectionShell} animate-pulse p-4`}>
-    <div className="flex items-center justify-between gap-3">
-      <div className={`${skeletonBlock} h-2.5 w-16`} />
-      <div className={`${skeletonBlock} h-4 w-4`} />
+const ProductPanel = ({ title, description, to, linkLabel, products, type }) => (
+  <article className="ai-product-panel">
+    <div className="ai-product-panel__head">
+      <div><h2 className="ai-product-panel__title">{title}</h2><p className="ai-product-panel__description">{description}</p></div>
+      <Link to={to} className="ai-panel__link">{linkLabel}</Link>
     </div>
-    <div className={`${skeletonBlock} mt-3 h-6 w-20 rounded-lg`} />
-    <div className={`${skeletonBlock} mt-2 h-2.5 w-24`} />
-  </div>
+    <div className="ai-product-list">
+      {products.map((product, index) => (
+        <div key={product.id} className="ai-product-row">
+          <span className="ai-product-row__rank">{type === 'stock' ? <FaBoxes size={11} /> : index + 1}</span>
+          <span className="ai-product-row__copy"><span className="ai-product-row__name">{product.name}</span><span className="ai-product-row__meta">{type === 'stock' ? product.sku || 'No SKU' : `${product.quantity} units · ${product.sku || 'No SKU'}`}</span></span>
+          {type === 'stock' ? <span className="ai-stock-pill">{product.stock} left</span> : <span className="ai-product-row__value">{formatKes(product.revenue)}</span>}
+        </div>
+      ))}
+    </div>
+  </article>
 );
 
 const AdminAiInsights = () => {
@@ -70,11 +89,7 @@ const AdminAiInsights = () => {
     setLoading(true);
     setLoadError(null);
     try {
-      const response = await Axios({
-        method: 'GET',
-        url: '/api/admin/ai/brief',
-        params: { range, sources: sources.join(',') },
-      });
+      const response = await Axios({ method: 'GET', url: '/api/admin/ai/brief', params: { range, sources: sources.join(',') } });
       setBrief(response.data?.data || null);
     } catch (error) {
       console.error('Failed to load admin AI brief:', error);
@@ -99,23 +114,14 @@ const AdminAiInsights = () => {
   const askCopilot = async (event) => {
     event.preventDefault();
     const trimmedQuestion = question.trim();
-    if (trimmedQuestion.length < 3) {
-      toast.error('Type a business question first.');
-      return;
-    }
-    // Flatten prior turns into plain {role, content} history for the server —
-    // it only needs enough context for follow-up questions to make sense.
+    if (trimmedQuestion.length < 3) return toast.error('Type a business question first.');
     const history = turns.flatMap((turn) => [
       { role: 'user', content: turn.question },
       ...(turn.answer?.available ? [{ role: 'assistant', content: turn.answer.text }] : []),
     ]);
     setAsking(true);
     try {
-      const response = await Axios({
-        method: 'POST',
-        url: '/api/admin/ai/ask',
-        data: { question: trimmedQuestion, range, sources, webSearch, history },
-      });
+      const response = await Axios({ method: 'POST', url: '/api/admin/ai/ask', data: { question: trimmedQuestion, range, sources, webSearch, history } });
       const data = response.data?.data;
       setTurns((current) => [...current, { question: trimmedQuestion, answer: data?.answer || null }]);
       setQuestion('');
@@ -130,371 +136,57 @@ const AdminAiInsights = () => {
 
   const metrics = brief?.metrics || {};
   const trend = metrics.revenueChangePercent;
+  const selectedRange = ranges.find((item) => item.id === range)?.label || 'Today';
+  const sourceSummary = sources.length === scopes.length ? 'All business data' : `${sources.length} selected source${sources.length === 1 ? '' : 's'}`;
+  const generatedAt = brief?.generatedAt ? new Intl.DateTimeFormat('en-KE', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(brief.generatedAt)) : '';
   const metricCards = [
-    {
-      icon: FaChartLine,
-      label: 'Combined revenue',
-      value: formatKes(metrics.revenue),
-      hint: trend === null
-        ? `${brief?.period || 'Selected period'} · no prior comparison`
-        : `${trend >= 0 ? '+' : ''}${trend}% vs previous period`,
-      trend,
-    },
-    {
-      icon: FaStore,
-      label: 'Counter sales',
-      value: formatKes(metrics.counterRevenue),
-      hint: `${metrics.counterSaleCount || 0} transactions · ${metrics.counterItemsSold || 0} items`,
-      active: sources.includes('counter'),
-    },
-    {
-      icon: FaShoppingBag,
-      label: 'Online sales',
-      value: formatKes(metrics.onlineRevenue),
-      hint: `${metrics.onlineOrderCount || 0} orders · ${metrics.openOrderCount || 0} open`,
-      active: sources.includes('online'),
-    },
-    {
-      icon: FaBoxes,
-      label: 'Stock at risk',
-      value: metrics.lowStockCount ?? 0,
-      hint: sources.includes('inventory') ? 'Products at or below threshold' : 'Inventory source not selected',
-      active: sources.includes('inventory'),
-    },
-    {
-      icon: FaClipboardList,
-      label: 'Active deliveries',
-      value: metrics.activeDeliveryCount ?? 0,
-      hint: metrics.availableDriverCount === null
-        ? 'Delivery source not selected'
-        : `${metrics.availableDriverCount || 0} verified drivers available`,
-      active: sources.includes('delivery'),
-    },
+    { icon: FaChartLine, label: 'Combined revenue', value: formatKes(metrics.revenue), hint: trend === null ? `${brief?.period || selectedRange} · no prior comparison` : `${trend >= 0 ? '+' : ''}${trend}% vs previous period`, trend, highlight: true },
+    { icon: FaStore, label: 'Counter sales', value: formatKes(metrics.counterRevenue), hint: `${metrics.counterSaleCount || 0} transactions · ${metrics.counterItemsSold || 0} items`, active: sources.includes('counter') },
+    { icon: FaShoppingBag, label: 'Online sales', value: formatKes(metrics.onlineRevenue), hint: `${metrics.onlineOrderCount || 0} orders · ${metrics.openOrderCount || 0} open`, active: sources.includes('online') },
+    { icon: FaBoxes, label: 'Stock at risk', value: metrics.lowStockCount ?? 0, hint: sources.includes('inventory') ? 'Products at or below threshold' : 'Inventory source not selected', active: sources.includes('inventory') },
+    { icon: FaClipboardList, label: 'Active deliveries', value: metrics.activeDeliveryCount ?? 0, hint: metrics.availableDriverCount === null ? 'Delivery source not selected' : `${metrics.availableDriverCount || 0} verified drivers available`, active: sources.includes('delivery') },
   ];
 
-  const generatedAt = brief?.generatedAt
-    ? new Intl.DateTimeFormat('en-KE', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(brief.generatedAt))
-    : '';
-
   return (
-    <div className="min-h-screen bg-ivory pb-16 dark:bg-dm-surface">
-      <header className="sticky top-0 z-30 border-b border-brown-100 bg-white/95 backdrop-blur dark:border-dm-border dark:bg-dm-card/95">
-        <div className="mx-auto flex max-w-7xl items-center gap-3 px-4 py-3 sm:px-6">
-          <button
-            type="button"
-            onClick={() => navigate('/dashboard')}
-            className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-brown-200 text-brown-700 hover:bg-plum-50 hover:text-plum-700 dark:border-dm-border dark:text-white/70 dark:hover:bg-dm-card-2"
-            aria-label="Back to dashboard"
-          >
-            <FaArrowLeft size={14} />
-          </button>
-          <div className="min-w-0 flex-1">
-            <div className="flex flex-wrap items-center gap-2">
-              <FaBrain className="shrink-0 text-plum-700 dark:text-plum-300" />
-              <h1 className="truncate text-base font-bold text-charcoal dark:text-white">Nawiri Operations Copilot</h1>
-              <span className="rounded-full bg-brown-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-brown-500 dark:bg-dm-card-2 dark:text-white/50">
-                Read-only
-              </span>
-            </div>
-            <p className="mt-0.5 truncate text-xs text-brown-500 dark:text-white/50">
-              {brief
-                ? `${brief.period || 'Selected period'} · Updated ${generatedAt || 'just now'}`
-                : 'Counter-first, owner-controlled data — nothing is written back.'}
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={loadBrief}
-            disabled={loading}
-            className="inline-flex items-center gap-2 rounded-xl border border-plum-200 bg-white px-3 py-2 text-sm font-semibold text-plum-700 hover:bg-plum-50 disabled:cursor-not-allowed disabled:opacity-60 dark:border-plum-800 dark:bg-dm-card dark:text-plum-200"
-          >
-            <FaSync className={loading ? 'animate-spin' : ''} size={13} />
-            <span className="hidden sm:inline">Refresh</span>
-          </button>
+    <div className="admin-workspace">
+      <header className="admin-workspace__header">
+        <div className="admin-workspace__header-inner">
+          <button type="button" onClick={() => navigate('/dashboard')} className="admin-workspace__back" aria-label="Back to dashboard"><FaArrowLeft size={14} /></button>
+          <div className="admin-workspace__title-group"><p className="admin-workspace__eyebrow">Nawiri owner workspace</p><h1 className="admin-workspace__title">Operations Copilot</h1><p className="admin-workspace__subline">Private, owner-controlled analysis for every store decision.</p></div>
+          <button type="button" onClick={loadBrief} disabled={loading} className="admin-workspace__refresh"><FaSync className={loading ? 'animate-spin' : ''} size={13} /><span>Refresh intelligence</span></button>
         </div>
       </header>
 
-      <main className="mx-auto max-w-7xl p-4 sm:p-6">
-      <div className="grid gap-4 sm:gap-5 xl:grid-cols-[minmax(0,1fr)_336px] xl:items-start">
-      <div className="space-y-4 sm:space-y-5">
-        <section className={`${sectionShell} overflow-hidden`} title="The copilot only sees the sources you select.">
-          <button type="button" onClick={() => setShowContext((current) => !current)} className="flex w-full items-center justify-between gap-3 p-4 text-left hover:bg-plum-50/40 dark:hover:bg-dm-card-2">
-            <span><span className={labelClass}>Analysis context</span><span className="mt-1 block text-sm font-bold text-charcoal dark:text-white">{ranges.find((item) => item.id === range)?.label} · {sources.length === scopes.length ? 'All business data' : `${sources.length} selected source${sources.length === 1 ? '' : 's'}`}</span></span>
-            <span className="flex items-center gap-2 text-xs font-bold text-plum-700 dark:text-plum-300">{showContext ? 'Done' : 'Adjust'} <FaChevronDown className={showContext ? 'rotate-180 transition-transform' : 'transition-transform'} size={12} /></span>
-          </button>
-          {showContext && <div className="border-t border-brown-100 p-4 dark:border-dm-border"><div className="grid gap-4 lg:grid-cols-[auto_1fr]"><div><p className="mb-2 text-xs font-bold uppercase tracking-wide text-brown-400 dark:text-white/40">Time range</p><div className="flex flex-wrap gap-2">{ranges.map((item) => <button key={item.id} type="button" onClick={() => setRange(item.id)} className={`rounded-xl px-3 py-2 text-sm font-semibold transition ${range === item.id ? 'bg-plum-700 text-white shadow-sm' : 'bg-ivory text-brown-600 hover:bg-plum-50 dark:bg-dm-card-2 dark:text-white/70'}`}>{item.label}</button>)}</div></div><div><p className="mb-2 text-xs font-bold uppercase tracking-wide text-brown-400 dark:text-white/40">Include business data</p><div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">{scopes.map((scope) => { const Icon = scope.icon; const selected = sources.includes(scope.id); return <button key={scope.id} type="button" onClick={() => toggleSource(scope.id)} className={`flex items-center gap-2 rounded-xl border p-2.5 text-left transition ${selected ? 'border-plum-300 bg-plum-50 text-plum-800 dark:border-plum-700 dark:bg-plum-900/20 dark:text-plum-100' : 'border-brown-100 text-brown-500 hover:bg-ivory dark:border-dm-border dark:text-white/50 dark:hover:bg-dm-card-2'}`}><span className={`flex h-7 w-7 items-center justify-center rounded-lg ${selected ? 'bg-plum-700 text-white' : 'bg-brown-100 text-brown-500 dark:bg-dm-card-2'}`}>{selected ? <FaCheck size={11} /> : <Icon size={12} />}</span><span className="min-w-0"><span className="block text-xs font-bold">{scope.label}</span><span className="block truncate text-[11px] opacity-70">{scope.hint}</span></span></button>; })}</div></div></div></div>}
+      <main className="admin-workspace__content"><div className="ai-command">
+        <section className="ai-command__hero">
+          <div className="ai-command__hero-copy"><p className="ai-command__eyebrow"><FaLightbulb size={11} />Your decision workspace</p><h2 className="ai-command__hero-title">Turn today’s operations into the next best move.</h2><p>Bring the live counter, online orders, inventory, and delivery into one decision-ready view. The copilot stays read-only until you choose an action.</p></div>
+          <div className="ai-command__hero-meta"><span className="ai-command__hero-pill ai-command__hero-pill--live">Live business context</span><span className="ai-command__hero-pill"><FaClock size={11} />{brief ? `Updated ${generatedAt || 'just now'}` : 'Loading current pulse'}</span><span className="ai-command__hero-pill"><FaCheck size={10} />{sourceSummary}</span></div>
+          <div className="ai-command__hero-actions"><button type="button" onClick={() => setShowContext((current) => !current)} className="ai-command__hero-action"><FaSearch size={12} />Adjust context</button><button type="button" onClick={() => document.getElementById('copilot-question')?.focus()} className="ai-command__hero-action ai-command__hero-action--solid"><FaBrain size={12} />Ask Nawiri AI</button></div>
         </section>
 
-        {loading && !brief ? (
-          <>
-            <section className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-              {Array.from({ length: 5 }).map((_, index) => <MetricSkeleton key={index} />)}
+        <div className="ai-command__workspace"><div className="ai-command__main">
+          <section className="ai-filter-deck" aria-label="Analysis context">
+            <button type="button" onClick={() => setShowContext((current) => !current)} className="ai-filter-deck__summary" aria-expanded={showContext}><span className="ai-filter-deck__summary-copy"><span className="ai-filter-deck__label">Analysis context</span><span className="ai-filter-deck__value">{selectedRange} · {sourceSummary}</span></span><span className="ai-filter-deck__control">{showContext ? 'Done' : 'Configure'} <FaChevronDown className={showContext ? 'rotate-180 transition-transform' : 'transition-transform'} size={12} /></span></button>
+            {showContext && <div className="ai-filter-deck__body"><div><span className="ai-filter-deck__group-title">Decision window</span><div className="ai-filter-deck__ranges">{ranges.map((item) => <button key={item.id} type="button" onClick={() => setRange(item.id)} className={`ai-filter-deck__range ${range === item.id ? 'bg-plum-700 text-white shadow-sm' : 'bg-ivory text-brown-600 hover:bg-plum-50 dark:bg-dm-card-2 dark:text-white/70'}`}>{item.label}</button>)}</div></div><div><span className="ai-filter-deck__group-title">Included live sources</span><div className="ai-source-grid">{scopes.map((scope) => { const Icon = scope.icon; const selected = sources.includes(scope.id); return <button key={scope.id} type="button" onClick={() => toggleSource(scope.id)} className={`ai-source ${selected ? 'ai-source--selected' : ''}`}><span className="ai-source__icon">{selected ? <FaCheck size={10} /> : <Icon size={11} />}</span><span className="ai-source__copy"><span className="ai-source__label">{scope.label}</span><span className="ai-source__hint">{scope.hint}</span></span></button>; })}</div></div></div>}
+          </section>
+
+          {loading && !brief ? <><section className="ai-loading-grid" aria-label="Loading business metrics">{Array.from({ length: 5 }).map((_, index) => <div key={index} className="ai-loading-card" />)}</section><section className="ai-insight-grid"><div className="ai-loading-card" /><div className="ai-loading-card" /></section></> : !brief ? <section className="ai-panel"><div className="ai-panel__head"><div className="ai-panel__identity"><span className="ai-panel__icon"><FaExclamationTriangle /></span><div><p className="ai-panel__overline">Connection needed</p><h2 className="ai-panel__title">The operations pulse could not load</h2></div></div></div><div className="ai-panel__content"><p className="ai-narrative">{loadError || 'Refresh to reconnect the operations copilot.'}</p>{loadError?.includes('session') && <Link to="/login" className="ai-panel__link">Sign in again</Link>}</div></section> : <>
+            <section className="ai-metric-grid" aria-label="Selected business metrics">{metricCards.map((metric) => <MetricCard key={metric.label} metric={metric} />)}</section>
+            <section className="ai-insight-grid">
+              <article className="ai-panel ai-panel--narrative"><div className="ai-panel__head"><div className="ai-panel__identity"><span className="ai-panel__icon"><FaBrain size={16} /></span><div><p className="ai-panel__overline">Automatic pulse</p><h2 className="ai-panel__title">What the selected data says</h2></div></div></div><div className="ai-panel__content">{brief.narrative?.available ? <AiMarkdown className="ai-narrative" text={brief.narrative.text} /> : <p className="ai-narrative">{`Live data is ready. ${brief.narrative?.reason || 'Ask a question for an owner-focused analysis of the selected period.'}`}</p>}</div></article>
+              <article className="ai-panel"><div className="ai-panel__head"><div className="ai-panel__identity"><span className="ai-panel__icon"><FaExclamationTriangle size={15} /></span><div><p className="ai-panel__overline">Action desk</p><h2 className="ai-panel__title">Review queue</h2></div></div></div><div className="ai-panel__content">{brief.actions?.length > 0 ? <div className="ai-review-list">{brief.actions.map((action, index) => <Link key={`${action.title}-${index}`} to={action.href} className={`ai-review ai-review--${reviewTone(action.level)}`}><span className="ai-review__marker">{index + 1}</span><span className="ai-review__copy"><span className="ai-review__title">{action.title}</span><span className="ai-review__detail">{action.detail}</span></span><FaArrowRight className="ai-review__arrow" size={11} /></Link>)}</div> : <div className="ai-empty-review"><FaCheck className="shrink-0 text-green-600" size={12} />Nothing needs review right now—the shop is running clean.</div>}</div></article>
             </section>
-            <section className="grid gap-5 lg:grid-cols-[minmax(0,1.25fr)_minmax(280px,0.75fr)]">
-              <div className={`${sectionShell} animate-pulse p-5`}>
-                <div className={`${skeletonBlock} h-2.5 w-32`} />
-                <div className="mt-4 space-y-2">
-                  <div className={`${skeletonBlock} h-3 w-full`} />
-                  <div className={`${skeletonBlock} h-3 w-5/6`} />
-                  <div className={`${skeletonBlock} h-3 w-2/3`} />
-                </div>
-              </div>
-              <div className={`${sectionShell} animate-pulse p-5`}>
-                <div className={`${skeletonBlock} h-2.5 w-24`} />
-                <div className="mt-4 space-y-2">
-                  <div className={`${skeletonBlock} h-12 rounded-2xl`} />
-                  <div className={`${skeletonBlock} h-12 rounded-2xl`} />
-                </div>
-              </div>
-            </section>
-          </>
-        ) : !brief ? (
-          <div className="rounded-3xl border border-red-200 bg-red-50 p-6 text-sm text-red-800 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-200">
-            <p>{loadError || 'The operations copilot could not be loaded. Refresh to try again.'}</p>
-            {loadError?.includes('session') && (
-              <Link to="/login" className="mt-3 inline-block font-semibold underline">Sign in again</Link>
-            )}
-          </div>
-        ) : (
-          <>
-            <section className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-              {metricCards.map((metric) => {
-                const Icon = metric.icon;
-                const TrendIcon = metric.trend >= 0 ? FaArrowUp : FaArrowDown;
-                return (
-                  <div key={metric.label} className={`${sectionShell} p-4`}>
-                    <div className="flex items-center justify-between gap-3">
-                      <p className={`${labelClass} min-w-0`}>{metric.label}</p>
-                      <Icon className={`shrink-0 ${metric.active === false ? 'text-brown-200 dark:text-white/25' : 'text-plum-600 dark:text-plum-300'}`} size={15} />
-                    </div>
-                    <p className="mt-2 text-xl font-black tracking-tight text-charcoal dark:text-white sm:text-2xl">{metric.value}</p>
-                    {metric.trend !== undefined && metric.trend !== null ? (
-                      <p className={`mt-1 flex items-center gap-1 text-xs font-semibold ${metric.trend >= 0 ? 'text-green-700 dark:text-green-300' : 'text-red-700 dark:text-red-300'}`}>
-                        <TrendIcon size={11} /> {metric.hint}
-                      </p>
-                    ) : (
-                      <p className="mt-1 text-xs text-brown-500 dark:text-white/50">{metric.hint}</p>
-                    )}
-                  </div>
-                );
-              })}
-            </section>
+            {(brief.counterTopProducts?.length > 0 || brief.lowStockProducts?.length > 0) && <section className="ai-product-grid">{brief.counterTopProducts?.length > 0 && <ProductPanel title="Counter best movers" description="Validated, non-voided counter transactions in the selected period." to="/dashboard/sales-hub" linkLabel="Sales Hub" products={brief.counterTopProducts} type="sales" />}{brief.lowStockProducts?.length > 0 && <ProductPanel title="Stock needing review" description="Shown because Inventory is included in the current context." to="/dashboard/catalog-quality" linkLabel="Catalog" products={brief.lowStockProducts} type="stock" />}</section>}
+          </>}
+        </div>
 
-            <section className="grid gap-5 lg:grid-cols-[minmax(0,1.25fr)_minmax(280px,0.75fr)]">
-              <div className={`${sectionShell} border-plum-100 p-5 dark:border-plum-900/50`}>
-                <div className="flex items-start gap-3">
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-plum-100 text-plum-700 dark:bg-plum-900/30 dark:text-plum-300">
-                    <FaBrain />
-                  </div>
-                  <div>
-                    <p className="text-xs font-bold uppercase tracking-wide text-plum-600 dark:text-plum-300">Automatic pulse</p>
-                    <h2 className="mt-0.5 font-bold text-charcoal dark:text-white">What the selected data says</h2>
-                  </div>
-                </div>
-                {brief.narrative?.available ? (
-                  <AiMarkdown className="mt-4" text={brief.narrative.text} />
-                ) : (
-                  <p className="mt-4 text-sm leading-6 text-brown-700 dark:text-white/70">
-                    {`Live data is ready. ${brief.narrative?.reason || 'Ask a question above for an owner-focused analysis.'}`}
-                  </p>
-                )}
-              </div>
-
-              <div className={`${sectionShell} p-5`}>
-                <div className="flex items-center gap-2">
-                  <FaExclamationTriangle className="text-gold-600" />
-                  <h2 className="font-bold text-charcoal dark:text-white">Review queue</h2>
-                </div>
-                {brief.actions?.length > 0 ? (
-                  <div className="mt-3 space-y-2">
-                    {brief.actions.map((action, index) => (
-                      <Link
-                        key={`${action.title}-${index}`}
-                        to={action.href}
-                        className={`block rounded-2xl border p-3 transition-transform hover:-translate-y-0.5 ${toneFor(action.level)}`}
-                      >
-                        <p className="text-sm font-bold">{action.title}</p>
-                        <p className="mt-1 text-xs leading-5 opacity-80">{action.detail}</p>
-                        <p className="mt-2 text-xs font-semibold underline">Open review</p>
-                      </Link>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="mt-3 flex items-center gap-2 rounded-2xl border border-dashed border-brown-200 p-3 text-xs text-brown-500 dark:border-dm-border dark:text-white/50">
-                    <FaCheck className="shrink-0 text-green-600 dark:text-green-400" size={12} />
-                    Nothing needs review right now — the shop is running clean.
-                  </div>
-                )}
-              </div>
-            </section>
-
-            {(brief.counterTopProducts?.length > 0 || brief.lowStockProducts?.length > 0) && (
-              <section className="grid gap-5 lg:grid-cols-2">
-                {brief.counterTopProducts?.length > 0 && (
-                  <div className={`${sectionShell} p-5`}>
-                    <div className="flex items-center justify-between gap-3">
-                      <div>
-                        <h2 className="font-bold text-charcoal dark:text-white">Counter best movers</h2>
-                        <p className="mt-0.5 text-xs text-brown-500 dark:text-white/50">From valid, non-voided counter transactions.</p>
-                      </div>
-                      <Link to="/dashboard/sales-hub" className="text-xs font-bold text-plum-700 underline dark:text-plum-300">Sales Hub</Link>
-                    </div>
-                    <div className="mt-3 divide-y divide-brown-100 dark:divide-dm-border">
-                      {brief.counterTopProducts.map((product, index) => (
-                        <div key={product.id} className="flex items-center justify-between gap-3 py-3 text-sm">
-                          <div className="min-w-0">
-                            <p className="truncate font-semibold text-charcoal dark:text-white">{index + 1}. {product.name}</p>
-                            <p className="mt-0.5 text-xs text-brown-500 dark:text-white/50">{product.quantity} units · {product.sku || 'No SKU'}</p>
-                          </div>
-                          <p className="shrink-0 font-bold text-plum-700 dark:text-plum-300">{formatKes(product.revenue)}</p>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {brief.lowStockProducts?.length > 0 && (
-                  <div className={`${sectionShell} p-5`}>
-                    <div className="flex items-center justify-between gap-3">
-                      <div>
-                        <h2 className="font-bold text-charcoal dark:text-white">Stock needing review</h2>
-                        <p className="mt-0.5 text-xs text-brown-500 dark:text-white/50">Shown only because Inventory is selected.</p>
-                      </div>
-                      <Link to="/dashboard/catalog-quality" className="text-xs font-bold text-plum-700 underline dark:text-plum-300">Catalog quality</Link>
-                    </div>
-                    <div className="mt-3 divide-y divide-brown-100 dark:divide-dm-border">
-                      {brief.lowStockProducts.map((product) => (
-                        <div key={product.id} className="flex items-center justify-between gap-4 py-3 text-sm">
-                          <div className="min-w-0">
-                            <p className="truncate font-semibold text-charcoal dark:text-white">{product.name}</p>
-                            <p className="mt-0.5 text-xs text-brown-500 dark:text-white/50">{product.sku || 'No SKU'}</p>
-                          </div>
-                          <span className="shrink-0 rounded-pill bg-red-100 px-2.5 py-1 text-xs font-bold text-red-700 dark:bg-red-950/40 dark:text-red-200">
-                            {product.stock} left
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </section>
-            )}
-          </>
-        )}
-      </div>
-
-      <aside className="order-first xl:order-none xl:sticky xl:top-20">
-        <section className={`${sectionShell} overflow-hidden border-plum-100 p-0 dark:border-plum-900/50`}>
-          <div className="flex items-start gap-3">
-            <div className="m-4 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-plum-100 text-plum-700 dark:bg-plum-900/30 dark:text-plum-300 sm:m-5">
-              <FaSearch />
-            </div>
-            <div className="min-w-0 py-4 pr-4 sm:py-5 sm:pr-5">
-              <h2 className="font-bold text-charcoal dark:text-white">Ask the copilot</h2>
-              <p className="mt-0.5 text-xs text-brown-500 dark:text-white/50">
-                Ask about the selected business data, or opt into outside market research.
-              </p>
-            </div>
-          </div>
-
-          <form className="border-t border-brown-100 p-4 sm:p-5 dark:border-dm-border" onSubmit={askCopilot}>
-            <textarea
-              value={question}
-              onChange={(event) => setQuestion(event.target.value)}
-              rows={3}
-              maxLength={1200}
-              className="w-full resize-y rounded-2xl border border-brown-200 bg-ivory p-3 text-sm text-charcoal outline-none transition placeholder:text-brown-400 focus:border-plum-500 focus:ring-2 focus:ring-plum-100 dark:border-dm-border dark:bg-dm-card-2 dark:text-white dark:focus:ring-plum-900/40"
-              placeholder="For example: What should I do before opening tomorrow?"
-            />
-            <div className="mt-3 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-              <div className="flex flex-wrap gap-2">
-                {quickQuestions.map((item) => (
-                  <button
-                    key={item}
-                    type="button"
-                    onClick={() => setQuestion(item)}
-                    className="rounded-pill bg-ivory px-3 py-1.5 text-xs font-semibold text-brown-600 hover:bg-plum-50 hover:text-plum-700 dark:bg-dm-card-2 dark:text-white/60"
-                  >
-                    {item}
-                  </button>
-                ))}
-              </div>
-              <div className="flex items-center justify-between gap-3">
-                <label className="flex cursor-pointer items-center gap-2 text-xs text-brown-600 dark:text-white/65">
-                  <input
-                    type="checkbox"
-                    checked={webSearch}
-                    onChange={(event) => setWebSearch(event.target.checked)}
-                    className="h-4 w-4 rounded border-brown-300 text-plum-700 focus:ring-plum-500"
-                  />
-                  <FaGlobeAfrica className="text-plum-600" /> Include web research
-                </label>
-                <button
-                  type="submit"
-                  disabled={asking}
-                  className="inline-flex items-center gap-2 rounded-xl bg-plum-700 px-4 py-2.5 text-sm font-bold text-white shadow-sm hover:bg-plum-600 disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                  {asking ? <FaSync className="animate-spin" size={13} /> : <FaBrain size={13} />}
-                  {asking ? 'Thinking…' : 'Ask'}
-                </button>
-              </div>
-            </div>
-            {webSearch && (
-              <p className="mt-3 rounded-xl bg-gold-50 px-3 py-2 text-xs leading-5 text-brown-700 dark:bg-gold-900/20 dark:text-gold-100">
-                Web research is owner-initiated. The copilot receives only the selected, aggregated shop snapshot—not customer names, contacts, or payments.
-              </p>
-            )}
-          </form>
-
-          {turns.length > 0 && (
-            <div className="mt-5 max-h-[32rem] space-y-3 overflow-y-auto pr-1">
-              {turns.map((turn, index) => (
-                <div key={`${turn.question}-${index}`} className="space-y-2">
-                  <div className="flex items-start gap-2 rounded-2xl bg-ivory px-3 py-2 dark:bg-dm-card-2">
-                    <FaUser className="mt-0.5 shrink-0 text-brown-400 dark:text-white/40" size={11} />
-                    <p className="text-sm text-charcoal dark:text-white">{turn.question}</p>
-                  </div>
-
-                  <div className="rounded-2xl border border-plum-100 bg-plum-50/50 p-4 dark:border-plum-900/50 dark:bg-plum-900/10">
-                    <div className="flex items-center gap-2">
-                      <FaBrain className="text-plum-700 dark:text-plum-300" size={14} />
-                      <h3 className="text-sm font-bold text-charcoal dark:text-white">Copilot</h3>
-                      {turn.answer?.webSearch && (
-                        <span className="rounded-pill bg-white px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-plum-700 dark:bg-dm-card-2 dark:text-plum-200">
-                          Web researched
-                        </span>
-                      )}
-                    </div>
-                    {turn.answer?.available ? (
-                      <AiMarkdown className="mt-3" text={turn.answer.text} />
-                    ) : (
-                      <p className="mt-3 text-sm leading-6 text-brown-700 dark:text-white/70">{turn.answer?.reason || 'No answer available.'}</p>
-                    )}
-
-                    {turn.answer?.actions?.length > 0 && (
-                      <div className="mt-3 space-y-1.5 border-t border-plum-100 pt-3 dark:border-plum-900/50">
-                        <p className="text-[11px] font-bold uppercase tracking-wide text-plum-600 dark:text-plum-300">Actions taken</p>
-                        {turn.answer.actions.map((action, actionIndex) => (
-                          <div key={`${action.tool}-${actionIndex}`} className="flex items-start gap-2 text-xs">
-                            {action.ok ? (
-                              <FaCheck className="mt-0.5 shrink-0 text-green-600 dark:text-green-400" size={10} />
-                            ) : (
-                              <FaTimes className="mt-0.5 shrink-0 text-red-600 dark:text-red-400" size={10} />
-                            )}
-                            <span className="text-brown-600 dark:text-white/60">{action.summary}</span>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </section>
-      </aside>
-      </div>
-      </main>
+        <aside className="ai-command__rail"><section className="ai-copilot">
+          <div className="ai-copilot__head"><span className="ai-copilot__badge"><FaSearch size={15} /></span><div><h2 className="ai-copilot__title">Ask the copilot</h2><p className="ai-copilot__description">Ask a plain-language question using only the data you selected above.</p><span className="ai-copilot__signal">Read-only analysis</span></div></div>
+          <form className="ai-composer" onSubmit={askCopilot}><textarea id="copilot-question" value={question} onChange={(event) => setQuestion(event.target.value)} rows={4} maxLength={1200} className="ai-composer__textarea" placeholder="For example: What should I do before opening tomorrow?" /><div className="ai-composer__prompts">{quickQuestions.map((item) => <button key={item} type="button" onClick={() => setQuestion(item)} className="ai-composer__prompt"><span>{item}</span><FaArrowRight size={10} /></button>)}</div><div className="ai-composer__footer"><label className="ai-composer__research"><input type="checkbox" checked={webSearch} onChange={(event) => setWebSearch(event.target.checked)} /><FaGlobeAfrica className="text-plum-600" size={12} />Include outside market research</label><button type="submit" disabled={asking} className="ai-composer__submit">{asking ? <FaSync className="animate-spin" size={12} /> : <FaBrain size={12} />}{asking ? 'Thinking…' : 'Ask copilot'}</button></div>{webSearch && <p className="ai-composer__notice">Web research is owner-initiated. The copilot receives only the selected, aggregated shop snapshot—not customer names, contacts, or payments.</p>}</form>
+          {turns.length > 0 && <div className="ai-conversation">{turns.map((turn, index) => <article key={`${turn.question}-${index}`} className="ai-turn"><div className="ai-turn__question"><FaUser className="mt-0.5 shrink-0 text-brown-400" size={10} /><span>{turn.question}</span></div><div className="ai-turn__answer"><div className="ai-turn__answer-head"><FaBrain size={12} /><h3 className="ai-turn__answer-title">Copilot response</h3>{turn.answer?.webSearch && <span className="ai-turn__web">Web researched</span>}</div>{turn.answer?.available ? <AiMarkdown className="ai-narrative" text={turn.answer.text} /> : <p className="ai-narrative">{turn.answer?.reason || 'No answer is available right now.'}</p>}{turn.answer?.actions?.length > 0 && <div className="ai-turn__actions">{turn.answer.actions.map((action, actionIndex) => <div key={`${action.tool}-${actionIndex}`} className="ai-turn__action">{action.ok ? <FaCheck className="mt-0.5 shrink-0 text-green-600" size={9} /> : <FaTimes className="mt-0.5 shrink-0 text-red-600" size={9} />}<span>{action.summary}</span></div>)}</div>}</div></article>)}</div>}
+        </section></aside>
+        </div>
+      </div></main>
     </div>
   );
 };

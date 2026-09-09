@@ -6,14 +6,10 @@ import LoyaltyCard from '../models/loyaltycard.model.js';
 import generatedAccessToken from '../utils/generatedAccessToken.js';
 import genertedRefreshToken from '../utils/generatedRefreshToken.js';
 import trimTrailingSlash from '../utils/trimTrailingSlash.js';
+import { hasGoogleOAuthCredentials, resolveGoogleCallbackUrl } from '../utils/googleOAuth.js';
 
 dotenv.config();
 const router = express.Router();
-
-const getPrimaryForwardedValue = (value = '') =>
-  value
-    .split(',')[0]
-    .trim();
 
 const LOCAL_FRONTEND_URL = 'http://localhost:5173';
 const CANONICAL_FRONTEND_URL = 'https://nawirihairke.com';
@@ -181,11 +177,35 @@ const generateToken = (user) => {
 
 // Google OAuth callback URL - MUST match what's configured in Google Cloud Console
 // Do NOT use dynamically generated URLs from request headers - Google will reject them
-const GOOGLE_CALLBACK_BASE_URL = trimTrailingSlash(process.env.GOOGLE_CALLBACK_BASE_URL || process.env.SERVER_BASE_URL || '');
-const GOOGLE_CALLBACK_URL = `${GOOGLE_CALLBACK_BASE_URL}/api/auth/google/callback`;
+const GOOGLE_CALLBACK_URL = resolveGoogleCallbackUrl();
+const buildOAuthFailureRedirect = (reason = 'Authentication failed') => buildFrontendRedirectUrl('/login', {
+  query: { error: reason },
+});
+
+const authenticateGoogleCallback = (req, res, next) => passport.authenticate(
+  'google',
+  { session: false, callbackURL: GOOGLE_CALLBACK_URL },
+  (error, user, info) => {
+    if (error) {
+      console.error('Google OAuth callback failed:', {
+        name: error.name,
+        message: error.message,
+      });
+      return res.redirect(buildOAuthFailureRedirect('oauth_callback_failed'));
+    }
+
+    if (!user) {
+      console.warn('Google OAuth callback was rejected:', info?.message || 'No user returned');
+      return res.redirect(buildOAuthFailureRedirect('Authentication failed'));
+    }
+
+    req.user = user;
+    return handleSocialAuthSuccess(req, res, next);
+  }
+)(req, res, next);
 
 // Google OAuth routes - Only register if credentials are available
-if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
+if (hasGoogleOAuthCredentials()) {
   // Availability probe for clients using HEAD
   router.head('/google', (req, res) => res.sendStatus(200));
   router.get('/google', (req, res, next) => {
@@ -197,20 +217,7 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
     })(req, res, next);
   });
 
-  router.get(
-    '/google/callback',
-    passport.authenticate('google', {
-      failureRedirect: buildFrontendRedirectUrl('/login', {
-        query: {
-          error: 'Authentication failed',
-        },
-      }),
-      session: false,
-      callbackURL: GOOGLE_CALLBACK_URL,
-    }),
-    // Use the unified success handler that generates tokens with the correct secrets
-    handleSocialAuthSuccess
-  );
+  router.get('/google/callback', authenticateGoogleCallback);
 } else {
   // Fallback routes when Google OAuth is not configured
   router.head('/google', (req, res) => res.sendStatus(503));

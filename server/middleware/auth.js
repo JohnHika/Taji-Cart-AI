@@ -16,7 +16,7 @@ const auth = async(request, response, next) => {
         }
 
         try {
-            const decode = jwt.verify(token, process.env.SECRET_KEY_ACCESS_TOKEN)
+            const decode = jwt.verify(token, process.env.SECRET_KEY_ACCESS_TOKEN || process.env.JWT_SECRET)
             
             // Updated to use _id instead of id for consistency with our token updates
             request.userId = decode._id

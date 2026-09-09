@@ -116,7 +116,7 @@ If you want Google to show `api.nawirihairke.com` instead of the raw Render host
 1. Attach `api.nawirihairke.com` to the same Vercel project that serves the frontend.
 2. Deploy this repo so the root `vercel.json` host-based rewrites are active.
 3. Add `VITE_OAUTH_BASE_URL=https://api.nawirihairke.com` to the frontend environment.
-4. Set `GOOGLE_CALLBACK_URL=https://api.nawirihairke.com/api/auth/google/callback` on the backend.
+4. Set `GOOGLE_CALLBACK_URL=https://api.nawirihairke.com/api/auth/google/callback`, `GOOGLE_CALLBACK_BASE_URL=https://api.nawirihairke.com`, and `GOOGLE_CALLBACK_BRANDED_READY=true` on the backend. The callback URL must also be registered in Google Cloud Console.
 5. Keep `VITE_SERVER_URL` / `VITE_BACKEND_URL` on the Render backend until you intentionally move regular HTTP traffic to the branded relay.
 
 This gives you a branded Google OAuth prompt without forcing Socket.IO traffic through Vercel.
