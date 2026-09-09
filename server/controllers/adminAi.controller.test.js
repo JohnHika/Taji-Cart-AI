@@ -3,11 +3,13 @@ import assert from 'node:assert/strict';
 import {
   buildOperationsBrief,
   extractProductLookupTokens,
+  parseQuestionStartDate,
+} from './adminAi.controller.js';
+import {
   isStockDeltaWithinCap,
   isPriceChangeWithinCap,
   isOrderStatusTransitionAllowed,
-  parseQuestionStartDate,
-} from './adminAi.controller.js';
+} from '../utils/adminAiTools.js';
 
 test('extractProductLookupTokens preserves a requested product and removes question wording', () => {
   assert.deepEqual(
