@@ -376,14 +376,14 @@ const StoreManagementWorkspace = () => {
           <div className="flex h-9 w-9 items-center justify-center rounded-lg" style={{ background: 'var(--si-accent-wash)', color: 'var(--si-accent-strong)' }}><FaStore size={14} /></div>
           <div><p style={{ fontSize: '0.8125rem', fontWeight: 700, color: 'var(--si-text)' }}>Nawiri Hair</p><p className="si-eyebrow">Store Intelligence</p></div>
         </div>
-        <div className="si-row">
+        <div className="si-row" style={{ gap: '0.375rem' }}>
           <ThemeToggle />
           <button type="button" onClick={() => setGuideOpen(true)} className="si-btn si-btn--ghost si-guide-trigger" aria-label="Open store guide">
             <FaCircleQuestion size={13} />
             {!guideSeen && <span className="si-guide-trigger__dot" />}
           </button>
           <button type="button" onClick={load} disabled={loading} className="si-btn si-btn--ghost" aria-label="Refresh store data"><FaSync className={loading ? 'animate-spin' : ''} size={12} /></button>
-          <button type="button" onClick={leaveStorePortal} className="si-btn si-btn--ghost">Exit</button>
+          <button type="button" onClick={leaveStorePortal} className="si-btn si-btn--ghost" aria-label="Exit Store Management"><FaSignOutAlt size={12} /><span className="hidden sm:inline">Exit</span></button>
         </div>
       </div>
     </header>
@@ -404,7 +404,7 @@ const StoreManagementWorkspace = () => {
         <CommandPalette areas={paletteAreas} onSelect={jumpTo} />
         {guide}
         {topBar}
-        <div className="mx-auto grid max-w-[1600px] lg:grid-cols-[240px_minmax(0,1fr)]">
+        <div className="mx-auto grid max-w-[1600px] grid-cols-[minmax(0,1fr)] lg:grid-cols-[240px_minmax(0,1fr)]">
           {sidebar}
           <div className="si-content">
             <div><p className="si-eyebrow">Ask Nawiri</p><h1 className="si-title" style={{ fontSize: '1.5rem' }}>Ask. Then decide.</h1></div>
@@ -428,7 +428,7 @@ const StoreManagementWorkspace = () => {
       <CommandPalette areas={paletteAreas} onSelect={jumpTo} />
       {guide}
       {topBar}
-      <div className="mx-auto grid max-w-[1600px] lg:grid-cols-[240px_minmax(0,1fr)]">
+      <div className="mx-auto grid max-w-[1600px] grid-cols-[minmax(0,1fr)] lg:grid-cols-[240px_minmax(0,1fr)]">
         {sidebar}
         <div className="si-content">
           <div className="si-row" style={{ justifyContent: 'space-between', flexWrap: 'wrap' }}>

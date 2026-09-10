@@ -51,7 +51,7 @@ const StoreCommandCenter = ({ onOpenArea }) => {
         ))}
       </section>
 
-      <section className="si-grid" style={{ gridTemplateColumns: 'minmax(0, 1.3fr) minmax(0, 0.7fr)' }}>
+      <section className="si-grid grid-cols-1 lg:grid-cols-[minmax(0,1.3fr)_minmax(0,0.7fr)]">
         <div className="si-card">
           <p className="si-eyebrow">Last 30 days</p>
           <p className="si-title" style={{ fontSize: '0.9375rem' }}>Revenue trend</p>
