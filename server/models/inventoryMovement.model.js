@@ -3,7 +3,7 @@ import mongoose from 'mongoose';
 // Product.stock and Product.warehouseStock remain the fast, current balances.
 // This immutable ledger is the explanation for every non-sale change.
 const inventoryMovementSchema = new mongoose.Schema({
-  product: { type: mongoose.Schema.Types.ObjectId, ref: 'Product', required: true, index: true },
+  product: { type: mongoose.Schema.Types.ObjectId, ref: 'product', required: true, index: true },
   type: {
     type: String,
     enum: ['warehouse_receipt', 'purchase_receipt', 'warehouse_to_shop', 'stocktake_adjustment'],

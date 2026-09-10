@@ -2,7 +2,7 @@ import mongoose from 'mongoose';
 
 const ProductEmbeddingSchema = new mongoose.Schema(
   {
-    product: { type: mongoose.Schema.Types.ObjectId, ref: 'Product', index: true, required: true },
+    product: { type: mongoose.Schema.Types.ObjectId, ref: 'product', index: true, required: true },
     chunkIndex: { type: Number, index: true },
     text: { type: String },
     embedding: { type: [Number], index: false },
