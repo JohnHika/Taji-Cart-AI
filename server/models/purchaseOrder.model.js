@@ -1,7 +1,7 @@
 import mongoose from 'mongoose';
 
 const purchaseOrderLineSchema = new mongoose.Schema({
-  product: { type: mongoose.Schema.Types.ObjectId, ref: 'Product', required: true },
+  product: { type: mongoose.Schema.Types.ObjectId, ref: 'product', required: true },
   productName: { type: String, required: true },
   sku: { type: String },
   orderedQuantity: { type: Number, required: true, min: 1 },
