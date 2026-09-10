@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useAbcClassification } from './hooks/useStoreIntelligence';
 
 const formatKes = (value) => `KES ${Number(value || 0).toLocaleString()}`;
+const PAGE_SIZE = 25;
 
 const classChip = (classification) => {
   if (classification === 'A') return <span className="si-chip si-chip--critical"><span className="si-dot" />A</span>;
@@ -19,7 +20,11 @@ const FILTERS = [
 const AbcClassification = () => {
   const { data: result, loading } = useAbcClassification();
   const [filter, setFilter] = useState('');
+  const [page, setPage] = useState(1);
   const items = (result?.items || []).filter((item) => !filter || item.classification === filter);
+  useEffect(() => { setPage(1); }, [filter, items.length]);
+  const totalPages = Math.max(1, Math.ceil(items.length / PAGE_SIZE));
+  const pageItems = items.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   return (
     <div className="si-grid" style={{ gap: '1.25rem' }}>
@@ -86,7 +91,7 @@ const AbcClassification = () => {
             </tr>
           </thead>
           <tbody>
-            {items.map((item) => (
+            {pageItems.map((item) => (
               <tr key={item.productId}>
                 <td>{item.name}<div className="si-mono" style={{ fontSize: '0.6875rem', color: 'var(--si-text-faint)' }}>{item.sku}</div></td>
                 <td className="si-align-right si-mono">{item.velocityPerDay}</td>
@@ -100,6 +105,17 @@ const AbcClassification = () => {
           </tbody>
         </table>
       </section>
+
+      {items.length > PAGE_SIZE && (
+        <div className="si-row" style={{ justifyContent: 'space-between' }}>
+          <span className="si-stat__detail">Showing {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, items.length)} of {items.length}</span>
+          <div className="si-row">
+            <button type="button" className="si-btn si-btn--ghost" disabled={page <= 1} onClick={() => setPage((current) => Math.max(1, current - 1))}>Previous</button>
+            <span className="si-stat__detail">Page {page} of {totalPages}</span>
+            <button type="button" className="si-btn si-btn--ghost" disabled={page >= totalPages} onClick={() => setPage((current) => Math.min(totalPages, current + 1))}>Next</button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
