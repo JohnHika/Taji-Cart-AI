@@ -419,22 +419,47 @@ export async function checkoutController(request, response) {
 
         const generatedOrder = await OrderModel.insertMany(payload);
 
-        // Atomically reduce stock for each item, then flag low-stock items
-        await Promise.all(normalizedItems.map(async (item) => {
-            const updated = await ProductModel.findByIdAndUpdate(
-                item.productId._id,
-                { $inc: { stock: -item.quantity } },
-                { new: true }
-            );
-            if (updated && updated.stock < 5) {
-                await NotificationModel.create({
-                    type: 'low_stock',
-                    title: 'Low Stock Alert',
-                    message: `Product "${updated.name}" is running low (${updated.stock} remaining)`,
-                    isRead: false,
-                    forAdmin: true,
+        // Atomically reserve (decrement) stock for every line, guarded so a
+        // product can never be driven below zero. All-or-nothing: on any
+        // shortfall the whole batch rolls back and the just-inserted order is
+        // removed so it doesn't linger as a phantom pending order.
+        const stockReserve = await reserveStockGuarded(
+            normalizedItems.map((item) => ({
+                id: item.productId._id,
+                quantity: item.quantity,
+                label: item.productId.name || 'product',
+            }))
+        );
+
+        if (!stockReserve.ok) {
+            await OrderModel.deleteMany({ orderId: sharedOrderId });
+            if (stockReserve.status === 404) {
+                return response.status(404).json({
+                    success: false,
+                    message: 'Product ' + (stockReserve.row?.label || 'item') + ' not found',
+                    error: true,
                 });
             }
+            return response.status(409).json({
+                success: false,
+                message: stockReserve.product
+                    ? (stockReserve.product.stock > 0
+                        ? stockReserve.product.name + ' only has ' + stockReserve.product.stock + ' item(s) left in stock'
+                        : stockReserve.product.name + ' is out of stock')
+                    : 'One of the items is out of stock',
+                error: true,
+            });
+        }
+
+        // Flag low-stock items once after the whole batch has been reserved.
+        await Promise.all(stockReserve.lowStock.map(async ({ product: updated }) => {
+            await NotificationModel.create({
+                type: 'low_stock',
+                title: 'Low Stock Alert',
+                message: 'Product ' + updated.name + ' is running low (' + updated.stock + ' remaining)',
+                isRead: false,
+                forAdmin: true,
+            });
         }));
 
         // Remove from cart
@@ -698,22 +723,47 @@ export async function CashOnDeliveryOrderController(request, response) {
 
         const generatedOrder = await OrderModel.insertMany(payload)
 
-        // Atomically reduce stock for each item, then flag low-stock items
-        await Promise.all(normalizedItems.map(async (item) => {
-            const updated = await ProductModel.findByIdAndUpdate(
-                item.productId._id,
-                { $inc: { stock: -item.quantity } },
-                { new: true }
-            );
-            if (updated && updated.stock < 5) {
-                await NotificationModel.create({
-                    type: 'low_stock',
-                    title: 'Low Stock Alert',
-                    message: `Product "${updated.name}" is running low (${updated.stock} remaining)`,
-                    isRead: false,
-                    forAdmin: true
+        // Atomically reserve (decrement) stock for every line, guarded so a
+        // product can never be driven below zero. All-or-nothing: on any
+        // shortfall the whole batch rolls back and the just-inserted order is
+        // removed so it doesn't linger as a phantom pending order.
+        const stockReserve = await reserveStockGuarded(
+            normalizedItems.map((item) => ({
+                id: item.productId._id,
+                quantity: item.quantity,
+                label: item.productId.name || 'product',
+            }))
+        );
+
+        if (!stockReserve.ok) {
+            await OrderModel.deleteMany({ orderId: sharedOrderId });
+            if (stockReserve.status === 404) {
+                return response.status(404).json({
+                    success: false,
+                    message: 'Product ' + (stockReserve.row?.label || 'item') + ' not found',
+                    error: true,
                 });
             }
+            return response.status(409).json({
+                success: false,
+                message: stockReserve.product
+                    ? (stockReserve.product.stock > 0
+                        ? stockReserve.product.name + ' only has ' + stockReserve.product.stock + ' item(s) left in stock'
+                        : stockReserve.product.name + ' is out of stock')
+                    : 'One of the items is out of stock',
+                error: true,
+            });
+        }
+
+        // Flag low-stock items once after the whole batch has been reserved.
+        await Promise.all(stockReserve.lowStock.map(async ({ product: updated }) => {
+            await NotificationModel.create({
+                type: 'low_stock',
+                title: 'Low Stock Alert',
+                message: 'Product ' + updated.name + ' is running low (' + updated.stock + ' remaining)',
+                isRead: false,
+                forAdmin: true,
+            });
         }));
 
         // Remove from the cart
@@ -1030,11 +1080,35 @@ export async function guestCheckoutController(request, response) {
             estimatedPickupTime: fulfillment_type === 'pickup' ? new Date(Date.now() + 24 * 60 * 60 * 1000) : undefined
         })
 
-        // Deduct stock
-        for (const item of normalizedItems) {
-            const productId = getOrderProductId(item)
-            await ProductModel.findByIdAndUpdate(productId, {
-                $inc: { stock: -item.quantity }
+        // Atomically reserve (decrement) stock for every line, guarded so a
+        // product can never be driven below zero. All-or-nothing: on any
+        // shortfall the whole batch rolls back and the just-created order is
+        // removed so it doesn't linger as a phantom guest order.
+        const stockReserve = await reserveStockGuarded(
+            normalizedItems.map((item) => ({
+                id: getOrderProductId(item),
+                quantity: item.quantity,
+                label: item.name || 'product',
+            }))
+        )
+
+        if (!stockReserve.ok) {
+            await OrderModel.deleteOne({ orderId })
+            if (stockReserve.status === 404) {
+                return response.status(404).json({
+                    success: false,
+                    message: 'Product ' + (stockReserve.row?.label || 'item') + ' not found',
+                    error: true,
+                })
+            }
+            return response.status(409).json({
+                success: false,
+                message: stockReserve.product
+                    ? (stockReserve.product.stock > 0
+                        ? stockReserve.product.name + ' only has ' + stockReserve.product.stock + ' item(s) left in stock'
+                        : stockReserve.product.name + ' is out of stock')
+                    : 'One of the items is out of stock',
+                error: true,
             })
         }
 

@@ -87,12 +87,42 @@ const createQuantumOrder = async (req, res) => {
 
     await order.save();
 
-    // Update product stock (classical reality now)
+    // Update product stock (classical reality now) — guarded so a product
+    // can never be driven below zero. If any line can't be fully reserved,
+    // roll back prior lines and reject before the order is committed.
+    const reservedStock = [];
     for (const item of orderItems) {
-      await Product.findByIdAndUpdate(
-        item.productId,
-        { $inc: { stock: -item.quantity } }
+      const productId = item.productId;
+      const qty = Number(item.quantity);
+      const updated = await Product.findOneAndUpdate(
+        {
+          _id: productId,
+          $or: [{ stock: null }, { stock: { $gte: qty } }]
+        },
+        { $inc: { stock: -qty } },
+        { new: true }
       );
+
+      if (!updated) {
+        for (const reserved of reservedStock) {
+          await Product.findByIdAndUpdate(reserved.id, { $inc: { stock: reserved.qty } });
+        }
+        const product = await Product.findById(productId);
+        if (!product) {
+          return res.status(404).json({
+            success: false,
+            message: `Product "${item.productId}" not found.`
+          });
+        }
+        return res.status(409).json({
+          success: false,
+          message: product.stock > 0
+            ? `${product.name} only has ${product.stock} item(s) left in stock`
+            : `${product.name} is out of stock`
+        });
+      }
+
+      reservedStock.push({ id: productId, qty });
     }
 
     res.status(201).json({

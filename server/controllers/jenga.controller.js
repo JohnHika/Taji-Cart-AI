@@ -25,6 +25,7 @@ import {
   SACCO_TERMINAL_DROPOFF_CHARGE,
 } from '../utils/cbdDelivery.js';
 import { getEffectiveUnitPrice, getWholesalePricingSettings, isWholesaleEligible } from '../utils/wholesalePricing.js';
+import { reserveStockGuarded } from '../utils/stockGuard.js';
 
 // buildValidatedOrderPricing / pricewithDiscount live in order.controller.js but
 // aren't exported there — re-derive the pieces this controller needs directly
@@ -403,21 +404,50 @@ const finalizePaidOrder = async (paymentDoc) => {
 
   const orders = await OrderModel.find({ orderId: paymentDoc.orderId });
 
-  await Promise.all(orders.map(async (order) => {
-    const updated = await ProductModel.findByIdAndUpdate(
-      order.productId,
-      { $inc: { stock: -1 * (order.quantity || 1) } },
-      { new: true }
+  // Atomically reserve (decrement) stock for every line of the paid order,
+  // guarded so no product can ever be driven below zero by the finalization
+  // of this payment. Pre-validated at payment time, but a concurrent sale may
+  // have drained stock since — never let this decrement take stock negative.
+  const reserved = await reserveStockGuarded(
+    orders.map((order) => ({
+      id: order.productId,
+      quantity: order.quantity || 1,
+      label: (order.product_details?.name) || 'product',
+    }))
+  );
+
+  if (!reserved.ok) {
+    // A verified, paid order we can no longer fully fulfill. Leave stock
+    // untouched and flag the order for manual attention instead of booking a
+    // phantom decrement that would drive a product below zero.
+    console.error(
+      `[JENGA] Paid order ${paymentDoc.orderId} could not reserve stock: ${
+        reserved.row?.label || reserved.reason || 'unknown'
+      } — holding for manual resolution.`
     );
-    if (updated && updated.stock < 5) {
-      await NotificationModel.create({
-        type: 'low_stock',
-        title: 'Low Stock Alert',
-        message: `Product "${updated.name}" is running low (${updated.stock} remaining)`,
-        isRead: false,
-        forAdmin: true,
-      });
-    }
+    await OrderModel.updateMany(
+      { orderId: paymentDoc.orderId },
+      { $set: { payment_status: 'PAID', paymentId: paymentDoc.orderReference, stockShortfall: true } }
+    );
+    await NotificationModel.create({
+      type: 'low_stock',
+      title: 'Stock Shortfall on Paid Order',
+      message: `Paid order ${paymentDoc.orderId} could not be fully stocked (${reserved.product?.name || reserved.reason || ''} unavailable). Needs manual resolution.`,
+      isRead: false,
+      forAdmin: true,
+    });
+    return;
+  }
+
+  // Flag low-stock items once after the whole batch has been reserved.
+  await Promise.all(reserved.lowStock.map(async ({ product: updated }) => {
+    await NotificationModel.create({
+      type: 'low_stock',
+      title: 'Low Stock Alert',
+      message: `Product "${updated.name}" is running low (${updated.stock} remaining)`,
+      isRead: false,
+      forAdmin: true,
+    });
   }));
 
   await OrderModel.updateMany(
