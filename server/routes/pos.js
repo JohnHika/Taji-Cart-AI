@@ -19,6 +19,7 @@ import SaccoOperatorModel from '../models/saccooperator.model.js';
 import { resolveBikeDeliveryZone, resolveDeliveryCharge } from '../utils/deliveryFee.js';
 import { getNextSequence } from '../models/counter.model.js';
 import generatePickupCode from '../utils/generatePickupCode.js';
+import { validatePosPayments } from '../utils/posPaymentValidation.js';
 import { notifyCustomerOrderDispatched } from '../utils/orderDispatchNotify.js';
 import escapeRegex from '../utils/escapeRegex.js';
 
@@ -450,6 +451,8 @@ router.post('/held-sales', auth, Staff, requireStaffPermission('pos.open_counter
       paymentMethod,
       amountTendered,
       splitCashAmount,
+      splitEquityAmount,
+      splitTextForwardedAmount,
       equityProofUrl,
       equityApproved,
       forwardedText,
@@ -476,6 +479,8 @@ router.post('/held-sales', auth, Staff, requireStaffPermission('pos.open_counter
       paymentMethod: paymentMethod || 'cash',
       amountTendered: amountTendered || '',
       splitCashAmount: splitCashAmount || '',
+      splitEquityAmount: splitEquityAmount || '',
+      splitTextForwardedAmount: splitTextForwardedAmount || '',
       equityProofUrl: equityProofUrl || '',
       equityApproved: Boolean(equityApproved),
       forwardedText: forwardedText || '',
@@ -616,7 +621,7 @@ router.post('/sale', auth, Staff, requireStaffPermission('pos.open_counter'), as
     // text (e.g. relayed by the admin) instead of a screenshot — must be
     // present and explicitly approved before the sale can be recorded.
     const textForwardedRows = Array.isArray(payments) ? payments.filter(p => p.method === 'text_forwarded') : [];
-    const unprovenTextRow = textForwardedRows.find(p => !p.forwardedText?.trim() || !p.approved);
+    const unprovenTextRow = textForwardedRows.find(p => !String(p.forwardedText || '').trim() || !p.approved);
     if (unprovenTextRow) {
       return res.status(400).json({
         success: false,
@@ -695,6 +700,23 @@ router.post('/sale', auth, Staff, requireStaffPermission('pos.open_counter'), as
       item.total = Number(item.total || item.price * item.quantity);
     }
     
+    // Reconcile every payment leg against the server's canonical sale total.
+    // A split sale is valid only when its cash, Equity, and/or forwarded-text
+    // portions add up exactly; the client cannot record an under/over-allocated
+    // transaction by changing the browser payload.
+    const serverSubtotal = normalizedItems.reduce((sum, item) => sum + item.total, 0);
+    const serverDiscount = Number(discount) || 0;
+    const serverTax = typeof tax === 'number' && Number.isFinite(tax) ? tax : 0;
+    const serverTotal = Math.max(0, serverSubtotal - serverDiscount + serverTax + deliveryCharge);
+    const paymentValidation = validatePosPayments({
+      paymentMethod,
+      total: serverTotal,
+      payments,
+    });
+    if (!paymentValidation.valid) {
+      return res.status(400).json({ success: false, message: paymentValidation.message });
+    }
+
     // Generate sale number. Uses an atomic per-day counter ($inc, not
     // read-then-compute) so two sales created back-to-back — e.g. resuming a
     // held sale right after finishing another, or two cashiers checking out

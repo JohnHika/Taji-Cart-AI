@@ -7,6 +7,27 @@ cloudinaryV2.config({
     api_secret: process.env.CLOUDINARY_API_SECRET_KEY // Use the correct environment variable name with _KEY
 });
 
+const BROWSER_INCOMPATIBLE_FORMATS = new Set(['heic', 'heif', 'avif']);
+
+// Cloudinary accepts HEIC/HEIF/AVIF, but several browsers cannot render the
+// original delivery format. Store a transformed delivery URL for those files
+// so proof images remain viewable in Sales Hub and on receipts.
+export const getBrowserSafeImageUrl = ({ secureUrl, mimetype, format }) => {
+    if (!secureUrl || typeof secureUrl !== 'string') return secureUrl;
+
+    const mimeFormat = String(mimetype || '').toLowerCase().split('/').pop();
+    const uploadedFormat = String(format || '').toLowerCase();
+    if (!BROWSER_INCOMPATIBLE_FORMATS.has(mimeFormat) && !BROWSER_INCOMPATIBLE_FORMATS.has(uploadedFormat)) {
+        return secureUrl;
+    }
+
+    if (!secureUrl.includes('/image/upload/')) return secureUrl;
+    const transformedUrl = secureUrl.includes('/image/upload/f_jpg')
+        ? secureUrl
+        : secureUrl.replace('/image/upload/', '/image/upload/f_jpg,q_auto/');
+    return transformedUrl.replace(/\.(heic|heif|avif)(?=[?#]|$)/i, '.jpg');
+};
+
 const uploadImageClodinary = async(image) => {
     try {
         // Check if image exists
@@ -50,7 +71,11 @@ const uploadImageClodinary = async(image) => {
         
         return {
             public_id: result.public_id,
-            url: result.secure_url
+            url: getBrowserSafeImageUrl({
+                secureUrl: result.secure_url,
+                mimetype: image.mimetype,
+                format: result.format,
+            }),
         };
     } catch (error) {
         console.error("Error in uploadImageCloudinary:", error);

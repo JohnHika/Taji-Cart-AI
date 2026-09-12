@@ -55,6 +55,8 @@ const heldSaleSchema = new mongoose.Schema({
   },
   amountTendered: { type: String, default: '' },
   splitCashAmount: { type: String, default: '' },
+  splitEquityAmount: { type: String, default: '' },
+  splitTextForwardedAmount: { type: String, default: '' },
   equityProofUrl: { type: String, default: '' },
   equityApproved: { type: Boolean, default: false },
   forwardedText: { type: String, default: '' },

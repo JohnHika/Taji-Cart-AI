@@ -18,9 +18,27 @@ const isWebp = (buffer) =>
   buffer.toString('ascii', 0, 4) === 'RIFF' &&
   buffer.toString('ascii', 8, 12) === 'WEBP';
 
+const FTYP_IMAGE_BRANDS = new Set([
+  'heic', 'heif', 'heix', 'hevc', 'hevx', 'mif1', 'msf1',
+  'avif', 'avis',
+]);
+
+const isFtypImage = (buffer) => {
+  if (!buffer || buffer.length < 16 || buffer.toString('ascii', 4, 8) !== 'ftyp') {
+    return false;
+  }
+
+  for (let offset = 8; offset + 4 <= buffer.length; offset += 4) {
+    if (FTYP_IMAGE_BRANDS.has(buffer.toString('ascii', offset, offset + 4))) {
+      return true;
+    }
+  }
+  return false;
+};
+
 const isValidImageBuffer = (buffer) => {
   if (!buffer || buffer.length < 12) return false;
-  if (isWebp(buffer)) return true;
+  if (isWebp(buffer) || isFtypImage(buffer)) return true;
   return SIGNATURES.some(({ bytes }) => matchesSignature(buffer, bytes));
 };
 

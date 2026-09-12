@@ -323,7 +323,7 @@ const POSSales = () => {
                   {selected.payments.map((payment, index) => (
                     <div key={index} className="flex justify-between">
                       <span className="text-brown-500 dark:text-white/40">
-                        {payment.method}
+                        {payment.method === 'cash' ? 'Cash' : payment.method === 'equity' ? 'Equity' : payment.method === 'text_forwarded' ? 'Text Forwarded' : payment.method}
                         {payment.phone ? ` (${payment.phone})` : ''}
                       </span>
                       <span className="text-charcoal dark:text-white">{DisplayPriceInShillings(payment.amount)}</span>

@@ -108,6 +108,12 @@ const getSalePaymentMethodLabel = (sale) => {
   return method.charAt(0).toUpperCase() + method.slice(1);
 };
 
+const getPaymentLegLabel = (method) => ({
+  cash: 'Cash',
+  equity: 'Equity',
+  text_forwarded: 'Text Forwarded',
+}[method] || method || 'N/A');
+
 const downloadSaleReceipt = (sale) => {
   const doc = new jsPDF({ unit: 'mm', format: 'a4' });
   const pageWidth = doc.internal.pageSize.getWidth();
@@ -1826,7 +1832,7 @@ const POSDashboard = () => {
                     <div className="mt-3 space-y-1 text-xs text-brown-600 dark:text-white/55">
                       {selectedSale.payments.map((payment, index) => (
                         <div key={index} className="flex justify-between gap-3">
-                          <span className="capitalize">{payment.method === 'equity' ? 'Equity' : payment.method}</span>
+                          <span className="capitalize">{getPaymentLegLabel(payment.method)}</span>
                           <span>{DisplayPriceInShillings(payment.amount)}</span>
                         </div>
                       ))}

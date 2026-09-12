@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
 import QRCode from 'qrcode';
 import {
@@ -29,6 +29,7 @@ import uploadImage from '../utils/UploadImage';
 import { compressImage } from '../utils/compressImage';
 import { DisplayPriceInShillings } from '../utils/DisplayPriceInShillings';
 import { calculateSalesCounterTotals } from '../utils/salesCounterTotals';
+import { buildSplitPaymentRows, getSplitPaymentSummary, shouldShowEquityProof } from '../utils/splitPayment';
 import { isWholesaleEligible } from '../utils/wholesalePricing';
 import { nawiriBrand } from '../config/brand';
 
@@ -112,6 +113,8 @@ const SalesCounter = () => {
   const [paymentMethod, setPaymentMethod] = useState(() => restoredDraft?.paymentMethod || 'cash');
   const [amountTendered, setAmountTendered] = useState(() => restoredDraft?.amountTendered || '');
   const [splitCashAmount, setSplitCashAmount] = useState(() => restoredDraft?.splitCashAmount || '');
+  const [splitEquityAmount, setSplitEquityAmount] = useState(() => restoredDraft?.splitEquityAmount || '');
+  const [splitTextForwardedAmount, setSplitTextForwardedAmount] = useState(() => restoredDraft?.splitTextForwardedAmount || '');
   const [equityProofUrl, setEquityProofUrl] = useState(() => restoredDraft?.equityProofUrl || '');
   const [equityProofUploading, setEquityProofUploading] = useState(false);
   const [equityProofUploadProgress, setEquityProofUploadProgress] = useState(0);
@@ -177,6 +180,8 @@ const SalesCounter = () => {
         paymentMethod,
         amountTendered,
         splitCashAmount,
+        splitEquityAmount,
+        splitTextForwardedAmount,
         equityProofUrl,
         equityApproved,
         forwardedText,
@@ -192,7 +197,7 @@ const SalesCounter = () => {
       // sessionStorage unavailable (private browsing quota, etc.) — draft
       // recovery just won't be available this session, sale flow still works.
     }
-  }, [cart, fulfillmentType, saleSource, deliveryDetails, paymentMethod, amountTendered, splitCashAmount, equityProofUrl, equityApproved, forwardedText, forwardedTextApproved, customerName, customerPhone, saleNote, deliveryNote, deliveryScheduledDate, activeHeldSaleId]);
+  }, [cart, fulfillmentType, saleSource, deliveryDetails, paymentMethod, amountTendered, splitCashAmount, splitEquityAmount, splitTextForwardedAmount, equityProofUrl, equityApproved, forwardedText, forwardedTextApproved, customerName, customerPhone, saleNote, deliveryNote, deliveryScheduledDate, activeHeldSaleId]);
 
   // Reset pagination whenever the filter changes so "Load more" starts fresh.
   useEffect(() => {
@@ -271,6 +276,8 @@ const SalesCounter = () => {
           paymentMethod,
           amountTendered,
           splitCashAmount,
+          splitEquityAmount,
+          splitTextForwardedAmount,
           equityProofUrl,
           equityApproved,
           forwardedText,
@@ -313,6 +320,8 @@ const SalesCounter = () => {
       setPaymentMethod(heldSale.paymentMethod || 'cash');
       setAmountTendered(heldSale.amountTendered || '');
       setSplitCashAmount(heldSale.splitCashAmount || '');
+      setSplitEquityAmount(heldSale.splitEquityAmount || '');
+      setSplitTextForwardedAmount(heldSale.splitTextForwardedAmount || '');
       setEquityProofUrl(heldSale.equityProofUrl || '');
       setEquityApproved(Boolean(heldSale.equityApproved));
       setForwardedText(heldSale.forwardedText || '');
@@ -459,9 +468,30 @@ const SalesCounter = () => {
     return { ...itemTotals, total, change: Math.max(0, tendered - total) };
   }, [itemTotals, deliveryCharge, amountTendered]);
 
-  // For a split sale, the cash portion is whatever the cashier enters; the
-  // remainder is assumed to be covered by Equity.
-  const splitEquityAmount = Math.max(0, totals.total - (Number(splitCashAmount) || 0));
+  const splitPaymentRows = useMemo(
+    () => buildSplitPaymentRows({
+      cashAmount: splitCashAmount,
+      equityAmount: splitEquityAmount,
+      textForwardedAmount: splitTextForwardedAmount,
+    }),
+    [splitCashAmount, splitEquityAmount, splitTextForwardedAmount],
+  );
+
+  const splitPaymentSummary = useMemo(
+    () => getSplitPaymentSummary({
+      total: totals.total,
+      cashAmount: splitCashAmount,
+      equityAmount: splitEquityAmount,
+      textForwardedAmount: splitTextForwardedAmount,
+    }),
+    [totals.total, splitCashAmount, splitEquityAmount, splitTextForwardedAmount],
+  );
+
+  const splitEquityPayment = splitPaymentRows.find((payment) => payment.method === 'equity');
+  const splitTextForwardedPayment = splitPaymentRows.find((payment) => payment.method === 'text_forwarded');
+  const showEquityProof = shouldShowEquityProof(paymentMethod);
+  const hasEquityPayment = paymentMethod === 'equity' || Boolean(splitEquityPayment);
+  const hasForwardedTextPayment = paymentMethod === 'text_forwarded' || Boolean(splitTextForwardedPayment);
 
   const resetSale = () => {
     clearDraft();
@@ -474,6 +504,8 @@ const SalesCounter = () => {
     setPaymentMethod('cash');
     setAmountTendered('');
     setSplitCashAmount('');
+    setSplitEquityAmount('');
+    setSplitTextForwardedAmount('');
     setEquityProofUrl('');
     setEquityApproved(false);
     setForwardedText('');
@@ -564,23 +596,32 @@ const SalesCounter = () => {
       toast.error('Amount tendered is less than the total.');
       return;
     }
-    if ((paymentMethod === 'equity' || paymentMethod === 'split') && (!equityProofUrl || !equityApproved)) {
+    if (paymentMethod === 'split' && splitPaymentSummary.methodCount < 2) {
+      toast.error('Add at least two payment methods to the split.');
+      return;
+    }
+    if (paymentMethod === 'split' && !splitPaymentSummary.isBalanced) {
+      const difference = Math.abs(splitPaymentSummary.remaining);
+      toast.error(
+        splitPaymentSummary.remaining > 0
+          ? `Split payment is short by ${DisplayPriceInShillings(difference)}.`
+          : `Split payment exceeds the total by ${DisplayPriceInShillings(difference)}.`,
+      );
+      return;
+    }
+    if (hasEquityPayment && (!equityProofUrl || !equityApproved)) {
       toast.error('Attach and approve the Equity confirmation photo before charging.');
       return;
     }
     // The instant-preview flow shows the photo locally before the server has
     // it — never let a sale complete against a photo that's still saving
     // (its URL is a temporary blob: that hasn't reached Cloudinary yet).
-    if ((paymentMethod === 'equity' || paymentMethod === 'split') && equityProofUploading) {
+    if (hasEquityPayment && equityProofUploading) {
       toast.error('The confirmation photo is still saving — it will attach in a moment.');
       return;
     }
-    if (paymentMethod === 'text_forwarded' && (!forwardedText.trim() || !forwardedTextApproved)) {
+    if (hasForwardedTextPayment && (!forwardedText.trim() || !forwardedTextApproved)) {
       toast.error('Paste and approve the forwarded confirmation message before charging.');
-      return;
-    }
-    if (paymentMethod === 'split' && (Number(splitCashAmount) || 0) <= 0) {
-      toast.error('Enter the cash portion of a split payment.');
       return;
     }
     if (fulfillmentType === 'delivery') {
@@ -613,8 +654,15 @@ const SalesCounter = () => {
     } else if (paymentMethod === 'text_forwarded') {
       payments.push({ method: 'text_forwarded', amount: totals.total, forwardedText, approved: true });
     } else if (paymentMethod === 'split') {
-      payments.push({ method: 'cash', amount: Number(splitCashAmount) || 0 });
-      payments.push({ method: 'equity', amount: splitEquityAmount, proofImageUrl: equityProofUrl, approved: true });
+      payments.push(...splitPaymentRows.map((payment) => {
+        if (payment.method === 'equity') {
+          return { ...payment, proofImageUrl: equityProofUrl, approved: true };
+        }
+        if (payment.method === 'text_forwarded') {
+          return { ...payment, forwardedText, approved: true };
+        }
+        return payment;
+      }));
     }
 
     const amountTenderedTotal =
@@ -1024,14 +1072,18 @@ const SalesCounter = () => {
             {/* Payment method */}
             <div className="pt-2">
               <p className="text-sm font-medium mb-2">Payment method</p>
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
                 {PAYMENT_METHODS.map((m) => (
                   <button
                     key={m.id}
                     onClick={() => {
                       setPaymentMethod(m.id);
                       setAmountTendered(m.id === 'cash' ? '' : totals.total.toFixed(2));
-                      if (m.id !== 'split') setSplitCashAmount('');
+                      if (m.id !== 'split') {
+                        setSplitCashAmount('');
+                        setSplitEquityAmount('');
+                        setSplitTextForwardedAmount('');
+                      }
                     }}
                     className={`min-h-[44px] rounded-lg text-sm font-medium text-white transition-opacity active:scale-[0.97] ${m.color} ${
                       paymentMethod === m.id ? 'opacity-100 ring-2 ring-offset-1 ring-gold-400' : 'opacity-70'
@@ -1063,34 +1115,92 @@ const SalesCounter = () => {
               </div>
             )}
 
-            {/* Split: cash portion, remainder assumed Equity */}
+            {/* Split payment: cashier allocates the total across any two or all three methods */}
             {paymentMethod === 'split' && (
-              <div className="pt-2">
-                <label className="text-sm font-medium">Cash portion</label>
-                <input
-                  type="number"
-                  min={0}
-                  step={0.01}
-                  value={splitCashAmount}
-                  onChange={(e) => setSplitCashAmount(e.target.value)}
-                  placeholder="0.00"
-                  className="w-full mt-1 px-3 py-2 rounded-lg border border-brown-200 dark:border-dm-border bg-white dark:bg-dm-card-2 text-sm"
-                />
-                <p className="mt-1 text-xs text-brown-500 dark:text-white/50">
-                  Equity portion: {DisplayPriceInShillings(splitEquityAmount)}
-                </p>
+              <div className="space-y-3 pt-2">
+                <div>
+                  <p className="text-sm font-medium">Split payment amounts</p>
+                  <p className="mt-1 text-xs text-brown-500 dark:text-white/50">
+                    Enter the amount collected through each method. The three amounts must equal the total.
+                  </p>
+                </div>
+                <div className="grid gap-3 sm:grid-cols-3">
+                  <label className="text-sm font-medium">
+                    Cash
+                    <input
+                      type="number"
+                      min={0}
+                      step={0.01}
+                      inputMode="decimal"
+                      value={splitCashAmount}
+                      onChange={(e) => setSplitCashAmount(e.target.value)}
+                      placeholder="0.00"
+                      className="mt-1 w-full rounded-lg border border-brown-200 bg-white px-3 py-2 text-sm dark:border-dm-border dark:bg-dm-card-2"
+                    />
+                  </label>
+                  <label className="text-sm font-medium">
+                    Equity
+                    <input
+                      type="number"
+                      min={0}
+                      step={0.01}
+                      inputMode="decimal"
+                      value={splitEquityAmount}
+                      onChange={(e) => {
+                        setSplitEquityAmount(e.target.value);
+                        setEquityApproved(false);
+                      }}
+                      placeholder="0.00"
+                      className="mt-1 w-full rounded-lg border border-brown-200 bg-white px-3 py-2 text-sm dark:border-dm-border dark:bg-dm-card-2"
+                    />
+                  </label>
+                  <label className="text-sm font-medium">
+                    Text forwarded
+                    <input
+                      type="number"
+                      min={0}
+                      step={0.01}
+                      inputMode="decimal"
+                      value={splitTextForwardedAmount}
+                      onChange={(e) => {
+                        setSplitTextForwardedAmount(e.target.value);
+                        setForwardedTextApproved(false);
+                      }}
+                      placeholder="0.00"
+                      className="mt-1 w-full rounded-lg border border-brown-200 bg-white px-3 py-2 text-sm dark:border-dm-border dark:bg-dm-card-2"
+                    />
+                  </label>
+                </div>
+                <div className={`rounded-lg border px-3 py-2 text-sm ${
+                  splitPaymentSummary.isBalanced
+                    ? 'border-green-200 bg-green-50 text-green-700 dark:border-green-900/40 dark:bg-green-950/20 dark:text-green-300'
+                    : 'border-gold-200 bg-gold-50 text-gold-700 dark:border-gold-900/40 dark:bg-gold-950/20 dark:text-gold-300'
+                }`}>
+                  <div className="flex items-center justify-between gap-3">
+                    <span>Allocated</span>
+                    <span className="font-bold tabular-nums">{DisplayPriceInShillings(splitPaymentSummary.paid)}</span>
+                  </div>
+                  <div className="mt-1 flex items-center justify-between gap-3">
+                    <span>{splitPaymentSummary.remaining > 0 ? 'Remaining' : splitPaymentSummary.remaining < 0 ? 'Over by' : 'Status'}</span>
+                    <span className="font-bold tabular-nums">
+                      {splitPaymentSummary.remaining === 0
+                        ? 'Fully allocated'
+                        : DisplayPriceInShillings(Math.abs(splitPaymentSummary.remaining))}
+                    </span>
+                  </div>
+                </div>
               </div>
             )}
 
             {/* Equity proof photo + cashier approval */}
-            {(paymentMethod === 'equity' || paymentMethod === 'split') && (
+            {showEquityProof && (
               <div className="pt-2">
                 <label className="text-sm font-medium">Equity SMS confirmation</label>
                 <input
                   ref={equityProofInputRef}
                   id="equity-proof-input-sales-counter"
                   type="file"
-                  accept="image/*"
+                  accept="image/*,.heic,.heif,.avif"
                   capture="environment"
                   onChange={handleEquityProofSelected}
                   style={{ position: 'absolute', left: '-9999px' }}
@@ -1152,7 +1262,7 @@ const SalesCounter = () => {
 
             {/* Text Forwarded: paste the confirmation SMS text (e.g. relayed
                 by the admin from their own phone) + cashier approval */}
-            {paymentMethod === 'text_forwarded' && (
+            {hasForwardedTextPayment && (
               <div className="pt-2">
                 <div className="flex items-center justify-between">
                   <label className="text-sm font-medium">Forwarded confirmation message</label>
@@ -1238,8 +1348,9 @@ const SalesCounter = () => {
               cart.length === 0 ||
               submitting ||
               equityProofUploading ||
-              ((paymentMethod === 'equity' || paymentMethod === 'split') && (!equityProofUrl || !equityApproved)) ||
-              (paymentMethod === 'text_forwarded' && (!forwardedText.trim() || !forwardedTextApproved))
+              (paymentMethod === 'split' && (splitPaymentSummary.methodCount < 2 || !splitPaymentSummary.isBalanced)) ||
+              (hasEquityPayment && (!equityProofUrl || !equityApproved)) ||
+              (hasForwardedTextPayment && (!forwardedText.trim() || !forwardedTextApproved))
             }
             className="flex-1 min-h-[48px] bg-gold-500 hover:bg-gold-600 active:scale-[0.98] disabled:bg-brown-300 disabled:active:scale-100 text-white font-bold py-3 rounded-xl flex items-center justify-center gap-2 transition-all"
           >
@@ -1752,7 +1863,7 @@ const SalesCounter = () => {
                 {completedSale.paymentMethod === 'split' && Array.isArray(completedSale.payments) &&
                   completedSale.payments.map((payment, idx) => (
                     <div key={idx} className="sc-totals-row" style={{ fontSize: '8px', marginLeft: '8px' }}>
-                      <span style={{ textTransform: 'capitalize' }}>{payment.method}:</span>
+                      <span style={{ textTransform: 'capitalize' }}>{paymentMethodLabel(payment.method)}:</span>
                       <span>{DisplayPriceInShillings(payment.amount)}</span>
                     </div>
                   ))
