@@ -49,6 +49,12 @@ const STAFF_PERMISSION_GROUPS = [
     ],
   },
   {
+    label: 'Inventory',
+    permissions: [
+      ['stock.receive', 'Receive and reconcile store stock transfers'],
+    ],
+  },
+  {
     label: 'Returns & exchanges',
     permissions: [
       ['exchange.manage', 'Process returns and exchanges'],
