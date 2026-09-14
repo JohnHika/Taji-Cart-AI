@@ -30,6 +30,7 @@ import { renderOrderNoticeEmail } from "../utils/emailTemplates.js";
 import { getOrderIdentifierQuery } from "../utils/orderIdentifier.js";
 import { hasLoyaltyAccess } from "../utils/loyaltySettings.js";
 import { getEffectiveUnitPrice, getWholesalePricingSettings, isWholesaleEligible } from "../utils/wholesalePricing.js";
+import { reserveStockGuarded } from '../utils/stockGuard.js';
 
 // Add this helper function to better log objects
 const inspectObject = (obj) => util.inspect(obj, {depth: 3, colors: true});
