@@ -125,6 +125,7 @@ const StockReceiving = () => {
 
   const openCount = transfers.length;
   const totalUnits = transfers.reduce((total, transfer) => total + totalsFor(transfer).dispatched, 0);
+  const branchLabel = user?.staff_branch || 'Branch not assigned';
 
   if (!allowed) {
     return <main className="container mx-auto px-4 py-8"><section className={`${shell} p-6`}><p className={labelClass}>Stock receiving</p><h1 className="mt-2 text-2xl font-black text-charcoal dark:text-white">Permission required</h1><p className="mt-2 max-w-xl text-sm leading-6 text-brown-500 dark:text-white/55">An administrator must grant Stock receiving before this account can view or confirm store transfers.</p></section></main>;
@@ -132,19 +133,74 @@ const StockReceiving = () => {
 
   return (
     <main className="container mx-auto max-w-5xl px-4 py-6 sm:py-8">
-      <section className="relative overflow-hidden rounded-[30px] bg-[#260c28] px-5 py-6 text-white shadow-[0_28px_60px_-32px_rgba(40,8,41,0.9)] sm:px-7">
-        <div className="absolute -right-12 -top-16 h-52 w-52 rounded-full bg-gold-400/15 blur-3xl" />
-        <div className="relative flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
-          <div><p className="text-[10px] font-black uppercase tracking-[0.18em] text-gold-300">Stock receiving</p><h1 className="mt-2 text-2xl font-black tracking-tight sm:text-3xl">Count what arrived before it goes on sale.</h1><p className="mt-2 max-w-xl text-sm leading-6 text-white/65">Compare every delivery against the admin’s dispatch. Matching quantities go to shop stock; differences stay visible for review.</p></div>
-          <div className="grid grid-cols-2 gap-2"><div className="rounded-2xl border border-white/10 bg-white/[0.07] px-3 py-3"><p className="text-[10px] font-bold uppercase tracking-wide text-white/45">Open transfers</p><p className="mt-1 text-xl font-black">{openCount}</p></div><div className="rounded-2xl border border-white/10 bg-white/[0.07] px-3 py-3"><p className="text-[10px] font-bold uppercase tracking-wide text-white/45">Units expected</p><p className="mt-1 text-xl font-black">{totalUnits}</p></div></div>
+      <section className="rounded-[26px] border border-plum-900/10 bg-[#260c28] px-5 py-6 text-white shadow-[0_22px_50px_-30px_rgba(40,8,41,0.8)] sm:px-7">
+        <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+          <div className="max-w-2xl">
+            <div className="flex flex-wrap items-center gap-2 text-[10px] font-black uppercase tracking-[0.18em] text-gold-300">
+              <span>Staff stock receiving</span>
+              <span className="rounded-full border border-white/15 px-2.5 py-1 text-white/75">{branchLabel}</span>
+            </div>
+            <h1 className="mt-3 text-2xl font-black tracking-tight sm:text-3xl">Confirm what arrived before it goes on sale.</h1>
+            <p className="mt-3 max-w-xl text-sm leading-6 text-white/70">Open a transfer below, count every product, and submit the physical quantity. Matching counts become shop stock; differences stay visible for admin review.</p>
+          </div>
+          <div className="grid grid-cols-2 gap-3 sm:min-w-[260px]">
+            <div className="rounded-2xl border border-white/10 bg-white/[0.08] px-4 py-3">
+              <p className="text-[10px] font-bold uppercase tracking-wide text-white/55">Waiting for your count</p>
+              <p className="mt-1 text-2xl font-black">{openCount}</p>
+              <p className="mt-1 text-xs text-white/55">{openCount === 1 ? 'transfer' : 'transfers'}</p>
+            </div>
+            <div className="rounded-2xl border border-white/10 bg-white/[0.08] px-4 py-3">
+              <p className="text-[10px] font-bold uppercase tracking-wide text-white/55">Units dispatched</p>
+              <p className="mt-1 text-2xl font-black">{totalUnits}</p>
+              <p className="mt-1 text-xs text-white/55">Across this queue</p>
+            </div>
+          </div>
         </div>
       </section>
 
       <div className="mt-5 flex justify-end"><button type="button" onClick={load} disabled={loading} className="inline-flex min-h-[44px] items-center gap-2 rounded-xl border border-brown-200 px-4 py-2 text-sm font-bold text-brown-700 transition hover:border-plum-400 hover:text-plum-700 disabled:opacity-50 dark:border-dm-border dark:text-white/70"><FaSync className={loading ? 'animate-spin' : ''} size={12} /> Refresh queue</button></div>
 
-      <div className="mt-4 space-y-5">
+      {!user?.staff_branch && (
+        <section className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-amber-900 dark:border-amber-900/50 dark:bg-amber-900/15 dark:text-amber-100">
+          <p className="text-sm font-black">Store branch not assigned</p>
+          <p className="mt-1 text-xs leading-5">Your account can open Stock Receiving, but transfers remain hidden until an administrator assigns your store branch.</p>
+        </section>
+      )}
+
+      <section className={`${shell} mt-4 p-5 sm:p-6`}>
+        <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+          <div><p className={labelClass}>Receiving checklist</p><h2 className="mt-1 text-lg font-black text-charcoal dark:text-white">What to do when stock arrives</h2></div>
+          <span className="text-xs font-bold text-brown-500 dark:text-white/55">Your branch: {branchLabel}</span>
+        </div>
+        <div className="mt-4 grid gap-3 md:grid-cols-3">
+          <div className="rounded-2xl border border-brown-100 bg-ivory p-4 dark:border-dm-border dark:bg-dm-card-2"><span className="flex h-8 w-8 items-center justify-center rounded-full bg-plum-700 text-sm font-black text-white">1</span><p className="mt-3 text-sm font-black text-charcoal dark:text-white">Wait for the release</p><p className="mt-1 text-xs leading-5 text-brown-500 dark:text-white/55">The admin releases stock to your branch. It then appears in the queue above.</p></div>
+          <div className="rounded-2xl border border-brown-100 bg-ivory p-4 dark:border-dm-border dark:bg-dm-card-2"><span className="flex h-8 w-8 items-center justify-center rounded-full bg-gold-500 text-sm font-black text-white">2</span><p className="mt-3 text-sm font-black text-charcoal dark:text-white">Count every product</p><p className="mt-1 text-xs leading-5 text-brown-500 dark:text-white/55">Enter the physical quantity received for each line. Use 0 if a listed product did not arrive.</p></div>
+          <div className="rounded-2xl border border-brown-100 bg-ivory p-4 dark:border-dm-border dark:bg-dm-card-2"><span className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-600 text-sm font-black text-white">3</span><p className="mt-3 text-sm font-black text-charcoal dark:text-white">Confirm or report</p><p className="mt-1 text-xs leading-5 text-brown-500 dark:text-white/55">Matching counts go to shop stock. A difference needs a note and admin review.</p></div>
+        </div>
+      </section>
+
+      <div className="mt-5 space-y-5">
         {loading && <section className={`${shell} p-6 text-sm text-brown-500`}>Loading transfers…</section>}
-        {!loading && transfers.length === 0 && <section className={`${shell} p-8 text-center`}><FaCheckCircle className="mx-auto text-3xl text-emerald-500" /><h2 className="mt-3 text-lg font-black text-charcoal dark:text-white">Nothing waiting for confirmation</h2><p className="mt-1 text-sm text-brown-500">New admin releases will appear here for your branch.</p></section>}
+        {!loading && transfers.length === 0 && (
+          <section className={`${shell} p-5 sm:p-7`}>
+            <div className="flex items-start gap-4">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-600 dark:bg-emerald-900/20 dark:text-emerald-300"><FaCheckCircle size={22} /></div>
+              <div>
+                <p className={labelClass}>Queue clear</p>
+                <h2 className="mt-1 text-lg font-black text-charcoal dark:text-white">No transfer waiting for {branchLabel}</h2>
+                <p className="mt-2 text-sm leading-6 text-brown-500 dark:text-white/55">There is nothing to count right now. When an admin releases inventory to this branch, the transfer will appear here.</p>
+              </div>
+            </div>
+            <div className="mt-5 rounded-2xl border border-brown-100 bg-ivory p-4 dark:border-dm-border dark:bg-dm-card-2">
+              <p className="text-xs font-black uppercase tracking-wide text-brown-500 dark:text-white/55">If stock was just released, check:</p>
+              <ul className="mt-2 space-y-2 text-xs leading-5 text-brown-600 dark:text-white/65">
+                <li><span className="mr-2 font-black text-plum-700">1</span>The admin selected <strong>{branchLabel}</strong> as the destination.</li>
+                <li><span className="mr-2 font-black text-plum-700">2</span>Your account has the <strong>Receive and reconcile store stock transfers</strong> permission.</li>
+                <li><span className="mr-2 font-black text-plum-700">3</span>Tap <strong>Refresh queue</strong> after the release is completed.</li>
+              </ul>
+            </div>
+          </section>
+        )}
         {!loading && transfers.map((transfer) => {
           const totals = totalsFor(transfer);
           const receipt = receipts[transfer._id] || initialReceipt(transfer);
