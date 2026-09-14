@@ -382,7 +382,7 @@ const UploadProduct = () => {
           </div>
 
           <div className='grid gap-1'>
-            <label htmlFor='sku' className='font-medium dark:text-white'>SKU (Internal Stock Code) *UNIQUE*</label>
+            <label htmlFor='sku' className='font-medium dark:text-white'>SKU (Internal Stock Code)</label>
             <input 
               id='sku'
               type='text'
@@ -393,7 +393,6 @@ const UploadProduct = () => {
               required
               className='bg-plum-50/90 dark:bg-dm-card p-2 outline-none border dark:border-dm-border focus-within:border-plum-500 dark:focus-within:border-plum-400 rounded dark:text-white transition-colors duration-200'
             />
-            <p className='text-xs text-red-500 dark:text-red-400 mt-1'>⚠️ Critical: Must be unique for every row for barcode scanning</p>
           </div>
 
           <div className='grid gap-4 md:grid-cols-2'>
