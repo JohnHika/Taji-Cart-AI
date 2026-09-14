@@ -85,14 +85,15 @@ export const GUIDE_CONTENT = {
         heading: 'Reading the table',
         body: [
           'Search narrows the list by product name or SKU.',
-          'Backroom — units in the warehouse, not yet available to sell on the shop floor.',
-          'Shop floor — units physically available right now; the number turns red at 3 or fewer. That is a simple, fixed low-stock line, separate from the computed reorder point used in Reorder intelligence.',
+          'Backroom — units in the warehouse, not yet released to a store.',
+          'In transit — units released by the warehouse but not yet counted and confirmed by destination staff.',
+          'Shop floor — units physically confirmed at the store and available right now; the number turns red at 3 or fewer. That is a simple, fixed low-stock line, separate from the computed reorder point used in Reorder intelligence.',
         ],
       },
       {
         heading: 'Moving stock',
         body: [
-          'Type a quantity, then choose Receive (adds to backroom — use this when a delivery physically arrives) or To shop (moves backroom → shop floor, for restocking the sales floor). "To shop" is disabled when there is nothing in the backroom to move.',
+          'Type a quantity, then choose Receive (adds to backroom — use this when a supplier delivery physically arrives) or Release (moves backroom → in transit and creates a transfer for the destination store). Shop stock changes only after store staff confirms the physical receipt.',
         ],
       },
       {

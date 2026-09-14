@@ -1,13 +1,13 @@
 import mongoose from 'mongoose';
 
 // Shared audit trail for every non-customer-initiated write: warehouse
-// dispatch, receiving, and any AI-copilot tool call (executed or rejected).
+// dispatch, staff receiving, reconciliation, and any AI-copilot tool call
 // There was no equivalent anywhere in this codebase before — this is the
 // one place to look to answer "what changed, who/what changed it, and why."
 const adminActionLogSchema = new mongoose.Schema({
     actorType: {
         type: String,
-        enum: ['admin', 'ai'],
+        enum: ['admin', 'staff', 'ai'],
         required: true,
     },
     actorId: {

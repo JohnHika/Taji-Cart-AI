@@ -134,31 +134,41 @@ export const getAuditTrail = async (request, response) => {
     const { productId, actorType, since } = request.query;
     const dateFilter = since ? { createdAt: { $gte: new Date(since) } } : {};
 
-    const movementFilter = { ...dateFilter, ...(productId ? { product: productId } : {}) };
+    const movementActorFilter = actorType === 'admin'
+      ? { $or: [{ actorType: 'admin' }, { actorType: { $exists: false } }] }
+      : (actorType ? { actorType } : {});
+    const movementFilter = { ...dateFilter, ...(productId ? { product: productId } : {}), ...movementActorFilter };
     const actionFilter = { ...dateFilter, ...(actorType ? { actorType } : {}) };
 
     const [movements, actions] = await Promise.all([
       InventoryMovementModel.find(movementFilter).sort({ createdAt: -1 }).limit(limit)
+        .select('product type actorType warehouseDelta inTransitDelta shopDelta reason reference createdAt actorId')
         .populate('product', 'name sku').populate('actorId', 'name').lean(),
       AdminActionLogModel.find(actionFilter).sort({ createdAt: -1 }).limit(limit)
         .populate('actorId', 'name').lean(),
     ]);
+
+    const movementDetail = (movement) => [
+      movement.warehouseDelta ? `${movement.warehouseDelta > 0 ? '+' : ''}${movement.warehouseDelta} backroom` : '',
+      movement.inTransitDelta ? `${movement.inTransitDelta > 0 ? '+' : ''}${movement.inTransitDelta} in transit` : '',
+      movement.shopDelta ? `${movement.shopDelta > 0 ? '+' : ''}${movement.shopDelta} shop floor` : '',
+    ].filter(Boolean).join(' · ') || 'No balance delta';
 
     const entries = [
       ...movements.map((movement) => ({
         kind: 'movement',
         id: String(movement._id),
         createdAt: movement.createdAt,
-        actor: movement.actorId?.name || (movement.actorId ? 'Staff' : 'System'),
+        actor: movement.actorType === 'ai' ? 'Ask Nawiri' : (movement.actorId?.name || (movement.actorType === 'staff' ? 'Staff' : (movement.actorType === 'system' ? 'System' : 'Admin'))),
         summary: `${movement.type.replaceAll('_', ' ')} — ${movement.product?.name || 'Unknown product'}`,
-        detail: movement.shopDelta ? `${movement.shopDelta > 0 ? '+' : ''}${movement.shopDelta} shop floor` : `${movement.warehouseDelta > 0 ? '+' : ''}${movement.warehouseDelta} backroom`,
+        detail: movementDetail(movement),
         reason: movement.reason || '',
       })),
       ...actions.map((action) => ({
         kind: 'action',
         id: String(action._id),
         createdAt: action.createdAt,
-        actor: action.actorType === 'ai' ? 'Ask Nawiri' : (action.actorId?.name || 'Admin'),
+        actor: action.actorType === 'ai' ? 'Ask Nawiri' : (action.actorId?.name || (action.actorType === 'staff' ? 'Staff' : 'Admin')),
         summary: action.action.replaceAll('_', ' '),
         detail: action.target?.model ? `${action.target.model} ${action.target.id || ''}`.trim() : '',
         reason: action.reason || '',

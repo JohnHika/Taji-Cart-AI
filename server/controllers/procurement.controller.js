@@ -143,6 +143,7 @@ export const receivePurchaseOrder = async (request, response) => {
     await InventoryMovementModel.insertMany(changes.map(({ line, quantity }) => ({
       product: line.product,
       type: 'purchase_receipt',
+      actorType: 'admin',
       warehouseDelta: quantity,
       reference: { model: 'PurchaseOrder', id: purchaseOrder._id, number: purchaseOrder.number },
       reason: `Received from purchase order ${purchaseOrder.number}`,

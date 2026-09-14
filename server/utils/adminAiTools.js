@@ -155,7 +155,7 @@ const READ_TOOLS = [
       maxStock: { type: 'number' },
       publishedOnly: { type: 'boolean', description: 'Only include products currently published to the storefront.' },
     },
-    select: 'name sku price costPrice stock warehouseStock publish category',
+    select: 'name sku price costPrice stock warehouseStock inTransitStock publish category',
     buildFilter: (args) => {
       const filter = {};
       if (args.text) {
@@ -179,11 +179,11 @@ const READ_TOOLS = [
     model: InventoryMovementModel,
     properties: {
       productId: { type: 'string', description: 'A Product _id.' },
-      type: { type: 'string', enum: ['warehouse_receipt', 'purchase_receipt', 'warehouse_to_shop', 'stocktake_adjustment'] },
+      type: { type: 'string', enum: ['warehouse_receipt', 'purchase_receipt', 'warehouse_to_shop', 'transfer_dispatch', 'transfer_receipt', 'transfer_loss', 'transfer_overage', 'stocktake_adjustment'] },
       startDate: { type: 'string', description: 'ISO date.' },
       endDate: { type: 'string', description: 'ISO date.' },
     },
-    select: 'product type warehouseDelta shopDelta reason reference createdAt',
+    select: 'product type actorType warehouseDelta inTransitDelta shopDelta reason reference createdAt',
     buildFilter: (args) => ({
       ...(isValidObjectId(args.productId) ? { product: args.productId } : {}),
       ...(args.type ? { type: args.type } : {}),
@@ -259,7 +259,7 @@ const READ_TOOLS = [
     description: 'Self-audit: review recent admin/AI changes -- what changed, who or what changed it, and why. Use this to answer "what have you changed recently" or to check before repeating an action.',
     model: AdminActionLogModel,
     properties: {
-      actorType: { type: 'string', enum: ['admin', 'ai'] },
+      actorType: { type: 'string', enum: ['admin', 'staff', 'ai'] },
       action: { type: 'string', description: 'Exact action name, e.g. "ai_adjust_stock".' },
       targetModel: { type: 'string', description: 'e.g. "Product", "Order".' },
       startDate: { type: 'string', description: 'ISO date.' },
@@ -700,6 +700,7 @@ const runAdjustStock = async ({ productId, delta, reason }) => {
   await InventoryMovementModel.create({
     product: productId,
     type: 'stocktake_adjustment',
+    actorType: 'ai',
     shopDelta: amount,
     reason: reason || 'AI copilot stock adjustment',
   });

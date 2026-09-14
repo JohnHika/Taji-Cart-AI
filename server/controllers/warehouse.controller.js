@@ -1,6 +1,8 @@
 import ProductModel from '../models/product.model.js';
 import AdminActionLogModel from '../models/adminActionLog.model.js';
 import InventoryMovementModel from '../models/inventoryMovement.model.js';
+import { createStockTransferRecord, idempotencyKeyFromRequest } from './stockTransfer.controller.js';
+import { isValidTransferQuantity } from '../utils/stockTransfer.js';
 
 const asInt = (value) => {
     const num = Number(value);
@@ -8,10 +10,7 @@ const asInt = (value) => {
 };
 
 // Pure predicate, exported so it can be unit-tested without a database.
-export const isValidDispatchQuantity = (value) => {
-    const qty = asInt(value);
-    return Number.isFinite(qty) && qty > 0;
-};
+export const isValidDispatchQuantity = (value) => isValidTransferQuantity(value);
 
 const logAction = ({ actorType, actorId, action, target, before, after, reason }) =>
     AdminActionLogModel.create({ actorType, actorId, action, target, before, after, reason }).catch((error) => {
@@ -33,7 +32,7 @@ export const getWarehouseInventory = async (request, response) => {
 
         const [products, total] = await Promise.all([
             ProductModel.find(filter)
-                .select('name sku barcode stock warehouseStock costPrice price publish')
+                .select('name sku barcode stock warehouseStock inTransitStock costPrice price publish')
                 .sort({ warehouseStock: -1, name: 1 })
                 .skip((page - 1) * limit)
                 .limit(limit)
@@ -52,7 +51,7 @@ export const getWarehouseInventory = async (request, response) => {
 // backroom tier. Does not touch live shop stock.
 export const receiveWarehouseStock = async (request, response) => {
     const productId = String(request.body?.productId || '').trim();
-    const quantity = asInt(request.body?.quantity);
+    const quantity = isValidTransferQuantity(request.body?.quantity) ? Number(request.body.quantity) : NaN;
     const reason = String(request.body?.reason || '').trim().slice(0, 500);
 
     if (!productId || !Number.isFinite(quantity) || quantity <= 0) {
@@ -80,7 +79,7 @@ export const receiveWarehouseStock = async (request, response) => {
             after: { warehouseStock: updated.warehouseStock },
             reason,
         });
-        await InventoryMovementModel.create({ product: productId, type: 'warehouse_receipt', warehouseDelta: quantity, reason, actorId: request.userId });
+        await InventoryMovementModel.create({ product: productId, type: 'warehouse_receipt', actorType: 'admin', warehouseDelta: quantity, reason, actorId: request.userId });
 
         return response.json({ success: true, data: updated });
     } catch (error) {
@@ -89,60 +88,45 @@ export const receiveWarehouseStock = async (request, response) => {
     }
 };
 
-// The one race-safe stock-mutation pattern in this codebase, otherwise only
-// used by server/routes/pos.js and exchange.controller.js: an atomic
-// conditional decrement that only succeeds if enough stock is still present
-// at write time, closing the race two concurrent dispatches could otherwise
-// hit. Exported so the AI-tool executor (adminAi.controller.js) can reuse the
-// exact same guarantee instead of re-implementing it.
-export const dispatchWarehouseStockToShop = async ({ productId, quantity, actorType, actorId, reason }) => {
-    const qty = asInt(quantity);
-    if (!productId || !isValidDispatchQuantity(qty)) {
-        return { ok: false, status: 400, message: 'Provide a product and a positive quantity to dispatch.' };
-    }
-
-    const updated = await ProductModel.findOneAndUpdate(
-        { _id: productId, warehouseStock: { $gte: qty } },
-        { $inc: { warehouseStock: -qty, stock: qty } },
-        { new: true },
-    ).select('name sku warehouseStock stock');
-
-    if (!updated) {
-        const current = await ProductModel.findById(productId).select('name warehouseStock').lean();
-        if (!current) return { ok: false, status: 404, message: 'Product not found.' };
+// The old helper name remains exported for internal callers, but it now creates
+// an in-transit transfer rather than adding stock directly to the shop floor.
+export const dispatchWarehouseStockToShop = async ({ productId, quantity, actorId, reason, destinationBranch, idempotencyKey }) => {
+    try {
+        const transfer = await createStockTransferRecord({
+            lines: [{ productId, quantity }],
+            destinationBranch,
+            notes: reason,
+            actorId,
+            idempotencyKey,
+        });
+        return { ok: true, transfer };
+    } catch (error) {
         return {
             ok: false,
-            status: 409,
-            message: `Only ${current.warehouseStock} unit(s) of ${current.name} are in the warehouse.`,
+            status: error.status || 500,
+            message: error.message || 'Stock transfer could not be released.',
         };
     }
-
-    await logAction({
-        actorType,
-        actorId,
-        action: 'dispatch_stock_to_shop',
-        target: { model: 'Product', id: productId },
-        before: { warehouseStock: updated.warehouseStock + qty, stock: updated.stock - qty },
-        after: { warehouseStock: updated.warehouseStock, stock: updated.stock },
-        reason,
-    });
-    await InventoryMovementModel.create({ product: productId, type: 'warehouse_to_shop', warehouseDelta: -qty, shopDelta: qty, reason, actorId });
-
-    return { ok: true, product: updated };
 };
 
-// POST /api/admin/warehouse/dispatch — admin-initiated dispatch.
+// POST /api/admin/warehouse/dispatch — compatibility endpoint for the former
+// one-product dispatch action. It now returns a pending transfer receipt.
 export const dispatchToShop = async (request, response) => {
-    const result = await dispatchWarehouseStockToShop({
-        productId: String(request.body?.productId || '').trim(),
-        quantity: request.body?.quantity,
-        actorType: 'admin',
-        actorId: request.userId,
-        reason: String(request.body?.reason || '').trim().slice(0, 500),
-    });
+    try {
+        const result = await dispatchWarehouseStockToShop({
+            productId: String(request.body?.productId || '').trim(),
+            quantity: request.body?.quantity,
+            actorId: request.userId,
+            destinationBranch: request.body?.destinationBranch,
+            reason: String(request.body?.reason || '').trim().slice(0, 500),
+            idempotencyKey: idempotencyKeyFromRequest(request),
+        });
 
-    if (!result.ok) {
-        return response.status(result.status).json({ success: false, message: result.message });
+        if (!result.ok) {
+            return response.status(result.status).json({ success: false, message: result.message });
+        }
+        return response.json({ success: true, data: result.transfer });
+    } catch (error) {
+        return response.status(error.status || 500).json({ success: false, message: error.message || 'Stock transfer could not be released.' });
     }
-    return response.json({ success: true, data: result.product });
 };

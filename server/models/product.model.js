@@ -118,6 +118,12 @@ const productSchema = new mongoose.Schema({
         min : 0,
         description: "Backroom stock not yet dispatched to the live shop"
     },
+    inTransitStock : {
+        type : Number,
+        default : 0,
+        min : 0,
+        description: "Stock released by the warehouse but not yet confirmed by the destination store"
+    },
     weight : {
         type : Number,
         description: "Weight in grams - used for shipping calculation"

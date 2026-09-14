@@ -13,7 +13,7 @@ export const getStockControlDashboard = async (request, response) => {
   try {
     const [counts, movements] = await Promise.all([
       StockCountModel.find().sort({ createdAt: -1 }).limit(20).lean(),
-      InventoryMovementModel.find().populate('product', 'name sku').sort({ createdAt: -1 }).limit(25).lean(),
+      InventoryMovementModel.find().select('product type actorType warehouseDelta inTransitDelta shopDelta reason reference createdAt actorId').populate('product', 'name sku').sort({ createdAt: -1 }).limit(25).lean(),
     ]);
     return response.json({ success: true, data: { counts, movements } });
   } catch (error) {
@@ -58,7 +58,7 @@ export const finalizeStockCount = async (request, response) => {
       await ProductModel.findByIdAndUpdate(line.product, { $set: { [field]: counted } });
       deltas.push({ product: line.product, productName: line.productName, variance });
     }
-    if (deltas.length) await InventoryMovementModel.insertMany(deltas.map((item) => ({ product: item.product, type: 'stocktake_adjustment', warehouseDelta: count.location === 'warehouse' ? item.variance : 0, shopDelta: count.location === 'shop' ? item.variance : 0, reference: { model: 'StockCount', id: count._id, number: count.number }, reason: `Physical ${count.location} count`, actorId: request.userId })));
+    if (deltas.length) await InventoryMovementModel.insertMany(deltas.map((item) => ({ product: item.product, type: 'stocktake_adjustment', actorType: 'admin', warehouseDelta: count.location === 'warehouse' ? item.variance : 0, shopDelta: count.location === 'shop' ? item.variance : 0, reference: { model: 'StockCount', id: count._id, number: count.number }, reason: `Physical ${count.location} count`, actorId: request.userId })));
     count.status = 'finalized';
     count.finalizedBy = request.userId;
     count.finalizedAt = new Date();

@@ -17,7 +17,7 @@ const InventoryAuditTrail = () => {
             <p className="si-title" style={{ fontSize: '0.9375rem' }}>Audit trail</p>
           </div>
           <div className="si-row">
-            {[['', 'All'], ['ai', 'Ask Nawiri'], ['admin', 'Staff']].map(([value, label]) => (
+            {[['', 'All'], ['ai', 'Ask Nawiri'], ['admin', 'Admin'], ['staff', 'Staff']].map(([value, label]) => (
               <button
                 key={value || 'all'}
                 type="button"

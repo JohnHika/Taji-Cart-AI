@@ -1,9 +1,10 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { BiTargetLock } from 'react-icons/bi';
-import { FaBoxOpen, FaCalculator, FaCalendarCheck, FaCheck, FaClock, FaMapMarkerAlt, FaRedo, FaShoppingCart, FaTruck, FaUserCircle } from 'react-icons/fa';
+import { FaBoxOpen, FaCalculator, FaCalendarCheck, FaCheck, FaClipboardCheck, FaClock, FaMapMarkerAlt, FaRedo, FaShoppingCart, FaTruck, FaUserCircle } from 'react-icons/fa';
 import { HiOutlineStatusOnline } from 'react-icons/hi';
 import { useSelector } from 'react-redux';
 import { Link } from 'react-router-dom';
+import hasStaffPermission from '../../utils/hasStaffPermission';
 import Axios from '../../utils/Axios';
 
 const defaultDashboardData = {
@@ -230,6 +231,7 @@ const Dashboard = () => {
             <FaTruck className="sm:mr-2 h-4 w-4" />
             <span className="hidden sm:inline">Delivery Management</span>
           </Link>
+          {hasStaffPermission(user, 'stock.receive') && <Link to="/dashboard/staff/stock-receiving" className="inline-flex items-center px-3 sm:px-4 py-2 border border-gold-300 dark:border-gold-700 rounded-md shadow-sm text-sm font-medium text-plum-900 dark:text-gold-100 bg-gold-50 dark:bg-gold-900/20 hover:bg-gold-100 focus:outline-none"><FaClipboardCheck className="sm:mr-2 h-4 w-4" /><span className="hidden sm:inline">Stock Receiving</span></Link>}
         </div>
       </div>
       

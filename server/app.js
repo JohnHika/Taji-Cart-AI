@@ -45,6 +45,7 @@ import adminAiRouter from './route/adminAi.route.js';
 import warehouseRouter from './route/warehouse.route.js';
 import procurementRouter from './route/procurement.route.js';
 import stockControlRouter from './route/stockControl.route.js';
+import stockTransferRouter from './route/stockTransfer.route.js';
 import storePortalRouter from './route/storePortal.route.js';
 import inventoryIntelligenceRouter from './route/inventoryIntelligence.route.js';
 
@@ -126,7 +127,7 @@ app.use(cors({
         return callback(new Error(`CORS: Origin ${origin} not allowed`));
     },
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'Idempotency-Key'],
     optionsSuccessStatus: 200,
 }));
 app.options('*', cors());
@@ -199,6 +200,7 @@ app.use('/api/driver-financials', driverFinancialRoutes);
 app.use('/api/driver-performance', driverPerformanceRoutes);
 app.use('/api/admin/ai', adminAiRouter);
 app.use('/api/admin/warehouse', warehouseRouter);
+app.use('/api/stock-transfers', stockTransferRouter);
 app.use('/api/admin/procurement', procurementRouter);
 app.use('/api/admin/stock-control', stockControlRouter);
 app.use('/api/admin/store-portal', storePortalRouter);

@@ -29,6 +29,7 @@ export const STAFF_GRANTABLE_PERMISSIONS = [
   { id: 'delivery.export', label: 'Export delivery records' },
   { id: 'exchange.manage', label: 'Process returns and exchanges' },
   { id: 'catalog.manage', label: 'Add, edit, and remove products/categories' },
+  { id: 'stock.receive', label: 'Receive and reconcile store stock transfers' },
   { id: 'pos.void_sale', label: 'Void a completed sale' }
 ];
 
