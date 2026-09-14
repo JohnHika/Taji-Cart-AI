@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import PropTypes from 'prop-types';
 import { FaArrowRight, FaCheck, FaRotateLeft, FaXmark } from 'react-icons/fa6';
 import { INTERACTIVE_TOUR_STEPS } from './interactiveTour';
@@ -9,7 +9,9 @@ const InteractiveTourOverlay = ({ open, stepIndex, onNext, onBack, onPause, onRe
   const step = INTERACTIVE_TOUR_STEPS[stepIndex] || INTERACTIVE_TOUR_STEPS[0];
   const [targetRect, setTargetRect] = useState(null);
   const [targetMissing, setTargetMissing] = useState(false);
+  const [cardHeight, setCardHeight] = useState(0);
   const completionRef = useRef('');
+  const cardRef = useRef(null);
 
   const syncTarget = useCallback((shouldScroll = false) => {
     const target = document.querySelector(step.selector);
@@ -65,6 +67,17 @@ const InteractiveTourOverlay = ({ open, stepIndex, onNext, onBack, onPause, onRe
     };
   }, [open, step.id, syncTarget]);
 
+  useLayoutEffect(() => {
+    if (!open) return undefined;
+    const measureCard = () => {
+      const height = cardRef.current?.getBoundingClientRect().height || 0;
+      if (height && height !== cardHeight) setCardHeight(height);
+    };
+    measureCard();
+    window.addEventListener('resize', measureCard);
+    return () => window.removeEventListener('resize', measureCard);
+  }, [cardHeight, open, step.id, targetMissing, targetRect]);
+
   const completeAction = useCallback(() => {
     if (completionRef.current === step.id) return;
     completionRef.current = step.id;
@@ -93,14 +106,28 @@ const InteractiveTourOverlay = ({ open, stepIndex, onNext, onBack, onPause, onRe
 
   if (!open) return null;
 
-  const cardWidth = Math.min(360, window.innerWidth - 32);
-  const cardLeft = targetRect
-    ? clamp(targetRect.left + (targetRect.width / 2) - (cardWidth / 2), 16, window.innerWidth - cardWidth - 16)
-    : 16;
-  const roomBelow = targetRect ? window.innerHeight - targetRect.bottom : 0;
-  const cardTop = targetRect && roomBelow >= 300
-    ? Math.min(targetRect.bottom + 18, window.innerHeight - 280)
-    : (targetRect ? Math.max(16, targetRect.top - 300) : Math.max(16, (window.innerHeight / 2) - 190));
+  const viewportWidth = window.innerWidth;
+  const viewportHeight = window.innerHeight;
+  const cardWidth = Math.min(360, viewportWidth - 32);
+  const effectiveCardHeight = cardHeight || 260;
+  const maxCardTop = Math.max(16, viewportHeight - effectiveCardHeight - 16);
+  const roomBelow = targetRect ? viewportHeight - targetRect.bottom : 0;
+  const isSidebarTarget = step.selector.includes('sidebar-');
+  const canPlaceRight = Boolean(targetRect && isSidebarTarget && viewportWidth >= 768 && targetRect.right + cardWidth + 24 <= viewportWidth);
+  const canPlaceLeft = Boolean(targetRect && isSidebarTarget && viewportWidth >= 768 && targetRect.left - cardWidth - 24 >= 0);
+  const placement = !targetRect
+    ? 'center'
+    : (canPlaceRight ? 'right' : (canPlaceLeft ? 'left' : (roomBelow >= effectiveCardHeight + 24 ? 'bottom' : (targetRect.top >= effectiveCardHeight + 24 ? 'top' : 'bottom'))));
+  const cardLeft = placement === 'right'
+    ? clamp(targetRect.right + 18, 16, viewportWidth - cardWidth - 16)
+    : (placement === 'left'
+      ? clamp(targetRect.left - cardWidth - 18, 16, viewportWidth - cardWidth - 16)
+      : (targetRect ? clamp(targetRect.left + (targetRect.width / 2) - (cardWidth / 2), 16, viewportWidth - cardWidth - 16) : 16));
+  const cardTop = placement === 'right' || placement === 'left'
+    ? clamp(targetRect.top + (targetRect.height / 2) - (effectiveCardHeight / 2), 16, maxCardTop)
+    : (placement === 'bottom'
+      ? clamp(targetRect ? targetRect.bottom + 18 : (viewportHeight / 2) - (effectiveCardHeight / 2), 16, maxCardTop)
+      : (placement === 'top' ? clamp(targetRect.top - effectiveCardHeight - 18, 16, maxCardTop) : clamp((viewportHeight - effectiveCardHeight) / 2, 16, maxCardTop)));
   const progress = `${stepIndex + 1} of ${INTERACTIVE_TOUR_STEPS.length}`;
   const isActionStep = step.type === 'click' || step.type === 'task';
 
@@ -115,7 +142,8 @@ const InteractiveTourOverlay = ({ open, stepIndex, onNext, onBack, onPause, onRe
         />
       )}
       <section
-        className={`si-tour-card ${!targetRect ? 'si-tour-card--centered' : ''}`}
+        className={`si-tour-card si-tour-card--${placement}`}
+        ref={cardRef}
         role="dialog"
         aria-modal="false"
         aria-label={`Interactive store tour, ${progress}`}

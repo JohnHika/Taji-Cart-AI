@@ -508,7 +508,21 @@
   animation: si-tour-card-in 180ms ease;
 }
 
-.si-tour-card--centered { box-shadow: 0 24px 60px -18px rgba(0, 0, 0, 0.7); }
+.si-tour-card::after {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  border: 1px solid var(--si-hairline-strong);
+  background: var(--si-surface);
+  content: '';
+  transform: rotate(45deg);
+}
+
+.si-tour-card--right::after { top: calc(50% - 7px); left: -7px; border-top: 0; border-right: 0; }
+.si-tour-card--left::after { top: calc(50% - 7px); right: -7px; border-bottom: 0; border-left: 0; }
+.si-tour-card--bottom::after { top: -7px; left: calc(50% - 7px); border-top: 0; border-left: 0; }
+.si-tour-card--top::after { bottom: -7px; left: calc(50% - 7px); border-right: 0; border-bottom: 0; }
+.si-tour-card--center::after { display: none; }
 
 @keyframes si-tour-card-in {
   from { transform: translateY(0.35rem); opacity: 0; }
