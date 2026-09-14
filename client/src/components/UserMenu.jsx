@@ -35,6 +35,7 @@ import { logout } from '../store/userSlice';
 import Axios from '../utils/Axios';
 import AxiosToastError from '../utils/AxiosToastError';
 import { clearAuthStorage } from '../utils/authStorage';
+import hasStaffPermission from '../utils/hasStaffPermission';
 import isadmin from '../utils/isAdmin';
 import isStaff from '../utils/isStaff';
 import { useGlobalContext } from '../provider/GlobalProvider';
@@ -54,6 +55,7 @@ const UserMenu = ({ close, variant = 'dropdown' }) => {
   const canManageExchanges = isAdmin || (user?.staffPermissions || []).includes('exchange.manage');
   const canManageCounterFulfillment = isAdmin || (user?.staffPermissions || []).includes('pos.manage_fulfillment');
   const canManageCatalog = isAdmin || (user?.staffPermissions || []).includes('catalog.manage');
+  const canReceiveStock = hasStaffPermission(user, 'stock.receive');
 
   const sectionClass = 'min-w-0 px-4 py-1 mt-3 mb-0.5 text-xs font-semibold uppercase tracking-[0.14em] leading-tight text-brown-500 dark:text-white/45 whitespace-normal break-words';
 
@@ -175,6 +177,9 @@ const UserMenu = ({ close, variant = 'dropdown' }) => {
                 )}
                 <MenuLink to="/dashboard/staff/verify-pickup" icon={FaQrcode} label="Verify pickup" />
                 <MenuLink to="/dashboard/staff/pending-pickups" icon={FaBoxes} label="Pending pickups" />
+                {canReceiveStock && (
+                  <MenuLink to="/dashboard/staff/stock-receiving" icon={FaClipboardCheck} label="Stock receiving" />
+                )}
                 <MenuLink to="/dashboard/staff/completed-verifications" icon={FaClipboardCheck} label="Verification history" />
                 <MenuLink to="/dashboard/staff/delivery" icon={FaCog} label="Delivery management" />
                 {canManageCounterFulfillment && (
