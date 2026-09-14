@@ -140,7 +140,7 @@ const StockReceiving = () => {
               <span>Staff stock receiving</span>
               <span className="rounded-full border border-white/15 px-2.5 py-1 text-white/75">{branchLabel}</span>
             </div>
-            <h1 className="mt-3 text-2xl font-black tracking-tight sm:text-3xl">Confirm what arrived before it goes on sale.</h1>
+            <h1 className="mt-3 text-2xl font-black tracking-tight text-white sm:text-3xl">Confirm what arrived before it goes on sale.</h1>
             <p className="mt-3 max-w-xl text-sm leading-6 text-white/70">Open a transfer below, count every product, and submit the physical quantity. Matching counts become shop stock; differences stay visible for admin review.</p>
           </div>
           <div className="grid grid-cols-2 gap-3 sm:min-w-[260px]">
