@@ -455,6 +455,94 @@
   box-shadow: 0 0 0 2px var(--si-floor);
 }
 
+/* ── Interactive tour (click/task guidance over the live workspace) ───── */
+
+.si-guide-tour-callout {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.9rem 1.5rem;
+  border-bottom: 1px solid var(--si-hairline);
+  background: var(--si-accent-wash);
+}
+
+.si-guide-tour-callout__title { font-size: 0.8125rem; font-weight: 700; color: var(--si-text); }
+.si-guide-tour-callout__body { margin-top: 0.2rem; font-size: 0.75rem; line-height: 1.4; color: var(--si-text-muted); }
+
+.si-tour-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 130;
+  pointer-events: none;
+}
+
+.si-tour-full-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  background: rgba(8, 6, 5, 0.66);
+  pointer-events: none;
+}
+
+.si-tour-spotlight {
+  position: fixed;
+  z-index: 1;
+  border: 2px solid var(--si-accent);
+  border-radius: 0.8rem;
+  box-shadow: 0 0 0 9999px rgba(8, 6, 5, 0.66), 0 0 0 5px color-mix(in srgb, var(--si-accent) 24%, transparent), 0 8px 28px rgba(0, 0, 0, 0.2);
+  pointer-events: none;
+  transition: top 180ms ease, left 180ms ease, width 180ms ease, height 180ms ease;
+}
+
+.si-tour-card {
+  position: fixed;
+  z-index: 2;
+  padding: 1rem;
+  border: 1px solid var(--si-hairline-strong);
+  border-radius: 1rem;
+  background: var(--si-surface);
+  color: var(--si-text);
+  box-shadow: 0 24px 60px -18px rgba(0, 0, 0, 0.6);
+  pointer-events: auto;
+  animation: si-tour-card-in 180ms ease;
+}
+
+.si-tour-card--centered { box-shadow: 0 24px 60px -18px rgba(0, 0, 0, 0.7); }
+
+@keyframes si-tour-card-in {
+  from { transform: translateY(0.35rem); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+.si-tour-card__topline,
+.si-tour-card__footer { display: flex; align-items: center; gap: 0.5rem; }
+.si-tour-card__topline { justify-content: space-between; }
+.si-tour-card__progress { font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 0.6875rem; font-weight: 700; color: var(--si-text-faint); }
+.si-tour-card__close { display: inline-flex; align-items: center; justify-content: center; min-width: 2rem; min-height: 2rem; border-radius: 0.5rem; color: var(--si-text-muted); }
+.si-tour-card__close:hover { background: var(--si-surface-2); color: var(--si-text); }
+.si-tour-card__bar { height: 0.25rem; margin: 0.6rem 0 1rem; overflow: hidden; border-radius: 999px; background: var(--si-surface-3); }
+.si-tour-card__bar span { display: block; height: 100%; border-radius: inherit; background: var(--si-accent); transition: width 200ms ease; }
+.si-tour-card__title { margin-top: 0.3rem; font-size: 1.05rem; font-weight: 750; letter-spacing: -0.01em; color: var(--si-text); }
+.si-tour-card__body { margin-top: 0.5rem; font-size: 0.8125rem; line-height: 1.55; color: var(--si-text-muted); }
+.si-tour-card__action,
+.si-tour-card__notice { display: flex; align-items: flex-start; gap: 0.5rem; margin-top: 0.85rem; padding: 0.6rem 0.7rem; border-radius: 0.6rem; font-size: 0.75rem; font-weight: 700; line-height: 1.4; }
+.si-tour-card__action { background: var(--si-accent-wash); color: var(--si-accent-strong); }
+.si-tour-card__notice { background: var(--si-good-wash); color: var(--si-good); }
+.si-tour-card__action-dot { width: 0.45rem; height: 0.45rem; margin-top: 0.3rem; flex: 0 0 auto; border-radius: 999px; background: currentColor; animation: si-tour-pulse 1.4s ease-in-out infinite; }
+@keyframes si-tour-pulse { 0%, 100% { opacity: 0.45; } 50% { opacity: 1; } }
+.si-tour-card__footer { justify-content: flex-end; margin-top: 1rem; }
+.si-tour-card__text-button { display: inline-flex; align-items: center; gap: 0.35rem; min-height: 2.25rem; padding: 0.4rem 0.45rem; color: var(--si-text-muted); font-size: 0.75rem; font-weight: 700; }
+.si-tour-card__text-button:hover { color: var(--si-accent-strong); }
+
+@media (max-width: 560px) {
+  .si-guide-tour-callout { align-items: flex-start; flex-direction: column; }
+  .si-guide-tour-callout .si-btn { width: 100%; justify-content: center; }
+  .si-tour-card { max-width: calc(100vw - 2rem); }
+  .si-tour-card__footer { flex-wrap: wrap; }
+  .si-tour-card__footer .si-btn { min-height: 2.5rem; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .store-intelligence * { transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; }
 }

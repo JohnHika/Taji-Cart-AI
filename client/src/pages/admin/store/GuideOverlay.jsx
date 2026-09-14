@@ -7,7 +7,7 @@ import { GUIDE_CONTENT } from './guideContent';
 // forgets what a "stat" badge or a cumulative-share column means long after
 // any first-run walkthrough would have faded, so this stays reachable at
 // any time via the ? button and reopens pinned to whatever area they're on.
-const GuideOverlay = ({ open, onClose, areas, activeArea, onJump }) => {
+const GuideOverlay = ({ open, onClose, areas, activeArea, onJump, onStartTour, tourInProgress }) => {
   const [section, setSection] = useState('getting-started');
 
   useEffect(() => {
@@ -35,6 +35,15 @@ const GuideOverlay = ({ open, onClose, areas, activeArea, onJump }) => {
             <p className="si-title" style={{ fontSize: '1.0625rem' }}>How to run this workspace</p>
           </div>
           <button type="button" className="si-btn si-btn--ghost" onClick={onClose} aria-label="Close guide"><FaXmark size={13} /></button>
+        </div>
+        <div className="si-guide-tour-callout">
+          <div>
+            <p className="si-guide-tour-callout__title">Take the interactive tour</p>
+            <p className="si-guide-tour-callout__body">Click through the important workflows with a live spotlight on the real controls.</p>
+          </div>
+          <button type="button" className="si-btn si-btn--primary" onClick={() => { onStartTour(); onClose(); }}>
+            {tourInProgress ? 'Continue interactive tour' : 'Start interactive tour'} <span aria-hidden="true">→</span>
+          </button>
         </div>
         <div className="si-guide-panel__body">
           <nav className="si-guide-nav">
@@ -97,6 +106,8 @@ GuideOverlay.propTypes = {
   })).isRequired,
   activeArea: PropTypes.string,
   onJump: PropTypes.func.isRequired,
+  onStartTour: PropTypes.func.isRequired,
+  tourInProgress: PropTypes.bool.isRequired,
 };
 
 GuideOverlay.defaultProps = { activeArea: null };

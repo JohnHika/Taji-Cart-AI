@@ -332,6 +332,7 @@ const InventoryControl = () => {
           <label className="flex items-center gap-2 rounded-xl bg-ivory px-3 py-2 text-sm dark:bg-dm-card-2">
           <FaSearch className="text-brown-400" size={12} />
           <input
+            data-tour="inventory-search"
             value={search}
             onChange={(event) => setSearch(event.target.value)}
             placeholder="Find product or SKU"
@@ -340,7 +341,7 @@ const InventoryControl = () => {
         </label>
         </div>
       </div>
-      <div className="overflow-x-auto">
+      <div className="overflow-x-auto" data-tour="inventory-table">
         <table className="w-full min-w-[840px] text-left text-sm">
           <thead className="bg-ivory text-[11px] uppercase tracking-wide text-brown-400 dark:bg-dm-card-2">
             <tr>

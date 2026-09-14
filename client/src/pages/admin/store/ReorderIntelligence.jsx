@@ -46,14 +46,14 @@ const ReorderIntelligence = () => {
 
   return (
     <div className="si-grid" style={{ gap: '1.25rem' }}>
-      <section className="si-card">
+      <section className="si-card" data-tour="replenishment-method">
         <p className="si-eyebrow">Computed, not guessed</p>
         <p className="si-title" style={{ fontSize: '0.9375rem' }}>Reorder point = (sales velocity × supplier lead time) + safety stock</p>
         <p className="si-stat__detail" style={{ marginTop: '0.35rem', maxWidth: '46rem' }}>
           Every row below is at or below its computed reorder point. Velocity blends the last 30/60/90 days of
-          non-voided sales; lead time comes from that supplier's actual delivery history. Safety stock is
-          statistical (sized to a 95% service level from that product's own day-to-day demand variability) once
-          there's enough sale-day history to trust — marked <span className="si-mono" style={{ color: 'var(--si-accent-strong)' }}>stat</span> below.
+          non-voided sales; lead time comes from that supplier&apos;s actual delivery history. Safety stock is
+          statistical (sized to a 95% service level from that product&apos;s own day-to-day demand variability) once
+          there&apos;s enough sale-day history to trust — marked <span className="si-mono" style={{ color: 'var(--si-accent-strong)' }}>stat</span> below.
           Everything else falls back to a conservative flat buffer rather than being silently skipped.
         </p>
       </section>

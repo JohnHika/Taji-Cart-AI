@@ -36,23 +36,36 @@ const StoreCommandCenter = ({ onOpenArea }) => {
 
   return (
     <div className="si-grid" style={{ gap: '1.25rem' }}>
-      <section className="si-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(11rem, 1fr))' }}>
+      <section className="si-grid" data-tour="overview-kpis" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(11rem, 1fr))' }}>
         {[
           ['Today’s revenue', formatKes(metrics.revenue), `${(metrics.counterSaleCount || 0) + (metrics.onlineOrderCount || 0)} transactions`],
           ['Counter', formatKes(metrics.counterRevenue), `${metrics.counterItemsSold || 0} items sold`],
           ['Online', formatKes(metrics.onlineRevenue), `${metrics.onlineOrderCount || 0} orders`],
           ['Needs restocking', (queue || []).length, `${stockHealth.critical || 0} out of stock`],
-        ].map(([name, value, hint]) => (
-          <div key={name} className="si-card">
+        ].map(([name, value, hint]) => {
+          const isRestockingCard = name === 'Needs restocking';
+          const openRestocking = () => { if (isRestockingCard) onOpenArea('replenishment'); };
+          return (
+          <div
+            key={name}
+            data-tour={isRestockingCard ? 'overview-restocking' : undefined}
+            className={`si-card ${isRestockingCard ? 'cursor-pointer transition hover:-translate-y-0.5 hover:border-[var(--si-accent)]' : ''}`}
+            onClick={isRestockingCard ? openRestocking : undefined}
+            onKeyDown={isRestockingCard ? (event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); openRestocking(); } } : undefined}
+            role={isRestockingCard ? 'button' : undefined}
+            tabIndex={isRestockingCard ? 0 : undefined}
+            aria-label={isRestockingCard ? 'Open products needing restocking' : undefined}
+          >
             <p className="si-stat__label">{name}</p>
             <p className="si-stat__value si-mono">{briefLoading && queueLoading ? '—' : value}</p>
             <p className="si-stat__detail">{hint}</p>
           </div>
-        ))}
+          );
+        })}
       </section>
 
       <section className="si-grid grid-cols-1 lg:grid-cols-[minmax(0,1.3fr)_minmax(0,0.7fr)]">
-        <div className="si-card">
+        <div className="si-card" data-tour="overview-revenue-trend">
           <p className="si-eyebrow">Last 30 days</p>
           <p className="si-title" style={{ fontSize: '0.9375rem' }}>Revenue trend</p>
           <div style={{ height: '13rem', marginTop: '0.75rem' }}>

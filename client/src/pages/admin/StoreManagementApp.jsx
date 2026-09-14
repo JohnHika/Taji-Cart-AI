@@ -25,6 +25,10 @@ import DeadStockReport from './store/DeadStockReport';
 import AbcClassification from './store/AbcClassification';
 import CommandPalette from './store/CommandPalette';
 import GuideOverlay from './store/GuideOverlay';
+import InteractiveTourOverlay from './store/InteractiveTourOverlay';
+import {
+  INTERACTIVE_TOUR_STEPS, getSavedTourState, saveTourState,
+} from './store/interactiveTour';
 import '../../styles/store-intelligence.css';
 
 // Bumping this key forces the guide to auto-open again for every admin even
@@ -93,7 +97,7 @@ const PurchasingDesk = ({ procurement, inventory, supplierDraft, setSupplierDraf
 
       {composer === 'purchase' && <form onSubmit={createPurchaseOrder} className={`${shell} animate-in fade-in slide-in-from-top-2 p-5`}><div className="flex items-start justify-between gap-3"><div><p className={label}>New purchase order</p><h3 className="mt-1 text-lg font-black text-charcoal dark:text-white">Draft the supplier commitment</h3></div><button type="button" onClick={() => setComposer(null)} className="text-xs font-bold text-brown-500">Close</button></div><div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-3"><select required value={purchaseDraft.supplierId} onChange={(event) => setPurchaseDraft((current) => ({ ...current, supplierId: event.target.value }))} className="rounded-xl border border-brown-200 bg-ivory px-3 py-3 text-sm outline-none dark:border-dm-border dark:bg-dm-card-2"><option value="">Select supplier</option>{(procurement.supplierList || []).map((supplier) => <option key={supplier._id} value={supplier._id}>{supplier.name}</option>)}</select><select required value={purchaseDraft.productId} onChange={(event) => { const product = inventory.find((item) => item._id === event.target.value); setPurchaseDraft((current) => ({ ...current, productId: event.target.value, unitCost: product?.costPrice || current.unitCost })); }} className="rounded-xl border border-brown-200 bg-ivory px-3 py-3 text-sm outline-none dark:border-dm-border dark:bg-dm-card-2"><option value="">Select product</option>{inventory.map((product) => <option key={product._id} value={product._id}>{product.name}{product.sku ? ` · ${product.sku}` : ''}</option>)}</select><input required type="number" min="1" value={purchaseDraft.quantity} onChange={(event) => setPurchaseDraft((current) => ({ ...current, quantity: event.target.value }))} placeholder="Units ordered" className="rounded-xl border border-brown-200 bg-ivory px-3 py-3 text-sm outline-none dark:border-dm-border dark:bg-dm-card-2"/><input required type="number" min="0" value={purchaseDraft.unitCost} onChange={(event) => setPurchaseDraft((current) => ({ ...current, unitCost: event.target.value }))} placeholder="Unit cost (KES)" className="rounded-xl border border-brown-200 bg-ivory px-3 py-3 text-sm outline-none dark:border-dm-border dark:bg-dm-card-2"/><input type="date" value={purchaseDraft.expectedDate} onChange={(event) => setPurchaseDraft((current) => ({ ...current, expectedDate: event.target.value }))} className="rounded-xl border border-brown-200 bg-ivory px-3 py-3 text-sm outline-none dark:border-dm-border dark:bg-dm-card-2"/><div className="rounded-xl bg-plum-50 px-3 py-3 text-xs leading-5 text-plum-800 dark:bg-plum-900/20 dark:text-plum-100">{selectedProduct ? `${selectedProduct.name} · current cost ${formatKes(selectedProduct.costPrice)}` : 'Choose a product to see its current unit cost.'}</div></div><button type="submit" disabled={busy} className="mt-4 rounded-xl bg-plum-700 px-4 py-2.5 text-sm font-bold text-white disabled:opacity-50">Save draft purchase order</button></form>}
 
-      <section className={`${shell} overflow-hidden`}><div className="flex flex-wrap items-end justify-between gap-3 border-b border-brown-100 px-5 py-5 dark:border-dm-border"><div><p className={label}>Live commitments</p><h3 className="mt-1 text-lg font-black text-charcoal dark:text-white">Purchase order timeline</h3></div><p className="text-xs text-brown-500">Draft → Ordered → Received</p></div><div className="divide-y divide-brown-100 dark:divide-dm-border">{purchaseOrders.slice(0, 8).map((order) => { const total = order.lines.reduce((sum, line) => sum + (line.orderedQuantity * line.unitCost), 0); const received = order.lines.reduce((sum, line) => sum + line.receivedQuantity, 0); const ordered = order.lines.reduce((sum, line) => sum + line.orderedQuantity, 0); return <div key={order._id} className="flex flex-col gap-3 px-5 py-4 lg:flex-row lg:items-center lg:justify-between"><div className="min-w-0"><div className="flex items-center gap-2"><p className="font-black text-charcoal dark:text-white">{order.number}</p><span className={`rounded-full px-2 py-0.5 text-[10px] font-black uppercase tracking-wide ${order.status === 'received' ? 'bg-emerald-50 text-emerald-700' : order.status === 'draft' ? 'bg-brown-100 text-brown-600' : 'bg-gold-50 text-gold-800'}`}>{order.status.replaceAll('_', ' ')}</span></div><p className="mt-1 text-xs text-brown-500">{order.supplier?.name || 'Supplier'} · {ordered} units · {formatKes(total)}</p><div className="mt-2 h-1.5 max-w-sm overflow-hidden rounded-full bg-brown-100 dark:bg-dm-card-2"><div className="h-full rounded-full bg-plum-600" style={{ width: `${ordered ? Math.round((received / ordered) * 100) : 0}%` }} /></div></div><div className="flex shrink-0 gap-2">{order.status === 'draft' && <button type="button" disabled={busy} onClick={() => advancePurchaseOrder(order, 'order')} className="rounded-xl border border-plum-200 px-3 py-2 text-xs font-bold text-plum-700">Mark ordered</button>}{['ordered', 'partially_received'].includes(order.status) && <button type="button" disabled={busy} onClick={() => advancePurchaseOrder(order, 'receive')} className="rounded-xl bg-plum-700 px-3 py-2 text-xs font-bold text-white">Receive {ordered - received} units</button>}</div></div>; })}{!loading && !purchaseOrders.length && <div className="px-5 py-12 text-center"><div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-plum-50 text-plum-600"><FaClipboardList/></div><p className="mt-3 font-bold text-charcoal dark:text-white">No purchase orders yet</p><p className="mt-1 text-sm text-brown-500">Add your first supplier, then create a draft above.</p></div>}</div>{purchaseOrders.length > 8 && <p className="border-t border-brown-100 px-5 py-2 text-xs text-brown-500 dark:border-dm-border">Showing 8 of {purchaseOrders.length}.</p>}</section>
+      <section data-tour="purchasing-lifecycle" className={`${shell} overflow-hidden`}><div className="flex flex-wrap items-end justify-between gap-3 border-b border-brown-100 px-5 py-5 dark:border-dm-border"><div><p className={label}>Live commitments</p><h3 className="mt-1 text-lg font-black text-charcoal dark:text-white">Purchase order timeline</h3></div><p className="text-xs text-brown-500">Draft → Ordered → Received</p></div><div className="divide-y divide-brown-100 dark:divide-dm-border">{purchaseOrders.slice(0, 8).map((order) => { const total = order.lines.reduce((sum, line) => sum + (line.orderedQuantity * line.unitCost), 0); const received = order.lines.reduce((sum, line) => sum + line.receivedQuantity, 0); const ordered = order.lines.reduce((sum, line) => sum + line.orderedQuantity, 0); return <div key={order._id} className="flex flex-col gap-3 px-5 py-4 lg:flex-row lg:items-center lg:justify-between"><div className="min-w-0"><div className="flex items-center gap-2"><p className="font-black text-charcoal dark:text-white">{order.number}</p><span className={`rounded-full px-2 py-0.5 text-[10px] font-black uppercase tracking-wide ${order.status === 'received' ? 'bg-emerald-50 text-emerald-700' : order.status === 'draft' ? 'bg-brown-100 text-brown-600' : 'bg-gold-50 text-gold-800'}`}>{order.status.replaceAll('_', ' ')}</span></div><p className="mt-1 text-xs text-brown-500">{order.supplier?.name || 'Supplier'} · {ordered} units · {formatKes(total)}</p><div className="mt-2 h-1.5 max-w-sm overflow-hidden rounded-full bg-brown-100 dark:bg-dm-card-2"><div className="h-full rounded-full bg-plum-600" style={{ width: `${ordered ? Math.round((received / ordered) * 100) : 0}%` }} /></div></div><div className="flex shrink-0 gap-2">{order.status === 'draft' && <button type="button" disabled={busy} onClick={() => advancePurchaseOrder(order, 'order')} className="rounded-xl border border-plum-200 px-3 py-2 text-xs font-bold text-plum-700">Mark ordered</button>}{['ordered', 'partially_received'].includes(order.status) && <button type="button" disabled={busy} onClick={() => advancePurchaseOrder(order, 'receive')} className="rounded-xl bg-plum-700 px-3 py-2 text-xs font-bold text-white">Receive {ordered - received} units</button>}</div></div>; })}{!loading && !purchaseOrders.length && <div className="px-5 py-12 text-center"><div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-plum-50 text-plum-600"><FaClipboardList/></div><p className="mt-3 font-bold text-charcoal dark:text-white">No purchase orders yet</p><p className="mt-1 text-sm text-brown-500">Add your first supplier, then create a draft above.</p></div>}</div>{purchaseOrders.length > 8 && <p className="border-t border-brown-100 px-5 py-2 text-xs text-brown-500 dark:border-dm-border">Showing 8 of {purchaseOrders.length}.</p>}</section>
     </section>
   );
 };
@@ -198,6 +202,9 @@ const StoreManagementWorkspace = () => {
     typeof window !== 'undefined' && Boolean(window.localStorage.getItem(GUIDE_SEEN_KEY))
   ));
   const [guideOpen, setGuideOpen] = useState(false);
+  const [tourOpen, setTourOpen] = useState(false);
+  const [tourStepIndex, setTourStepIndex] = useState(() => getSavedTourState().stepIndex);
+  const [tourState, setTourState] = useState(() => getSavedTourState());
 
   // Auto-opens once per browser for a new admin so the guide is discovered,
   // not just available -- every visit after that, it only opens on request.
@@ -247,6 +254,65 @@ const StoreManagementWorkspace = () => {
     setArea(nextArea);
     window.history.pushState({}, '', nextArea === 'overview' ? '/' : `/${nextArea}`);
   };
+
+  const startTour = () => {
+    const saved = getSavedTourState();
+    const resume = saved.status === 'in-progress';
+    const nextIndex = resume ? saved.stepIndex : 0;
+    setTourStepIndex(nextIndex);
+    setTourState({ status: 'in-progress', stepIndex: nextIndex });
+    saveTourState({ status: 'in-progress', stepIndex: nextIndex });
+    setGuideOpen(false);
+    setTourOpen(true);
+  };
+
+  const pauseTour = () => {
+    const nextState = { status: 'in-progress', stepIndex: tourStepIndex };
+    setTourState(nextState);
+    saveTourState(nextState);
+    setTourOpen(false);
+  };
+
+  const finishTour = () => {
+    const nextState = { status: 'complete', stepIndex: 0 };
+    setTourState(nextState);
+    saveTourState(nextState);
+    setTourOpen(false);
+    toast.success('Store workspace tour complete. Reopen it anytime from the ? button.');
+  };
+
+  const nextTourStep = () => {
+    if (tourStepIndex >= INTERACTIVE_TOUR_STEPS.length - 1) {
+      finishTour();
+      return;
+    }
+    const nextIndex = tourStepIndex + 1;
+    setTourStepIndex(nextIndex);
+    setTourState({ status: 'in-progress', stepIndex: nextIndex });
+  };
+
+  const previousTourStep = () => {
+    const nextIndex = Math.max(0, tourStepIndex - 1);
+    setTourStepIndex(nextIndex);
+    setTourState({ status: 'in-progress', stepIndex: nextIndex });
+  };
+
+  const restartTour = () => {
+    setTourStepIndex(0);
+    setTourState({ status: 'in-progress', stepIndex: 0 });
+    saveTourState({ status: 'in-progress', stepIndex: 0 });
+    setTourOpen(true);
+  };
+
+  useEffect(() => {
+    if (!tourOpen) return;
+    const currentStep = INTERACTIVE_TOUR_STEPS[tourStepIndex];
+    if (currentStep && currentStep.type !== 'click' && area !== currentStep.area) selectArea(currentStep.area);
+  }, [area, tourOpen, tourStepIndex]);
+
+  useEffect(() => {
+    if (tourOpen) saveTourState({ status: 'in-progress', stepIndex: tourStepIndex });
+  }, [tourOpen, tourStepIndex]);
 
   const activeOrders = useMemo(() => orders.filter((order) => !['delivered', 'cancelled', 'pos'].includes(String(order.status || '').toLowerCase())), [orders]);
   // "Delivery" specifically, not pickup/sacco_pickup -- the "Active deliveries"
@@ -362,7 +428,7 @@ const StoreManagementWorkspace = () => {
         {areas.map((item) => {
           const Icon = item.icon;
           const selected = area === item.id;
-          return <button key={item.id} type="button" onClick={() => selectArea(item.id)} className={`si-nav-item ${selected ? 'si-nav-item--active' : ''}`}><Icon size={14} />{item.label}</button>;
+          return <button key={item.id} type="button" data-tour={`sidebar-${item.id}`} onClick={() => selectArea(item.id)} className={`si-nav-item ${selected ? 'si-nav-item--active' : ''}`}><Icon size={14} />{item.label}</button>;
         })}
       </nav>
       <p className="si-stat__detail" style={{ padding: '0 0.75rem', marginTop: '1.25rem' }}><span className="si-kbd">⌘K</span> to jump anywhere</p>
@@ -378,7 +444,7 @@ const StoreManagementWorkspace = () => {
         </div>
         <div className="si-row" style={{ gap: '0.375rem' }}>
           <ThemeToggle />
-          <button type="button" onClick={() => setGuideOpen(true)} className="si-btn si-btn--ghost si-guide-trigger" aria-label="Open store guide">
+          <button type="button" data-tour="workspace-help" onClick={() => setGuideOpen(true)} className="si-btn si-btn--ghost si-guide-trigger" aria-label="Open store guide">
             <FaCircleQuestion size={13} />
             {!guideSeen && <span className="si-guide-trigger__dot" />}
           </button>
@@ -391,7 +457,9 @@ const StoreManagementWorkspace = () => {
 
   const paletteAreas = [...areas, { id: '__guide', label: 'Help & guide', icon: FaCircleQuestion, keywords: 'help training tutorial how to guide docs' }];
   const jumpTo = (id) => { if (id === '__guide') { setGuideOpen(true); return; } selectArea(id); };
-  const guide = <GuideOverlay open={guideOpen} onClose={closeGuide} areas={areas} activeArea={area} onJump={selectArea} />;
+  const guidedAreaContent = <div data-tour={`area-${area}`}>{areaContent[area]}</div>;
+  const guide = <GuideOverlay open={guideOpen} onClose={closeGuide} areas={areas} activeArea={area} onJump={selectArea} onStartTour={startTour} tourInProgress={tourState.status === 'in-progress'} />;
+  const tour = <InteractiveTourOverlay open={tourOpen} stepIndex={tourStepIndex} onNext={nextTourStep} onBack={previousTourStep} onPause={pauseTour} onRestart={restartTour} />;
 
   // themeClass mirrors the admin's own light/dark choice (see useTheme()
   // above) onto this wrapper -- both store-intelligence.css's own tokens
@@ -403,6 +471,7 @@ const StoreManagementWorkspace = () => {
       <div className={`store-intelligence ${themeClass}`}>
         <CommandPalette areas={paletteAreas} onSelect={jumpTo} />
         {guide}
+        {tour}
         {topBar}
         <div className="mx-auto grid max-w-[1600px] grid-cols-[minmax(0,1fr)] lg:grid-cols-[240px_minmax(0,1fr)]">
           {sidebar}
@@ -416,7 +485,7 @@ const StoreManagementWorkspace = () => {
               </div>
               {webResearch && <p className="si-stat__detail" style={{ marginTop: '0.75rem' }}>Web research is owner-initiated. Nawiri receives only the selected, aggregated store snapshot and separates outside research from your business data.</p>}
             </section>
-            {areaContent.assistant}
+            {guidedAreaContent}
           </div>
         </div>
       </div>
@@ -427,6 +496,7 @@ const StoreManagementWorkspace = () => {
     <div className={`store-intelligence ${themeClass}`}>
       <CommandPalette areas={paletteAreas} onSelect={jumpTo} />
       {guide}
+      {tour}
       {topBar}
       <div className="mx-auto grid max-w-[1600px] grid-cols-[minmax(0,1fr)] lg:grid-cols-[240px_minmax(0,1fr)]">
         {sidebar}
@@ -435,7 +505,7 @@ const StoreManagementWorkspace = () => {
             <div><p className="si-eyebrow">{areas.find((item) => item.id === area)?.label}</p><h1 className="si-title" style={{ fontSize: '1.5rem' }}>{area === 'overview' ? 'Run the store with a single view' : areas.find((item) => item.id === area)?.label}</h1></div>
             {area !== 'assistant' && <button type="button" onClick={() => selectArea('assistant')} className="si-btn si-btn--primary"><FaWandMagicSparkles size={12} /> Ask Nawiri</button>}
           </div>
-          {areaContent[area]}
+          {guidedAreaContent}
         </div>
       </div>
     </div>
