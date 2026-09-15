@@ -298,15 +298,15 @@ const SalesCounter = () => {
           equityApproved,
           forwardedText,
           forwardedTextApproved,
+          // If this sale was itself a resumed hold, replace the original
+          // record server-side instead of leaving a stale duplicate behind —
+          // this also releases its reserved stock first so re-holding the
+          // same items doesn't fight its own reservation.
+          replaceHeldSaleId: activeHeldSaleId || undefined,
         },
       });
       if (res.data.success) {
-        // If this sale was itself a resumed hold, drop the original record
-        // instead of leaving a stale duplicate behind.
-        if (activeHeldSaleId) {
-          await Axios({ url: `/api/pos/held-sales/${activeHeldSaleId}`, method: 'DELETE' }).catch(() => {});
-        }
-        toast.success('Sale held. Resume it anytime from Held Sales.');
+        toast.success('Sale held — its items are reserved so they can\'t be sold elsewhere. Resume it anytime from Held Sales.');
         resetSale();
         loadHeldSales();
       }
@@ -774,6 +774,10 @@ const SalesCounter = () => {
         cashierName: user.name,
         saleDate: new Date(),
         note: saleNote.trim() || undefined,
+        // If resuming a held sale, the server releases its stock reservation
+        // and deletes the record before reserving fresh against this basket
+        // — a single request, so nothing is left double-reserved or orphaned.
+        heldSaleId: activeHeldSaleId || undefined,
       };
 
       const res = await Axios({
@@ -788,7 +792,6 @@ const SalesCounter = () => {
         generateReceiptQrCode(finishedSale);
         toast.success(`Sale ${res.data.saleNumber} completed`);
         if (activeHeldSaleId) {
-          Axios({ url: `/api/pos/held-sales/${activeHeldSaleId}`, method: 'DELETE' }).catch(() => {});
           setActiveHeldSaleId(null);
           loadHeldSales();
         }
@@ -2119,6 +2122,9 @@ const SalesCounter = () => {
               </div>
               <p className="mt-0.5 text-xs text-brown-500 dark:text-white/50">
                 {isAdmin ? 'Every held sale across the counter.' : 'Sales you’ve personally held.'}
+              </p>
+              <p className="mt-1.5 rounded-lg bg-gold-100 px-2.5 py-1.5 text-[11px] font-medium text-gold-800 dark:bg-gold-500/10 dark:text-gold-300">
+                Held items are already deducted from current stock, so they can’t be sold to someone else. Resume or discard a hold to release it back.
               </p>
             </div>
             <div className="flex-1 overflow-y-auto p-4 space-y-3">

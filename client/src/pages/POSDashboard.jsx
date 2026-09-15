@@ -322,6 +322,7 @@ const POSDashboard = () => {
   const [recentSalesView, setRecentSalesView] = useState('list'); // 'list' | 'grid'
   const [recentSalesPage, setRecentSalesPage] = useState(1);
   const [showAdvancedAnalytics, setShowAdvancedAnalytics] = useState(false);
+  const [heldSalesCount, setHeldSalesCount] = useState(0);
 
   // Wait for session hydration before deciding access, and allow admins to use sales tools.
   useEffect(() => {
@@ -361,7 +362,8 @@ const POSDashboard = () => {
         loadDailySummary(),
         loadAnalytics(),
         loadRecentSales(),
-        loadEodStatus()
+        loadEodStatus(),
+        loadHeldSalesCount()
       ]);
     } catch (error) {
       AxiosToastError(error);
@@ -403,6 +405,21 @@ const POSDashboard = () => {
     } catch (error) {
       console.error('Error loading end-of-day status:', error);
       toast.error('Could not load end-of-day status.');
+    }
+  };
+
+  // Held sales already have their stock deducted the moment they're parked
+  // (see server/routes/pos.js) — surfaced here so a cashier glancing at the
+  // hub before opening the counter knows some of "current stock" is already
+  // spoken for, not actually free to sell.
+  const loadHeldSalesCount = async () => {
+    try {
+      const response = await Axios({ url: '/api/pos/held-sales', method: 'GET' });
+      if (response.data.success) {
+        setHeldSalesCount((response.data.data || []).length);
+      }
+    } catch (error) {
+      console.error('Error loading held sales count:', error);
     }
   };
 
@@ -645,6 +662,11 @@ const POSDashboard = () => {
             <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-gold-200">{user.staff_branch || 'Main Store'} · live trade desk</p>
             <h1 className="mt-2 text-2xl font-black tracking-tight sm:text-3xl">Sales Hub</h1>
             <p className="mt-1 text-sm text-white/70">Counter first. See today’s trade, open a sale, then review the detail only when you need it.</p>
+            {heldSalesCount > 0 && (
+              <p className="mt-1 text-xs font-semibold text-gold-200">
+                {heldSalesCount} sale{heldSalesCount === 1 ? '' : 's'} on hold — their items are already deducted from current stock until resumed or discarded.
+              </p>
+            )}
           </div>
           <div className="flex flex-wrap gap-2">
             <button
@@ -656,10 +678,18 @@ const POSDashboard = () => {
             </button>
             <button
               onClick={() => navigate('/dashboard/sales-counter')}
-              className="flex items-center justify-center rounded-xl bg-white px-4 py-2.5 text-sm font-bold text-plum-800 transition hover:bg-ivory"
+              className="relative flex items-center justify-center rounded-xl bg-white px-4 py-2.5 text-sm font-bold text-plum-800 transition hover:bg-ivory"
             >
               <FaShoppingCart className="mr-2" />
               Open Sales Counter
+              {heldSalesCount > 0 && (
+                <span
+                  className="absolute -right-2 -top-2 flex h-5 min-w-[20px] items-center justify-center rounded-full bg-gold-500 px-1 text-[11px] font-bold text-charcoal"
+                  aria-label={`${heldSalesCount} sale${heldSalesCount === 1 ? '' : 's'} on hold`}
+                >
+                  {heldSalesCount}
+                </span>
+              )}
             </button>
             <button
               onClick={() => navigate('/dashboard/returns-exchanges')}

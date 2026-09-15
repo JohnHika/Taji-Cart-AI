@@ -22,6 +22,7 @@ import generatePickupCode from '../utils/generatePickupCode.js';
 import { validatePosPayments } from '../utils/posPaymentValidation.js';
 import { notifyCustomerOrderDispatched } from '../utils/orderDispatchNotify.js';
 import escapeRegex from '../utils/escapeRegex.js';
+import reserveStockGuarded from '../utils/stockGuard.js';
 
 const router = express.Router();
 
@@ -447,7 +448,18 @@ router.get('/held-sales', auth, Staff, async (req, res) => {
   }
 });
 
+// Give back whatever stock a held sale had reserved — shared by discard,
+// by the failure path of a replace/swap, and by DELETE below.
+const releaseHeldSaleStock = async (heldSale) => {
+  if (!heldSale?.stockReserved) return;
+  for (const item of heldSale.cart || []) {
+    await Product.findByIdAndUpdate(item._id, { $inc: { stock: item.quantity } });
+  }
+};
+
 // Park the current in-progress sale exactly as it stands on the counter.
+// Reserves (decrements) stock for the basket so it can't be oversold to
+// someone else while it's parked — see stockReserved on the model.
 router.post('/held-sales', auth, Staff, requireStaffPermission('pos.open_counter'), async (req, res) => {
   try {
     const {
@@ -469,10 +481,53 @@ router.post('/held-sales', auth, Staff, requireStaffPermission('pos.open_counter
       equityApproved,
       forwardedText,
       forwardedTextApproved,
+      // Set when this hold is replacing one the cashier already had parked
+      // (they resumed it, edited the basket, and are re-parking it). Its
+      // reservation is released before the new one is made so re-holding
+      // the same items doesn't fight its own stock hold.
+      replaceHeldSaleId,
     } = req.body;
 
     if (!Array.isArray(cart) || cart.length === 0) {
       return res.status(400).json({ success: false, message: 'Cannot hold an empty basket.' });
+    }
+
+    let replacedHeldSale = null;
+    let replacedHeldSaleWasReserved = false;
+    if (replaceHeldSaleId) {
+      const isAdminUser = req.user.isAdmin === true || req.user.role === 'admin';
+      const query = isAdminUser
+        ? { _id: replaceHeldSaleId }
+        : { _id: replaceHeldSaleId, heldBy: req.user._id };
+      replacedHeldSale = await HeldSale.findOne(query);
+      replacedHeldSaleWasReserved = Boolean(replacedHeldSale?.stockReserved);
+      await releaseHeldSaleStock(replacedHeldSale);
+    }
+
+    const reservation = await reserveStockGuarded(
+      cart.map((item) => ({ id: item._id, quantity: item.quantity, label: item.name }))
+    );
+
+    if (!reservation.ok) {
+      // The swap failed — put the replaced hold's stock back exactly as it
+      // was so nothing changes for it (only if it was actually released above).
+      if (replacedHeldSale && replacedHeldSaleWasReserved) {
+        for (const item of replacedHeldSale.cart || []) {
+          await Product.findByIdAndUpdate(item._id, { $inc: { stock: -item.quantity } });
+        }
+      }
+      if (reservation.reason === 'product_not_found') {
+        return res.status(404).json({ success: false, message: `Product "${reservation.row.label || reservation.row.id}" not found.` });
+      }
+      if (reservation.reason === 'insufficient_stock') {
+        return res.status(409).json({
+          success: false,
+          message: reservation.product.stock > 0
+            ? `Only ${reservation.remaining} of ${reservation.product.name} left — can't hold ${reservation.row.quantity}.`
+            : `${reservation.product.name} is out of stock.`
+        });
+      }
+      return res.status(400).json({ success: false, message: 'Could not hold this sale.' });
     }
 
     const label = customerName?.trim() || `Held sale · ${cart.length} item${cart.length === 1 ? '' : 's'}`;
@@ -500,7 +555,12 @@ router.post('/held-sales', auth, Staff, requireStaffPermission('pos.open_counter
       branch: req.user.staff_branch || 'Main Store',
       heldBy: req.user._id,
       heldByName: req.user.name,
+      stockReserved: true,
     });
+
+    if (replacedHeldSale) {
+      await HeldSale.findByIdAndDelete(replacedHeldSale._id);
+    }
 
     res.json({ success: true, data: heldSale });
   } catch (error) {
@@ -508,12 +568,14 @@ router.post('/held-sales', auth, Staff, requireStaffPermission('pos.open_counter
   }
 });
 
-// Discard a held sale. Admins can discard any held sale (this is how the
-// admin-only Held Sales list lets someone clear a stale entry). Staff
-// cannot browse or discard other people's holds, but a staff member who
-// personally held a sale can still clean up that one record themselves —
-// e.g. the client auto-deletes it once they resume and complete or
-// re-hold it, without needing list/browse access.
+// Discard a held sale outright, releasing its reserved stock back to the
+// pool. Admins can discard any held sale (this is how the admin-only Held
+// Sales list lets someone clear a stale entry). Staff cannot browse or
+// discard other people's holds, but a staff member who personally held a
+// sale can still clean up that one record themselves. (Resuming into a
+// completed sale or re-holding go through /sale's heldSaleId and
+// /held-sales' replaceHeldSaleId instead, which swap the reservation over
+// in the same request rather than deleting via this route.)
 router.delete('/held-sales/:id', auth, Staff, async (req, res) => {
   try {
     const isAdminUser = req.user.isAdmin === true || req.user.role === 'admin';
@@ -525,6 +587,9 @@ router.delete('/held-sales/:id', auth, Staff, async (req, res) => {
     if (!deleted) {
       return res.status(404).json({ success: false, message: 'Held sale not found' });
     }
+    // Give the reserved stock back now that this hold is gone — whether
+    // discarded outright or cleared after being resumed elsewhere.
+    await releaseHeldSaleStock(deleted);
     res.json({ success: true });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -555,8 +620,21 @@ router.post('/sale', auth, Staff, requireStaffPermission('pos.open_counter'), as
       saccoOperatorId,
       manualSaccoOperatorName,
       saccoDestinationTown,
-      deliveryScheduledDate
+      deliveryScheduledDate,
+      // Present when this sale is completing a resumed held sale — its
+      // stock reservation is released below before the sale reserves fresh
+      // against the (possibly edited) final basket.
+      heldSaleId
     } = req.body;
+
+    if (heldSaleId) {
+      const isAdminUser = req.user.isAdmin === true || req.user.role === 'admin';
+      const heldQuery = isAdminUser
+        ? { _id: heldSaleId }
+        : { _id: heldSaleId, heldBy: req.user._id };
+      const releasedHeldSale = await HeldSale.findOneAndDelete(heldQuery);
+      await releaseHeldSaleStock(releasedHeldSale);
+    }
 
     // Validate required fields
     if (!items || items.length === 0) {

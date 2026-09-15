@@ -3,9 +3,11 @@ import mongoose from 'mongoose';
 // A snapshot of an in-progress Sales Counter transaction that a cashier has
 // parked to serve other customers, and will resume later exactly as left —
 // cart, customer details, fulfillment/delivery choice, and whatever payment
-// info was already entered. No stock is reserved and nothing here counts
-// toward sales reporting; it only becomes a real Sale once resumed and
-// charged through the normal POST /api/pos/sale flow.
+// info was already entered. The cart's stock IS reserved (decremented) the
+// moment it's held, so a parked basket can't be oversold to someone else
+// while it waits — see stockReserved below. Nothing here counts toward
+// sales reporting; it only becomes a real Sale once resumed and charged
+// through the normal POST /api/pos/sale flow.
 const heldSaleSchema = new mongoose.Schema({
   label: {
     // Short display name for the held-sales list, e.g. the customer's name
@@ -70,7 +72,12 @@ const heldSaleSchema = new mongoose.Schema({
   heldByName: {
     type: String,
     required: true
-  }
+  },
+  // True once this hold's cart has actually been decremented from product
+  // stock. Read before restoring stock on discard/replace/resume-complete —
+  // defaults to false so a hold that fails to reserve (or a record written
+  // before this field existed) is never mistakenly credited stock back.
+  stockReserved: { type: Boolean, default: false }
 }, {
   timestamps: true
 });
