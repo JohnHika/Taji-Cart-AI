@@ -979,6 +979,7 @@ const SalesCounter = () => {
               key={id}
               type="button"
               onClick={() => setSaleSource(id)}
+              aria-pressed={saleSource === id}
               className={`relative z-10 flex min-h-[44px] flex-1 items-center justify-center gap-1.5 rounded-xl text-xs font-bold transition-colors active:scale-[0.97] ${
                 saleSource === id ? 'text-white' : 'text-brown-600 dark:text-white/60'
               }`}
@@ -1007,6 +1008,7 @@ const SalesCounter = () => {
                 key={f.id}
                 type="button"
                 onClick={() => setFulfillmentType(f.id)}
+                aria-pressed={fulfillmentType === f.id}
                 className={`relative z-10 flex min-h-[44px] flex-1 flex-col items-center justify-center gap-0.5 rounded-xl px-1 text-[11px] font-bold transition-colors active:scale-[0.97] ${
                   fulfillmentType === f.id ? 'text-white' : 'text-brown-600 dark:text-white/60'
                 }`}
