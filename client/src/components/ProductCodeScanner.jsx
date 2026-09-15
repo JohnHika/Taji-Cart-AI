@@ -15,15 +15,27 @@ const SCAN_FORMAT_NAMES = [
   'UPC_E',
 ];
 
+// html5-qrcode doesn't always reject with a proper DOMException — it often
+// rejects with a plain string, or with a generic Error/TypeError from its
+// own internal code (e.g. constructing the native BarcodeDetector with a
+// format it doesn't support). Matching only `.name` silently dumps all of
+// those into the unhelpful generic message below, which is what cashiers
+// were actually hitting — so match on the stringified error too.
 const getCameraErrorMessage = (error) => {
-  if (error?.name === 'NotAllowedError' || error?.name === 'PermissionDeniedError') {
+  const name = error?.name || '';
+  const text = `${name} ${error?.message || ''} ${typeof error === 'string' ? error : ''}`.toLowerCase();
+
+  if (name === 'NotAllowedError' || name === 'PermissionDeniedError' || text.includes('permission')) {
     return 'Camera permission was denied. Allow camera access in your browser, then try again.';
   }
-  if (error?.name === 'NotFoundError' || error?.name === 'OverconstrainedError') {
+  if (name === 'NotFoundError' || name === 'OverconstrainedError' || text.includes('no camera') || text.includes('not found')) {
     return 'No usable rear camera was found. Use the code field or a Bluetooth scanner instead.';
   }
-  if (error?.name === 'NotReadableError') {
+  if (name === 'NotReadableError' || text.includes('could not start video source') || text.includes('already in use') || text.includes('trackstart')) {
     return 'Another app is using the camera. Close it, then try again.';
+  }
+  if (typeof window !== 'undefined' && !window.isSecureContext) {
+    return 'Camera scanning needs a secure https:// connection — open this page over https and try again.';
   }
   return 'The camera could not start. You can still type, paste, or use a hardware scanner.';
 };
@@ -67,23 +79,33 @@ const ProductCodeScanner = ({ onDetected, onClose }) => {
 
     const startScanner = async () => {
       try {
+        // These fail as a generic Error/TypeError with no useful .name, so
+        // check them up front rather than letting scanner.start() surface
+        // an unrecognisable error for something we can diagnose directly.
+        if (typeof window !== 'undefined' && !window.isSecureContext) {
+          setError('Camera scanning needs a secure https:// connection — open this page over https and try again.');
+          setStatus('');
+          return;
+        }
+        if (!navigator.mediaDevices?.getUserMedia) {
+          setError('This browser does not support camera access here. Use the code field or a Bluetooth scanner instead.');
+          setStatus('');
+          return;
+        }
+
         const { Html5Qrcode, Html5QrcodeSupportedFormats } = await import('html5-qrcode');
         if (cancelled) return;
 
-        scanner = new Html5Qrcode(scannerIdRef.current, {
-          formatsToSupport: SCAN_FORMAT_NAMES
-            .map((name) => Html5QrcodeSupportedFormats[name])
-            .filter((format) => format !== undefined),
-          useBarCodeDetectorIfSupported: true,
-          verbose: false,
-        });
-        scannerRef.current = scanner;
+        const supportedFormats = SCAN_FORMAT_NAMES
+          .map((name) => Html5QrcodeSupportedFormats[name])
+          .filter((format) => format !== undefined);
 
         const resumeAfterFeedback = () => {
           window.setTimeout(() => {
-            if (!cancelled && scannerRef.current === scanner) {
+            const active = scannerRef.current;
+            if (!cancelled && active) {
               try {
-                scanner.resume();
+                active.resume();
               } catch {
                 // Closing the scanner during this small pause is safe.
               }
@@ -95,7 +117,7 @@ const ProductCodeScanner = ({ onDetected, onClose }) => {
         const handleDecoded = async (decodedText) => {
           if (detectingRef.current || cancelled) return;
           detectingRef.current = true;
-          scanner.pause(true);
+          scannerRef.current?.pause(true);
 
           const normalizedCode = String(decodedText || '').trim();
           if (normalizedCode && normalizedCode === lastAddedCodeRef.current) {
@@ -123,18 +145,46 @@ const ProductCodeScanner = ({ onDetected, onClose }) => {
           disableFlip: false,
         };
 
-        try {
-          await scanner.start(
-            { facingMode: { ideal: 'environment' } },
-            config,
-            handleDecoded,
-            () => {},
-          );
-        } catch {
-          // Some older mobile browsers reject the ideal constraint even though
-          // their default camera works, so retry without picking a camera.
-          await scanner.start({}, config, handleDecoded, () => {});
+        // Try the native BarcodeDetector path (fast, low battery) first, in
+        // both the ideal rear-camera and browser-default camera shape; if
+        // both fail, fall back to a fresh instance forced onto the pure-JS
+        // decoder — some desktop/older browsers throw constructing or
+        // running the native detector even though a camera is available.
+        const attempts = [
+          { useBarCodeDetectorIfSupported: true, cameraConfig: { facingMode: { ideal: 'environment' } } },
+          { useBarCodeDetectorIfSupported: true, cameraConfig: {} },
+          { useBarCodeDetectorIfSupported: false, cameraConfig: { facingMode: { ideal: 'environment' } } },
+          { useBarCodeDetectorIfSupported: false, cameraConfig: {} },
+        ];
+
+        // A flat-out permission denial or "no camera" fails identically no
+        // matter the detector/constraint combo — stop after the first such
+        // result instead of replaying the same permission prompt 4 times.
+        const isTerminalError = (err) =>
+          ['NotAllowedError', 'PermissionDeniedError', 'NotFoundError'].includes(err?.name);
+
+        let lastError = null;
+        for (const attempt of attempts) {
+          if (cancelled) return;
+          const instance = new Html5Qrcode(scannerIdRef.current, {
+            formatsToSupport: supportedFormats,
+            useBarCodeDetectorIfSupported: attempt.useBarCodeDetectorIfSupported,
+            verbose: false,
+          });
+          try {
+            await instance.start(attempt.cameraConfig, config, handleDecoded, () => {});
+            scanner = instance;
+            scannerRef.current = instance;
+            lastError = null;
+            break;
+          } catch (attemptError) {
+            lastError = attemptError;
+            await stopAndClear(instance);
+            if (isTerminalError(attemptError)) break;
+          }
         }
+
+        if (lastError) throw lastError;
 
         if (cancelled) {
           await stopAndClear(scanner);
@@ -142,6 +192,9 @@ const ProductCodeScanner = ({ onDetected, onClose }) => {
         }
         setStatus('Point the camera at a hair label. QR codes and barcodes both work.');
       } catch (startError) {
+        // The friendly message can't include the raw error, so log it —
+        // this is the only way to see *why* "camera could not start" fired.
+        console.error('Product code scanner failed to start:', startError);
         if (!cancelled) {
           setError(getCameraErrorMessage(startError));
           setStatus('');
