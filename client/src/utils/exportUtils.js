@@ -1,7 +1,7 @@
 import { saveAs } from 'file-saver';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import JsBarcode from 'jsbarcode';
+import QRCode from 'qrcode';
 import ExcelJS from 'exceljs';
 
 // Brand palette used consistently across every export format
@@ -302,8 +302,13 @@ const exportToPDF = (products, filename = 'products') => {
 
 // ---------------------------------------------------------------------------
 // Barcode labels — production-ready A4 sheet: 3 columns × 8 rows = 24 labels.
-// Each label is a standalone Code 128 scan target and prints its plain-text
-// reference underneath for manual lookup if a scanner is unavailable.
+// Each label is a standalone QR scan target and prints its plain-text
+// reference underneath for manual lookup if a scanner is unavailable. QR
+// over a 1D barcode specifically because every label is scanned with a
+// phone camera at the counter, not a laser gun: QR's square finder pattern
+// locks a camera decoder onto ONE code far more reliably than a 1D strip
+// when several labels sit close together on an uncut sheet (the same
+// cross-read failure mode fixed in the Sales Counter scanner itself).
 // ---------------------------------------------------------------------------
 const BARCODE_LABEL_COLUMNS = 3;
 const BARCODE_LABEL_ROWS = 8;
@@ -321,17 +326,12 @@ const barcodeLabelDetails = (product) => {
   return variant || String(product?.unit || 'Hair product');
 };
 
-const createBarcodeImage = (value) => {
-  const canvas = document.createElement('canvas');
-  JsBarcode(canvas, value, {
-    format: 'CODE128',
-    displayValue: false,
+const createQrCodeImage = (value) =>
+  QRCode.toDataURL(value, {
+    width: 300,
     margin: 0,
-    width: 2,
-    height: 44,
+    color: { dark: '#2D2233', light: '#FFFFFF' },
   });
-  return canvas.toDataURL('image/png');
-};
 
 const exportToBarcodeLabelsPDF = async (products, filename = 'nawiri-hair-barcode-labels') => {
   const allProducts = Array.isArray(products) ? products : [];
@@ -342,11 +342,6 @@ const exportToBarcodeLabelsPDF = async (products, filename = 'nawiri-hair-barcod
   const missingBarcodes = allProducts.filter((product) => !String(product?.barcode || '').trim());
   if (missingBarcodes.length) {
     throw new Error(`${missingBarcodes.length} product${missingBarcodes.length === 1 ? '' : 's'} still need a barcode. Generate barcodes before exporting labels.`);
-  }
-
-  const invalidCode128Barcodes = allProducts.filter((product) => !/^[\x20-\x7E]+$/.test(String(product?.barcode || '')));
-  if (invalidCode128Barcodes.length) {
-    throw new Error(`${invalidCode128Barcodes.length} product${invalidCode128Barcodes.length === 1 ? '' : 's'} have a barcode that Code 128 cannot print. Correct those barcode values before exporting labels.`);
   }
 
   const labelProducts = [...allProducts]
@@ -373,7 +368,7 @@ const exportToBarcodeLabelsPDF = async (products, filename = 'nawiri-hair-barcod
     const x = marginX + (column * (labelWidth + columnGap));
     const y = marginY + (row * (labelHeight + rowGap));
     const barcode = String(product.barcode).trim();
-    const barcodeImage = createBarcodeImage(barcode);
+    const qrImage = await createQrCodeImage(barcode);
 
     doc.setDrawColor(227, 213, 222);
     doc.setLineWidth(0.65);
@@ -389,19 +384,20 @@ const exportToBarcodeLabelsPDF = async (products, filename = 'nawiri-hair-barcod
     doc.setFontSize(6.8);
     doc.text(trimLabelText(barcodeLabelDetails(product), 52), x + 8, y + 22);
 
-    doc.addImage(barcodeImage, 'PNG', x + 8, y + 28, labelWidth - 16, 32);
+    // Square, not a full-width strip — kept scannable-sized and centred
+    // rather than stretched to the label width.
+    const qrSize = 40;
+    doc.addImage(qrImage, 'PNG', x + ((labelWidth - qrSize) / 2), y + 26, qrSize, qrSize);
 
     doc.setFont('courier', 'bold');
     doc.setTextColor(45, 34, 51);
     doc.setFontSize(7.3);
-    doc.text(barcode, x + (labelWidth / 2), y + 70, { align: 'center' });
+    doc.text(barcode, x + (labelWidth / 2), y + 73, { align: 'center' });
 
     doc.setFont('helvetica', 'normal');
-    doc.setTextColor(107, 45, 92);
-    doc.setFontSize(7);
-    doc.text(`KSh ${Number(product.price || 0).toLocaleString('en-KE')}`, x + 8, y + labelHeight - 8);
     doc.setTextColor(107, 96, 112);
-    doc.text('Nawiri Hair', x + labelWidth - 8, y + labelHeight - 8, { align: 'right' });
+    doc.setFontSize(7);
+    doc.text('Nawiri Hair', x + (labelWidth / 2), y + labelHeight - 8, { align: 'center' });
 
     // Yield once per page so a full 564-label export keeps the admin page responsive.
     if ((index + 1) % BARCODE_LABELS_PER_PAGE === 0) {
