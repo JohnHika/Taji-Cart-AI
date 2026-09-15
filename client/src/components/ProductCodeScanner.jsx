@@ -243,7 +243,9 @@ const ProductCodeScanner = ({ onDetected, onClose, cart = [], onIncrement, onDec
               setLastAdded(result.productId ? { productId: result.productId, productName: result.productName } : null);
               setScanFlashKey((key) => key + 1);
               setStatusTone('success');
-              vibrate(45);
+              // 45ms was too brief to reliably feel — long enough to
+              // register as a deliberate confirming buzz, not a twitch.
+              vibrate(70);
             } else {
               setStatusTone('warning');
               setLastAdded(null);
