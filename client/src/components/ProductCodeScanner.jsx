@@ -225,6 +225,10 @@ const ProductCodeScanner = ({ onDetected, onClose, cart = [], onIncrement, onDec
           if (normalizedCode && normalizedCode === lastAddedCodeRef.current) {
             vibrate(30);
             setStatusTone('duplicate');
+            // Otherwise the Undo button lingers, still offering to undo
+            // whatever was added several scans ago — confusing right below
+            // a message about this (unrelated) duplicate scan.
+            setLastAdded(null);
             setStatus('That label is already in this basket. Move to another hair piece, or use + for another identical piece.');
             resumeAfterFeedback();
             return;
@@ -242,6 +246,7 @@ const ProductCodeScanner = ({ onDetected, onClose, cart = [], onIncrement, onDec
               vibrate(45);
             } else {
               setStatusTone('warning');
+              setLastAdded(null);
               vibrate([30, 70, 30]);
             }
             // Echo the code that was actually matched — on a dense, uncut
@@ -251,6 +256,7 @@ const ProductCodeScanner = ({ onDetected, onClose, cart = [], onIncrement, onDec
             setStatus(`${result?.message || 'Added. Point at the next item.'}${codeSuffix}`);
           } catch {
             setStatusTone('warning');
+            setLastAdded(null);
             vibrate([30, 70, 30]);
             setStatus('That code could not be added. Try again or use the code field.');
           } finally {

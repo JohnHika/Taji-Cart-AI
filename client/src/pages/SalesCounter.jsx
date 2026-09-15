@@ -1089,29 +1089,32 @@ const SalesCounter = () => {
           <>
             {/* Customer details */}
             <div className="space-y-3 pt-2">
-              <div className="flex items-center gap-2 text-sm font-medium text-brown-700 dark:text-white/70">
-                <FaUser /> Walk-in customer (optional)
+              <div className="flex items-center gap-2 text-sm font-bold text-charcoal dark:text-white">
+                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-plum-100 text-plum-700 dark:bg-plum-900/40 dark:text-plum-300">
+                  <FaUser size={11} />
+                </span>
+                Walk-in customer (optional)
               </div>
               <input
                 type="text"
                 value={customerName}
                 onChange={(e) => setCustomerName(e.target.value)}
                 placeholder="Customer name"
-                className="w-full px-3 py-2 rounded-lg border border-brown-200 dark:border-dm-border bg-white dark:bg-dm-card-2 text-sm"
+                className="w-full rounded-xl border border-brown-200 bg-white px-3 py-2.5 text-sm transition-colors focus:border-plum-400 focus:outline-none focus:ring-2 focus:ring-plum-100 dark:border-dm-border dark:bg-dm-card-2 dark:focus:ring-plum-900/30"
               />
               <input
                 type="tel"
                 value={customerPhone}
                 onChange={(e) => setCustomerPhone(e.target.value)}
                 placeholder="Phone number"
-                className="w-full px-3 py-2 rounded-lg border border-brown-200 dark:border-dm-border bg-white dark:bg-dm-card-2 text-sm"
+                className="w-full rounded-xl border border-brown-200 bg-white px-3 py-2.5 text-sm transition-colors focus:border-plum-400 focus:outline-none focus:ring-2 focus:ring-plum-100 dark:border-dm-border dark:bg-dm-card-2 dark:focus:ring-plum-900/30"
               />
               <textarea
                 value={saleNote}
                 onChange={(e) => setSaleNote(e.target.value)}
                 placeholder="Note (optional)"
                 rows={2}
-                className="w-full px-3 py-2 rounded-lg border border-brown-200 dark:border-dm-border bg-white dark:bg-dm-card-2 text-sm resize-none"
+                className="w-full resize-none rounded-xl border border-brown-200 bg-white px-3 py-2.5 text-sm transition-colors focus:border-plum-400 focus:outline-none focus:ring-2 focus:ring-plum-100 dark:border-dm-border dark:bg-dm-card-2 dark:focus:ring-plum-900/30"
               />
             </div>
 
@@ -1159,14 +1162,14 @@ const SalesCounter = () => {
             {/* Cash tendered */}
             {paymentMethod === 'cash' && (
               <div className="pt-2">
-                <label className="text-sm font-medium">Amount tendered</label>
+                <label className="text-sm font-bold text-charcoal dark:text-white">Amount tendered</label>
                 <input
                   type="number"
                   min={0}
                   step={0.01}
                   value={amountTendered}
                   onChange={(e) => setAmountTendered(e.target.value)}
-                  className="w-full mt-1 px-3 py-2 rounded-lg border border-brown-200 dark:border-dm-border bg-white dark:bg-dm-card-2 text-sm"
+                  className="mt-1 w-full rounded-xl border border-brown-200 bg-white px-3 py-2.5 text-sm transition-colors focus:border-plum-400 focus:outline-none focus:ring-2 focus:ring-plum-100 dark:border-dm-border dark:bg-dm-card-2 dark:focus:ring-plum-900/30"
                 />
                 {totals.change > 0 && (
                   <p className="text-sm text-green-600 mt-1">
@@ -1180,7 +1183,7 @@ const SalesCounter = () => {
             {paymentMethod === 'split' && (
               <div className="space-y-3 pt-2">
                 <div>
-                  <p className="text-sm font-medium">Split payment amounts</p>
+                  <p className="text-sm font-bold text-charcoal dark:text-white">Split payment amounts</p>
                   <p className="mt-1 text-xs text-brown-500 dark:text-white/50">
                     Enter the amount collected through each method. The three amounts must equal the total.
                   </p>
@@ -1196,7 +1199,7 @@ const SalesCounter = () => {
                       value={splitCashAmount}
                       onChange={(e) => setSplitCashAmount(e.target.value)}
                       placeholder="0.00"
-                      className="mt-1 w-full rounded-lg border border-brown-200 bg-white px-3 py-2 text-sm dark:border-dm-border dark:bg-dm-card-2"
+                      className="mt-1 w-full rounded-xl border border-brown-200 bg-white px-3 py-2.5 text-sm transition-colors focus:border-plum-400 focus:outline-none focus:ring-2 focus:ring-plum-100 dark:border-dm-border dark:bg-dm-card-2 dark:focus:ring-plum-900/30"
                     />
                   </label>
                   <label className="text-sm font-medium">
@@ -1212,7 +1215,7 @@ const SalesCounter = () => {
                         setEquityApproved(false);
                       }}
                       placeholder="0.00"
-                      className="mt-1 w-full rounded-lg border border-brown-200 bg-white px-3 py-2 text-sm dark:border-dm-border dark:bg-dm-card-2"
+                      className="mt-1 w-full rounded-xl border border-brown-200 bg-white px-3 py-2.5 text-sm transition-colors focus:border-plum-400 focus:outline-none focus:ring-2 focus:ring-plum-100 dark:border-dm-border dark:bg-dm-card-2 dark:focus:ring-plum-900/30"
                     />
                   </label>
                   <label className="text-sm font-medium">
@@ -1228,11 +1231,11 @@ const SalesCounter = () => {
                         setForwardedTextApproved(false);
                       }}
                       placeholder="0.00"
-                      className="mt-1 w-full rounded-lg border border-brown-200 bg-white px-3 py-2 text-sm dark:border-dm-border dark:bg-dm-card-2"
+                      className="mt-1 w-full rounded-xl border border-brown-200 bg-white px-3 py-2.5 text-sm transition-colors focus:border-plum-400 focus:outline-none focus:ring-2 focus:ring-plum-100 dark:border-dm-border dark:bg-dm-card-2 dark:focus:ring-plum-900/30"
                     />
                   </label>
                 </div>
-                <div className={`rounded-lg border px-3 py-2 text-sm ${
+                <div className={`rounded-xl border px-3 py-2.5 text-sm ${
                   splitPaymentSummary.isBalanced
                     ? 'border-green-200 bg-green-50 text-green-700 dark:border-green-900/40 dark:bg-green-950/20 dark:text-green-300'
                     : 'border-gold-200 bg-gold-50 text-gold-700 dark:border-gold-900/40 dark:bg-gold-950/20 dark:text-gold-300'
@@ -1256,7 +1259,7 @@ const SalesCounter = () => {
             {/* Equity proof photo + cashier approval */}
             {showEquityProof && (
               <div className="pt-2">
-                <label className="text-sm font-medium">Equity SMS confirmation</label>
+                <label className="text-sm font-bold text-charcoal dark:text-white">Equity SMS confirmation</label>
                 <input
                   ref={equityProofInputRef}
                   id="equity-proof-input-sales-counter"
@@ -1272,7 +1275,7 @@ const SalesCounter = () => {
                   // on a display:none input gets silently blocked on iOS.
                   <label
                     htmlFor="equity-proof-input-sales-counter"
-                    className={`mt-1 flex w-full items-center justify-center gap-2 rounded-lg border border-dashed border-brown-300 py-3 text-sm font-medium text-brown-600 transition-colors hover:bg-brown-50 dark:border-dm-border dark:text-white/70 dark:hover:bg-dm-card-2 ${equityProofUploading ? 'pointer-events-none opacity-60' : 'cursor-pointer'}`}
+                    className={`mt-1 flex w-full items-center justify-center gap-2 rounded-xl border-2 border-dashed border-plum-200 bg-plum-50/40 py-3.5 text-sm font-bold text-plum-700 transition-colors hover:border-plum-300 hover:bg-plum-50 dark:border-dm-border dark:bg-dm-card-2 dark:text-gold-300 dark:hover:bg-dm-card ${equityProofUploading ? 'pointer-events-none opacity-60' : 'cursor-pointer'}`}
                   >
                     <FaCamera />
                     {equityProofUploading
@@ -1281,7 +1284,7 @@ const SalesCounter = () => {
                   </label>
                 ) : (
                   <div className="mt-1 space-y-2">
-                    <div className="relative overflow-hidden rounded-lg border border-brown-200 dark:border-dm-border">
+                    <div className="relative overflow-hidden rounded-xl border border-brown-200 dark:border-dm-border">
                       <img src={equityProofUrl} alt="Equity payment confirmation" className="max-h-40 w-full object-contain bg-white" />
                       {equityProofUploading && (
                         <span className="absolute left-1.5 top-1.5 inline-flex items-center gap-1.5 rounded-full bg-plum-700/90 px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-white">
@@ -1300,7 +1303,7 @@ const SalesCounter = () => {
                         </button>
                       )}
                     </div>
-                    <label className="flex items-start gap-2.5 rounded-lg border border-brown-100 bg-white p-2.5 text-sm dark:border-dm-border dark:bg-dm-card-2">
+                    <label className="flex items-start gap-2.5 rounded-xl border border-brown-100 bg-white p-3 text-sm transition-colors hover:border-brown-200 dark:border-dm-border dark:bg-dm-card-2">
                       <input
                         type="checkbox"
                         checked={equityApproved}
@@ -1326,7 +1329,7 @@ const SalesCounter = () => {
             {hasForwardedTextPayment && (
               <div className="pt-2">
                 <div className="flex items-center justify-between">
-                  <label className="text-sm font-medium">Forwarded confirmation message</label>
+                  <label className="text-sm font-bold text-charcoal dark:text-white">Forwarded confirmation message</label>
                   {forwardedText.trim() && (
                     <button
                       type="button"
@@ -1345,11 +1348,11 @@ const SalesCounter = () => {
                   }}
                   placeholder="Paste the M-Pesa/bank confirmation message forwarded to you here…"
                   rows={4}
-                  className="w-full mt-1 px-3 py-2 rounded-lg border border-brown-200 dark:border-dm-border bg-white dark:bg-dm-card-2 text-sm resize-none"
+                  className="mt-1 w-full resize-none rounded-xl border border-brown-200 bg-white px-3 py-2.5 text-sm transition-colors focus:border-plum-400 focus:outline-none focus:ring-2 focus:ring-plum-100 dark:border-dm-border dark:bg-dm-card-2 dark:focus:ring-plum-900/30"
                 />
                 {forwardedText.trim() && (
                   <div className="mt-2 space-y-2">
-                    <label className="flex items-start gap-2.5 rounded-lg border border-brown-100 bg-white p-2.5 text-sm dark:border-dm-border dark:bg-dm-card-2">
+                    <label className="flex items-start gap-2.5 rounded-xl border border-brown-100 bg-white p-3 text-sm transition-colors hover:border-brown-200 dark:border-dm-border dark:bg-dm-card-2">
                       <input
                         type="checkbox"
                         checked={forwardedTextApproved}
