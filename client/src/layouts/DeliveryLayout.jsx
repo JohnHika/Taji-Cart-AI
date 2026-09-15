@@ -3,6 +3,7 @@ import { useSelector } from 'react-redux';
 import { Navigate, Outlet } from 'react-router-dom';
 import DeliveryNavigation from '../components/DeliveryNavigation';
 import Footer from '../components/Footer';
+import '../styles/operations.css';
 
 const DeliveryLayout = () => {
   const user = useSelector(state => state.user);
@@ -23,7 +24,7 @@ const DeliveryLayout = () => {
   }
   
   return (
-    <div className="flex flex-col min-h-screen bg-ivory dark:bg-dm-surface">
+    <div className="operations-shell flex flex-col min-h-screen bg-ivory dark:bg-dm-surface">
       <DeliveryNavigation />
       <main className="flex-grow container mx-auto w-full max-w-full overflow-x-hidden px-3 py-4 sm:px-4 sm:py-6 pb-24 lg:pb-6">
         <Outlet />

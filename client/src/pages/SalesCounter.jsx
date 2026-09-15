@@ -1457,7 +1457,7 @@ const SalesCounter = () => {
   );
 
   return (
-    <div className="min-h-screen bg-ivory dark:bg-dm-surface text-charcoal dark:text-white lg:flex">
+    <div className="operations-shell min-h-screen bg-ivory dark:bg-dm-surface text-charcoal dark:text-white lg:flex">
       {isMobile ? (
         <div className="flex-1">
           {/* Fixed top chrome: back/title, search, categories — stays pinned regardless of scroll depth */}

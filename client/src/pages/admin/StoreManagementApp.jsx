@@ -30,6 +30,7 @@ import {
   INTERACTIVE_TOUR_STEPS, getSavedTourState, saveTourState,
 } from './store/interactiveTour';
 import '../../styles/store-intelligence.css';
+import '../../styles/operations.css';
 
 // Bumping this key forces the guide to auto-open again for every admin even
 // if they've dismissed an older version -- only do that when the content
@@ -468,7 +469,7 @@ const StoreManagementWorkspace = () => {
   // it the same way the rest of the app already does.
   if (area === 'assistant') {
     return (
-      <div className={`store-intelligence ${themeClass}`}>
+      <div className={`operations-shell store-intelligence ${themeClass}`}>
         <CommandPalette areas={paletteAreas} onSelect={jumpTo} />
         {guide}
         {tour}
@@ -493,7 +494,7 @@ const StoreManagementWorkspace = () => {
   }
 
   return (
-    <div className={`store-intelligence ${themeClass}`}>
+    <div className={`operations-shell store-intelligence ${themeClass}`}>
       <CommandPalette areas={paletteAreas} onSelect={jumpTo} />
       {guide}
       {tour}

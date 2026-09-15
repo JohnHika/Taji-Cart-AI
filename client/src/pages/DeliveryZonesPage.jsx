@@ -19,6 +19,7 @@ const DeliveryZonesPage = () => {
     const [openConfirmBoxDeactivate, setOpenConfirmBoxDeactivate] = useState(false)
     const [deactivateZone, setDeactivateZone] = useState({ _id: "" })
     const [searchTerm, setSearchTerm] = useState('')
+    const [error, setError] = useState('')
 
     const fetchZones = async () => {
         try {
@@ -31,8 +32,10 @@ const DeliveryZonesPage = () => {
 
             if (responseData.success) {
                 setZoneData(responseData.data)
+                setError('')
             }
         } catch (error) {
+            setError(error.response?.data?.message || 'Delivery zones could not be loaded.')
             AxiosToastError(error)
         } finally {
             setLoading(false)
@@ -80,14 +83,14 @@ const DeliveryZonesPage = () => {
     }, [filteredZones])
 
     return (
-        <section className="bg-ivory dark:bg-dm-surface min-h-screen transition-colors duration-200">
+        <section className="operations-shell bg-ivory dark:bg-dm-surface min-h-screen transition-colors duration-200">
             {/* Header with title, search and add button */}
             <div className="bg-white dark:bg-dm-card shadow-md p-4 sticky top-0 z-10 transition-colors duration-200">
                 <div className="container mx-auto flex flex-col md:flex-row items-center justify-between gap-3">
                     <h2 className="text-xl font-semibold dark:text-white transition-colors duration-200">Delivery Zones (Bike Fare Chart)</h2>
 
                     {/* Search input */}
-                    <div className="relative flex-grow max-w-md">
+                    <div className="relative w-full max-w-md flex-grow md:w-auto">
                         <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                             <FaSearch className="text-brown-400 dark:text-white/40 transition-colors duration-200" />
                         </div>
@@ -111,7 +114,13 @@ const DeliveryZonesPage = () => {
 
             {/* Main content */}
             <div className="container mx-auto p-4">
-                {!loading && filteredZones.length === 0 && <NoData />}
+                {!loading && error && (
+                    <div className="mb-6 rounded-xl border border-red-200 bg-red-50 p-5 text-center text-red-700 dark:border-red-900/40 dark:bg-red-900/20 dark:text-red-200">
+                        <p className="text-sm font-semibold">{error}</p>
+                        <button type="button" onClick={fetchZones} className="mt-4 min-h-[44px] rounded-lg bg-red-700 px-4 py-2 text-sm font-semibold text-white hover:bg-red-800">Try again</button>
+                    </div>
+                )}
+                {!loading && !error && filteredZones.length === 0 && <NoData />}
 
                 <div className="grid gap-6">
                     {groupedZones.map(([corridor, zones]) => (

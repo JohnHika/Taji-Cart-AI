@@ -1,0 +1,158 @@
+/* Shared interaction and layout guardrails for authenticated operations screens.
+   Keep this scoped: customer/public pages intentionally keep their own rhythm. */
+.operations-shell {
+  --ops-focus: #c9943a;
+  min-width: 0;
+  min-height: 100dvh;
+  max-width: 100%;
+  overflow-x: clip;
+  overflow-wrap: anywhere;
+}
+
+.operations-shell *,
+.operations-mobile-chrome * {
+  box-sizing: border-box;
+}
+
+.operations-shell > *,
+.operations-shell .flex > *,
+.operations-shell .grid > *,
+.operations-mobile-chrome * {
+  min-width: 0;
+}
+
+.operations-shell img,
+.operations-shell svg,
+.operations-shell video,
+.operations-shell canvas {
+  max-width: 100%;
+}
+
+.operations-shell .container {
+  width: 100%;
+  max-width: 100%;
+}
+
+.operations-shell :where(input, select, textarea) {
+  max-width: 100%;
+}
+
+.operations-shell :where(button, a, input, select, textarea):focus-visible,
+.operations-mobile-chrome :where(button, a):focus-visible {
+  outline: 2px solid var(--ops-focus);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px rgba(201, 148, 58, 0.2);
+}
+
+.operations-shell :where([class~="min-h-screen"]) {
+  min-height: 100dvh;
+}
+
+.operations-shell :where([class~="h-screen"]) {
+  height: 100dvh;
+}
+
+.operations-shell :where([class~="max-h-screen"]) {
+  max-height: 100dvh;
+}
+
+.operations-shell :where([role="dialog"]) {
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+}
+
+.operations-shell :where(.overflow-x-auto) {
+  max-width: 100%;
+  overscroll-behavior-inline: contain;
+  scrollbar-color: #b98ca9 transparent;
+  scrollbar-width: thin;
+}
+
+.operations-shell :where(table) {
+  max-width: 100%;
+}
+
+.dark .operations-shell :where(th) {
+  color: rgba(255, 255, 255, 0.78);
+}
+
+.dark .operations-shell :where(td) {
+  border-color: #3a2030;
+}
+
+.operations-shell :where(form) {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.operations-shell :where([class~="sticky"]) {
+  isolation: isolate;
+}
+
+@media (max-width: 767px) {
+  .operations-shell :where(button, a) {
+    min-height: 44px;
+  }
+
+  .operations-shell :where(input, select, textarea) {
+    min-height: 44px;
+  }
+
+  .operations-mobile-chrome :where(button, a) {
+    min-height: 44px;
+  }
+
+  /* Existing mobile card views remain in control where a page provides one;
+     dense tables get a contained horizontal reading surface. */
+  .operations-shell :where(table) {
+    font-size: 0.8125rem;
+    white-space: nowrap;
+  }
+
+  .operations-shell :where(.overflow-x-auto) {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .operations-shell :where([class~="w-[360px]"]),
+  .operations-shell :where([class~="w-[380px]"]),
+  .operations-shell :where([class~="w-[400px]"]),
+  .operations-shell :where([class~="w-[420px]"]) {
+    width: min(100%, 28rem);
+  }
+
+  .operations-shell :where([class~="max-h-[90vh]"]),
+  .operations-shell :where([class~="max-h-[92vh]"]),
+  .operations-shell :where([class~="max-h-[86vh]"]) {
+    max-height: min(92dvh, 48rem);
+  }
+
+  .operations-shell :where([class~="max-h-[calc(100vh-2rem)]"]) {
+    max-height: calc(100dvh - 2rem);
+  }
+
+  .operations-shell :where([class~="min-w-[540px]"]),
+  .operations-shell :where([class~="min-w-[560px]"]),
+  .operations-shell :where([class~="min-w-[620px]"]),
+  .operations-shell :where([class~="min-w-[680px]"]),
+  .operations-shell :where([class~="min-w-[840px]"]) {
+    max-width: none;
+  }
+
+  .operations-shell :where([class~="fixed"][class~="bottom-0"]) {
+    padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .operations-shell *,
+  .operations-mobile-chrome * {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
+}
+
+.dark .operations-shell {
+  --ops-focus: #e8c478;
+}

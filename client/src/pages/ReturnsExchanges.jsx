@@ -560,7 +560,7 @@ const ReturnsExchanges = () => {
   );
 
   return (
-    <div className="min-h-screen bg-ivory dark:bg-dm-surface text-charcoal dark:text-white pb-16">
+    <div className="operations-shell min-h-screen bg-ivory dark:bg-dm-surface text-charcoal dark:text-white pb-16">
       {/* Header */}
       <div className="sticky top-0 z-30 border-b border-brown-100 bg-white shadow-sm dark:border-dm-border dark:bg-dm-card">
         <div className="flex items-center gap-3 px-3 py-3 sm:px-4">

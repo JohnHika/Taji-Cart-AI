@@ -647,14 +647,14 @@ const POSDashboard = () => {
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center min-h-screen">
+      <div className="operations-shell flex justify-center items-center min-h-screen">
         <LoadingSpinner size="large" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen w-full max-w-full overflow-x-hidden bg-brown-50 dark:bg-dm-surface p-4 pb-24 lg:pb-6">
+    <div className="operations-shell min-h-screen w-full max-w-full overflow-x-hidden bg-brown-50 dark:bg-dm-surface p-4 pb-24 lg:pb-6">
       {/* Header */}
       <div className="mb-5 overflow-hidden rounded-3xl bg-gradient-to-br from-[#351126] via-plum-800 to-[#704352] p-5 text-white shadow-lg sm:p-6">
         <div className="flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">

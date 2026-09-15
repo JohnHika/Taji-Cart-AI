@@ -116,11 +116,11 @@ const ProductAdmin = () => {
   },[search])
   
   return (
-    <section className='min-h-screen dark:bg-dm-surface'>
-        <div className='p-2 bg-white dark:bg-dm-card border-b border-brown-100 dark:border-dm-border shadow-md flex items-center justify-between gap-4'>
+    <section className='operations-shell min-h-screen dark:bg-dm-surface'>
+        <div className='flex flex-col items-stretch gap-3 border-b border-brown-100 bg-white p-3 shadow-md dark:border-dm-border dark:bg-dm-card sm:flex-row sm:items-center sm:justify-between sm:gap-4'>
                 <h2 className='font-semibold dark:text-white'>Product</h2>
-                <div className='flex items-center gap-4'>
-                  <div className='h-full min-w-24 max-w-56 w-full bg-plum-50 dark:bg-dm-card-2 px-4 flex items-center gap-3 py-2 rounded border focus-within:border-plum-500 dark:border-dm-border dark:focus-within:border-plum-400'>
+                <div className='flex w-full min-w-0 flex-col gap-3 sm:w-auto sm:flex-row sm:items-center sm:gap-4'>
+                  <div className='flex min-h-[44px] w-full min-w-0 max-w-none items-center gap-3 rounded border border-brown-200 bg-plum-50 px-4 py-2 focus-within:border-plum-500 dark:border-dm-border dark:bg-dm-card-2 dark:focus-within:border-plum-400 sm:max-w-56'>
                     <IoSearchOutline size={25} className="dark:text-white/55"/>
                     <input
                       type='text'

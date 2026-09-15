@@ -4,6 +4,7 @@ import { useSelector } from 'react-redux';
 import { Link } from 'react-router-dom';
 import { nawiriBrand } from '../config/brand';
 import isadmin from '../utils/isAdmin';
+import isStaff from '../utils/isStaff';
 import AdminMenu from './AdminMenu';
 import UserMenu from './UserMenu';
 
@@ -14,7 +15,9 @@ import UserMenu from './UserMenu';
 const DashboardMobileHeader = () => {
   const [open, setOpen] = useState(false);
   const user = useSelector((s) => s.user);
-  const isAdmin = isadmin(user.role);
+  const isAdmin = isadmin(user);
+  const isUserStaff = isStaff(user) && !isAdmin;
+  const roleLabel = isAdmin ? 'Admin workspace' : isUserStaff ? 'Staff workspace' : 'My account';
 
   useEffect(() => {
     if (open) document.body.style.overflow = 'hidden';
@@ -28,22 +31,23 @@ const DashboardMobileHeader = () => {
 
   return (
     <>
-      <header className="lg:hidden sticky top-0 z-30 flex items-center justify-between gap-3 px-4 h-14 border-b border-brown-100 dark:border-dm-border bg-ivory dark:bg-dm-surface shadow-sm">
+      <header className="operations-mobile-chrome lg:hidden sticky top-0 z-30 flex items-center justify-between gap-3 px-4 h-14 border-b border-brown-100 dark:border-dm-border bg-ivory dark:bg-dm-surface shadow-sm">
         <Link
           to="/"
           className="text-sm font-semibold text-plum-700 dark:text-plum-200 hover:text-plum-600 dark:hover:text-plum-100 shrink-0"
         >
           ← Shop
         </Link>
-        <Link to="/" className="flex-1 flex justify-center min-w-0" onClick={closeMenu}>
+        <Link to="/" className="flex min-w-0 flex-1 flex-col items-center justify-center leading-none" onClick={closeMenu}>
           <div className="rounded-2xl bg-white px-2 py-1 shadow-sm">
             <img
               src={nawiriBrand.logo}
               alt="Nawiri Hair"
               className="h-9 w-auto max-w-[140px] object-contain object-center"
             />
-          </div>
-        </Link>
+            </div>
+            <span className="mt-0.5 max-w-full truncate text-[10px] font-semibold uppercase tracking-[0.12em] text-brown-500 dark:text-white/50">{roleLabel}</span>
+          </Link>
         <button
           type="button"
           onClick={() => setOpen(true)}
@@ -61,9 +65,9 @@ const DashboardMobileHeader = () => {
             aria-hidden
             onClick={closeMenu}
           />
-          <div className="lg:hidden fixed top-0 right-0 h-full w-[min(100%,20rem)] z-50 bg-white dark:bg-dm-card border-l border-brown-100 dark:border-dm-border shadow-hover flex flex-col animate-slide-in-right">
+          <div className="operations-mobile-chrome lg:hidden fixed top-0 right-0 h-full w-[min(100%,20rem)] z-50 bg-white dark:bg-dm-card border-l border-brown-100 dark:border-dm-border shadow-hover flex flex-col animate-slide-in-right">
             <div className="flex items-center justify-between p-4 border-b border-brown-100 dark:border-dm-border">
-              <span className="font-semibold text-charcoal dark:text-white text-sm">Menu</span>
+              <span className="font-semibold text-charcoal dark:text-white text-sm">{roleLabel}</span>
               <button
                 type="button"
                 onClick={closeMenu}

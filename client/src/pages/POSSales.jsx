@@ -15,10 +15,12 @@ const POSSales = () => {
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [selected, setSelected] = useState(null);
+  const [loadError, setLoadError] = useState('');
 
   const loadSales = async () => {
     try {
       setLoading(true);
+      setLoadError('');
       const params = new URLSearchParams({ page, limit: 20, includeItems: 'true' });
       if (startDate) params.append('startDate', startDate);
       if (endDate) params.append('endDate', endDate);
@@ -27,9 +29,12 @@ const POSSales = () => {
       if (res.data.success) {
         setSales(res.data.data || []);
         setPages(res.data.pagination?.pages || 1);
+      } else {
+        setLoadError(res.data.message || 'Sales history could not be loaded.');
       }
     } catch (error) {
       console.error('Error loading sales', error);
+      setLoadError(error.response?.data?.message || 'Sales history could not be loaded.');
     } finally {
       setLoading(false);
     }
@@ -73,8 +78,22 @@ const POSSales = () => {
     );
   }
 
+  if (loadError) {
+    return (
+      <div className="operations-shell mobile-page-shell min-h-screen bg-brown-50 dark:bg-dm-surface">
+        <div className="mobile-surface mx-auto max-w-lg p-6 text-center">
+          <h1 className="text-lg font-bold text-charcoal dark:text-white">Sales history is unavailable</h1>
+          <p className="mt-2 text-sm leading-6 text-brown-500 dark:text-white/60">{loadError}</p>
+          <button type="button" onClick={loadSales} className="mt-5 min-h-[44px] rounded-xl bg-plum-700 px-5 py-2.5 text-sm font-semibold text-white hover:bg-plum-800">
+            Try again
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="mobile-page-shell min-h-screen bg-brown-50 dark:bg-dm-surface">
+    <div className="operations-shell mobile-page-shell min-h-screen bg-brown-50 dark:bg-dm-surface">
       <div className="mb-4 flex flex-col gap-3">
         <h1 className="text-xl sm:text-2xl font-bold text-charcoal dark:text-white">Sales History</h1>
         

@@ -4,6 +4,7 @@ import AdminMenu from '../components/AdminMenu'
 import UserMenu from '../components/UserMenu'
 import isadmin from '../utils/isAdmin'
 import { getPOSOverflowClass } from '../utils/posLayout'
+import '../styles/operations.css'
 
 const Dashboard = () => {
   const user = useSelector(state => state.user)
@@ -20,7 +21,7 @@ const Dashboard = () => {
   };
   
   return (
-    <section className={`w-full max-w-full bg-ivory dark:bg-dm-surface transition-colors duration-200 ${isPOSFullScreen ? '' : 'lg:h-[100dvh] lg:overflow-hidden'}`}>
+    <section className={`operations-shell w-full max-w-full bg-ivory dark:bg-dm-surface transition-colors duration-200 ${isPOSFullScreen ? '' : 'lg:h-[100dvh] lg:overflow-hidden'}`}>
         <div className={`${isPOSFullScreen ? 'grid w-full max-w-full grid-cols-1 p-0' : 'mx-auto grid w-full max-w-full items-start p-0 sm:p-2 lg:h-full lg:grid-cols-[minmax(0,248px)_minmax(0,1fr)] lg:gap-3 lg:p-3 lg:overflow-hidden'}`}>
                 {!isPOSFullScreen && (
                   <aside className='hidden min-w-0 lg:block lg:h-full lg:overflow-hidden'>

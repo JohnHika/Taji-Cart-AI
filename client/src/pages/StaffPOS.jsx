@@ -1288,7 +1288,7 @@ const StaffPOS = () => {
   }, [parkCurrentSale]);
 
   return (
-    <div className="min-h-screen bg-ivory dark:bg-dm-surface">
+    <div className="operations-shell min-h-screen bg-ivory dark:bg-dm-surface">
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap');
         @page { size: 80mm auto; margin: 0; }

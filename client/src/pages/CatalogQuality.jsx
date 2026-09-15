@@ -76,7 +76,7 @@ const CatalogQuality = () => {
   const copy = getCatalogVisibilityCopy(hideIncompleteProducts);
 
   return (
-    <main className="min-h-screen bg-ivory px-3 py-4 dark:bg-dm-surface sm:px-5 sm:py-6">
+    <main className="operations-shell min-h-screen bg-ivory px-3 py-4 dark:bg-dm-surface sm:px-5 sm:py-6">
       <div className="mx-auto max-w-6xl">
         <motion.header {...getCatalogQualityMotion(reduceMotion, 0)} className="mb-5 rounded-card border border-brown-100 bg-white p-4 shadow-sm dark:border-dm-border dark:bg-dm-card sm:p-6">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
