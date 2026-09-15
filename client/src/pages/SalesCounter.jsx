@@ -280,6 +280,9 @@ const SalesCounter = () => {
   };
 
   const holdSale = async () => {
+    // Same double-tap race as completeSale below — a synchronous guard
+    // rather than relying solely on the button's disabled={holding} timing.
+    if (holding) return;
     if (cart.length === 0) {
       toast.error('Add at least one product before holding this sale.');
       return;
@@ -667,6 +670,11 @@ const SalesCounter = () => {
   };
 
   const completeSale = async () => {
+    // The Charge button's disabled={submitting} only takes effect after a
+    // React re-render — a fast double-tap can land both clicks before that
+    // happens. This guard is synchronous, so it closes that race outright
+    // rather than relying on the DOM attribute's timing.
+    if (submitting) return;
     if (cart.length === 0) {
       toast.error('Add at least one product to the basket.');
       return;
