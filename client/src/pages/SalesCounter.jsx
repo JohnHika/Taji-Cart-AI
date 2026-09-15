@@ -4,18 +4,27 @@ import QRCode from 'qrcode';
 import {
   FaArrowLeft,
   FaBarcode,
+  FaBoxOpen,
   FaCamera,
+  FaCheck,
   FaCheckCircle,
   FaClock,
+  FaCommentDots,
   FaCopy,
+  FaCreditCard,
+  FaGlobe,
+  FaLayerGroup,
   FaMinus,
+  FaMoneyBillWave,
   FaPause,
   FaPlus,
   FaPrint,
   FaSearch,
   FaShoppingBasket,
+  FaStore,
   FaTimes,
   FaTrash,
+  FaTruck,
   FaUser,
 } from 'react-icons/fa';
 import { useSelector } from 'react-redux';
@@ -39,16 +48,16 @@ import { isWholesaleEligible } from '../utils/wholesalePricing';
 import { nawiriBrand } from '../config/brand';
 
 const PAYMENT_METHODS = [
-  { id: 'cash', label: 'Cash', color: 'bg-green-600' },
-  { id: 'equity', label: 'Equity', color: 'bg-gold-600' },
-  { id: 'split', label: 'Split', color: 'bg-plum-600' },
-  { id: 'text_forwarded', label: 'Text Forwarded', color: 'bg-blue-600' },
+  { id: 'cash', label: 'Cash', icon: FaMoneyBillWave },
+  { id: 'equity', label: 'Equity', icon: FaCreditCard },
+  { id: 'split', label: 'Split', icon: FaLayerGroup },
+  { id: 'text_forwarded', label: 'Text Forwarded', icon: FaCommentDots },
 ];
 
 const FULFILLMENT_TYPES = [
-  { id: 'in_store', label: 'In-Store' },
-  { id: 'pickup', label: 'Pickup Later' },
-  { id: 'delivery', label: 'Delivery' },
+  { id: 'in_store', label: 'In-Store', icon: FaStore },
+  { id: 'pickup', label: 'Pickup Later', icon: FaBoxOpen },
+  { id: 'delivery', label: 'Delivery', icon: FaTruck },
 ];
 
 const paymentMethodLabel = (method) =>
@@ -939,48 +948,67 @@ const SalesCounter = () => {
   const orderPanelContent = (
     <>
       {/* Walk-in vs Online — is the customer here in person, or is this a
-          website/WhatsApp order being recorded/paid for at the counter? */}
-      <div className="grid grid-cols-2 gap-1.5 border-b border-brown-100 p-3 dark:border-dm-border">
-        <button
-          type="button"
-          onClick={() => setSaleSource('walkin')}
-          className={`flex min-h-[44px] items-center justify-center gap-1.5 rounded-full px-2 text-xs font-semibold transition-colors active:scale-[0.97] ${
-            saleSource === 'walkin'
-              ? 'bg-gold-500 text-white'
-              : 'bg-brown-100 text-brown-700 dark:bg-dm-border dark:text-white/70'
-          }`}
-        >
-          Walk-in
-        </button>
-        <button
-          type="button"
-          onClick={() => setSaleSource('online')}
-          className={`flex min-h-[44px] items-center justify-center gap-1.5 rounded-full px-2 text-xs font-semibold transition-colors active:scale-[0.97] ${
-            saleSource === 'online'
-              ? 'bg-plum-700 text-white'
-              : 'bg-brown-100 text-brown-700 dark:bg-dm-border dark:text-white/70'
-          }`}
-        >
-          Online
-        </button>
+          website/WhatsApp order being recorded/paid for at the counter?
+          A sliding segmented control, not flat toggle buttons — the active
+          choice glides into place instead of just swapping colour. */}
+      <div className="border-b border-brown-100 p-3 dark:border-dm-border">
+        <div className="relative flex rounded-2xl bg-brown-100 p-1 dark:bg-dm-border">
+          <span
+            aria-hidden="true"
+            className={`absolute inset-y-1 rounded-xl shadow-sm transition-all duration-300 ease-out ${
+              saleSource === 'walkin' ? 'bg-gold-500' : 'bg-plum-700'
+            }`}
+            style={{
+              left: saleSource === 'walkin' ? '4px' : 'calc(4px + (100% - 8px) / 2)',
+              width: 'calc((100% - 8px) / 2)',
+            }}
+          />
+          {[
+            { id: 'walkin', label: 'Walk-in', icon: FaUser },
+            { id: 'online', label: 'Online', icon: FaGlobe },
+          ].map(({ id, label, icon: Icon }) => (
+            <button
+              key={id}
+              type="button"
+              onClick={() => setSaleSource(id)}
+              className={`relative z-10 flex min-h-[44px] flex-1 items-center justify-center gap-1.5 rounded-xl text-xs font-bold transition-colors active:scale-[0.97] ${
+                saleSource === id ? 'text-white' : 'text-brown-600 dark:text-white/60'
+              }`}
+            >
+              <Icon size={12} /> {label}
+            </button>
+          ))}
+        </div>
       </div>
 
-      {/* Order type */}
-      <div className="grid grid-cols-3 gap-1.5 border-b border-brown-100 p-3 dark:border-dm-border">
-        {FULFILLMENT_TYPES.map((f) => (
-          <button
-            key={f.id}
-            type="button"
-            onClick={() => setFulfillmentType(f.id)}
-            className={`min-h-[44px] rounded-full px-2 text-xs font-semibold transition-colors active:scale-[0.97] ${
-              fulfillmentType === f.id
-                ? 'bg-plum-700 text-white'
-                : 'bg-brown-100 text-brown-700 dark:bg-dm-border dark:text-white/70'
-            }`}
-          >
-            {f.label}
-          </button>
-        ))}
+      {/* Order type — same sliding-segment treatment, 3-wide. */}
+      <div className="border-b border-brown-100 p-3 dark:border-dm-border">
+        <div className="relative flex rounded-2xl bg-brown-100 p-1 dark:bg-dm-border">
+          <span
+            aria-hidden="true"
+            className="absolute inset-y-1 rounded-xl bg-plum-700 shadow-sm transition-all duration-300 ease-out"
+            style={{
+              left: `calc(4px + ${FULFILLMENT_TYPES.findIndex((f) => f.id === fulfillmentType)} * (100% - 8px) / 3)`,
+              width: 'calc((100% - 8px) / 3)',
+            }}
+          />
+          {FULFILLMENT_TYPES.map((f) => {
+            const Icon = f.icon;
+            return (
+              <button
+                key={f.id}
+                type="button"
+                onClick={() => setFulfillmentType(f.id)}
+                className={`relative z-10 flex min-h-[44px] flex-1 flex-col items-center justify-center gap-0.5 rounded-xl px-1 text-[11px] font-bold transition-colors active:scale-[0.97] ${
+                  fulfillmentType === f.id ? 'text-white' : 'text-brown-600 dark:text-white/60'
+                }`}
+              >
+                <Icon size={13} />
+                {f.label}
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       <div className="flex-1 space-y-4 overflow-y-auto p-4">
@@ -1087,29 +1115,44 @@ const SalesCounter = () => {
               />
             </div>
 
-            {/* Payment method */}
+            {/* Payment method — real cards with an icon and a clear
+                selected state, not flat colour pills. */}
             <div className="pt-2">
-              <p className="text-sm font-medium mb-2">Payment method</p>
+              <p className="mb-2 text-sm font-bold text-charcoal dark:text-white">Payment method</p>
               <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-                {PAYMENT_METHODS.map((m) => (
-                  <button
-                    key={m.id}
-                    onClick={() => {
-                      setPaymentMethod(m.id);
-                      setAmountTendered(m.id === 'cash' ? '' : totals.total.toFixed(2));
-                      if (m.id !== 'split') {
-                        setSplitCashAmount('');
-                        setSplitEquityAmount('');
-                        setSplitTextForwardedAmount('');
-                      }
-                    }}
-                    className={`min-h-[44px] rounded-lg text-sm font-medium text-white transition-opacity active:scale-[0.97] ${m.color} ${
-                      paymentMethod === m.id ? 'opacity-100 ring-2 ring-offset-1 ring-gold-400' : 'opacity-70'
-                    }`}
-                  >
-                    {m.label}
-                  </button>
-                ))}
+                {PAYMENT_METHODS.map((m) => {
+                  const Icon = m.icon;
+                  const active = paymentMethod === m.id;
+                  return (
+                    <button
+                      key={m.id}
+                      type="button"
+                      onClick={() => {
+                        setPaymentMethod(m.id);
+                        setAmountTendered(m.id === 'cash' ? '' : totals.total.toFixed(2));
+                        if (m.id !== 'split') {
+                          setSplitCashAmount('');
+                          setSplitEquityAmount('');
+                          setSplitTextForwardedAmount('');
+                        }
+                      }}
+                      className={`relative flex min-h-[72px] flex-col items-center justify-center gap-1.5 rounded-xl border-2 px-2 py-2 text-xs font-bold transition-all active:scale-[0.97] ${
+                        active
+                          ? 'border-transparent bg-plum-800 text-white shadow-hover dark:bg-plum-700'
+                          : 'border-brown-200 bg-white text-brown-600 hover:border-brown-300 dark:border-dm-border dark:bg-dm-card-2 dark:text-white/60'
+                      }`}
+                      aria-pressed={active}
+                    >
+                      {active && (
+                        <span className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-gold-400 text-charcoal shadow-sm">
+                          <FaCheck size={9} />
+                        </span>
+                      )}
+                      <Icon size={17} className={active ? 'text-gold-300' : 'text-brown-400 dark:text-white/40'} />
+                      {m.label}
+                    </button>
+                  );
+                })}
               </div>
             </div>
 
@@ -1331,8 +1374,8 @@ const SalesCounter = () => {
       </div>
 
       {/* Totals + checkout */}
-      <div className="p-4 border-t border-brown-100 dark:border-dm-border bg-plum-50/30 dark:bg-dm-card-2">
-        <div className="space-y-1 text-sm mb-3">
+      <div className="border-t border-brown-100 bg-gradient-to-b from-plum-50/50 to-transparent p-4 dark:border-dm-border dark:from-dm-card-2 dark:to-transparent">
+        <div className="mb-3 space-y-1 text-sm">
           <div className="flex justify-between">
             <span className="text-brown-500 dark:text-white/60">Subtotal</span>
             <span>{DisplayPriceInShillings(totals.subtotal)}</span>
@@ -1343,9 +1386,9 @@ const SalesCounter = () => {
               <span>{DisplayPriceInShillings(deliveryCharge)}</span>
             </div>
           )}
-          <div className="flex justify-between text-base font-bold pt-1 border-t border-brown-200 dark:border-dm-border">
-            <span>Total</span>
-            <span className="text-plum-700 dark:text-plum-300">
+          <div className="flex items-baseline justify-between border-t border-brown-200 pt-2 dark:border-dm-border">
+            <span className="text-sm font-bold text-charcoal dark:text-white">Total due</span>
+            <span className="text-2xl font-black tabular-nums text-plum-700 dark:text-gold-300">
               {DisplayPriceInShillings(totals.total)}
             </span>
           </div>
@@ -1355,7 +1398,7 @@ const SalesCounter = () => {
             onClick={holdSale}
             disabled={cart.length === 0 || holding || submitting}
             title="Park this sale to serve another customer, and resume it later"
-            className="shrink-0 min-h-[48px] bg-white border border-brown-300 hover:bg-brown-50 active:scale-[0.97] disabled:opacity-50 disabled:hover:bg-white disabled:active:scale-100 text-brown-700 font-bold py-3 px-4 rounded-xl flex items-center justify-center gap-2 transition-all dark:bg-dm-card dark:border-dm-border dark:text-white/80 dark:hover:bg-dm-card-2"
+            className="shrink-0 min-h-[52px] bg-white border border-brown-300 hover:bg-brown-50 active:scale-[0.97] disabled:opacity-50 disabled:hover:bg-white disabled:active:scale-100 text-brown-700 font-bold py-3 px-4 rounded-xl flex items-center justify-center gap-2 transition-all dark:bg-dm-card dark:border-dm-border dark:text-white/80 dark:hover:bg-dm-card-2"
           >
             <FaPause size={13} />
             {holding ? '…' : 'Hold'}
@@ -1370,9 +1413,18 @@ const SalesCounter = () => {
               (hasEquityPayment && (!equityProofUrl || !equityApproved)) ||
               (hasForwardedTextPayment && (!forwardedText.trim() || !forwardedTextApproved))
             }
-            className="flex-1 min-h-[48px] bg-gold-500 hover:bg-gold-600 active:scale-[0.98] disabled:bg-brown-300 disabled:active:scale-100 text-white font-bold py-3 rounded-xl flex items-center justify-center gap-2 transition-all"
+            className="flex flex-1 min-h-[52px] items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-gold-500 to-gold-400 py-3 font-bold text-charcoal shadow-hover transition-all active:scale-[0.98] hover:from-gold-400 hover:to-gold-300 disabled:from-brown-300 disabled:to-brown-300 disabled:text-white disabled:shadow-none disabled:active:scale-100"
           >
-            {submitting ? 'Processing…' : equityProofUploading ? 'Saving photo…' : `Charge ${DisplayPriceInShillings(totals.total)}`}
+            {submitting ? (
+              'Processing…'
+            ) : equityProofUploading ? (
+              'Saving photo…'
+            ) : (
+              <>
+                <FaCheckCircle size={16} />
+                Charge {DisplayPriceInShillings(totals.total)}
+              </>
+            )}
           </button>
         </div>
       </div>
