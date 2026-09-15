@@ -187,7 +187,7 @@ const router = createBrowserRouter([
       },
       {
         path: 'sales-counter',
-        element: <PrivateRoute requireStaff={true}>{S(StaffPOS)}</PrivateRoute>,
+        element: <PrivateRoute requireStaff={true}><Navigate to="/dashboard/sales-counter" replace /></PrivateRoute>,
       },
 
       // Category routes

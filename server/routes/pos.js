@@ -127,6 +127,11 @@ const withExchangeData = (sale, exchangeByNumber) => {
 router.get('/products/lookup', auth, Staff, requireStaffPermission('pos.open_counter'), async (req, res) => {
   try {
     const rawCode = String(req.query.code || '').trim();
+    // Camera/manual code entry must never fall back to a product-name search:
+    // a QR payload that merely contains a name could otherwise add the wrong
+    // hair item. Keep the legacy name lookup available for older Staff POS
+    // screens unless the caller opts into this strict scan contract.
+    const strictCodeLookup = ['1', 'true'].includes(String(req.query.strict || '').toLowerCase());
 
     if (!rawCode) {
       return res.status(400).json({ success: false, message: 'Barcode, QR code, or SKU is required' });
@@ -144,6 +149,13 @@ router.get('/products/lookup', auth, Staff, requireStaffPermission('pos.open_cou
 
     if (exactCodeMatch) {
       return res.json({ success: true, data: exactCodeMatch });
+    }
+
+    if (strictCodeLookup) {
+      return res.status(404).json({
+        success: false,
+        message: 'No product matches that barcode, QR code, or SKU'
+      });
     }
 
     const exactName = await Product.findOne({

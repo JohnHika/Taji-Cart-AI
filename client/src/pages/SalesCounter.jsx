@@ -3,6 +3,7 @@ import toast from 'react-hot-toast';
 import QRCode from 'qrcode';
 import {
   FaArrowLeft,
+  FaBarcode,
   FaCamera,
   FaCheckCircle,
   FaClock,
@@ -22,6 +23,7 @@ import { useNavigate } from 'react-router-dom';
 import SummaryApi from '../common/SummaryApi';
 import DeliveryModeSelector from '../components/DeliveryModeSelector';
 import LoadingSpinner from '../components/LoadingSpinner';
+import ProductCodeScanner from '../components/ProductCodeScanner';
 import useMobile from '../hooks/useMobile';
 import Axios from '../utils/Axios';
 import AxiosToastError from '../utils/AxiosToastError';
@@ -29,6 +31,8 @@ import uploadImage from '../utils/UploadImage';
 import { compressImage } from '../utils/compressImage';
 import { DisplayPriceInShillings } from '../utils/DisplayPriceInShillings';
 import { calculateSalesCounterTotals } from '../utils/salesCounterTotals';
+import { addProductToSalesCounterCart } from '../utils/salesCounterCart';
+import { findProductByScannedCode, normalizeProductCode } from '../utils/productCodeLookup';
 import { buildSplitPaymentRows, getSplitPaymentSummary, shouldShowEquityProof } from '../utils/splitPayment';
 import { isWholesaleEligible } from '../utils/wholesalePricing';
 import { nawiriBrand } from '../config/brand';
@@ -98,10 +102,22 @@ const SalesCounter = () => {
   const [search, setSearch] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
+  const [showProductScanner, setShowProductScanner] = useState(false);
+  const [lookingUpScannedCode, setLookingUpScannedCode] = useState(false);
 
   const restoredDraft = useRef(loadDraft()).current;
 
   const [cart, setCart] = useState(() => restoredDraft?.cart || []);
+  // Camera and hardware scanners can submit a second code before React has
+  // committed the first render. Keep the authoritative in-tab cart in a ref,
+  // update it synchronously, then render the same snapshot so stock caps are
+  // applied to every rapid add rather than a stale closure.
+  const cartRef = useRef(restoredDraft?.cart || []);
+  const replaceCart = (nextCart) => {
+    const normalizedCart = Array.isArray(nextCart) ? nextCart : [];
+    cartRef.current = normalizedCart;
+    setCart(normalizedCart);
+  };
   const [showCart, setShowCart] = useState(false);
   const [fulfillmentType, setFulfillmentType] = useState(() => restoredDraft?.fulfillmentType || 'in_store');
   // Walk-in = customer is physically at the counter right now. Online = this
@@ -308,7 +324,7 @@ const SalesCounter = () => {
     }
     try {
       setResumingId(heldSale._id);
-      setCart(heldSale.cart || []);
+      replaceCart(heldSale.cart || []);
       setCustomerName(heldSale.customerName || '');
       setCustomerPhone(heldSale.customerPhone || '');
       setSaleNote(heldSale.saleNote || '');
@@ -390,49 +406,102 @@ const SalesCounter = () => {
   const hasMoreProducts = visibleCount < allProductsSource.length;
 
   const addToCart = (product) => {
-    if (!product.price || product.price <= 0) {
-      toast.error(`${product.name} has no price set.`);
-      return;
+    const result = addProductToSalesCounterCart(cartRef.current, product);
+    if (!result.added) {
+      toast.error(result.message);
+      return false;
     }
-    // stock === null/undefined means untracked inventory — always allowed.
-    if (product.stock != null && product.stock <= 0) {
-      toast.error(`${product.name} is out of stock.`);
-      return;
+
+    replaceCart(result.cart);
+    toast.success(result.message);
+    return true;
+  };
+
+  // The scanner always resolves through the protected lookup endpoint first,
+  // so the label's current product data is used even if this counter tab has
+  // been open for a while. A local exact-code lookup is only an offline
+  // fallback; checkout still validates stock on the server before charging.
+  const addProductByCode = async (rawCode) => {
+    const code = normalizeProductCode(rawCode);
+    if (!code) {
+      const message = 'Enter or scan a barcode, QR code, or SKU first.';
+      toast.error(message);
+      return { added: false, message };
     }
-    setCart((prev) => {
-      const existing = prev.find((i) => i._id === product._id);
-      if (existing) {
-        if (product.stock != null && existing.quantity + 1 > product.stock) {
-          toast.error(`Only ${product.stock} of ${product.name} left in stock.`);
-          return prev;
+
+    if (lookingUpScannedCode) {
+      return { added: false, message: 'Finishing the previous scan…' };
+    }
+
+    setLookingUpScannedCode(true);
+    try {
+      let product;
+      try {
+        const response = await Axios({
+          url: `/api/pos/products/lookup?code=${encodeURIComponent(code)}&strict=true`,
+          method: 'GET',
+        });
+        product = response.data?.success ? response.data.data : null;
+      } catch (error) {
+        // A network failure may still leave a currently-loaded catalog usable.
+        // Do not use a local fallback for a server-side "not found" response:
+        // that would let a deleted product look sellable in this tab.
+        if (!error?.response) {
+          product = findProductByScannedCode(products, code);
         }
-        return prev.map((i) =>
-          i._id === product._id ? { ...i, quantity: i.quantity + 1 } : i
-        );
+        if (!product) {
+          const message = error?.response?.data?.message || 'Could not look up that label. Check the connection and try again.';
+          toast.error(message);
+          return { added: false, message };
+        }
       }
-      return [...prev, { ...product, quantity: 1 }];
-    });
-    toast.success(`${product.name} added`);
+
+      if (!product) {
+        const message = 'No product matches that barcode, QR code, or SKU.';
+        toast.error(message);
+        return { added: false, message };
+      }
+
+      setProducts((previous) => {
+        const exists = previous.some((item) => item._id === product._id);
+        return exists
+          ? previous.map((item) => (item._id === product._id ? { ...item, ...product } : item))
+          : [product, ...previous];
+      });
+
+      const added = addToCart(product);
+      const message = added
+        ? `${product.name} added. Point at the next item.`
+        : `${product.name} was not added.`;
+      return { added, message };
+    } finally {
+      setLookingUpScannedCode(false);
+    }
+  };
+
+  const handleProductCodeSubmit = async (event) => {
+    event.preventDefault();
+    const result = await addProductByCode(search);
+    if (result.added) setSearch('');
   };
 
   const updateQty = (id, delta) => {
-    setCart((prev) =>
-      prev
-        .map((i) => {
-          if (i._id !== id) return i;
-          const nextQty = i.quantity + delta;
-          if (delta > 0 && i.stock != null && nextQty > i.stock) {
-            toast.error(`Only ${i.stock} of ${i.name} left in stock.`);
-            return i;
-          }
-          return { ...i, quantity: nextQty };
-        })
-        .filter((i) => i.quantity > 0)
-    );
+    const nextCart = cartRef.current
+      .map((item) => {
+        if (item._id !== id) return item;
+        const nextQty = item.quantity + delta;
+        if (delta > 0 && item.stock != null && nextQty > item.stock) {
+          toast.error(`Only ${item.stock} of ${item.name} left in stock.`);
+          return item;
+        }
+        return { ...item, quantity: nextQty };
+      })
+      .filter((item) => item.quantity > 0);
+    replaceCart(nextCart);
   };
 
   const removeItem = (id) => {
-    setCart((prev) => prev.filter((i) => i._id !== id));
+    replaceCart(cartRef.current.filter((item) => item._id !== id));
   };
 
   // Wholesale eligibility is basket-wide: total quantity across every line,
@@ -495,7 +564,7 @@ const SalesCounter = () => {
 
   const resetSale = () => {
     clearDraft();
-    setCart([]);
+    replaceCart([]);
     setShowCart(false);
     setFulfillmentType('in_store');
     setSaleSource('walkin');
@@ -1411,18 +1480,40 @@ const SalesCounter = () => {
               </button>
             </div>
 
-            {/* Search */}
-            <div className="relative px-3 pt-1">
+            {/* Search, manual code entry, and phone camera scanner */}
+            <form onSubmit={handleProductCodeSubmit} className="relative px-3 pt-1">
               <FaSearch className="absolute left-6 top-1/2 -translate-y-1/2 text-brown-400 text-sm" />
               <input
                 ref={searchRef}
                 type="text"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search product, SKU or barcode..."
-                className="w-full min-h-[44px] pl-9 pr-4 py-2 rounded-lg border border-brown-200 dark:border-dm-border bg-plum-50/50 dark:bg-dm-card-2 text-sm focus:outline-none focus:border-plum-500"
+                placeholder="Search, scan, or enter SKU..."
+                enterKeyHint="done"
+                autoComplete="off"
+                className="w-full min-h-[44px] pl-9 pr-24 py-2 rounded-lg border border-brown-200 dark:border-dm-border bg-plum-50/50 dark:bg-dm-card-2 text-sm focus:outline-none focus:border-plum-500"
               />
-            </div>
+              <div className="absolute right-4 top-1/2 flex -translate-y-1/2 items-center gap-1">
+                <button
+                  type="submit"
+                  disabled={lookingUpScannedCode || !search.trim()}
+                  className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-plum-700 transition-colors hover:bg-plum-100 disabled:opacity-40 dark:text-plum-300 dark:hover:bg-dm-border"
+                  aria-label="Add entered barcode, QR code, or SKU"
+                  title="Add entered code"
+                >
+                  <FaBarcode size={15} />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowProductScanner(true)}
+                  className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-plum-700 text-white transition-colors hover:bg-plum-800"
+                  aria-label="Open phone camera scanner"
+                  title="Scan hair label with camera"
+                >
+                  <FaCamera size={14} />
+                </button>
+              </div>
+            </form>
 
             {/* Categories */}
             <div className="flex gap-1.5 overflow-x-auto px-3 pb-2 pt-2 scrollbar-hide">
@@ -1538,17 +1629,39 @@ const SalesCounter = () => {
               <span className="font-bold tabular-nums text-plum-700 dark:text-gold-300">{itemCount} items · {DisplayPriceInShillings(totals.total)}</span>
             </div>
 
-            {/* Search */}
-            <div className="relative px-3 pt-2 sm:px-4">
-              <FaSearch className="absolute left-6 top-1/2 -translate-y-1/2 text-brown-400 text-sm" />
+            {/* Search, manual code entry, and phone camera scanner */}
+            <form onSubmit={handleProductCodeSubmit} className="relative px-3 pt-2 sm:px-4">
+              <FaSearch className="absolute left-6 top-1/2 -translate-y-1/2 text-brown-400 text-sm sm:left-7" />
               <input
                 type="text"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search product, SKU or barcode..."
-                className="w-full pl-9 pr-4 py-2 rounded-lg border border-brown-200 dark:border-dm-border bg-plum-50/50 dark:bg-dm-card-2 text-sm focus:outline-none focus:border-plum-500"
+                placeholder="Search, scan, or enter SKU..."
+                enterKeyHint="done"
+                autoComplete="off"
+                className="w-full min-h-[44px] pl-9 pr-24 py-2 rounded-lg border border-brown-200 dark:border-dm-border bg-plum-50/50 dark:bg-dm-card-2 text-sm focus:outline-none focus:border-plum-500"
               />
-            </div>
+              <div className="absolute right-4 top-1/2 flex -translate-y-1/2 items-center gap-1 sm:right-5">
+                <button
+                  type="submit"
+                  disabled={lookingUpScannedCode || !search.trim()}
+                  className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-plum-700 transition-colors hover:bg-plum-100 disabled:opacity-40 dark:text-plum-300 dark:hover:bg-dm-border"
+                  aria-label="Add entered barcode, QR code, or SKU"
+                  title="Add entered code"
+                >
+                  <FaBarcode size={15} />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowProductScanner(true)}
+                  className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-plum-700 text-white transition-colors hover:bg-plum-800"
+                  aria-label="Open phone camera scanner"
+                  title="Scan hair label with camera"
+                >
+                  <FaCamera size={14} />
+                </button>
+              </div>
+            </form>
 
             {/* Categories */}
             <div className="flex gap-1.5 overflow-x-auto px-3 pb-2 pt-2 scrollbar-hide sm:px-4">
@@ -1634,6 +1747,13 @@ const SalesCounter = () => {
             {orderPanelContent}
           </div>
         </div>
+      )}
+
+      {showProductScanner && (
+        <ProductCodeScanner
+          onDetected={addProductByCode}
+          onClose={() => setShowProductScanner(false)}
+        />
       )}
 
       {/* Completed sale receipt overlay */}

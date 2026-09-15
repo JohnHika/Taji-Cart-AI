@@ -39,6 +39,7 @@
     "framer-motion": "^12.42.2",
     "geolib": "^3.3.4",
     "html2canvas": "^1.4.1",
+    "html5-qrcode": "^2.3.8",
     "js-cookie": "^3.0.5",
     "jsbarcode": "^3.12.3",
     "jspdf": "^4.2.1",
