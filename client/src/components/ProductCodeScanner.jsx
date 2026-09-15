@@ -1,6 +1,8 @@
 /* eslint-disable react/prop-types */
-import { useEffect, useId, useRef, useState } from 'react';
-import { FaCamera, FaTimes } from 'react-icons/fa';
+import { useEffect, useId, useMemo, useRef, useState } from 'react';
+import { FaCamera, FaShoppingBasket, FaTimes } from 'react-icons/fa';
+import CartItemRow from './CartItemRow';
+import { DisplayPriceInShillings } from '../utils/DisplayPriceInShillings';
 
 const SCAN_FORMAT_NAMES = [
   'QR_CODE',
@@ -14,6 +16,13 @@ const SCAN_FORMAT_NAMES = [
   'UPC_A',
   'UPC_E',
 ];
+
+// How long we'll wait for the opened camera to actually paint a frame
+// before treating it as failed. html5-qrcode's start() can resolve
+// successfully (permission granted, stream attached) while the <video>
+// element never renders anything — a silent "blank camera" failure mode
+// that's otherwise indistinguishable from "still loading".
+const VIDEO_FRAME_TIMEOUT_MS = 4000;
 
 // html5-qrcode doesn't always reject with a proper DOMException — it often
 // rejects with a plain string, or with a generic Error/TypeError from its
@@ -40,7 +49,7 @@ const getCameraErrorMessage = (error) => {
   return 'The camera could not start. You can still type, paste, or use a hardware scanner.';
 };
 
-const ProductCodeScanner = ({ onDetected, onClose }) => {
+const ProductCodeScanner = ({ onDetected, onClose, cart = [], onIncrement, onDecrement, onRemove, onCheckout }) => {
   const generatedId = useId();
   const scannerIdRef = useRef(`sales-counter-scanner-${generatedId.replace(/[^a-zA-Z0-9_-]/g, '')}`);
   const scannerRef = useRef(null);
@@ -50,6 +59,12 @@ const ProductCodeScanner = ({ onDetected, onClose }) => {
   const onCloseRef = useRef(onClose);
   const [status, setStatus] = useState('Opening the rear camera…');
   const [error, setError] = useState('');
+
+  const itemCount = useMemo(() => cart.reduce((sum, item) => sum + item.quantity, 0), [cart]);
+  const cartTotal = useMemo(
+    () => cart.reduce((sum, item) => sum + item.effectivePrice * item.quantity, 0),
+    [cart],
+  );
 
   useEffect(() => {
     onDetectedRef.current = onDetected;
@@ -62,6 +77,7 @@ const ProductCodeScanner = ({ onDetected, onClose }) => {
   useEffect(() => {
     let cancelled = false;
     let scanner;
+    let frameWatchdog;
 
     const stopAndClear = async (instance) => {
       if (!instance) return;
@@ -191,6 +207,22 @@ const ProductCodeScanner = ({ onDetected, onClose }) => {
           return;
         }
         setStatus('Point the camera at a hair label. QR codes and barcodes both work.');
+
+        // start() resolving isn't proof the feed is actually visible — watch
+        // for a real frame to land, and surface an explicit error instead of
+        // leaving a dead black box behind a cheerful "point the camera" line.
+        const videoEl = document.getElementById(scannerIdRef.current)?.querySelector('video');
+        if (videoEl) {
+          const markFrameArrived = () => window.clearTimeout(frameWatchdog);
+          videoEl.addEventListener('loadeddata', markFrameArrived, { once: true });
+          frameWatchdog = window.setTimeout(() => {
+            if (!cancelled && videoEl.videoWidth === 0) {
+              console.error('Product code scanner: camera opened but no video frame arrived within', VIDEO_FRAME_TIMEOUT_MS, 'ms');
+              setError('Camera opened but no picture is showing. Close this and try again, or use the code field below.');
+              setStatus('');
+            }
+          }, VIDEO_FRAME_TIMEOUT_MS);
+        }
       } catch (startError) {
         // The friendly message can't include the raw error, so log it —
         // this is the only way to see *why* "camera could not start" fired.
@@ -207,6 +239,7 @@ const ProductCodeScanner = ({ onDetected, onClose }) => {
     return () => {
       cancelled = true;
       detectingRef.current = false;
+      window.clearTimeout(frameWatchdog);
       const instance = scannerRef.current;
       scannerRef.current = null;
       stopAndClear(instance);
@@ -215,41 +248,85 @@ const ProductCodeScanner = ({ onDetected, onClose }) => {
 
   return (
     <div className="fixed inset-0 z-[70] flex items-end bg-black/60 sm:items-center sm:justify-center sm:p-4" role="dialog" aria-modal="true" aria-labelledby="product-code-scanner-title">
-      <div className="w-full rounded-t-2xl bg-white p-4 shadow-2xl dark:bg-dm-card sm:max-w-md sm:rounded-2xl">
-        <div className="mb-3 flex items-start justify-between gap-3">
-          <div>
-            <h2 id="product-code-scanner-title" className="flex items-center gap-2 text-lg font-bold text-charcoal dark:text-white">
-              <FaCamera className="text-plum-700 dark:text-gold-300" /> Scan hair label
-            </h2>
-            <p className="mt-0.5 text-xs text-brown-500 dark:text-white/50">
-              Add each scanned hair piece directly to this order.
+      <div className="flex max-h-[92dvh] w-full flex-col rounded-t-2xl bg-white shadow-2xl dark:bg-dm-card sm:max-h-[85vh] sm:max-w-md sm:rounded-2xl">
+        <div className="shrink-0 p-4 pb-0">
+          <div className="mb-3 flex items-start justify-between gap-3">
+            <div>
+              <h2 id="product-code-scanner-title" className="flex items-center gap-2 text-lg font-bold text-charcoal dark:text-white">
+                <FaCamera className="text-plum-700 dark:text-gold-300" /> Scan hair label
+              </h2>
+              <p className="mt-0.5 text-xs text-brown-500 dark:text-white/50">
+                Add each scanned hair piece directly to this order.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => onCloseRef.current?.()}
+              className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-brown-200 text-brown-700 transition-colors hover:bg-brown-50 dark:border-dm-border dark:text-white/70 dark:hover:bg-dm-card-2"
+              aria-label="Close camera scanner"
+            >
+              <FaTimes />
+            </button>
+          </div>
+
+          <div className="overflow-hidden rounded-xl border border-plum-200 bg-black dark:border-dm-border">
+            <div id={scannerIdRef.current} className="min-h-[190px] [&_video]:h-[190px] [&_video]:w-full [&_video]:object-cover" />
+          </div>
+
+          {error ? (
+            <p className="mt-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-900/50 dark:bg-red-950/30 dark:text-red-300">
+              {error}
+            </p>
+          ) : (
+            <p aria-live="polite" className="mt-3 rounded-lg bg-plum-50 px-3 py-2 text-sm text-plum-800 dark:bg-dm-card-2 dark:text-plum-200">
+              {status}
+            </p>
+          )}
+        </div>
+
+        {/* Live basket — grows as labels are scanned, quantity adjustable
+            right here without closing the camera. */}
+        <div className="mt-3 flex min-h-0 flex-1 flex-col border-t border-brown-100 dark:border-dm-border">
+          <div className="flex shrink-0 items-center justify-between px-4 pt-3 pb-2">
+            <p className="text-sm font-bold text-charcoal dark:text-white">
+              This order · {itemCount} item{itemCount === 1 ? '' : 's'}
+            </p>
+            <p className="text-sm font-bold tabular-nums text-plum-700 dark:text-gold-300">
+              {DisplayPriceInShillings(cartTotal)}
             </p>
           </div>
-          <button
-            type="button"
-            onClick={() => onCloseRef.current?.()}
-            className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-brown-200 text-brown-700 transition-colors hover:bg-brown-50 dark:border-dm-border dark:text-white/70 dark:hover:bg-dm-card-2"
-            aria-label="Close camera scanner"
-          >
-            <FaTimes />
-          </button>
+          <div className="flex-1 space-y-2 overflow-y-auto px-4 pb-3">
+            {cart.length === 0 ? (
+              <div className="rounded-xl border border-dashed border-brown-200 px-4 py-8 text-center text-sm text-brown-500 dark:border-dm-border dark:text-white/50">
+                Nothing scanned yet — point the camera at a hair label to add it here.
+              </div>
+            ) : (
+              cart.map((item) => (
+                <CartItemRow
+                  key={item._id}
+                  item={item}
+                  onIncrement={onIncrement}
+                  onDecrement={onDecrement}
+                  onRemove={onRemove}
+                />
+              ))
+            )}
+          </div>
+
+          {cart.length > 0 && (
+            <div className="shrink-0 border-t border-brown-100 p-3 dark:border-dm-border">
+              <button
+                type="button"
+                onClick={() => onCheckout?.()}
+                className="flex min-h-[48px] w-full items-center justify-center gap-2 rounded-xl bg-gold-500 text-sm font-bold text-charcoal transition-colors hover:bg-gold-400"
+              >
+                <FaShoppingBasket /> View basket & checkout
+              </button>
+            </div>
+          )}
         </div>
 
-        <div className="overflow-hidden rounded-xl border border-plum-200 bg-black dark:border-dm-border">
-          <div id={scannerIdRef.current} className="min-h-[260px] [&_video]:h-[260px] [&_video]:w-full [&_video]:object-cover" />
-        </div>
-
-        {error ? (
-          <p className="mt-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-900/50 dark:bg-red-950/30 dark:text-red-300">
-            {error}
-          </p>
-        ) : (
-          <p aria-live="polite" className="mt-3 rounded-lg bg-plum-50 px-3 py-2 text-sm text-plum-800 dark:bg-dm-card-2 dark:text-plum-200">
-            {status}
-          </p>
-        )}
-
-        <p className="mt-3 text-xs leading-relaxed text-brown-500 dark:text-white/50">
+        <p className="shrink-0 px-4 pb-3 text-xs leading-relaxed text-brown-500 dark:text-white/50">
           Keep the label inside the frame and hold steady. If the label has no code, close this and search or enter its SKU manually.
         </p>
       </div>
