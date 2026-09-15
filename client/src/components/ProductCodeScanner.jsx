@@ -429,9 +429,19 @@ const ProductCodeScanner = ({ onDetected, onClose, cart = [], onIncrement, onDec
         <div className="absolute inset-0 bg-gradient-to-b from-plum-900 via-charcoal to-charcoal" />
       )}
 
-      {/* Top bar — above the reticle's dimming spotlight (z-10) so it never
-          gets muddied by it. */}
-      <div className="safe-area-top absolute inset-x-0 top-0 z-20 flex items-center justify-between gap-3 p-4">
+      {/* Foreground UI as ONE flex column — not three independently
+          absolutely-positioned layers guessing at each other's size. That
+          was the actual bug behind the reticle/basket overlap: the reticle
+          was centered across the FULL screen with zero awareness of how
+          tall the top bar or bottom stack actually were, so on a shorter
+          viewport (or a taller bottom stack) they could collide. Here the
+          top bar and bottom stack take their natural height first, and the
+          middle (flex-1) reticle section only ever centers within whatever
+          space is actually left over — overlap becomes impossible by
+          construction, not just hidden in one specific state. */}
+      <div className="relative z-10 flex h-full flex-col">
+        {/* Top bar */}
+        <div className="safe-area-top flex items-center justify-between gap-3 p-4">
         <h2
           id="product-code-scanner-title"
           className="glass-dark flex items-center gap-2 rounded-full px-4 py-2.5 text-sm font-bold text-white"
@@ -463,21 +473,22 @@ const ProductCodeScanner = ({ onDetected, onClose, cart = [], onIncrement, onDec
         </div>
       </div>
 
-      {/* Animated scan reticle — sized to match the real decode region
-          (SCAN_BOX_WIDTH/HEIGHT above), not just decorative. The box-shadow
-          spread dims everything OUTSIDE the box (the classic scanner
-          "spotlight" look — iOS Camera's QR mode, WhatsApp, Google Pay all
-          do this) instead of just the top/bottom edges. */}
-      {/* Fades out while the basket drawer is expanded — the reticle is
-          centered across the whole screen with no awareness of how tall the
-          drawer has grown, so an expanded drawer can grow right into it. The
-          cashier's attention is on the basket at that point anyway. */}
-      {!error && (
-        <div
-          className={`pointer-events-none absolute inset-0 z-10 flex flex-col items-center justify-center transition-opacity duration-300 ${
-            basketExpanded ? 'opacity-0' : 'opacity-100'
-          }`}
-        >
+        {/* Animated scan reticle — sized to match the real decode region
+            (SCAN_BOX_WIDTH/HEIGHT above), not just decorative. The box-shadow
+            spread dims everything OUTSIDE the box (the classic scanner
+            "spotlight" look — iOS Camera's QR mode, WhatsApp, Google Pay all
+            do this) instead of just the top/bottom edges. min-h-0 lets this
+            flex-1 section actually shrink (its default min-height is auto,
+            which otherwise refuses to shrink below the box's own size and
+            would push the bottom stack off-screen instead of overlapping).
+            Still fades out while the drawer's expanded, since a squeezed-flat
+            reticle reads worse than no reticle. */}
+        {!error && (
+          <div
+            className={`pointer-events-none flex min-h-0 flex-1 flex-col items-center justify-center overflow-hidden transition-opacity duration-300 ${
+              basketExpanded ? 'opacity-0' : 'opacity-100'
+            }`}
+          >
           <div
             className="relative rounded-xl shadow-[0_0_0_9999px_rgba(0,0,0,0.5)]"
             style={{ width: SCAN_BOX_WIDTH, height: SCAN_BOX_HEIGHT }}
@@ -501,10 +512,9 @@ const ProductCodeScanner = ({ onDetected, onClose, cart = [], onIncrement, onDec
         </div>
       )}
 
-      {/* Status/error, and the basket — pinned to the bottom, stacked so
-          neither needs a hand-measured offset from the other. Above the
-          reticle's dimming spotlight (z-10) for the same reason as the top bar. */}
-      <div className="safe-area-bottom absolute inset-x-0 bottom-0 z-20 flex flex-col gap-2.5 px-3 pb-3">
+        {/* Status/error, and the basket — a normal flex-column sibling of
+            the reticle now, not a competing absolutely-positioned layer. */}
+        <div className="safe-area-bottom flex shrink-0 flex-col gap-2.5 px-3 pb-3">
         {error ? (
           <div className="glass-dark rounded-2xl border-l-4 border-red-400/70 px-4 py-3">
             <p className="text-sm font-medium text-red-300">{error}</p>
@@ -611,6 +621,7 @@ const ProductCodeScanner = ({ onDetected, onClose, cart = [], onIncrement, onDec
             </div>
           )}
         </div>
+      </div>
       </div>
     </div>
   );
