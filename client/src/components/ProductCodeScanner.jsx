@@ -1,8 +1,19 @@
 /* eslint-disable react/prop-types */
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
-import { FaCamera, FaChevronDown, FaChevronUp, FaShoppingBasket, FaTimes } from 'react-icons/fa';
+import { FaBolt, FaCamera, FaChevronDown, FaChevronUp, FaShoppingBasket, FaTimes } from 'react-icons/fa';
 import CartItemRow from './CartItemRow';
 import { DisplayPriceInShillings } from '../utils/DisplayPriceInShillings';
+
+// Short tactile confirmation so a cashier doesn't have to watch the screen
+// for every single scan — standard on native scanner apps. No-ops silently
+// where the Vibration API isn't available (iOS Safari, some browsers).
+const vibrate = (pattern) => {
+  try {
+    navigator.vibrate?.(pattern);
+  } catch {
+    // Best-effort only.
+  }
+};
 
 // Mirrors the html5-qrcode `qrbox` size below in real px so the on-screen
 // reticle is a true representation of the region actually being decoded,
@@ -90,6 +101,11 @@ const ProductCodeScanner = ({ onDetected, onClose, cart = [], onIncrement, onDec
   // The basket starts tucked away as a peek bar so the camera owns the
   // screen; tapping it slides the full itemised list up over the feed.
   const [basketExpanded, setBasketExpanded] = useState(false);
+  // Torch/flashlight — only some devices + browsers expose this (checked
+  // via getRunningTrackCapabilities() once the camera is live), so the
+  // button only renders once we know it'll actually do something.
+  const [torchSupported, setTorchSupported] = useState(false);
+  const [torchOn, setTorchOn] = useState(false);
 
   const itemCount = useMemo(() => cart.reduce((sum, item) => sum + item.quantity, 0), [cart]);
   const cartTotal = useMemo(
@@ -109,11 +125,33 @@ const ProductCodeScanner = ({ onDetected, onClose, cart = [], onIncrement, onDec
     onDecrementRef.current = onDecrement;
   }, [onDecrement]);
 
+  // This is a full-screen overlay — without this, a stray swipe can scroll
+  // (or pull-to-refresh) the Sales Counter page underneath it, which would
+  // silently lose the scan session. Same pattern as the mobile nav drawer.
+  useEffect(() => {
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, []);
+
   const handleUndoLastScan = () => {
     if (!lastAdded) return;
     onDecrementRef.current?.(lastAdded.productId);
     setStatus(`Removed ${lastAdded.productName}. Point at the correct item.`);
     setLastAdded(null);
+  };
+
+  const handleToggleTorch = async () => {
+    const instance = scannerRef.current;
+    if (!instance) return;
+    const nextOn = !torchOn;
+    try {
+      await instance.applyVideoConstraints({ advanced: [{ torch: nextOn }] });
+      setTorchOn(nextOn);
+    } catch (torchError) {
+      console.error('Product code scanner: failed to toggle torch:', torchError);
+    }
   };
 
   useEffect(() => {
@@ -181,6 +219,7 @@ const ProductCodeScanner = ({ onDetected, onClose, cart = [], onIncrement, onDec
 
           const normalizedCode = String(decodedText || '').trim();
           if (normalizedCode && normalizedCode === lastAddedCodeRef.current) {
+            vibrate(30);
             setStatus('That label is already in this basket. Move to another hair piece, or use + for another identical piece.');
             resumeAfterFeedback();
             return;
@@ -193,6 +232,9 @@ const ProductCodeScanner = ({ onDetected, onClose, cart = [], onIncrement, onDec
               lastAddedCodeRef.current = normalizedCode;
               setLastAdded(result.productId ? { productId: result.productId, productName: result.productName } : null);
               setScanFlashKey((key) => key + 1);
+              vibrate(45);
+            } else {
+              vibrate([30, 70, 30]);
             }
             // Echo the code that was actually matched — on a dense, uncut
             // label sheet this is what lets a cashier catch a wrong pickup
@@ -200,6 +242,7 @@ const ProductCodeScanner = ({ onDetected, onClose, cart = [], onIncrement, onDec
             const codeSuffix = result?.added && result?.barcode ? ` (code ${result.barcode})` : '';
             setStatus(`${result?.message || 'Added. Point at the next item.'}${codeSuffix}`);
           } catch {
+            vibrate([30, 70, 30]);
             setStatus('That code could not be added. Try again or use the code field.');
           } finally {
             resumeAfterFeedback();
@@ -296,6 +339,15 @@ const ProductCodeScanner = ({ onDetected, onClose, cart = [], onIncrement, onDec
         }
         setStatus('Point the camera at a hair label. QR codes and barcodes both work.');
 
+        // Not every device/browser exposes torch control — only show the
+        // button once we know toggling it will actually do something.
+        try {
+          const capabilities = scanner.getRunningTrackCapabilities?.();
+          if (capabilities?.torch) setTorchSupported(true);
+        } catch {
+          // Capability probing is best-effort; scanning still works without it.
+        }
+
         // start() resolving isn't proof the feed is actually visible — watch
         // for a real frame to land, and surface an explicit error instead of
         // leaving a dead black box behind a cheerful "point the camera" line.
@@ -342,7 +394,7 @@ const ProductCodeScanner = ({ onDetected, onClose, cart = [], onIncrement, onDec
 
   return (
     <div
-      className="fixed inset-0 z-[70] overflow-hidden bg-charcoal"
+      className="fixed inset-0 z-[70] touch-manipulation overflow-hidden overscroll-contain bg-charcoal"
       role="dialog"
       aria-modal="true"
       aria-labelledby="product-code-scanner-title"
@@ -375,14 +427,29 @@ const ProductCodeScanner = ({ onDetected, onClose, cart = [], onIncrement, onDec
         >
           <FaCamera className="text-gold-300" /> Scan hair label
         </h2>
-        <button
-          type="button"
-          onClick={() => onCloseRef.current?.()}
-          className="glass-dark press inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-white"
-          aria-label="Close camera scanner"
-        >
-          <FaTimes />
-        </button>
+        <div className="flex items-center gap-2">
+          {torchSupported && (
+            <button
+              type="button"
+              onClick={handleToggleTorch}
+              className={`press inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full transition-colors ${
+                torchOn ? 'bg-gold-400 text-charcoal' : 'glass-dark text-white'
+              }`}
+              aria-pressed={torchOn}
+              aria-label={torchOn ? 'Turn off flashlight' : 'Turn on flashlight'}
+            >
+              <FaBolt />
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={() => onCloseRef.current?.()}
+            className="glass-dark press inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-white"
+            aria-label="Close camera scanner"
+          >
+            <FaTimes />
+          </button>
+        </div>
       </div>
 
       {/* Animated scan reticle — sized to match the real decode region
