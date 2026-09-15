@@ -80,14 +80,18 @@ const DashboardProduct = () => {
     return price - discountAmount;
   };
 
+  // Returns the fetched list (not just setting state) so callers that need
+  // the data immediately -- exports, chiefly -- don't have to work around
+  // setState's async timing by reading the (possibly still-stale) closure
+  // variable on the next line.
   const fetchProducts = async () => {
     try {
       setLoading(true);
-      
+
       const response = await Axios({
         ...SummaryApi.getAllProducts
       });
-      
+
       if (response.data.success) {
         setCatalogAccessDenied(false);
         const productData = response.data.data || [];
@@ -100,9 +104,10 @@ const DashboardProduct = () => {
           outOfStock: productData.filter(p => p.stock === 0).length,
           unpriced: productData.filter(p => !p.price || Number(p.price) === 0).length
         });
-      } else {
-        setProducts([]);
+        return productData;
       }
+      setProducts([]);
+      return [];
     } catch (error) {
       if (error?.response?.status === 403) {
         setCatalogAccessDenied(true);
@@ -110,6 +115,7 @@ const DashboardProduct = () => {
         console.error("Error fetching products:", error);
         AxiosToastError(error);
       }
+      return [];
     } finally {
       setLoading(false);
     }
@@ -329,20 +335,27 @@ const DashboardProduct = () => {
   const handleExport = async (format) => {
     try {
       setExporting(true);
+      // Re-fetch right before generating the file rather than trusting
+      // whatever's already sitting in `products` -- that state only loads
+      // once on mount, so a price/stock/name edited on the upload-product
+      // page (or in another tab) wouldn't otherwise show up here until an
+      // unrelated refresh happened to occur. This applies to every export
+      // format, the barcode label sheet included.
+      const freshProducts = await fetchProducts();
       switch (format) {
-        case 'excel': await exportToExcel(products, 'taji-cart-products'); break;
-        case 'csv':   exportToCSV(products, 'taji-cart-products'); break;
-        case 'pdf':   exportToPDF(products, 'taji-cart-products'); break;
+        case 'excel': await exportToExcel(freshProducts, 'taji-cart-products'); break;
+        case 'csv':   exportToCSV(freshProducts, 'taji-cart-products'); break;
+        case 'pdf':   exportToPDF(freshProducts, 'taji-cart-products'); break;
         case 'barcode-labels': {
-          const result = await exportToBarcodeLabelsPDF(products, 'nawiri-hair-barcode-labels');
+          const result = await exportToBarcodeLabelsPDF(freshProducts, 'nawiri-hair-barcode-labels');
           toast.success(`Downloaded ${result.count} barcode labels across ${result.pageCount} pages`);
           return;
         }
-        case 'word':  exportToWord(products, 'taji-cart-products'); break;
-        case 'json':  exportToJSON(products, 'taji-cart-products'); break;
+        case 'word':  exportToWord(freshProducts, 'taji-cart-products'); break;
+        case 'json':  exportToJSON(freshProducts, 'taji-cart-products'); break;
         default: break;
       }
-      toast.success(`Exported ${products.length} product${products.length === 1 ? '' : 's'} as ${format.toUpperCase()}`);
+      toast.success(`Exported ${freshProducts.length} product${freshProducts.length === 1 ? '' : 's'} as ${format.toUpperCase()}`);
     } catch (error) {
       toast.error(error?.message || 'Export failed. Please try again.');
     } finally {
