@@ -134,6 +134,15 @@ module.exports = {
           '25%':  { borderColor: 'rgba(74,222,128,1)',  boxShadow: '0 0 32px 4px rgba(74,222,128,0.55)' },
           '100%': { borderColor: 'rgba(217,173,88,0.9)', boxShadow: '0 0 0 rgba(74,222,128,0)' },
         },
+        scannerOpen: {
+          '0%':   { opacity: '0', transform: 'scale(1.04)' },
+          '100%': { opacity: '1', transform: 'scale(1)' },
+        },
+        countPop: {
+          '0%':   { transform: 'scale(1)' },
+          '40%':  { transform: 'scale(1.3)' },
+          '100%': { transform: 'scale(1)' },
+        },
       },
       animation: {
         'fade-up':        'fadeUp 0.5s ease both',
@@ -141,6 +150,8 @@ module.exports = {
         'shimmer':        'shimmer 1.6s linear infinite',
         'scan-sweep':     'scanSweep 2.4s ease-in-out infinite',
         'scan-success':   'scanFlashSuccess 0.9s ease-out',
+        'scanner-open':   'scannerOpen 0.35s ease-out both',
+        'count-pop':      'countPop 0.4s ease-out',
       },
     },
   },

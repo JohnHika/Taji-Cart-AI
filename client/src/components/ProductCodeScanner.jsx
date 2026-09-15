@@ -98,6 +98,10 @@ const ProductCodeScanner = ({ onDetected, onClose, cart = [], onIncrement, onDec
   // Briefly flashes the scan frame green on a successful add — retriggering
   // the same CSS animation needs a fresh key each time, not just a boolean.
   const [scanFlashKey, setScanFlashKey] = useState(0);
+  // Colors the status pill's accent edge to match what happened — a
+  // glanceable outcome signal alongside the vibration pattern and reticle
+  // flash, so a cashier scanning fast doesn't have to actually read the text.
+  const [statusTone, setStatusTone] = useState('idle');
   // The basket starts tucked away as a peek bar so the camera owns the
   // screen; tapping it slides the full itemised list up over the feed.
   const [basketExpanded, setBasketExpanded] = useState(false);
@@ -220,11 +224,13 @@ const ProductCodeScanner = ({ onDetected, onClose, cart = [], onIncrement, onDec
           const normalizedCode = String(decodedText || '').trim();
           if (normalizedCode && normalizedCode === lastAddedCodeRef.current) {
             vibrate(30);
+            setStatusTone('duplicate');
             setStatus('That label is already in this basket. Move to another hair piece, or use + for another identical piece.');
             resumeAfterFeedback();
             return;
           }
 
+          setStatusTone('idle');
           setStatus('Code found — adding it to the order…');
           try {
             const result = await onDetectedRef.current(decodedText);
@@ -232,8 +238,10 @@ const ProductCodeScanner = ({ onDetected, onClose, cart = [], onIncrement, onDec
               lastAddedCodeRef.current = normalizedCode;
               setLastAdded(result.productId ? { productId: result.productId, productName: result.productName } : null);
               setScanFlashKey((key) => key + 1);
+              setStatusTone('success');
               vibrate(45);
             } else {
+              setStatusTone('warning');
               vibrate([30, 70, 30]);
             }
             // Echo the code that was actually matched — on a dense, uncut
@@ -242,6 +250,7 @@ const ProductCodeScanner = ({ onDetected, onClose, cart = [], onIncrement, onDec
             const codeSuffix = result?.added && result?.barcode ? ` (code ${result.barcode})` : '';
             setStatus(`${result?.message || 'Added. Point at the next item.'}${codeSuffix}`);
           } catch {
+            setStatusTone('warning');
             vibrate([30, 70, 30]);
             setStatus('That code could not be added. Try again or use the code field.');
           } finally {
@@ -394,7 +403,7 @@ const ProductCodeScanner = ({ onDetected, onClose, cart = [], onIncrement, onDec
 
   return (
     <div
-      className="fixed inset-0 z-[70] touch-manipulation overflow-hidden overscroll-contain bg-charcoal"
+      className="fixed inset-0 z-[70] touch-manipulation overflow-hidden overscroll-contain bg-charcoal motion-reduce:animate-none animate-scanner-open"
       role="dialog"
       aria-modal="true"
       aria-labelledby="product-code-scanner-title"
@@ -414,13 +423,9 @@ const ProductCodeScanner = ({ onDetected, onClose, cart = [], onIncrement, onDec
         <div className="absolute inset-0 bg-gradient-to-b from-plum-900 via-charcoal to-charcoal" />
       )}
 
-      {/* Darken the top/bottom edges so floating white text stays legible
-          over whatever the camera happens to be pointed at. */}
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-36 bg-gradient-to-b from-black/70 via-black/25 to-transparent" />
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-72 bg-gradient-to-t from-black/85 via-black/35 to-transparent" />
-
-      {/* Top bar */}
-      <div className="safe-area-top absolute inset-x-0 top-0 z-10 flex items-center justify-between gap-3 p-4">
+      {/* Top bar — above the reticle's dimming spotlight (z-10) so it never
+          gets muddied by it. */}
+      <div className="safe-area-top absolute inset-x-0 top-0 z-20 flex items-center justify-between gap-3 p-4">
         <h2
           id="product-code-scanner-title"
           className="glass-dark flex items-center gap-2 rounded-full px-4 py-2.5 text-sm font-bold text-white"
@@ -453,10 +458,16 @@ const ProductCodeScanner = ({ onDetected, onClose, cart = [], onIncrement, onDec
       </div>
 
       {/* Animated scan reticle — sized to match the real decode region
-          (SCAN_BOX_WIDTH/HEIGHT above), not just decorative. */}
+          (SCAN_BOX_WIDTH/HEIGHT above), not just decorative. The box-shadow
+          spread dims everything OUTSIDE the box (the classic scanner
+          "spotlight" look — iOS Camera's QR mode, WhatsApp, Google Pay all
+          do this) instead of just the top/bottom edges. */}
       {!error && (
         <div className="pointer-events-none absolute inset-0 z-10 flex flex-col items-center justify-center">
-          <div className="relative" style={{ width: SCAN_BOX_WIDTH, height: SCAN_BOX_HEIGHT }}>
+          <div
+            className="relative rounded-xl shadow-[0_0_0_9999px_rgba(0,0,0,0.5)]"
+            style={{ width: SCAN_BOX_WIDTH, height: SCAN_BOX_HEIGHT }}
+          >
             <span className="absolute -left-1 -top-1 h-7 w-7 rounded-tl-xl border-l-[3px] border-t-[3px] border-gold-300" />
             <span className="absolute -right-1 -top-1 h-7 w-7 rounded-tr-xl border-r-[3px] border-t-[3px] border-gold-300" />
             <span className="absolute -bottom-1 -left-1 h-7 w-7 rounded-bl-xl border-b-[3px] border-l-[3px] border-gold-300" />
@@ -473,10 +484,11 @@ const ProductCodeScanner = ({ onDetected, onClose, cart = [], onIncrement, onDec
       )}
 
       {/* Status/error, and the basket — pinned to the bottom, stacked so
-          neither needs a hand-measured offset from the other. */}
-      <div className="safe-area-bottom absolute inset-x-0 bottom-0 z-10 flex flex-col gap-2.5 px-3 pb-3">
+          neither needs a hand-measured offset from the other. Above the
+          reticle's dimming spotlight (z-10) for the same reason as the top bar. */}
+      <div className="safe-area-bottom absolute inset-x-0 bottom-0 z-20 flex flex-col gap-2.5 px-3 pb-3">
         {error ? (
-          <div className="glass-dark rounded-2xl px-4 py-3">
+          <div className="glass-dark rounded-2xl border-l-4 border-red-400/70 px-4 py-3">
             <p className="text-sm font-medium text-red-300">{error}</p>
             {errorDetail && (
               <p className="mt-1 select-all break-words font-mono text-[10px] leading-snug text-red-200/70">
@@ -485,7 +497,17 @@ const ProductCodeScanner = ({ onDetected, onClose, cart = [], onIncrement, onDec
             )}
           </div>
         ) : (
-          <div aria-live="polite" className="glass-dark rounded-2xl px-4 py-3">
+          <div
+            aria-live="polite"
+            className={`glass-dark rounded-2xl border-l-4 px-4 py-3 transition-colors duration-300 ${
+              {
+                idle: 'border-white/15',
+                success: 'border-green-400/70',
+                duplicate: 'border-gold-300/70',
+                warning: 'border-red-400/70',
+              }[statusTone]
+            }`}
+          >
             <p className="text-sm font-medium text-white">{status}</p>
             {lastAdded && (
               <button
@@ -503,19 +525,27 @@ const ProductCodeScanner = ({ onDetected, onClose, cart = [], onIncrement, onDec
             focus; tap to slide the full, quantity-adjustable list up. */}
         <div
           className={`overflow-hidden rounded-3xl bg-white/97 shadow-2xl backdrop-blur-md transition-[max-height] duration-300 ease-out dark:bg-dm-card/97 ${
-            basketExpanded ? 'max-h-[58dvh]' : 'max-h-[60px]'
+            basketExpanded ? 'max-h-[58dvh]' : 'max-h-[68px]'
           }`}
         >
+          {/* Grab-handle — the standard bottom-sheet affordance, signalling
+              "tap or drag to open" beyond just the chevron icon. */}
+          <div className="flex justify-center pb-1 pt-2" aria-hidden="true">
+            <span className="h-1 w-10 rounded-full bg-brown-200 dark:bg-dm-border" />
+          </div>
           <button
             type="button"
             onClick={() => setBasketExpanded((expanded) => !expanded)}
-            className="flex min-h-[60px] w-full items-center justify-between gap-3 px-4"
+            className="flex min-h-[52px] w-full items-center justify-between gap-3 px-4"
             aria-expanded={basketExpanded}
             aria-label={basketExpanded ? 'Collapse basket' : 'Expand basket'}
           >
             <span className="flex items-center gap-2 text-sm font-bold text-charcoal dark:text-white">
               <FaShoppingBasket className="text-plum-700 dark:text-gold-300" />
-              {itemCount} item{itemCount === 1 ? '' : 's'}
+              <span key={scanFlashKey} className="animate-count-pop inline-block tabular-nums">
+                {itemCount}
+              </span>{' '}
+              item{itemCount === 1 ? '' : 's'}
             </span>
             <span className="flex items-center gap-3">
               <span className="text-sm font-bold tabular-nums text-plum-700 dark:text-gold-300">
@@ -530,7 +560,7 @@ const ProductCodeScanner = ({ onDetected, onClose, cart = [], onIncrement, onDec
           </button>
 
           {basketExpanded && (
-            <div className="flex max-h-[calc(58dvh-60px)] flex-col border-t border-brown-100 dark:border-dm-border">
+            <div className="flex max-h-[calc(58dvh-68px)] flex-col border-t border-brown-100 dark:border-dm-border">
               <div className="flex-1 space-y-2 overflow-y-auto p-3">
                 {cart.length === 0 ? (
                   <div className="rounded-xl border border-dashed border-brown-200 px-4 py-8 text-center text-sm text-brown-500 dark:border-dm-border dark:text-white/50">
