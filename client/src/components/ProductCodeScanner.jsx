@@ -497,18 +497,20 @@ const ProductCodeScanner = ({ onDetected, onClose, cart = [], onIncrement, onDec
             <span className="absolute -right-1 -top-1 h-7 w-7 rounded-tr-xl border-r-[3px] border-t-[3px] border-gold-300" />
             <span className="absolute -bottom-1 -left-1 h-7 w-7 rounded-bl-xl border-b-[3px] border-l-[3px] border-gold-300" />
             <span className="absolute -bottom-1 -right-1 h-7 w-7 rounded-br-xl border-b-[3px] border-r-[3px] border-gold-300" />
-            <div className="motion-reduce:hidden absolute inset-x-1 top-1/2 h-0.5 -translate-y-1/2 rounded-full bg-gold-300 shadow-[0_0_14px_3px_rgba(217,173,88,0.85)] animate-scan-sweep" />
+            {/* A deliberately different colour from the gold frame (moving
+                indicator vs. static corners is a standard scanner-app
+                convention), with a light glow instead of the previous heavy
+                one — that glow was blowing out to a washed-out haze in a
+                real phone photo, reading as mismatched rather than intentional. */}
+            <div className="motion-reduce:hidden absolute inset-x-2 top-1/2 h-0.5 -translate-y-1/2 rounded-full bg-white/90 shadow-[0_0_6px_1px_rgba(255,255,255,0.5)] animate-scan-sweep" />
             {scanFlashKey > 0 && (
               <div key={scanFlashKey} className="absolute -inset-2 rounded-2xl border-4 border-transparent animate-scan-success" />
             )}
           </div>
-          {/* A rounded pill with its own background, not a plain text block
-              — sitting flush under the box on the same hard-edged spotlight
-              made it read as a second stacked rectangle rather than a
-              floating tip. */}
-          <p className="mt-7 max-w-[240px] rounded-full bg-black/40 px-3.5 py-1.5 text-center text-[11px] leading-snug text-white/80 backdrop-blur-sm">
-            On an uncut sheet, cover neighbouring codes so only one shows.
-          </p>
+          {/* No caption crowding the box anymore — a text pill sitting this
+              close under it kept reading as a second, disconnected box
+              rather than a single clean frame. The status pill at the
+              bottom is where any messaging belongs now. */}
         </div>
       )}
 

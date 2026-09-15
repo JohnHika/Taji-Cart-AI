@@ -126,8 +126,11 @@ module.exports = {
           '100%': { backgroundPosition: '200% 0' },
         },
         scanSweep: {
-          '0%, 100%': { transform: 'translateY(-46px)', opacity: '0.3' },
-          '50%':      { transform: 'translateY(46px)',  opacity: '1' },
+          // Stays inside the box's own bounds (90px tall) with margin for
+          // the glow, rather than nearly spanning the full height — that
+          // let the line's glow visually poke past the corner brackets.
+          '0%, 100%': { transform: 'translateY(-32px)', opacity: '0.3' },
+          '50%':      { transform: 'translateY(32px)',  opacity: '1' },
         },
         scanFlashSuccess: {
           '0%':   { borderColor: 'rgba(74,222,128,0)',  boxShadow: '0 0 0 rgba(74,222,128,0)' },
