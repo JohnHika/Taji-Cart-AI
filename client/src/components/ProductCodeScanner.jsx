@@ -468,8 +468,16 @@ const ProductCodeScanner = ({ onDetected, onClose, cart = [], onIncrement, onDec
           spread dims everything OUTSIDE the box (the classic scanner
           "spotlight" look — iOS Camera's QR mode, WhatsApp, Google Pay all
           do this) instead of just the top/bottom edges. */}
+      {/* Fades out while the basket drawer is expanded — the reticle is
+          centered across the whole screen with no awareness of how tall the
+          drawer has grown, so an expanded drawer can grow right into it. The
+          cashier's attention is on the basket at that point anyway. */}
       {!error && (
-        <div className="pointer-events-none absolute inset-0 z-10 flex flex-col items-center justify-center">
+        <div
+          className={`pointer-events-none absolute inset-0 z-10 flex flex-col items-center justify-center transition-opacity duration-300 ${
+            basketExpanded ? 'opacity-0' : 'opacity-100'
+          }`}
+        >
           <div
             className="relative rounded-xl shadow-[0_0_0_9999px_rgba(0,0,0,0.5)]"
             style={{ width: SCAN_BOX_WIDTH, height: SCAN_BOX_HEIGHT }}
