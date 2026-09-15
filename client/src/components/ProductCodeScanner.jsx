@@ -32,7 +32,8 @@ const VIDEO_FRAME_TIMEOUT_MS = 4000;
 // were actually hitting — so match on the stringified error too.
 const getCameraErrorMessage = (error) => {
   const name = error?.name || '';
-  const text = `${name} ${error?.message || ''} ${typeof error === 'string' ? error : ''}`.toLowerCase();
+  const attemptLogText = Array.isArray(error?.__attemptLog) ? error.__attemptLog.join(' ') : '';
+  const text = `${name} ${error?.message || ''} ${typeof error === 'string' ? error : ''} ${attemptLogText}`.toLowerCase();
 
   if (name === 'NotAllowedError' || name === 'PermissionDeniedError' || text.includes('permission')) {
     return 'Camera permission was denied. Allow camera access in your browser, then try again.';
@@ -175,21 +176,41 @@ const ProductCodeScanner = ({ onDetected, onClose, cart = [], onIncrement, onDec
           disableFlip: false,
         };
 
-        // Try the native BarcodeDetector path (fast, low battery) first, in
-        // both the ideal rear-camera and browser-default camera shape; if
-        // both fail, fall back to a fresh instance forced onto the pure-JS
-        // decoder — some desktop/older browsers throw constructing or
-        // running the native detector even though a camera is available.
+        // `cameraIdOrConfig` must be either a device id string, or an object
+        // with EXACTLY one key ({facingMode: ...} or {deviceId: ...}) — an
+        // empty {} is rejected outright, which was silently breaking every
+        // "just use whatever camera is available" fallback since this
+        // feature shipped. `{facingMode: 'environment'}` is the valid form
+        // of that same intent.
         const attempts = [
-          { useBarCodeDetectorIfSupported: true, cameraConfig: { facingMode: { ideal: 'environment' } } },
-          { useBarCodeDetectorIfSupported: true, cameraConfig: {} },
-          { useBarCodeDetectorIfSupported: false, cameraConfig: { facingMode: { ideal: 'environment' } } },
-          { useBarCodeDetectorIfSupported: false, cameraConfig: {} },
+          { useBarCodeDetectorIfSupported: true, cameraIdOrConfig: { facingMode: 'environment' }, label: 'native-detector/facingMode=environment' },
+          { useBarCodeDetectorIfSupported: false, cameraIdOrConfig: { facingMode: 'environment' }, label: 'js-decoder/facingMode=environment' },
         ];
+
+        // If facingMode isn't honoured/supported on this device, fall back
+        // to enumerating actual cameras (html5-qrcode's own supported way to
+        // get an unambiguous, always-valid cameraIdOrConfig) and picking
+        // whichever looks rear-facing, else the first one available.
+        try {
+          const cameras = await Html5Qrcode.getCameras();
+          if (Array.isArray(cameras) && cameras.length > 0) {
+            const rearCamera = cameras.find((c) => /back|rear|environment/i.test(c.label || ''));
+            const cameraId = (rearCamera || cameras[0]).id;
+            attempts.push(
+              { useBarCodeDetectorIfSupported: true, cameraIdOrConfig: cameraId, label: `native-detector/device:${cameraId}` },
+              { useBarCodeDetectorIfSupported: false, cameraIdOrConfig: cameraId, label: `js-decoder/device:${cameraId}` },
+            );
+          }
+        } catch (getCamerasError) {
+          // Usually the same underlying permission/hardware problem as the
+          // facingMode attempts above — logged via attemptLog below instead
+          // of aborting, so those attempts still get a chance to run.
+          console.error('Product code scanner: Html5Qrcode.getCameras() failed:', getCamerasError);
+        }
 
         // A flat-out permission denial or "no camera" fails identically no
         // matter the detector/constraint combo — stop after the first such
-        // result instead of replaying the same permission prompt 4 times.
+        // result instead of replaying the same permission prompt repeatedly.
         const isTerminalError = (err) =>
           ['NotAllowedError', 'PermissionDeniedError', 'NotFoundError'].includes(err?.name);
 
@@ -197,29 +218,33 @@ const ProductCodeScanner = ({ onDetected, onClose, cart = [], onIncrement, onDec
         const attemptLog = [];
         for (const [index, attempt] of attempts.entries()) {
           if (cancelled) return;
-          const attemptLabel = `#${index + 1} ${attempt.useBarCodeDetectorIfSupported ? 'native-detector' : 'js-decoder'}/${attempt.cameraConfig.facingMode ? 'rear-cam' : 'default-cam'}`;
           const instance = new Html5Qrcode(scannerIdRef.current, {
             formatsToSupport: supportedFormats,
             useBarCodeDetectorIfSupported: attempt.useBarCodeDetectorIfSupported,
             verbose: false,
           });
           try {
-            await instance.start(attempt.cameraConfig, config, handleDecoded, () => {});
+            await instance.start(attempt.cameraIdOrConfig, config, handleDecoded, () => {});
             scanner = instance;
             scannerRef.current = instance;
             lastError = null;
             break;
           } catch (attemptError) {
             lastError = attemptError;
-            attemptLog.push(`${attemptLabel} → ${describeError(attemptError)}`);
+            attemptLog.push(`#${index + 1} ${attempt.label} → ${describeError(attemptError)}`);
             await stopAndClear(instance);
             if (isTerminalError(attemptError)) break;
           }
         }
 
         if (lastError) {
-          lastError.__attemptLog = attemptLog;
-          throw lastError;
+          // lastError can be a bare string (html5-qrcode does this) —
+          // never mutate it directly, wrap it in a real Error instead so
+          // the attempt log survives to the outer catch block below.
+          const wrapped = new Error(describeError(lastError));
+          wrapped.name = (lastError && typeof lastError === 'object' && lastError.name) || 'ScannerStartError';
+          wrapped.__attemptLog = attemptLog;
+          throw wrapped;
         }
 
         if (cancelled) {
