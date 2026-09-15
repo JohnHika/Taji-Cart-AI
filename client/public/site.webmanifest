@@ -6,6 +6,9 @@
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#ffffff",
+  "permissions_policy": {
+    "camera": ["self"]
+  },
   "icons": [
     {
       "src": "/android-chrome-192x192.png",
