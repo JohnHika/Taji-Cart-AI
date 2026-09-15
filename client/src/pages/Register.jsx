@@ -159,7 +159,7 @@ const Register = () => {
                                     value={data.password} onChange={handleChange} placeholder="Min. 8 characters"
                                     className="flex-1 bg-transparent outline-none text-sm text-charcoal dark:text-white placeholder:text-brown-300 dark:placeholder:text-white/30"
                                 />
-                                <button type="button" onClick={() => setShowPassword(p => !p)} className="text-brown-300 dark:text-white/30 hover:text-plum-700 transition-colors">
+                                <button type="button" onClick={() => setShowPassword(p => !p)} aria-label={showPassword ? "Hide password" : "Show password"} className="self-stretch flex items-center px-2 -mr-1 text-brown-300 dark:text-white/30 hover:text-plum-700 transition-colors">
                                     {showPassword ? <FaRegEye size={13} /> : <FaRegEyeSlash size={13} />}
                                 </button>
                             </div>
@@ -175,7 +175,7 @@ const Register = () => {
                                     value={data.confirmPassword} onChange={handleChange} placeholder="Repeat your password"
                                     className="flex-1 bg-transparent outline-none text-sm text-charcoal dark:text-white placeholder:text-brown-300 dark:placeholder:text-white/30"
                                 />
-                                <button type="button" onClick={() => setShowConfirmPassword(p => !p)} className="text-brown-300 dark:text-white/30 hover:text-plum-700 transition-colors">
+                                <button type="button" onClick={() => setShowConfirmPassword(p => !p)} aria-label={showConfirmPassword ? "Hide password" : "Show password"} className="self-stretch flex items-center px-2 -mr-1 text-brown-300 dark:text-white/30 hover:text-plum-700 transition-colors">
                                     {showConfirmPassword ? <FaRegEye size={13} /> : <FaRegEyeSlash size={13} />}
                                 </button>
                             </div>

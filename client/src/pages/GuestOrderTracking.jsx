@@ -139,16 +139,16 @@ function GuestOrderTracking() {
           <div className="space-y-6">
             {/* Order Status Header */}
             <div className="bg-white dark:bg-dm-card rounded-xl p-6 shadow-lg border border-brown-100 dark:border-dm-border">
-              <div className="flex items-center justify-between mb-4">
-                <div>
-                  <h2 className="text-xl font-bold text-charcoal dark:text-white">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-4">
+                <div className="min-w-0">
+                  <h2 className="text-lg sm:text-xl font-bold text-charcoal dark:text-white break-words">
                     Order {orderData.orderId}
                   </h2>
                   <p className="text-sm text-brown-500">
                     Placed on {new Date(orderData.statusHistory[0]?.timestamp).toLocaleDateString()}
                   </p>
                 </div>
-                <span className={`px-4 py-2 rounded-full font-semibold text-sm ${getStatusColor(orderData.status)}`}>
+                <span className={`self-start px-4 py-2 rounded-full font-semibold text-sm whitespace-nowrap ${getStatusColor(orderData.status)}`}>
                   {orderData.status.replace(/_/g, ' ').toUpperCase()}
                 </span>
               </div>
@@ -234,17 +234,17 @@ function GuestOrderTracking() {
               <h3 className="text-lg font-bold text-charcoal dark:text-white mb-4">Shipping Information</h3>
 
               <div className="space-y-3 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-brown-500">Name:</span>
-                  <span className="text-charcoal dark:text-white font-medium">{orderData.shipping?.name}</span>
+                <div className="flex flex-col xs:flex-row xs:justify-between gap-0.5">
+                  <span className="text-brown-500 shrink-0">Name:</span>
+                  <span className="text-charcoal dark:text-white font-medium xs:text-right break-words">{orderData.shipping?.name}</span>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-brown-500">Address:</span>
-                  <span className="text-charcoal dark:text-white font-medium">{orderData.shipping?.address}</span>
+                <div className="flex flex-col xs:flex-row xs:justify-between gap-0.5">
+                  <span className="text-brown-500 shrink-0">Address:</span>
+                  <span className="text-charcoal dark:text-white font-medium xs:text-right xs:max-w-[70%] break-words">{orderData.shipping?.address}</span>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-brown-500">Phone:</span>
-                  <span className="text-charcoal dark:text-white font-medium">{orderData.shipping?.phone}</span>
+                <div className="flex flex-col xs:flex-row xs:justify-between gap-0.5">
+                  <span className="text-brown-500 shrink-0">Phone:</span>
+                  <span className="text-charcoal dark:text-white font-medium xs:text-right break-words">{orderData.shipping?.phone}</span>
                 </div>
               </div>
             </div>

@@ -65,7 +65,7 @@ const OtpVerification = () => {
                 <form className='flex flex-col gap-5' onSubmit={handleSubmit}>
                     <div className='flex flex-col gap-2'>
                         <label className='text-sm font-medium text-charcoal dark:text-white/80'>Verification Code</label>
-                        <div className='flex items-center gap-2 justify-between'>
+                        <div className='flex items-center gap-1.5 xs:gap-2 justify-between'>
                             {data.map((element, index) => (
                                 <input
                                     key={"otp" + index}
@@ -100,7 +100,8 @@ const OtpVerification = () => {
                                     }}
                                     maxLength={1}
                                     inputMode='numeric'
-                                    className='bg-blush-50 dark:bg-dm-card-2 w-full aspect-square max-w-[48px] sm:max-w-[52px] border border-blush-200 dark:border-dm-border rounded-lg outline-none focus:border-plum-500 focus:ring-2 focus:ring-plum-500/20 text-center text-lg font-bold text-charcoal dark:text-white transition-all'
+                                    autoComplete='one-time-code'
+                                    className='bg-blush-50 dark:bg-dm-card-2 w-full min-w-0 aspect-square max-w-[44px] sm:max-w-[52px] border border-blush-200 dark:border-dm-border rounded-lg outline-none focus:border-plum-500 focus:ring-2 focus:ring-plum-500/20 text-center text-lg font-bold text-charcoal dark:text-white transition-all'
                                 />
                             ))}
                         </div>

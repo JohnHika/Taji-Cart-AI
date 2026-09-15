@@ -100,28 +100,28 @@ const PaymentSuccess = () => {
   };
   
   return (
-    <div className="min-h-screen flex items-center justify-center bg-brown-50 dark:bg-dm-surface">
-      <div className="bg-white dark:bg-dm-card p-8 rounded-lg shadow-lg max-w-md w-full text-center">
-        <FaCheckCircle className="text-green-500 text-6xl mx-auto mb-6" />
-        <h1 className="text-2xl font-bold mb-4 dark:text-white">Payment Successful!</h1>
-        <p className="text-brown-500 dark:text-white/55 mb-6">
+    <div className="min-h-screen flex items-center justify-center bg-ivory dark:bg-dm-surface px-4 py-8">
+      <div className="bg-white dark:bg-dm-card p-6 sm:p-8 rounded-card shadow-card border border-brown-100 dark:border-dm-border max-w-md w-full text-center">
+        <FaCheckCircle className="text-plum-600 dark:text-plum-300 text-6xl mx-auto mb-6" />
+        <h1 className="text-2xl font-bold mb-3 text-charcoal dark:text-white">Payment Successful!</h1>
+        <p className="text-sm text-brown-500 dark:text-white/60 mb-6">
           Your order has been placed successfully. Thank you for your purchase!
         </p>
-        <div className="flex flex-col space-y-3">
-          <button 
+        <div className="flex flex-col gap-3">
+          <button
             onClick={goToOrders}
-            className="bg-plum-700 hover:bg-plum-600 text-white py-2 px-4 rounded transition-colors"
+            className="w-full py-3 px-4 rounded-pill text-sm font-semibold text-white bg-plum-700 hover:bg-plum-600 transition-colors press"
           >
             View My Orders
           </button>
-          <button 
+          <button
             onClick={() => {
               // Final cart clear when navigating away
               dispatch(clearCartItems());
               if (globalClearCart) globalClearCart();
               navigate('/');
             }}
-            className="bg-brown-100 hover:bg-brown-200 text-charcoal py-2 px-4 rounded transition-colors"
+            className="w-full py-3 px-4 rounded-pill text-sm font-semibold border border-brown-200 dark:border-dm-border text-charcoal dark:text-white/80 bg-white dark:bg-dm-card hover:bg-plum-50 dark:hover:bg-plum-900/20 transition-colors press"
           >
             Continue Shopping
           </button>

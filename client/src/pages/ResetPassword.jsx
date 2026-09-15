@@ -116,7 +116,7 @@ const ResetPassword = () => {
                 placeholder='Min. 8 characters'
                 autoComplete='new-password'
               />
-              <button type='button' onClick={() => setShowPassword(p => !p)} className='text-brown-300 dark:text-white/30 hover:text-plum-700 dark:hover:text-plum-200 transition-colors'>
+              <button type='button' onClick={() => setShowPassword(p => !p)} aria-label={showPassword ? "Hide password" : "Show password"} className='self-stretch flex items-center px-2 -mr-1 text-brown-300 dark:text-white/30 hover:text-plum-700 dark:hover:text-plum-200 transition-colors'>
                 {showPassword ? <FaRegEye size={14} /> : <FaRegEyeSlash size={14} />}
               </button>
             </div>
@@ -136,7 +136,7 @@ const ResetPassword = () => {
                 placeholder='Repeat your password'
                 autoComplete='new-password'
               />
-              <button type='button' onClick={() => setShowConfirmPassword(p => !p)} className='text-brown-300 dark:text-white/30 hover:text-plum-700 dark:hover:text-plum-200 transition-colors'>
+              <button type='button' onClick={() => setShowConfirmPassword(p => !p)} aria-label={showConfirmPassword ? "Hide password" : "Show password"} className='self-stretch flex items-center px-2 -mr-1 text-brown-300 dark:text-white/30 hover:text-plum-700 dark:hover:text-plum-200 transition-colors'>
                 {showConfirmPassword ? <FaRegEye size={14} /> : <FaRegEyeSlash size={14} />}
               </button>
             </div>

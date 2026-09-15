@@ -201,7 +201,8 @@ const Login = () => {
                                 <button
                                     type="button"
                                     onClick={() => setShowPassword(p => !p)}
-                                    className="text-brown-300 dark:text-white/30 hover:text-plum-700 dark:hover:text-plum-200 transition-colors"
+                                    aria-label={showPassword ? "Hide password" : "Show password"}
+                                    className="self-stretch flex items-center px-2 -mr-1 text-brown-300 dark:text-white/30 hover:text-plum-700 dark:hover:text-plum-200 transition-colors"
                                 >
                                     {showPassword ? <FaRegEye size={14} /> : <FaRegEyeSlash size={14} />}
                                 </button>

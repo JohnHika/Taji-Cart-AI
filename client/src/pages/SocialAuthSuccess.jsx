@@ -212,7 +212,7 @@ const SocialAuthSuccess = () => {
   }, [dispatch, navigate, location]);
 
   return (
-    <div className="h-screen flex flex-col items-center justify-center">
+    <div className="min-h-screen flex flex-col items-center justify-center px-4 text-center">
       <div className="text-center">
         <FaSpinner className="animate-spin text-6xl text-primary-200 mx-auto mb-4" />
         <h1 className="text-2xl font-semibold mb-2 dark:text-white">Logging you in...</h1>
