@@ -132,10 +132,16 @@ module.exports = {
           '0%, 100%': { transform: 'translateY(-32px)', opacity: '0.3' },
           '50%':      { transform: 'translateY(32px)',  opacity: '1' },
         },
+        // Starts AND ends fully transparent, peaking green in the middle --
+        // verified by screenshotting the actual compiled animation (not just
+        // reading the keyframes) that the old version, which settled on a
+        // visible gold ring at 100%, relied on animation-fill-mode
+        // defaulting away after the one-shot animation finished. Whether
+        // that snap-back was visible depended on exact timing, producing
+        // the inconsistent "stray green/gold box" that kept getting flagged.
         scanFlashSuccess: {
-          '0%':   { borderColor: 'rgba(74,222,128,0)',  boxShadow: '0 0 0 rgba(74,222,128,0)' },
-          '25%':  { borderColor: 'rgba(74,222,128,1)',  boxShadow: '0 0 32px 4px rgba(74,222,128,0.55)' },
-          '100%': { borderColor: 'rgba(217,173,88,0.9)', boxShadow: '0 0 0 rgba(74,222,128,0)' },
+          '0%, 100%': { borderColor: 'rgba(74,222,128,0)', boxShadow: '0 0 0 rgba(74,222,128,0)' },
+          '35%':      { borderColor: 'rgba(74,222,128,1)', boxShadow: '0 0 32px 4px rgba(74,222,128,0.55)' },
         },
         scannerOpen: {
           '0%':   { opacity: '0', transform: 'scale(1.04)' },
