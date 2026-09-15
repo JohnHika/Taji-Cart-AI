@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { FaFileExcel, FaFilePdf, FaFileWord, FaFileCsv, FaFileCode, FaSpinner } from 'react-icons/fa';
+import { FaBarcode, FaFileExcel, FaFilePdf, FaFileWord, FaFileCsv, FaFileCode, FaSpinner } from 'react-icons/fa';
 import { IoClose } from 'react-icons/io5';
 
 const ExportButton = ({ data, onExport, exporting = false }) => {
@@ -35,6 +35,12 @@ const ExportButton = ({ data, onExport, exporting = false }) => {
       icon: <FaFilePdf className="text-red-600" />,
       format: 'pdf',
       description: 'Portable Document Format (.pdf)'
+    },
+    {
+      name: 'Barcode label sheet',
+      icon: <FaBarcode className="text-plum-600" />,
+      format: 'barcode-labels',
+      description: 'Printable Code 128 labels for every product (.pdf)'
     },
     {
       name: 'Word',

@@ -11,7 +11,7 @@ import Axios from '../utils/Axios';
 import AxiosToastError from '../utils/AxiosToastError';
 import { DisplayPriceInShillings } from '../utils/DisplayPriceInShillings';
 import { getAdminProductPage } from '../utils/adminProductPresentation';
-import { exportToExcel, exportToCSV, exportToPDF, exportToWord, exportToJSON } from '../utils/exportUtils';
+import { exportToExcel, exportToCSV, exportToPDF, exportToWord, exportToJSON, exportToBarcodeLabelsPDF } from '../utils/exportUtils';
 
 const PRODUCTS_PER_PAGE = 12;
 const PRODUCT_VIEW_PREFERENCE = 'adminProductViewMode';
@@ -37,6 +37,7 @@ const buildProductSearchText = (product = {}) => {
     product.name,
     product.description,
     product.sku,
+    product.barcode,
     product?.variants?.color,
     product?.variants?.length,
     ...categoryNames,
@@ -332,6 +333,11 @@ const DashboardProduct = () => {
         case 'excel': await exportToExcel(products, 'taji-cart-products'); break;
         case 'csv':   exportToCSV(products, 'taji-cart-products'); break;
         case 'pdf':   exportToPDF(products, 'taji-cart-products'); break;
+        case 'barcode-labels': {
+          const result = await exportToBarcodeLabelsPDF(products, 'nawiri-hair-barcode-labels');
+          toast.success(`Downloaded ${result.count} barcode labels across ${result.pageCount} pages`);
+          return;
+        }
         case 'word':  exportToWord(products, 'taji-cart-products'); break;
         case 'json':  exportToJSON(products, 'taji-cart-products'); break;
         default: break;
@@ -575,6 +581,9 @@ const DashboardProduct = () => {
                             </span>
                           )}
                         </div>
+                        <p className="mt-2 truncate font-mono text-xs text-brown-500 dark:text-white/55" title={product.barcode || 'Barcode is pending'}>
+                          Barcode: {product.barcode || 'Pending'}
+                        </p>
                       </div>
                       
                       <div className="flex justify-between items-center mb-3">
@@ -714,8 +723,8 @@ const DashboardProduct = () => {
                               <div className="text-sm font-medium text-charcoal dark:text-white truncate" title={product.name}>
                                 {product.name}
                               </div>
-                              <div className="text-xs text-brown-400 dark:text-white/40">
-                                ID: {product._id.substring(0, 8)}...
+                              <div className="text-xs font-mono text-brown-500 dark:text-white/55" title={product.barcode || 'Barcode is pending'}>
+                                Barcode: {product.barcode || 'Pending'}
                               </div>
                             </div>
                           </td>

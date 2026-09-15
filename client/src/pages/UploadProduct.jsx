@@ -397,7 +397,7 @@ const UploadProduct = () => {
 
           <div className='grid gap-4 md:grid-cols-2'>
             <div className='grid gap-1'>
-              <label htmlFor='barcode' className='font-medium dark:text-white'>Barcode Value</label>
+              <label htmlFor='barcode' className='font-medium dark:text-white'>Barcode Reference (Auto-generated if blank)</label>
               <input 
                 id='barcode'
                 type='text'
@@ -407,7 +407,7 @@ const UploadProduct = () => {
                 onChange={handleChange}
                 className='bg-plum-50/90 dark:bg-dm-card p-2 outline-none border dark:border-dm-border focus-within:border-plum-500 dark:focus-within:border-plum-400 rounded dark:text-white transition-colors duration-200'
               />
-              <p className='text-xs text-brown-400 dark:text-white/40 mt-1'>Enter the exact value encoded in the printed product barcode so staff can scan it at the sales counter.</p>
+              <p className='text-xs text-brown-400 dark:text-white/40 mt-1'>Leave blank to create a Nawiri Hair barcode automatically. Enter a supplier barcode only when it is already printed on the product packaging.</p>
             </div>
 
             <div className='grid gap-1'>

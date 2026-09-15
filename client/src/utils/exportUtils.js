@@ -1,6 +1,7 @@
 import { saveAs } from 'file-saver';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import JsBarcode from 'jsbarcode';
 import ExcelJS from 'exceljs';
 
 // Brand palette used consistently across every export format
@@ -220,8 +221,8 @@ const exportToCSV = (products, filename = 'products') => {
 // ---------------------------------------------------------------------------
 // PDF — jspdf-autotable for a real, professionally paginated table.
 // ---------------------------------------------------------------------------
-const PDF_COLUMNS = ['name', 'sku', 'category', 'color', 'length', 'price', 'stock', 'stockStatus'];
-const PDF_HEADERS = { name: 'Product', sku: 'SKU', category: 'Category', color: 'Color', length: 'Length', price: 'Price', stock: 'Stock', stockStatus: 'Status' };
+const PDF_COLUMNS = ['name', 'barcode', 'sku', 'category', 'color', 'length', 'price', 'stock', 'stockStatus'];
+const PDF_HEADERS = { name: 'Product', barcode: 'Barcode', sku: 'SKU', category: 'Category', color: 'Color', length: 'Length', price: 'Price', stock: 'Stock', stockStatus: 'Status' };
 
 const exportToPDF = (products, filename = 'products') => {
   const rows = buildExportRows(products);
@@ -263,9 +264,11 @@ const exportToPDF = (products, filename = 'products') => {
     bodyStyles: { fontSize: 8.5, textColor: [45, 34, 51] },
     alternateRowStyles: { fillColor: [250, 245, 248] },
     columnStyles: {
-      0: { cellWidth: 160 },
-      5: { halign: 'right' },
+      0: { cellWidth: 140 },
+      1: { cellWidth: 96 },
+      2: { cellWidth: 96 },
       6: { halign: 'right' },
+      7: { halign: 'right' },
     },
     margin: { left: 24, right: 24, top: 68 },
     didParseCell: (data) => {
@@ -295,6 +298,128 @@ const exportToPDF = (products, filename = 'products') => {
   }
 
   doc.save(`${filename}.pdf`);
+};
+
+// ---------------------------------------------------------------------------
+// Barcode labels — production-ready A4 sheet: 3 columns × 8 rows = 24 labels.
+// Each label is a standalone Code 128 scan target and prints its plain-text
+// reference underneath for manual lookup if a scanner is unavailable.
+// ---------------------------------------------------------------------------
+const BARCODE_LABEL_COLUMNS = 3;
+const BARCODE_LABEL_ROWS = 8;
+const BARCODE_LABELS_PER_PAGE = BARCODE_LABEL_COLUMNS * BARCODE_LABEL_ROWS;
+
+const trimLabelText = (value, maxLength = 46) => {
+  const text = String(value || '').replace(/\s+/g, ' ').trim();
+  return text.length > maxLength ? `${text.slice(0, maxLength - 1)}…` : text;
+};
+
+const barcodeLabelDetails = (product) => {
+  const color = String(product?.variants?.color || '').trim();
+  const length = String(product?.variants?.length || '').trim();
+  const variant = [color && `Colour ${color}`, length].filter(Boolean).join(' · ');
+  return variant || String(product?.unit || 'Hair product');
+};
+
+const createBarcodeImage = (value) => {
+  const canvas = document.createElement('canvas');
+  JsBarcode(canvas, value, {
+    format: 'CODE128',
+    displayValue: false,
+    margin: 0,
+    width: 2,
+    height: 44,
+  });
+  return canvas.toDataURL('image/png');
+};
+
+const exportToBarcodeLabelsPDF = async (products, filename = 'nawiri-hair-barcode-labels') => {
+  const allProducts = Array.isArray(products) ? products : [];
+  if (!allProducts.length) {
+    throw new Error('There are no products to include in a barcode label sheet.');
+  }
+
+  const missingBarcodes = allProducts.filter((product) => !String(product?.barcode || '').trim());
+  if (missingBarcodes.length) {
+    throw new Error(`${missingBarcodes.length} product${missingBarcodes.length === 1 ? '' : 's'} still need a barcode. Generate barcodes before exporting labels.`);
+  }
+
+  const invalidCode128Barcodes = allProducts.filter((product) => !/^[\x20-\x7E]+$/.test(String(product?.barcode || '')));
+  if (invalidCode128Barcodes.length) {
+    throw new Error(`${invalidCode128Barcodes.length} product${invalidCode128Barcodes.length === 1 ? '' : 's'} have a barcode that Code 128 cannot print. Correct those barcode values before exporting labels.`);
+  }
+
+  const labelProducts = [...allProducts]
+    .sort((left, right) => String(left.barcode).localeCompare(String(right.barcode), 'en', { numeric: true }));
+  const doc = new jsPDF({ format: 'a4', orientation: 'portrait', unit: 'pt' });
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const pageHeight = doc.internal.pageSize.getHeight();
+  const marginX = 18;
+  const marginY = 18;
+  const columnGap = 8;
+  const rowGap = 4;
+  const labelWidth = (pageWidth - (marginX * 2) - (columnGap * (BARCODE_LABEL_COLUMNS - 1))) / BARCODE_LABEL_COLUMNS;
+  const labelHeight = (pageHeight - marginY - 28 - (rowGap * (BARCODE_LABEL_ROWS - 1))) / BARCODE_LABEL_ROWS;
+
+  for (let index = 0; index < labelProducts.length; index += 1) {
+    if (index > 0 && index % BARCODE_LABELS_PER_PAGE === 0) {
+      doc.addPage();
+    }
+
+    const product = labelProducts[index];
+    const indexOnPage = index % BARCODE_LABELS_PER_PAGE;
+    const column = indexOnPage % BARCODE_LABEL_COLUMNS;
+    const row = Math.floor(indexOnPage / BARCODE_LABEL_COLUMNS);
+    const x = marginX + (column * (labelWidth + columnGap));
+    const y = marginY + (row * (labelHeight + rowGap));
+    const barcode = String(product.barcode).trim();
+    const barcodeImage = createBarcodeImage(barcode);
+
+    doc.setDrawColor(227, 213, 222);
+    doc.setLineWidth(0.65);
+    doc.roundedRect(x, y, labelWidth, labelHeight, 4, 4, 'S');
+
+    doc.setTextColor(45, 34, 51);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(8);
+    doc.text(trimLabelText(product.name).toUpperCase(), x + 8, y + 12);
+
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(107, 96, 112);
+    doc.setFontSize(6.8);
+    doc.text(trimLabelText(barcodeLabelDetails(product), 52), x + 8, y + 22);
+
+    doc.addImage(barcodeImage, 'PNG', x + 8, y + 28, labelWidth - 16, 32);
+
+    doc.setFont('courier', 'bold');
+    doc.setTextColor(45, 34, 51);
+    doc.setFontSize(7.3);
+    doc.text(barcode, x + (labelWidth / 2), y + 70, { align: 'center' });
+
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(107, 45, 92);
+    doc.setFontSize(7);
+    doc.text(`KSh ${Number(product.price || 0).toLocaleString('en-KE')}`, x + 8, y + labelHeight - 8);
+    doc.setTextColor(107, 96, 112);
+    doc.text('Nawiri Hair', x + labelWidth - 8, y + labelHeight - 8, { align: 'right' });
+
+    // Yield once per page so a full 564-label export keeps the admin page responsive.
+    if ((index + 1) % BARCODE_LABELS_PER_PAGE === 0) {
+      await new Promise((resolve) => window.setTimeout(resolve, 0));
+    }
+  }
+
+  const pageCount = doc.internal.getNumberOfPages();
+  for (let page = 1; page <= pageCount; page += 1) {
+    doc.setPage(page);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(6.5);
+    doc.setTextColor(107, 96, 112);
+    doc.text(`Nawiri Hair · Product barcode labels · Page ${page} of ${pageCount}`, marginX, pageHeight - 10);
+  }
+
+  doc.save(`${filename}.pdf`);
+  return { count: labelProducts.length, pageCount };
 };
 
 // ---------------------------------------------------------------------------
@@ -390,6 +515,7 @@ export {
   exportToExcel,
   exportToCSV,
   exportToPDF,
+  exportToBarcodeLabelsPDF,
   exportToWord,
   exportToJSON
 };
