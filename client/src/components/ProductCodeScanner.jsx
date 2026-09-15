@@ -49,6 +49,14 @@ const getCameraErrorMessage = (error) => {
   return 'The camera could not start. You can still type, paste, or use a hardware scanner.';
 };
 
+const describeError = (err) => {
+  if (!err) return 'unknown error';
+  if (typeof err === 'string') return err;
+  const name = err.name || err.constructor?.name || 'Error';
+  const message = err.message || (() => { try { return JSON.stringify(err); } catch { return String(err); } })();
+  return `${name}: ${message}`;
+};
+
 const ProductCodeScanner = ({ onDetected, onClose, cart = [], onIncrement, onDecrement, onRemove, onCheckout }) => {
   const generatedId = useId();
   const scannerIdRef = useRef(`sales-counter-scanner-${generatedId.replace(/[^a-zA-Z0-9_-]/g, '')}`);
@@ -59,6 +67,10 @@ const ProductCodeScanner = ({ onDetected, onClose, cart = [], onIncrement, onDec
   const onCloseRef = useRef(onClose);
   const [status, setStatus] = useState('Opening the rear camera…');
   const [error, setError] = useState('');
+  // Shown in small print under the friendly message — console.error isn't
+  // reachable on a phone with no attached devtools, so surface the raw
+  // failure on-screen too (a cashier can screenshot it for support).
+  const [errorDetail, setErrorDetail] = useState('');
 
   const itemCount = useMemo(() => cart.reduce((sum, item) => sum + item.quantity, 0), [cart]);
   const cartTotal = useMemo(
@@ -100,11 +112,13 @@ const ProductCodeScanner = ({ onDetected, onClose, cart = [], onIncrement, onDec
         // an unrecognisable error for something we can diagnose directly.
         if (typeof window !== 'undefined' && !window.isSecureContext) {
           setError('Camera scanning needs a secure https:// connection — open this page over https and try again.');
+          setErrorDetail('preflight: window.isSecureContext is false');
           setStatus('');
           return;
         }
         if (!navigator.mediaDevices?.getUserMedia) {
           setError('This browser does not support camera access here. Use the code field or a Bluetooth scanner instead.');
+          setErrorDetail('preflight: navigator.mediaDevices.getUserMedia is unavailable');
           setStatus('');
           return;
         }
@@ -180,8 +194,10 @@ const ProductCodeScanner = ({ onDetected, onClose, cart = [], onIncrement, onDec
           ['NotAllowedError', 'PermissionDeniedError', 'NotFoundError'].includes(err?.name);
 
         let lastError = null;
-        for (const attempt of attempts) {
+        const attemptLog = [];
+        for (const [index, attempt] of attempts.entries()) {
           if (cancelled) return;
+          const attemptLabel = `#${index + 1} ${attempt.useBarCodeDetectorIfSupported ? 'native-detector' : 'js-decoder'}/${attempt.cameraConfig.facingMode ? 'rear-cam' : 'default-cam'}`;
           const instance = new Html5Qrcode(scannerIdRef.current, {
             formatsToSupport: supportedFormats,
             useBarCodeDetectorIfSupported: attempt.useBarCodeDetectorIfSupported,
@@ -195,12 +211,16 @@ const ProductCodeScanner = ({ onDetected, onClose, cart = [], onIncrement, onDec
             break;
           } catch (attemptError) {
             lastError = attemptError;
+            attemptLog.push(`${attemptLabel} → ${describeError(attemptError)}`);
             await stopAndClear(instance);
             if (isTerminalError(attemptError)) break;
           }
         }
 
-        if (lastError) throw lastError;
+        if (lastError) {
+          lastError.__attemptLog = attemptLog;
+          throw lastError;
+        }
 
         if (cancelled) {
           await stopAndClear(scanner);
@@ -217,8 +237,10 @@ const ProductCodeScanner = ({ onDetected, onClose, cart = [], onIncrement, onDec
           videoEl.addEventListener('loadeddata', markFrameArrived, { once: true });
           frameWatchdog = window.setTimeout(() => {
             if (!cancelled && videoEl.videoWidth === 0) {
-              console.error('Product code scanner: camera opened but no video frame arrived within', VIDEO_FRAME_TIMEOUT_MS, 'ms');
+              const detail = `no frame after ${VIDEO_FRAME_TIMEOUT_MS}ms — readyState=${videoEl.readyState} networkState=${videoEl.networkState} paused=${videoEl.paused}`;
+              console.error('Product code scanner: camera opened but no video frame arrived —', detail);
               setError('Camera opened but no picture is showing. Close this and try again, or use the code field below.');
+              setErrorDetail(detail);
               setStatus('');
             }
           }, VIDEO_FRAME_TIMEOUT_MS);
@@ -226,9 +248,13 @@ const ProductCodeScanner = ({ onDetected, onClose, cart = [], onIncrement, onDec
       } catch (startError) {
         // The friendly message can't include the raw error, so log it —
         // this is the only way to see *why* "camera could not start" fired.
-        console.error('Product code scanner failed to start:', startError);
+        console.error('Product code scanner failed to start:', startError, startError?.__attemptLog);
         if (!cancelled) {
           setError(getCameraErrorMessage(startError));
+          const detail = Array.isArray(startError?.__attemptLog) && startError.__attemptLog.length > 0
+            ? startError.__attemptLog.join(' | ')
+            : describeError(startError);
+          setErrorDetail(detail);
           setStatus('');
         }
       }
@@ -274,9 +300,14 @@ const ProductCodeScanner = ({ onDetected, onClose, cart = [], onIncrement, onDec
           </div>
 
           {error ? (
-            <p className="mt-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-900/50 dark:bg-red-950/30 dark:text-red-300">
-              {error}
-            </p>
+            <div className="mt-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 dark:border-red-900/50 dark:bg-red-950/30">
+              <p className="text-sm text-red-700 dark:text-red-300">{error}</p>
+              {errorDetail && (
+                <p className="mt-1 select-all break-words font-mono text-[10px] leading-snug text-red-500/80 dark:text-red-400/70">
+                  {errorDetail}
+                </p>
+              )}
+            </div>
           ) : (
             <p aria-live="polite" className="mt-3 rounded-lg bg-plum-50 px-3 py-2 text-sm text-plum-800 dark:bg-dm-card-2 dark:text-plum-200">
               {status}
