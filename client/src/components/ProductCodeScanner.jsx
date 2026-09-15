@@ -503,8 +503,10 @@ const ProductCodeScanner = ({ onDetected, onClose, cart = [], onIncrement, onDec
                 one — that glow was blowing out to a washed-out haze in a
                 real phone photo, reading as mismatched rather than intentional. */}
             <div className="motion-reduce:hidden absolute inset-x-2 top-1/2 h-0.5 -translate-y-1/2 rounded-full bg-white/90 shadow-[0_0_6px_1px_rgba(255,255,255,0.5)] animate-scan-sweep" />
+            {/* inset-0/rounded-xl — exactly the box's own bounds, not a
+                larger ring floating 8px outside it. */}
             {scanFlashKey > 0 && (
-              <div key={scanFlashKey} className="absolute -inset-2 rounded-2xl border-4 border-transparent animate-scan-success" />
+              <div key={scanFlashKey} className="absolute inset-0 rounded-xl border-4 border-transparent animate-scan-success" />
             )}
           </div>
           {/* No caption crowding the box anymore — a text pill sitting this
