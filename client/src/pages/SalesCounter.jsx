@@ -474,7 +474,7 @@ const SalesCounter = () => {
       const message = added
         ? `${product.name} added. Point at the next item.`
         : `${product.name} was not added.`;
-      return { added, message };
+      return { added, message, productId: product._id, productName: product.name, barcode: product.barcode || '' };
     } finally {
       setLookingUpScannedCode(false);
     }

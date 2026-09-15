@@ -66,8 +66,14 @@ const ProductCodeScanner = ({ onDetected, onClose, cart = [], onIncrement, onDec
   const lastAddedCodeRef = useRef('');
   const onDetectedRef = useRef(onDetected);
   const onCloseRef = useRef(onClose);
+  const onDecrementRef = useRef(onDecrement);
   const [status, setStatus] = useState('Opening the rear camera…');
   const [error, setError] = useState('');
+  // The most recently scanned-in item, kept only long enough to offer a
+  // one-tap undo — a dense, uncut label sheet can have several barcodes
+  // within the camera's view at once, so an occasional wrong pickup is
+  // expected and should be cheap to correct without hunting through the cart.
+  const [lastAdded, setLastAdded] = useState(null);
   // Shown in small print under the friendly message — console.error isn't
   // reachable on a phone with no attached devtools, so surface the raw
   // failure on-screen too (a cashier can screenshot it for support).
@@ -86,6 +92,17 @@ const ProductCodeScanner = ({ onDetected, onClose, cart = [], onIncrement, onDec
   useEffect(() => {
     onCloseRef.current = onClose;
   }, [onClose]);
+
+  useEffect(() => {
+    onDecrementRef.current = onDecrement;
+  }, [onDecrement]);
+
+  const handleUndoLastScan = () => {
+    if (!lastAdded) return;
+    onDecrementRef.current?.(lastAdded.productId);
+    setStatus(`Removed ${lastAdded.productName}. Point at the correct item.`);
+    setLastAdded(null);
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -160,8 +177,15 @@ const ProductCodeScanner = ({ onDetected, onClose, cart = [], onIncrement, onDec
           setStatus('Code found — adding it to the order…');
           try {
             const result = await onDetectedRef.current(decodedText);
-            if (result?.added) lastAddedCodeRef.current = normalizedCode;
-            setStatus(result?.message || 'Added. Point at the next item.');
+            if (result?.added) {
+              lastAddedCodeRef.current = normalizedCode;
+              setLastAdded(result.productId ? { productId: result.productId, productName: result.productName } : null);
+            }
+            // Echo the code that was actually matched — on a dense, uncut
+            // label sheet this is what lets a cashier catch a wrong pickup
+            // immediately, by eye, against the barcode printed on the label.
+            const codeSuffix = result?.added && result?.barcode ? ` (code ${result.barcode})` : '';
+            setStatus(`${result?.message || 'Added. Point at the next item.'}${codeSuffix}`);
           } catch {
             setStatus('That code could not be added. Try again or use the code field.');
           } finally {
@@ -171,7 +195,10 @@ const ProductCodeScanner = ({ onDetected, onClose, cart = [], onIncrement, onDec
 
         const config = {
           fps: 10,
-          qrbox: { width: 250, height: 180 },
+          // Tight and short (barcodes are wide, short strips) — on a dense,
+          // uncut sheet of labels a loose box can straddle two adjacent
+          // codes and the decoder can't tell which one the cashier meant.
+          qrbox: { width: 220, height: 90 },
           aspectRatio: 1.7778,
           disableFlip: false,
         };
@@ -182,9 +209,15 @@ const ProductCodeScanner = ({ onDetected, onClose, cart = [], onIncrement, onDec
         // "just use whatever camera is available" fallback since this
         // feature shipped. `{facingMode: 'environment'}` is the valid form
         // of that same intent.
+        //
+        // useBarCodeDetectorIfSupported is deliberately left off (always
+        // false, the html5-qrcode default): its cropping-to-qrbox behaviour
+        // for the native BarcodeDetector path is unreliable across devices,
+        // which is how a scan aimed at one label on a multi-label sheet
+        // could resolve to a completely different, unrelated product. The
+        // pure-JS decoder is the one guaranteed to only read the boxed area.
         const attempts = [
-          { useBarCodeDetectorIfSupported: true, cameraIdOrConfig: { facingMode: 'environment' }, label: 'native-detector/facingMode=environment' },
-          { useBarCodeDetectorIfSupported: false, cameraIdOrConfig: { facingMode: 'environment' }, label: 'js-decoder/facingMode=environment' },
+          { cameraIdOrConfig: { facingMode: 'environment' }, label: 'js-decoder/facingMode=environment' },
         ];
 
         // If facingMode isn't honoured/supported on this device, fall back
@@ -196,10 +229,7 @@ const ProductCodeScanner = ({ onDetected, onClose, cart = [], onIncrement, onDec
           if (Array.isArray(cameras) && cameras.length > 0) {
             const rearCamera = cameras.find((c) => /back|rear|environment/i.test(c.label || ''));
             const cameraId = (rearCamera || cameras[0]).id;
-            attempts.push(
-              { useBarCodeDetectorIfSupported: true, cameraIdOrConfig: cameraId, label: `native-detector/device:${cameraId}` },
-              { useBarCodeDetectorIfSupported: false, cameraIdOrConfig: cameraId, label: `js-decoder/device:${cameraId}` },
-            );
+            attempts.push({ cameraIdOrConfig: cameraId, label: `js-decoder/device:${cameraId}` });
           }
         } catch (getCamerasError) {
           // Usually the same underlying permission/hardware problem as the
@@ -220,7 +250,7 @@ const ProductCodeScanner = ({ onDetected, onClose, cart = [], onIncrement, onDec
           if (cancelled) return;
           const instance = new Html5Qrcode(scannerIdRef.current, {
             formatsToSupport: supportedFormats,
-            useBarCodeDetectorIfSupported: attempt.useBarCodeDetectorIfSupported,
+            useBarCodeDetectorIfSupported: false,
             verbose: false,
           });
           try {
@@ -334,9 +364,18 @@ const ProductCodeScanner = ({ onDetected, onClose, cart = [], onIncrement, onDec
               )}
             </div>
           ) : (
-            <p aria-live="polite" className="mt-3 rounded-lg bg-plum-50 px-3 py-2 text-sm text-plum-800 dark:bg-dm-card-2 dark:text-plum-200">
-              {status}
-            </p>
+            <div aria-live="polite" className="mt-3 rounded-lg bg-plum-50 px-3 py-2 text-sm text-plum-800 dark:bg-dm-card-2 dark:text-plum-200">
+              <p>{status}</p>
+              {lastAdded && (
+                <button
+                  type="button"
+                  onClick={handleUndoLastScan}
+                  className="mt-1 text-xs font-bold text-red-600 underline decoration-red-300 underline-offset-2 dark:text-red-400"
+                >
+                  Wrong item? Undo {lastAdded.productName}
+                </button>
+              )}
+            </div>
           )}
         </div>
 
@@ -383,7 +422,7 @@ const ProductCodeScanner = ({ onDetected, onClose, cart = [], onIncrement, onDec
         </div>
 
         <p className="shrink-0 px-4 pb-3 text-xs leading-relaxed text-brown-500 dark:text-white/50">
-          Keep the label inside the frame and hold steady. If the label has no code, close this and search or enter its SKU manually.
+          Keep the label inside the frame and hold steady. On an uncut sheet of labels, cover the neighbouring codes with your hand so only one is visible — otherwise the camera may pick up the wrong one. If the label has no code, close this and search or enter its SKU manually.
         </p>
       </div>
     </div>
