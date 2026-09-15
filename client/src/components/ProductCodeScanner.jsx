@@ -1,8 +1,14 @@
 /* eslint-disable react/prop-types */
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
-import { FaCamera, FaShoppingBasket, FaTimes } from 'react-icons/fa';
+import { FaCamera, FaChevronDown, FaChevronUp, FaShoppingBasket, FaTimes } from 'react-icons/fa';
 import CartItemRow from './CartItemRow';
 import { DisplayPriceInShillings } from '../utils/DisplayPriceInShillings';
+
+// Mirrors the html5-qrcode `qrbox` size below in real px so the on-screen
+// reticle is a true representation of the region actually being decoded,
+// not just decoration.
+const SCAN_BOX_WIDTH = 220;
+const SCAN_BOX_HEIGHT = 90;
 
 const SCAN_FORMAT_NAMES = [
   'QR_CODE',
@@ -78,6 +84,12 @@ const ProductCodeScanner = ({ onDetected, onClose, cart = [], onIncrement, onDec
   // reachable on a phone with no attached devtools, so surface the raw
   // failure on-screen too (a cashier can screenshot it for support).
   const [errorDetail, setErrorDetail] = useState('');
+  // Briefly flashes the scan frame green on a successful add — retriggering
+  // the same CSS animation needs a fresh key each time, not just a boolean.
+  const [scanFlashKey, setScanFlashKey] = useState(0);
+  // The basket starts tucked away as a peek bar so the camera owns the
+  // screen; tapping it slides the full itemised list up over the feed.
+  const [basketExpanded, setBasketExpanded] = useState(false);
 
   const itemCount = useMemo(() => cart.reduce((sum, item) => sum + item.quantity, 0), [cart]);
   const cartTotal = useMemo(
@@ -180,6 +192,7 @@ const ProductCodeScanner = ({ onDetected, onClose, cart = [], onIncrement, onDec
             if (result?.added) {
               lastAddedCodeRef.current = normalizedCode;
               setLastAdded(result.productId ? { productId: result.productId, productName: result.productName } : null);
+              setScanFlashKey((key) => key + 1);
             }
             // Echo the code that was actually matched — on a dense, uncut
             // label sheet this is what lets a cashier catch a wrong pickup
@@ -198,7 +211,7 @@ const ProductCodeScanner = ({ onDetected, onClose, cart = [], onIncrement, onDec
           // Tight and short (barcodes are wide, short strips) — on a dense,
           // uncut sheet of labels a loose box can straddle two adjacent
           // codes and the decoder can't tell which one the cashier meant.
-          qrbox: { width: 220, height: 90 },
+          qrbox: { width: SCAN_BOX_WIDTH, height: SCAN_BOX_HEIGHT },
           aspectRatio: 1.7778,
           disableFlip: false,
         };
@@ -328,102 +341,161 @@ const ProductCodeScanner = ({ onDetected, onClose, cart = [], onIncrement, onDec
   }, []);
 
   return (
-    <div className="fixed inset-0 z-[70] flex items-end bg-black/60 sm:items-center sm:justify-center sm:p-4" role="dialog" aria-modal="true" aria-labelledby="product-code-scanner-title">
-      <div className="flex max-h-[92dvh] w-full flex-col rounded-t-2xl bg-white shadow-2xl dark:bg-dm-card sm:max-h-[85vh] sm:max-w-md sm:rounded-2xl">
-        <div className="shrink-0 p-4 pb-0">
-          <div className="mb-3 flex items-start justify-between gap-3">
-            <div>
-              <h2 id="product-code-scanner-title" className="flex items-center gap-2 text-lg font-bold text-charcoal dark:text-white">
-                <FaCamera className="text-plum-700 dark:text-gold-300" /> Scan hair label
-              </h2>
-              <p className="mt-0.5 text-xs text-brown-500 dark:text-white/50">
-                Add each scanned hair piece directly to this order.
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={() => onCloseRef.current?.()}
-              className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-brown-200 text-brown-700 transition-colors hover:bg-brown-50 dark:border-dm-border dark:text-white/70 dark:hover:bg-dm-card-2"
-              aria-label="Close camera scanner"
-            >
-              <FaTimes />
-            </button>
-          </div>
+    <div
+      className="fixed inset-0 z-[70] overflow-hidden bg-charcoal"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="product-code-scanner-title"
+    >
+      {/* Full-bleed camera feed — this screen IS the camera, not a card
+          floating over one. */}
+      <div className="absolute inset-0">
+        <div
+          id={scannerIdRef.current}
+          className="h-full w-full [&_video]:h-full [&_video]:w-full [&_video]:object-cover"
+        />
+      </div>
 
-          <div className="overflow-hidden rounded-xl border border-plum-200 bg-black dark:border-dm-border">
-            <div id={scannerIdRef.current} className="min-h-[190px] [&_video]:h-[190px] [&_video]:w-full [&_video]:object-cover" />
-          </div>
+      {/* Nothing to show behind an error — a quiet brand gradient instead
+          of a dead black rectangle. */}
+      {error && (
+        <div className="absolute inset-0 bg-gradient-to-b from-plum-900 via-charcoal to-charcoal" />
+      )}
 
-          {error ? (
-            <div className="mt-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 dark:border-red-900/50 dark:bg-red-950/30">
-              <p className="text-sm text-red-700 dark:text-red-300">{error}</p>
-              {errorDetail && (
-                <p className="mt-1 select-all break-words font-mono text-[10px] leading-snug text-red-500/80 dark:text-red-400/70">
-                  {errorDetail}
-                </p>
-              )}
-            </div>
-          ) : (
-            <div aria-live="polite" className="mt-3 rounded-lg bg-plum-50 px-3 py-2 text-sm text-plum-800 dark:bg-dm-card-2 dark:text-plum-200">
-              <p>{status}</p>
-              {lastAdded && (
-                <button
-                  type="button"
-                  onClick={handleUndoLastScan}
-                  className="mt-1 text-xs font-bold text-red-600 underline decoration-red-300 underline-offset-2 dark:text-red-400"
-                >
-                  Wrong item? Undo {lastAdded.productName}
-                </button>
-              )}
-            </div>
-          )}
-        </div>
+      {/* Darken the top/bottom edges so floating white text stays legible
+          over whatever the camera happens to be pointed at. */}
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-36 bg-gradient-to-b from-black/70 via-black/25 to-transparent" />
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-72 bg-gradient-to-t from-black/85 via-black/35 to-transparent" />
 
-        {/* Live basket — grows as labels are scanned, quantity adjustable
-            right here without closing the camera. */}
-        <div className="mt-3 flex min-h-0 flex-1 flex-col border-t border-brown-100 dark:border-dm-border">
-          <div className="flex shrink-0 items-center justify-between px-4 pt-3 pb-2">
-            <p className="text-sm font-bold text-charcoal dark:text-white">
-              This order · {itemCount} item{itemCount === 1 ? '' : 's'}
-            </p>
-            <p className="text-sm font-bold tabular-nums text-plum-700 dark:text-gold-300">
-              {DisplayPriceInShillings(cartTotal)}
-            </p>
-          </div>
-          <div className="flex-1 space-y-2 overflow-y-auto px-4 pb-3">
-            {cart.length === 0 ? (
-              <div className="rounded-xl border border-dashed border-brown-200 px-4 py-8 text-center text-sm text-brown-500 dark:border-dm-border dark:text-white/50">
-                Nothing scanned yet — point the camera at a hair label to add it here.
-              </div>
-            ) : (
-              cart.map((item) => (
-                <CartItemRow
-                  key={item._id}
-                  item={item}
-                  onIncrement={onIncrement}
-                  onDecrement={onDecrement}
-                  onRemove={onRemove}
-                />
-              ))
+      {/* Top bar */}
+      <div className="safe-area-top absolute inset-x-0 top-0 z-10 flex items-center justify-between gap-3 p-4">
+        <h2
+          id="product-code-scanner-title"
+          className="glass-dark flex items-center gap-2 rounded-full px-4 py-2.5 text-sm font-bold text-white"
+        >
+          <FaCamera className="text-gold-300" /> Scan hair label
+        </h2>
+        <button
+          type="button"
+          onClick={() => onCloseRef.current?.()}
+          className="glass-dark press inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-white"
+          aria-label="Close camera scanner"
+        >
+          <FaTimes />
+        </button>
+      </div>
+
+      {/* Animated scan reticle — sized to match the real decode region
+          (SCAN_BOX_WIDTH/HEIGHT above), not just decorative. */}
+      {!error && (
+        <div className="pointer-events-none absolute inset-0 z-10 flex flex-col items-center justify-center">
+          <div className="relative" style={{ width: SCAN_BOX_WIDTH, height: SCAN_BOX_HEIGHT }}>
+            <span className="absolute -left-1 -top-1 h-7 w-7 rounded-tl-xl border-l-[3px] border-t-[3px] border-gold-300" />
+            <span className="absolute -right-1 -top-1 h-7 w-7 rounded-tr-xl border-r-[3px] border-t-[3px] border-gold-300" />
+            <span className="absolute -bottom-1 -left-1 h-7 w-7 rounded-bl-xl border-b-[3px] border-l-[3px] border-gold-300" />
+            <span className="absolute -bottom-1 -right-1 h-7 w-7 rounded-br-xl border-b-[3px] border-r-[3px] border-gold-300" />
+            <div className="motion-reduce:hidden absolute inset-x-1 top-1/2 h-0.5 -translate-y-1/2 rounded-full bg-gold-300 shadow-[0_0_14px_3px_rgba(217,173,88,0.85)] animate-scan-sweep" />
+            {scanFlashKey > 0 && (
+              <div key={scanFlashKey} className="absolute -inset-2 rounded-2xl border-4 border-transparent animate-scan-success" />
             )}
           </div>
+          <p className="mt-4 max-w-[220px] text-center text-[11px] leading-snug text-white/70">
+            On an uncut sheet, cover neighbouring codes so only one shows.
+          </p>
+        </div>
+      )}
 
-          {cart.length > 0 && (
-            <div className="shrink-0 border-t border-brown-100 p-3 dark:border-dm-border">
+      {/* Status/error, and the basket — pinned to the bottom, stacked so
+          neither needs a hand-measured offset from the other. */}
+      <div className="safe-area-bottom absolute inset-x-0 bottom-0 z-10 flex flex-col gap-2.5 px-3 pb-3">
+        {error ? (
+          <div className="glass-dark rounded-2xl px-4 py-3">
+            <p className="text-sm font-medium text-red-300">{error}</p>
+            {errorDetail && (
+              <p className="mt-1 select-all break-words font-mono text-[10px] leading-snug text-red-200/70">
+                {errorDetail}
+              </p>
+            )}
+          </div>
+        ) : (
+          <div aria-live="polite" className="glass-dark rounded-2xl px-4 py-3">
+            <p className="text-sm font-medium text-white">{status}</p>
+            {lastAdded && (
               <button
                 type="button"
-                onClick={() => onCheckout?.()}
-                className="flex min-h-[48px] w-full items-center justify-center gap-2 rounded-xl bg-gold-500 text-sm font-bold text-charcoal transition-colors hover:bg-gold-400"
+                onClick={handleUndoLastScan}
+                className="mt-1 text-xs font-bold text-red-300 underline decoration-red-400/60 underline-offset-2"
               >
-                <FaShoppingBasket /> View basket & checkout
+                Wrong item? Undo {lastAdded.productName}
               </button>
+            )}
+          </div>
+        )}
+
+        {/* Basket drawer — a peek bar by default so the camera stays the
+            focus; tap to slide the full, quantity-adjustable list up. */}
+        <div
+          className={`overflow-hidden rounded-3xl bg-white/97 shadow-2xl backdrop-blur-md transition-[max-height] duration-300 ease-out dark:bg-dm-card/97 ${
+            basketExpanded ? 'max-h-[58dvh]' : 'max-h-[60px]'
+          }`}
+        >
+          <button
+            type="button"
+            onClick={() => setBasketExpanded((expanded) => !expanded)}
+            className="flex min-h-[60px] w-full items-center justify-between gap-3 px-4"
+            aria-expanded={basketExpanded}
+            aria-label={basketExpanded ? 'Collapse basket' : 'Expand basket'}
+          >
+            <span className="flex items-center gap-2 text-sm font-bold text-charcoal dark:text-white">
+              <FaShoppingBasket className="text-plum-700 dark:text-gold-300" />
+              {itemCount} item{itemCount === 1 ? '' : 's'}
+            </span>
+            <span className="flex items-center gap-3">
+              <span className="text-sm font-bold tabular-nums text-plum-700 dark:text-gold-300">
+                {DisplayPriceInShillings(cartTotal)}
+              </span>
+              {basketExpanded ? (
+                <FaChevronDown className="text-brown-400" size={12} />
+              ) : (
+                <FaChevronUp className="text-brown-400" size={12} />
+              )}
+            </span>
+          </button>
+
+          {basketExpanded && (
+            <div className="flex max-h-[calc(58dvh-60px)] flex-col border-t border-brown-100 dark:border-dm-border">
+              <div className="flex-1 space-y-2 overflow-y-auto p-3">
+                {cart.length === 0 ? (
+                  <div className="rounded-xl border border-dashed border-brown-200 px-4 py-8 text-center text-sm text-brown-500 dark:border-dm-border dark:text-white/50">
+                    Nothing scanned yet. If a label has no code, close this and search or enter its SKU manually.
+                  </div>
+                ) : (
+                  cart.map((item) => (
+                    <CartItemRow
+                      key={item._id}
+                      item={item}
+                      onIncrement={onIncrement}
+                      onDecrement={onDecrement}
+                      onRemove={onRemove}
+                    />
+                  ))
+                )}
+              </div>
+
+              {cart.length > 0 && (
+                <div className="shrink-0 border-t border-brown-100 p-3 dark:border-dm-border">
+                  <button
+                    type="button"
+                    onClick={() => onCheckout?.()}
+                    className="flex min-h-[48px] w-full items-center justify-center gap-2 rounded-xl bg-gold-500 text-sm font-bold text-charcoal transition-colors hover:bg-gold-400"
+                  >
+                    <FaShoppingBasket /> View basket & checkout
+                  </button>
+                </div>
+              )}
             </div>
           )}
         </div>
-
-        <p className="shrink-0 px-4 pb-3 text-xs leading-relaxed text-brown-500 dark:text-white/50">
-          Keep the label inside the frame and hold steady. On an uncut sheet of labels, cover the neighbouring codes with your hand so only one is visible — otherwise the camera may pick up the wrong one. If the label has no code, close this and search or enter its SKU manually.
-        </p>
       </div>
     </div>
   );

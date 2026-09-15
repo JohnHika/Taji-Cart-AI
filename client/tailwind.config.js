@@ -125,11 +125,22 @@ module.exports = {
           '0%':   { backgroundPosition: '-200% 0' },
           '100%': { backgroundPosition: '200% 0' },
         },
+        scanSweep: {
+          '0%, 100%': { transform: 'translateY(-46px)', opacity: '0.3' },
+          '50%':      { transform: 'translateY(46px)',  opacity: '1' },
+        },
+        scanFlashSuccess: {
+          '0%':   { borderColor: 'rgba(74,222,128,0)',  boxShadow: '0 0 0 rgba(74,222,128,0)' },
+          '25%':  { borderColor: 'rgba(74,222,128,1)',  boxShadow: '0 0 32px 4px rgba(74,222,128,0.55)' },
+          '100%': { borderColor: 'rgba(217,173,88,0.9)', boxShadow: '0 0 0 rgba(74,222,128,0)' },
+        },
       },
       animation: {
         'fade-up':        'fadeUp 0.5s ease both',
         'fade-in':        'fadeIn 0.4s ease both',
         'shimmer':        'shimmer 1.6s linear infinite',
+        'scan-sweep':     'scanSweep 2.4s ease-in-out infinite',
+        'scan-success':   'scanFlashSuccess 0.9s ease-out',
       },
     },
   },
