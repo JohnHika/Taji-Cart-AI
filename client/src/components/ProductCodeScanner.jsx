@@ -483,7 +483,11 @@ const ProductCodeScanner = ({ onDetected, onClose, cart = [], onIncrement, onDec
               <div key={scanFlashKey} className="absolute -inset-2 rounded-2xl border-4 border-transparent animate-scan-success" />
             )}
           </div>
-          <p className="mt-4 max-w-[220px] text-center text-[11px] leading-snug text-white/70">
+          {/* A rounded pill with its own background, not a plain text block
+              — sitting flush under the box on the same hard-edged spotlight
+              made it read as a second stacked rectangle rather than a
+              floating tip. */}
+          <p className="mt-7 max-w-[240px] rounded-full bg-black/40 px-3.5 py-1.5 text-center text-[11px] leading-snug text-white/80 backdrop-blur-sm">
             On an uncut sheet, cover neighbouring codes so only one shows.
           </p>
         </div>
