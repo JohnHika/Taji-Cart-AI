@@ -1,5 +1,7 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
+import fs from 'node:fs'
+import path from 'node:path'
 
 const API_PORT = process.env.VITE_API_PORT || '3001'
 const BACKEND =
@@ -8,9 +10,30 @@ const BACKEND =
   process.env.VITE_BACKEND_URL ||
   `http://localhost:${API_PORT}`
 
+// Identifies exactly which deploy is running in a given browser tab.
+// VERCEL_GIT_COMMIT_SHA is set automatically by Vercel's build environment;
+// falls back to a timestamp for local builds where it isn't set.
+const BUILD_ID = process.env.VERCEL_GIT_COMMIT_SHA || `local-${Date.now()}`
+
+// Writes dist/version.json (unhashed, so it's always fetched fresh — unlike
+// the content-hashed JS chunks) so an already-loaded tab can poll for it and
+// detect that a newer deploy has shipped. See src/App.jsx's version watcher.
+const emitVersionFile = () => ({
+  name: 'emit-version-file',
+  writeBundle(options) {
+    fs.writeFileSync(
+      path.join(options.dir, 'version.json'),
+      JSON.stringify({ buildId: BUILD_ID }),
+    )
+  },
+})
+
 // https://vitejs.dev/config/
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react(), emitVersionFile()],
+  define: {
+    __APP_BUILD_ID__: JSON.stringify(BUILD_ID),
+  },
   optimizeDeps: {
     include: ['exceljs'],
   },

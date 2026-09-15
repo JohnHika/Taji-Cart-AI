@@ -78,6 +78,8 @@ function App() {
   const isFetchingProductsRef = useRef(false);
   const lastVisibilityFetchRef = useRef(0);
   const lastUserRefreshRef = useRef(0);
+  const lastVersionCheckRef = useRef(0);
+  const reloadingForUpdateRef = useRef(false);
 
   // Product/category fetching function
   const fetchProductData = async () => {
@@ -273,6 +275,48 @@ function App() {
       window.removeEventListener('nawiri:token-refreshed', refreshUserIfStale);
     };
   }, [dispatch]);
+
+  // Detects when a newer deploy has gone live and reloads this tab onto it,
+  // so cashiers/staff who leave a page open for a whole shift don't stay
+  // stuck running old code (an already-loaded SPA never re-checks its own
+  // bundle on its own). Safe to do silently: in-progress Sales Counter
+  // state is restored from sessionStorage after reload (see SalesCounter.jsx).
+  // Runs on a 5-minute cooldown, both periodically and whenever the tab
+  // becomes visible again — the periodic timer also fires while backgrounded
+  // so a stale tab is often already updated by the time it's switched back to.
+  useEffect(() => {
+    if (import.meta.env.DEV) return undefined;
+
+    const checkForUpdate = async () => {
+      if (reloadingForUpdateRef.current) return;
+      const now = Date.now();
+      if (now - lastVersionCheckRef.current < 5 * 60 * 1000) return;
+      lastVersionCheckRef.current = now;
+
+      try {
+        const response = await fetch(`/version.json?t=${now}`, { cache: 'no-store' });
+        if (!response.ok) return;
+        const data = await response.json();
+        if (data?.buildId && data.buildId !== __APP_BUILD_ID__) {
+          reloadingForUpdateRef.current = true;
+          window.location.reload();
+        }
+      } catch (error) {
+        console.warn('Version check failed (offline or blocked) — will retry later:', error?.message);
+      }
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') checkForUpdate();
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    const intervalId = window.setInterval(checkForUpdate, 5 * 60 * 1000);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.clearInterval(intervalId);
+    };
+  }, []);
 
 
   // Add a specific effect to handle dynamic routes

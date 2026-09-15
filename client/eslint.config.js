@@ -10,7 +10,12 @@ export default [
     ignores: ['dist'],
     languageOptions: {
       ecmaVersion: 2020,
-      globals: globals.browser,
+      globals: {
+        ...globals.browser,
+        // Injected by vite.config.js's `define` — the deployed commit SHA
+        // (or a local-build timestamp), used by App.jsx's version watcher.
+        __APP_BUILD_ID__: 'readonly',
+      },
       parserOptions: {
         ecmaVersion: 'latest',
         ecmaFeatures: { jsx: true },
@@ -33,6 +38,14 @@ export default [
         'warn',
         { allowConstantExport: true },
       ],
+    },
+  },
+  {
+    // Build-tool config files run in Node, not the browser — `process` etc.
+    // aren't covered by the browser globals used for app source above.
+    files: ['*.config.js'],
+    languageOptions: {
+      globals: globals.node,
     },
   },
 ]
