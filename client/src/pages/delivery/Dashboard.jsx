@@ -276,7 +276,7 @@ const Dashboard = () => {
                         {formatDate(order.createdAt)}
                       </p>
                     </div>
-                    <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                    <span className={`self-start sm:self-auto px-3 py-1 rounded-full text-xs font-medium ${
                       order.status === 'driver_assigned' ? 'bg-plum-100 text-plum-800 dark:bg-plum-800 dark:text-plum-200' :
                       order.status === 'out_for_delivery' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-800 dark:text-yellow-200' :
                       'bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-200'

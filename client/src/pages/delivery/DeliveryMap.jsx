@@ -945,7 +945,7 @@ const DeliveryMap = () => {
               setShowPerformance(true);
               fetchPerformanceData();
             }}
-            className="bg-plum-700 text-white px-4 py-2 rounded hover:bg-plum-600 flex items-center justify-center"
+            className="bg-plum-700 text-white px-4 py-2 rounded hover:bg-plum-600 flex items-center justify-center gap-1.5"
           >
             <FaChartLine size={13} />
             Performance
@@ -953,7 +953,7 @@ const DeliveryMap = () => {
           <button
             onClick={updateCurrentLocation}
             disabled={updatingLocation}
-            className="bg-plum-700 text-white px-4 py-2 rounded hover:bg-plum-600 flex items-center justify-center disabled:opacity-50"
+            className="bg-plum-700 text-white px-4 py-2 rounded hover:bg-plum-600 flex items-center justify-center gap-1.5 disabled:opacity-50"
           >
             {updatingLocation ? (
               <FaSpinner className="animate-spin" size={13} />
@@ -1256,16 +1256,16 @@ const DeliveryMap = () => {
           
           <button
             onClick={centerOnCurrentLocation}
-            className="bg-plum-700 text-white rounded px-3 py-2 text-sm flex items-center justify-center hover:bg-plum-600"
+            className="bg-plum-700 text-white rounded px-3 py-2 text-sm flex items-center justify-center gap-1.5 hover:bg-plum-600"
           >
-            <FaLocationArrow size={10} /> Center
+            <FaLocationArrow size={10} />Center
           </button>
           
           <button
             onClick={toggleTrafficLayer}
-            className={`rounded px-2 py-1 text-sm flex items-center ${
-              trafficLayer 
-                ? 'bg-red-500 text-white hover:bg-red-600' 
+            className={`rounded px-2 py-1 text-sm flex items-center gap-1.5 ${
+              trafficLayer
+                ? 'bg-red-500 text-white hover:bg-red-600'
                 : 'bg-brown-100 dark:bg-dm-card-2 text-charcoal dark:text-white/70 hover:bg-brown-200 dark:hover:bg-dm-border'
               } px-3 py-2`}
           >
@@ -1275,7 +1275,7 @@ const DeliveryMap = () => {
           
           <button
             onClick={toggleWeatherMode}
-            className={`rounded px-2 py-1 text-sm flex items-center ${
+            className={`rounded px-2 py-1 text-sm flex items-center gap-1.5 ${
               weatherMode
                 ? 'bg-gold-500 text-charcoal hover:bg-gold-400'
                 : 'bg-brown-100 dark:bg-dm-card-2 text-charcoal dark:text-white/70 hover:bg-brown-200 dark:hover:bg-dm-border'
@@ -1287,9 +1287,9 @@ const DeliveryMap = () => {
           
           <button
             onClick={() => setShowOptimizeModal(true)}
-            className="bg-purple-500 text-white rounded px-3 py-2 text-sm flex items-center justify-center hover:bg-purple-600"
+            className="bg-purple-500 text-white rounded px-3 py-2 text-sm flex items-center justify-center gap-1.5 hover:bg-purple-600"
           >
-            <FaRoute size={10} /> Optimize
+            <FaRoute size={10} />Optimize
             {selectedDeliveries.length > 0 && (
               <span className="ml-0.5 bg-gold-500 text-charcoal rounded-full h-4 w-4 flex items-center justify-center text-[10px] font-bold">
                 {selectedDeliveries.length}
@@ -1314,7 +1314,7 @@ const DeliveryMap = () => {
             <button
               onClick={() => getDetailedDirections(currentLocation, selectedDelivery.coordinates)}
               disabled={isRouteFetching}
-              className="bg-green-500 text-white rounded px-3 py-2 text-sm flex items-center justify-center hover:bg-green-600 disabled:opacity-50"
+              className="bg-green-500 text-white rounded px-3 py-2 text-sm flex items-center justify-center gap-1.5 hover:bg-green-600 disabled:opacity-50"
             >
               {isRouteFetching ? <FaSpinner className="animate-spin" size={10} /> : <FaRoute size={10} />}
               Route
@@ -1323,7 +1323,7 @@ const DeliveryMap = () => {
           
           <button
             onClick={toggleFullscreen}
-            className="bg-brown-400 text-white rounded px-3 py-2 text-sm flex items-center justify-center hover:bg-brown-500"
+            className="bg-brown-400 text-white rounded px-3 py-2 text-sm flex items-center justify-center gap-1.5 hover:bg-brown-500"
           >
             {isFullscreen ? <FaCompressAlt size={10} /> : <FaExpandAlt size={10} />}
             {isFullscreen ? 'Exit' : 'Fullscreen'}
@@ -1472,24 +1472,24 @@ const DeliveryMap = () => {
                       
                       {delivery.status === 'driver_assigned' && (
                         <button 
-                          className="bg-plum-700 hover:bg-plum-600 text-white px-3 py-2 rounded text-xs flex items-center justify-center"
+                          className="bg-plum-700 hover:bg-plum-600 text-white px-3 py-2 rounded text-xs flex items-center justify-center gap-1"
                           onClick={(e) => {
                             e.stopPropagation();
                             handleStatusUpdate(delivery._id, 'out_for_delivery');
                           }}
                         >
-                          <FaTruck size={9} /> Start
+                          <FaTruck size={9} />Start
                         </button>
                       )}
                       {delivery.status === 'out_for_delivery' && (
                         <button 
-                          className="bg-green-500 hover:bg-green-600 text-white px-3 py-2 rounded text-xs flex items-center justify-center"
+                          className="bg-green-500 hover:bg-green-600 text-white px-3 py-2 rounded text-xs flex items-center justify-center gap-1"
                           onClick={(e) => {
                             e.stopPropagation();
                             handleStatusUpdate(delivery._id, 'delivered');
                           }}
                         >
-                          <FaCalendarCheck size={9} /> Done
+                          <FaCalendarCheck size={9} />Done
                         </button>
                       )}
                     </div>
