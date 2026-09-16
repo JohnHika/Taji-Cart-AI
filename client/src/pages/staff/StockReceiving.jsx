@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { FaBoxes, FaCheckCircle, FaExclamationTriangle, FaSync } from 'react-icons/fa';
+import { FaBoxes, FaCheckCircle, FaClipboardList, FaExclamationTriangle, FaLock, FaSync, FaTruckLoading } from 'react-icons/fa';
 import { useSelector } from 'react-redux';
 import toast from 'react-hot-toast';
 import Axios from '../../utils/Axios';
@@ -128,7 +128,7 @@ const StockReceiving = () => {
   const branchLabel = user?.staff_branch || 'Branch not assigned';
 
   if (!allowed) {
-    return <main className="container mx-auto px-4 py-8"><section className={`${shell} p-6`}><p className={labelClass}>Stock receiving</p><h1 className="mt-2 text-2xl font-black text-charcoal dark:text-white">Permission required</h1><p className="mt-2 max-w-xl text-sm leading-6 text-brown-500 dark:text-white/55">An administrator must grant Stock receiving before this account can view or confirm store transfers.</p></section></main>;
+    return <main className="container mx-auto px-4 py-8"><section className={`${shell} p-6 text-center sm:p-8 sm:text-left`}><div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-gold-100 text-gold-600 dark:bg-gold-600/20 dark:text-gold-300 sm:mx-0"><FaLock size={22} /></div><p className={`${labelClass} mt-4`}>Stock receiving</p><h1 className="mt-2 text-2xl font-black text-charcoal dark:text-white">Permission required</h1><p className="mx-auto mt-2 max-w-xl text-sm leading-6 text-brown-500 dark:text-white/55 sm:mx-0">An administrator must grant Stock receiving before this account can view or confirm store transfers.</p></section></main>;
   }
 
   return (
@@ -145,12 +145,18 @@ const StockReceiving = () => {
           </div>
           <div className="grid grid-cols-2 gap-3 sm:min-w-[260px]">
             <div className="rounded-2xl border border-white/10 bg-white/[0.08] px-4 py-3">
-              <p className="text-[10px] font-bold uppercase tracking-wide text-white/55">Waiting for your count</p>
+              <div className="flex items-start justify-between gap-2">
+                <p className="text-[10px] font-bold uppercase tracking-wide text-white/55">Waiting for your count</p>
+                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gold-500/25 text-gold-200"><FaClipboardList size={13} /></span>
+              </div>
               <p className="mt-1 text-2xl font-black">{openCount}</p>
               <p className="mt-1 text-xs text-white/55">{openCount === 1 ? 'transfer' : 'transfers'}</p>
             </div>
             <div className="rounded-2xl border border-white/10 bg-white/[0.08] px-4 py-3">
-              <p className="text-[10px] font-bold uppercase tracking-wide text-white/55">Units dispatched</p>
+              <div className="flex items-start justify-between gap-2">
+                <p className="text-[10px] font-bold uppercase tracking-wide text-white/55">Units dispatched</p>
+                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-emerald-500/25 text-emerald-200"><FaTruckLoading size={13} /></span>
+              </div>
               <p className="mt-1 text-2xl font-black">{totalUnits}</p>
               <p className="mt-1 text-xs text-white/55">Across this queue</p>
             </div>
@@ -211,10 +217,42 @@ const StockReceiving = () => {
             return received !== null && received !== line.dispatchedQuantity;
           });
           const busy = actingId === transfer._id;
+          const lineState = (line) => {
+            const entered = receipt.lines.find((item) => item.productId === String(line.product));
+            const value = entered?.receivedQuantity ?? '';
+            const numeric = value === '' ? null : Number(value);
+            const variance = numeric === null || !Number.isFinite(numeric) ? null : numeric - line.dispatchedQuantity;
+            const varianceClass = variance === 0 ? 'text-emerald-600' : (variance < 0 ? 'text-red-600' : (variance > 0 ? 'text-amber-600' : 'text-brown-400'));
+            const varianceChip = variance === 0 ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-300' : (variance < 0 ? 'bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-300' : (variance > 0 ? 'bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-300' : 'border border-brown-200 bg-white text-brown-400 dark:border-dm-border dark:bg-dm-card dark:text-white/40'));
+            return { value, variance, varianceClass, varianceChip };
+          };
           return <section key={transfer._id} className={`${shell} overflow-hidden`}>
-            <div className="border-b border-brown-100 p-5 dark:border-dm-border"><div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between"><div><div className="flex flex-wrap items-center gap-2"><h2 className="text-lg font-black text-charcoal dark:text-white">{transfer.number}</h2><span className="rounded-full bg-gold-50 px-2.5 py-1 text-[10px] font-black uppercase tracking-wide text-gold-800 dark:bg-gold-900/20 dark:text-gold-200">{transfer.status.replaceAll('_', ' ')}</span></div><p className="mt-1 text-xs text-brown-500">{transfer.destinationBranch} · released {new Date(transfer.releasedAt).toLocaleString('en-KE', { dateStyle: 'medium', timeStyle: 'short' })} by {transfer.releasedBy?.name || 'Admin'}</p></div><div className="rounded-xl bg-ivory px-3 py-2 text-xs font-bold text-brown-700 dark:bg-dm-card-2 dark:text-white/70">{totals.received} / {totals.dispatched} units counted</div></div>{transfer.notes && <p className="mt-3 rounded-xl bg-ivory px-3 py-2 text-xs text-brown-600 dark:bg-dm-card-2 dark:text-white/60">Admin note: {transfer.notes}</p>}</div>
+            <div className="border-b border-brown-100 p-5 dark:border-dm-border"><div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between"><div><div className="flex flex-wrap items-center gap-2"><h2 className="text-lg font-black text-charcoal dark:text-white">{transfer.number}</h2><span className="inline-flex items-center gap-1 rounded-full bg-gold-50 px-2.5 py-1 text-[10px] font-black uppercase tracking-wide text-gold-600 dark:bg-gold-600/20 dark:text-gold-300"><FaTruckLoading size={10} />{transfer.status.replaceAll('_', ' ')}</span></div><p className="mt-1 text-xs text-brown-500">{transfer.destinationBranch} · released {new Date(transfer.releasedAt).toLocaleString('en-KE', { dateStyle: 'medium', timeStyle: 'short' })} by {transfer.releasedBy?.name || 'Admin'}</p></div><div className="rounded-xl bg-ivory px-3 py-2 text-xs font-bold text-brown-700 dark:bg-dm-card-2 dark:text-white/70">{totals.received} / {totals.dispatched} units counted</div></div>{transfer.notes && <p className="mt-3 rounded-xl bg-ivory px-3 py-2 text-xs text-brown-600 dark:bg-dm-card-2 dark:text-white/60">Admin note: {transfer.notes}</p>}</div>
             <div className="space-y-4 p-5">
-              <div className="overflow-x-auto"><table className="w-full min-w-[680px] text-left text-sm"><thead className="text-[10px] uppercase tracking-wide text-brown-400"><tr><th className="pb-2">Product</th><th className="pb-2 text-right">Dispatched</th><th className="pb-2 text-right">Received physically</th><th className="pb-2 text-right">Difference</th></tr></thead><tbody>{transfer.lines.map((line) => { const entered = receipt.lines.find((item) => item.productId === String(line.product)); const value = entered?.receivedQuantity ?? ''; const numeric = value === '' ? null : Number(value); const variance = numeric === null || !Number.isFinite(numeric) ? null : numeric - line.dispatchedQuantity; return <tr key={`${transfer._id}-${line.product}`} className="border-t border-brown-100 dark:border-dm-border"><td className="py-3 font-bold text-charcoal dark:text-white">{line.productName}<span className="ml-2 text-xs font-normal text-brown-400">{line.sku || ''}</span></td><td className="py-3 text-right font-black text-charcoal dark:text-white">{line.dispatchedQuantity}</td><td className="w-40 py-2"><input aria-label={`Received quantity for ${line.productName}`} type="number" min="0" max={MAX_TRANSFER_QUANTITY} step="1" value={value} onChange={(event) => updateReceiptLine(transfer._id, String(line.product), event.target.value)} className={inputClass} placeholder="Count" /></td><td className={`py-3 text-right font-black ${variance === 0 ? 'text-emerald-600' : (variance < 0 ? 'text-red-600' : (variance > 0 ? 'text-amber-600' : 'text-brown-400'))}`}>{variance === null ? '—' : `${variance > 0 ? '+' : ''}${variance}`}</td></tr>; })}</tbody></table></div>
+              <div className="space-y-2.5 lg:hidden">
+                {transfer.lines.map((line) => {
+                  const { value, variance, varianceChip } = lineState(line);
+                  return (
+                    <div key={`${transfer._id}-${line.product}-card`} className="rounded-2xl border border-brown-100 bg-ivory p-3.5 dark:border-dm-border dark:bg-dm-card-2">
+                      <div className="flex items-start justify-between gap-2">
+                        <p className="text-sm font-bold text-charcoal dark:text-white">{line.productName}<span className="ml-2 text-xs font-normal text-brown-400">{line.sku || ''}</span></p>
+                        <span className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-black ${varianceChip}`}>{variance === null ? '—' : `${variance > 0 ? '+' : ''}${variance}`}</span>
+                      </div>
+                      <div className="mt-3 flex items-end gap-3">
+                        <div className="shrink-0">
+                          <p className={labelClass}>Dispatched</p>
+                          <p className="mt-1 text-lg font-black text-charcoal dark:text-white">{line.dispatchedQuantity}</p>
+                        </div>
+                        <div className="flex-1">
+                          <label className={labelClass} htmlFor={`qty-${transfer._id}-${line.product}`}>Received physically</label>
+                          <input id={`qty-${transfer._id}-${line.product}`} aria-label={`Received quantity for ${line.productName}`} type="number" min="0" max={MAX_TRANSFER_QUANTITY} step="1" value={value} onChange={(event) => updateReceiptLine(transfer._id, String(line.product), event.target.value)} className={`${inputClass} mt-1`} placeholder="Count" />
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+              <div className="hidden overflow-x-auto lg:block"><table className="w-full min-w-[680px] text-left text-sm"><thead className="text-[10px] uppercase tracking-wide text-brown-400"><tr><th className="pb-2">Product</th><th className="pb-2 text-right">Dispatched</th><th className="pb-2 text-right">Received physically</th><th className="pb-2 text-right">Difference</th></tr></thead><tbody>{transfer.lines.map((line) => { const { value, variance, varianceClass } = lineState(line); return <tr key={`${transfer._id}-${line.product}`} className="border-t border-brown-100 dark:border-dm-border"><td className="py-3 font-bold text-charcoal dark:text-white">{line.productName}<span className="ml-2 text-xs font-normal text-brown-400">{line.sku || ''}</span></td><td className="py-3 text-right font-black text-charcoal dark:text-white">{line.dispatchedQuantity}</td><td className="w-40 py-2"><input aria-label={`Received quantity for ${line.productName}`} type="number" min="0" max={MAX_TRANSFER_QUANTITY} step="1" value={value} onChange={(event) => updateReceiptLine(transfer._id, String(line.product), event.target.value)} className={inputClass} placeholder="Count" /></td><td className={`py-3 text-right font-black ${varianceClass}`}>{variance === null ? '—' : `${variance > 0 ? '+' : ''}${variance}`}</td></tr>; })}</tbody></table></div>
               <div className="flex flex-col gap-3 rounded-2xl bg-ivory p-4 dark:bg-dm-card-2 sm:flex-row sm:items-center sm:justify-between"><div><p className={labelClass}>Receipt math</p><p className="mt-1 text-sm font-black text-charcoal dark:text-white">{totals.received} received − {totals.dispatched} dispatched = <span className={difference === 0 ? 'text-emerald-600' : 'text-red-600'}>{difference > 0 ? '+' : ''}{difference}</span></p><p className="mt-1 text-xs text-brown-500">{hasLineDifference ? 'A line-level difference will be reviewed.' : 'Everything matches.'}</p></div><FaBoxes className="hidden text-2xl text-plum-500 sm:block" /></div>
               <textarea aria-label={`Receipt note for ${transfer.number}`} value={receipt.receiptNote || ''} onChange={(event) => updateReceiptNote(transfer._id, event.target.value)} maxLength="500" rows="2" placeholder="Optional for a partial receipt; required when the final count differs" className="w-full rounded-xl border border-brown-200 bg-white p-3 text-sm outline-none focus:border-plum-500 dark:border-dm-border dark:bg-dm-card-2 dark:text-white" />
               <div className="flex flex-col gap-2 sm:flex-row sm:justify-end"><button type="button" disabled={busy || !totals.complete} onClick={() => submitReceipt(transfer, false)} className="min-h-[44px] rounded-xl border border-plum-200 px-4 py-2.5 text-sm font-bold text-plum-700 transition hover:bg-plum-50 disabled:opacity-50 dark:text-plum-200">Save partial receipt</button><button type="button" disabled={busy || !totals.complete} onClick={() => submitReceipt(transfer, true)} className="inline-flex min-h-[44px] items-center justify-center gap-2 rounded-xl bg-plum-700 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-plum-800 disabled:opacity-50">{hasLineDifference ? <FaExclamationTriangle size={13} /> : <FaCheckCircle size={13} />}{busy ? 'Saving…' : (hasLineDifference ? 'Submit difference' : 'Confirm receipt')}</button></div>

@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import toast from 'react-hot-toast';
-import { FaCheck, FaClock, FaRedo, FaSearch, FaSpinner, FaTruck } from 'react-icons/fa';
+import { FaCheck, FaCheckSquare, FaClock, FaMapMarkerAlt, FaRedo, FaSearch, FaSpinner, FaTruck, FaWallet } from 'react-icons/fa';
 import { useNavigate } from 'react-router-dom';
 import Axios from '../../../utils/Axios';
 import AxiosToastError from '../../../utils/AxiosToastError';
@@ -169,24 +169,49 @@ const PendingDispatch = () => {
   return (
     <section className="flex flex-col gap-4 lg:gap-5">
       <div className="grid grid-cols-2 gap-2.5 xl:grid-cols-4">
-        <div className="mobile-surface p-3 sm:p-4">
-          <p className="text-xs uppercase tracking-[0.16em] text-brown-400">Pending orders</p>
-          <p className="mt-1.5 text-2xl font-bold text-charcoal sm:mt-2 sm:text-3xl dark:text-white">{pendingOrders.length}</p>
+        <div className="rounded-2xl border border-plum-100 bg-plum-50 p-3 shadow-sm dark:border-plum-800 dark:bg-plum-900/20 sm:p-4">
+          <div className="flex items-start justify-between">
+            <div>
+              <p className="text-xs font-medium text-plum-800 dark:text-plum-200">Pending orders</p>
+              <p className="mt-1.5 text-2xl font-bold text-plum-900 sm:mt-2 sm:text-3xl dark:text-plum-100">{pendingOrders.length}</p>
+            </div>
+            <div className="rounded-full bg-plum-100 p-2 dark:bg-plum-800">
+              <FaClock className="h-4 w-4 text-plum-600 dark:text-plum-200 sm:h-5 sm:w-5" />
+            </div>
+          </div>
         </div>
-        <div className="mobile-surface p-3 sm:p-4">
-          <p className="text-xs uppercase tracking-[0.16em] text-brown-400">Selected</p>
-          <p className="mt-1.5 text-2xl font-bold text-charcoal sm:mt-2 sm:text-3xl dark:text-white">{selectedOrders.length}</p>
+        <div className="rounded-2xl border border-gold-200 bg-gold-50 p-3 shadow-sm dark:border-gold-600/40 dark:bg-gold-600/15 sm:p-4">
+          <div className="flex items-start justify-between">
+            <div>
+              <p className="text-xs font-medium text-gold-600 dark:text-gold-300">Selected</p>
+              <p className="mt-1.5 text-2xl font-bold text-charcoal sm:mt-2 sm:text-3xl dark:text-white">{selectedOrders.length}</p>
+            </div>
+            <div className="rounded-full bg-gold-100 p-2 dark:bg-gold-600/30">
+              <FaCheckSquare className="h-4 w-4 text-gold-600 dark:text-gold-300 sm:h-5 sm:w-5" />
+            </div>
+          </div>
         </div>
-        <div className="mobile-surface p-3 sm:p-4">
-          <p className="text-xs uppercase tracking-[0.16em] text-brown-400">Selected value</p>
-          <p className="mt-1.5 text-lg font-bold text-charcoal sm:mt-2 sm:text-xl dark:text-white">{formatCurrency(selectedValue)}</p>
+        <div className="rounded-2xl border border-blush-200 bg-blush-50 p-3 shadow-sm dark:border-plum-800 dark:bg-plum-900/25 sm:p-4">
+          <div className="flex items-start justify-between">
+            <div>
+              <p className="text-xs font-medium text-plum-800 dark:text-plum-200">Selected value</p>
+              <p className="mt-1.5 text-lg font-bold text-charcoal sm:mt-2 sm:text-xl dark:text-white">{formatCurrency(selectedValue)}</p>
+            </div>
+            <div className="rounded-full bg-blush-100 p-2 dark:bg-plum-800">
+              <FaWallet className="h-4 w-4 text-blush-500 dark:text-plum-200 sm:h-5 sm:w-5" />
+            </div>
+          </div>
         </div>
-        <div className="mobile-surface p-3 sm:p-4">
-          <p className="text-xs uppercase tracking-[0.16em] text-brown-400">Ready now</p>
-          <p className="mt-1.5 flex items-center gap-1.5 text-sm font-medium text-emerald-700 dark:text-emerald-300">
-            <FaTruck className="shrink-0" />
-            Dispatch queue
-          </p>
+        <div className="rounded-2xl border border-emerald-100 bg-emerald-50 p-3 shadow-sm dark:border-emerald-800 dark:bg-emerald-900/20 sm:p-4">
+          <div className="flex items-start justify-between">
+            <div>
+              <p className="text-xs font-medium text-emerald-800 dark:text-emerald-200">Ready now</p>
+              <p className="mt-1.5 text-sm font-bold text-emerald-900 sm:mt-2 sm:text-base dark:text-emerald-100">Dispatch queue</p>
+            </div>
+            <div className="rounded-full bg-emerald-100 p-2 dark:bg-emerald-800">
+              <FaTruck className="h-4 w-4 text-emerald-600 dark:text-emerald-200 sm:h-5 sm:w-5" />
+            </div>
+          </div>
         </div>
       </div>
 
@@ -266,34 +291,45 @@ const PendingDispatch = () => {
           <div className="grid gap-3 lg:hidden">
             {filteredOrders.map((order) => {
               const isBusy = processingIds.includes(order._id);
+              const isSelected = selectedOrders.includes(order._id);
               return (
-                <article key={order._id} className="mobile-surface p-4">
+                <article key={order._id} className={`mobile-surface p-3.5 transition ${isSelected ? 'ring-2 ring-plum-400' : ''}`}>
                   <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <p className="text-xs uppercase tracking-[0.16em] text-brown-400">Order</p>
-                      <h3 className="mt-1 text-lg font-semibold text-charcoal dark:text-white">{order.orderId}</h3>
+                    <div className="flex min-w-0 items-center gap-3">
+                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-plum-100 text-plum-700 dark:bg-plum-900/30 dark:text-plum-200">
+                        <FaTruck size={15} />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-xs uppercase tracking-[0.16em] text-brown-400">Order</p>
+                        <h3 className="truncate text-base font-semibold text-charcoal dark:text-white">{order.orderId}</h3>
+                      </div>
                     </div>
                     <input
                       type="checkbox"
-                      checked={selectedOrders.includes(order._id)}
+                      checked={isSelected}
                       onChange={() => handleSelectOrder(order._id)}
-                      className="mt-1 h-4 w-4 rounded border-brown-200 text-plum-600 focus:ring-plum-500"
+                      className="mt-1 h-5 w-5 shrink-0 rounded border-brown-200 text-plum-600 focus:ring-plum-500"
                     />
                   </div>
 
-                  <div className="mt-4 grid gap-3 text-sm text-brown-500 dark:text-white/55">
+                  <div className="mt-3 grid gap-2.5 text-sm text-brown-500 dark:text-white/55">
                     <div>
                       <p className="font-medium text-charcoal dark:text-white">{order.customer?.name}</p>
                       <p>{order.customer?.phone}</p>
-                      <p className="text-xs text-brown-400 dark:text-white/40">{order.customer?.email}</p>
                     </div>
-                    <div>
-                      <p className="font-medium text-charcoal dark:text-white">Address</p>
-                      <p>{order.deliveryAddress?.street}</p>
-                      <p>{[order.deliveryAddress?.city, order.deliveryAddress?.neighborhood].filter(Boolean).join(', ')}</p>
+                    <div className="flex items-start gap-1.5">
+                      <FaMapMarkerAlt className="mt-0.5 shrink-0 text-brown-400" size={12} />
+                      <p>{[order.deliveryAddress?.street, order.deliveryAddress?.city, order.deliveryAddress?.neighborhood].filter(Boolean).join(', ')}</p>
                     </div>
-                    <div className="flex items-center justify-between">
-                      <span>{order.items?.length || 0} item(s)</span>
+                    <div className="flex items-center justify-between border-t border-brown-100 pt-2.5 dark:border-dm-border">
+                      <div className="flex items-center gap-2">
+                        <span>{order.items?.length || 0} item(s)</span>
+                        {order.paymentStatus && (
+                          <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${order.paymentStatus.toLowerCase() === 'paid' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300' : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300'}`}>
+                            {order.paymentStatus}
+                          </span>
+                        )}
+                      </div>
                       <span className="font-semibold text-charcoal dark:text-white">{formatCurrency(order.total)}</span>
                     </div>
                     <div className="text-xs text-brown-400 dark:text-white/40">{formatDate(order.createdAt)}</div>
@@ -303,7 +339,7 @@ const PendingDispatch = () => {
                     type="button"
                     onClick={() => dispatchOrderById(order._id)}
                     disabled={isBusy || bulkProcessing}
-                    className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-plum-700 px-4 py-3 text-sm font-semibold text-white transition hover:bg-plum-600 disabled:opacity-50"
+                    className="mt-3.5 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-plum-700 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-plum-600 disabled:opacity-50"
                   >
                     {isBusy ? <FaSpinner className="animate-spin" /> : <FaTruck />}
                     Dispatch Order
