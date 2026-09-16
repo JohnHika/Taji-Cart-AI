@@ -105,6 +105,9 @@ const allowedOrigins = [
     'http://localhost:5173',
     'http://localhost:5174',
     'http://localhost:3000',
+    // 127.0.0.1 gets a distinct hostname from `localhost` so isStorePortalHost()
+    // can render the store portal locally without colliding with the main app.
+    'http://127.0.0.1:5173',
     'https://nawiri-hair-client.onrender.com',
     'https://nawiri-hair.vercel.app',
     'https://nawirihairke.com',
