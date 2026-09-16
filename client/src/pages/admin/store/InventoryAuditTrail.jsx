@@ -16,7 +16,7 @@ const InventoryAuditTrail = () => {
             <p className="si-eyebrow">Every stock change and every write, in one place</p>
             <p className="si-title" style={{ fontSize: '0.9375rem' }}>Audit trail</p>
           </div>
-          <div className="si-row">
+          <div className="si-row" style={{ flexWrap: 'wrap', gap: '0.5rem' }}>
             {[['', 'All'], ['ai', 'Ask Nawiri'], ['admin', 'Admin'], ['staff', 'Staff']].map(([value, label]) => (
               <button
                 key={value || 'all'}

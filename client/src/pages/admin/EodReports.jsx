@@ -137,7 +137,7 @@ const EodReports = () => {
 
       <div className="mx-auto max-w-4xl p-4 space-y-5">
         <div className="rounded-2xl border border-brown-100 bg-white p-4 shadow-sm dark:border-dm-border dark:bg-dm-card">
-          <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
             <div className="flex gap-2">
               {[{ key: 'week', label: 'Weekly' }, { key: 'month', label: 'Monthly' }].map((opt) => (
                 <button
@@ -151,7 +151,7 @@ const EodReports = () => {
                 </button>
               ))}
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <button
                 onClick={() => scope === 'week' ? setWeekOffset((p) => p - 1) : setMonthOffset((p) => p - 1)}
                 className="rounded-lg border border-brown-200 px-3 py-2 text-sm font-semibold text-brown-600 hover:bg-brown-50 dark:border-dm-border dark:text-white/70 dark:hover:bg-dm-card-2"
@@ -170,7 +170,7 @@ const EodReports = () => {
             <button
               onClick={handleDownload}
               disabled={!report}
-              className="flex items-center gap-2 rounded-xl bg-gold-500 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-gold-600 disabled:opacity-50"
+              className="flex items-center justify-center gap-2 rounded-xl bg-gold-500 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-gold-600 disabled:opacity-50"
             >
               <FaDownload size={12} /> Download PDF
             </button>

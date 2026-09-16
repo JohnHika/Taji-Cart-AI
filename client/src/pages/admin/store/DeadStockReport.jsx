@@ -84,9 +84,9 @@ const DeadStockReport = () => {
       </section>
 
       {items.length > PAGE_SIZE && (
-        <div className="si-row" style={{ justifyContent: 'space-between' }}>
+        <div className="si-row" style={{ justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem' }}>
           <span className="si-stat__detail">Showing {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, items.length)} of {items.length}</span>
-          <div className="si-row">
+          <div className="si-row" style={{ flexWrap: 'wrap' }}>
             <button type="button" className="si-btn si-btn--ghost" disabled={page <= 1} onClick={() => setPage((current) => Math.max(1, current - 1))}>Previous</button>
             <span className="si-stat__detail">Page {page} of {totalPages}</span>
             <button type="button" className="si-btn si-btn--ghost" disabled={page >= totalPages} onClick={() => setPage((current) => Math.min(totalPages, current + 1))}>Next</button>

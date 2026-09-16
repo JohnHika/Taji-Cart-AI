@@ -606,7 +606,7 @@ const LoyaltyProgramAdmin = () => {
   };
 
   return (
-    <div className="container mx-auto p-6 dark:bg-dm-surface dark:text-white">
+    <div className="container mx-auto p-4 sm:p-6 dark:bg-dm-surface dark:text-white">
       <h1 className="text-2xl font-bold mb-6 dark:text-white">Loyalty Program Management</h1>
 
       {/* Master switch */}
@@ -665,7 +665,7 @@ const LoyaltyProgramAdmin = () => {
             <div className="bg-amber-400 h-4" style={{width: `${(stats.tierDistribution?.Gold || stats.goldMembers || 0) / (stats.totalMembers || 1) * 100}%`}}></div>
             <div className="bg-plum-700 h-4" style={{width: `${(stats.tierDistribution?.Platinum || stats.platinumMembers || 0) / (stats.totalMembers || 1) * 100}%`}}></div>
           </div>
-          <div className="flex text-xs justify-between mt-1 dark:text-white/55">
+          <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs mt-1 dark:text-white/55">
             <span>Basic: {stats.tierDistribution?.Basic || 0}</span>
             <span>Bronze: {stats.tierDistribution?.Bronze || stats.bronzeMembers || 0}</span>
             <span>Silver: {stats.tierDistribution?.Silver || stats.silverMembers || 0}</span>
@@ -687,10 +687,10 @@ const LoyaltyProgramAdmin = () => {
       {/* Tabbed Navigation for Settings Panels */}
       <div className="mb-6">
         <div className="border-b border-brown-100 dark:border-dm-border">
-          <nav className="flex -mb-px">
+          <nav className="flex -mb-px gap-1 overflow-x-auto">
             <button
               onClick={() => setActiveTab('thresholds')}
-              className={`py-4 px-6 font-medium text-sm border-b-2 ${
+              className={`shrink-0 whitespace-nowrap py-4 px-6 font-medium text-sm border-b-2 ${
                 activeTab === 'thresholds'
                   ? 'border-primary-200 text-primary-200 dark:border-primary-400 dark:text-primary-400'
                   : 'border-transparent text-brown-400 dark:text-white/40 hover:text-charcoal dark:hover:text-white hover:border-brown-100 dark:hover:border-dm-border'
@@ -700,7 +700,7 @@ const LoyaltyProgramAdmin = () => {
             </button>
             <button
               onClick={() => setActiveTab('benefits')}
-              className={`py-4 px-6 font-medium text-sm border-b-2 ${
+              className={`shrink-0 whitespace-nowrap py-4 px-6 font-medium text-sm border-b-2 ${
                 activeTab === 'benefits'
                   ? 'border-primary-200 text-primary-200 dark:border-primary-400 dark:text-primary-400'
                   : 'border-transparent text-brown-400 dark:text-white/40 hover:text-charcoal dark:hover:text-white hover:border-brown-100 dark:hover:border-dm-border'
@@ -710,7 +710,7 @@ const LoyaltyProgramAdmin = () => {
             </button>
             <button
               onClick={() => setActiveTab('promotions')}
-              className={`py-4 px-6 font-medium text-sm border-b-2 ${
+              className={`shrink-0 whitespace-nowrap py-4 px-6 font-medium text-sm border-b-2 ${
                 activeTab === 'promotions'
                   ? 'border-primary-200 text-primary-200 dark:border-primary-400 dark:text-primary-400'
                   : 'border-transparent text-brown-400 dark:text-white/40 hover:text-charcoal dark:hover:text-white hover:border-brown-100 dark:hover:border-dm-border'
@@ -720,7 +720,7 @@ const LoyaltyProgramAdmin = () => {
             </button>
             <button
               onClick={() => setActiveTab('access')}
-              className={`py-4 px-6 font-medium text-sm border-b-2 ${
+              className={`shrink-0 whitespace-nowrap py-4 px-6 font-medium text-sm border-b-2 ${
                 activeTab === 'access'
                   ? 'border-primary-200 text-primary-200 dark:border-primary-400 dark:text-primary-400'
                   : 'border-transparent text-brown-400 dark:text-white/40 hover:text-charcoal dark:hover:text-white hover:border-brown-100 dark:hover:border-dm-border'
@@ -950,7 +950,7 @@ const LoyaltyProgramAdmin = () => {
                 <h3 className="font-medium mb-3 dark:text-white">Benefit Range Configuration</h3>
                 <div className="space-y-4">
                   {/* First Benefit Range */}
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 gap-3 xs:grid-cols-2">
                     <div>
                       <label className="block text-sm font-medium text-charcoal dark:text-white mb-1">
                         First Milestone (points)
@@ -979,7 +979,7 @@ const LoyaltyProgramAdmin = () => {
                   </div>
                   
                   {/* Second Benefit Range */}
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 gap-3 xs:grid-cols-2">
                     <div>
                       <label className="block text-sm font-medium text-charcoal dark:text-white mb-1">
                         Second Milestone (points)
@@ -1008,7 +1008,7 @@ const LoyaltyProgramAdmin = () => {
                   </div>
                   
                   {/* Third Benefit Range */}
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 gap-3 xs:grid-cols-2">
                     <div>
                       <label className="block text-sm font-medium text-charcoal dark:text-white mb-1">
                         Third Milestone (points)
@@ -1055,11 +1055,11 @@ const LoyaltyProgramAdmin = () => {
         {/* Special Tier Promotions Panel */}
         {activeTab === 'promotions' && (
           <div className="bg-white dark:bg-dm-card rounded-lg shadow p-6 mt-4">
-            <div className="flex items-center justify-between mb-4">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-4">
               <h2 className="text-lg font-semibold dark:text-white">Special Tier Promotions</h2>
               <button
                 onClick={() => setPromotionModalOpen(true)}
-                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+                className="self-start rounded-lg bg-green-600 px-4 py-2 text-white hover:bg-green-700 sm:self-auto"
               >
                 Grant Special Tier
               </button>
@@ -1230,6 +1230,7 @@ const LoyaltyProgramAdmin = () => {
       
       {/* Loyalty Cards Table */}
       <div className="bg-white dark:bg-dm-card rounded-lg shadow overflow-hidden">
+        <div className="overflow-x-auto">
         <table className="min-w-full divide-y divide-brown-100 dark:divide-dm-border">
           <thead className="bg-ivory dark:bg-dm-card-2">
             <tr>
@@ -1367,6 +1368,7 @@ const LoyaltyProgramAdmin = () => {
             )}
           </tbody>
         </table>
+        </div>
       </div>
 
       {/* Pagination */}
@@ -1394,8 +1396,8 @@ const LoyaltyProgramAdmin = () => {
       
       {/* Special Promotion Modal */}
       {promotionModalOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-dm-card rounded-lg shadow-lg p-6 w-full max-w-lg">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-lg bg-white p-6 shadow-lg dark:bg-dm-card">
             <h2 className="text-xl font-bold mb-4 dark:text-white">Grant Special Tier Status</h2>
             
             {/* User Search */}
@@ -1527,8 +1529,8 @@ const LoyaltyProgramAdmin = () => {
       
       {/* Refresh Points Confirmation Modal */}
       {refreshModalOpen && refreshingUser && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-dm-card rounded-lg shadow-lg p-6 w-full max-w-md">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-lg bg-white p-6 shadow-lg dark:bg-dm-card">
             <h2 className="text-xl font-bold mb-4 dark:text-white">Refresh Points</h2>
 
             <div className="mt-4 p-3 bg-ivory dark:bg-dm-card-2 rounded-lg mb-4">

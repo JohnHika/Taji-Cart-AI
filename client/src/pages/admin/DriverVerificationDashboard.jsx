@@ -339,8 +339,8 @@ const DriverVerificationDashboard = () => {
             </table>
 
             {/* Pagination */}
-            <div className="flex items-center justify-between px-6 py-4">
-              <div className="flex items-center space-x-2">
+            <div className="flex flex-col gap-3 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+              <div className="flex flex-wrap items-center gap-2">
                 <button
                   onClick={() => previousPage()}
                   disabled={!canPreviousPage}
@@ -378,7 +378,7 @@ const DriverVerificationDashboard = () => {
 
       {/* Verification Modal */}
       {isModalOpen && selectedDriver && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
           <div className="bg-white dark:bg-dm-card rounded-lg shadow-lg p-6 w-full max-w-2xl mx-auto max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center mb-5">
               <h2 className="text-xl font-semibold text-charcoal dark:text-white">
