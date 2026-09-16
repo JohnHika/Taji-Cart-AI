@@ -98,7 +98,57 @@ const Dashboard = () => {
         return null;
     }
   };
-  
+
+  const getStatusMeta = (status) => {
+    switch (status) {
+      case 'driver_assigned':
+        return {
+          icon: FaTruck,
+          tint: 'bg-plum-50 dark:bg-plum-900/20',
+          badgeBg: 'bg-plum-100 dark:bg-plum-800',
+          iconColor: 'text-plum-600 dark:text-plum-200',
+          chip: 'bg-plum-100 text-plum-800 dark:bg-plum-800 dark:text-plum-200'
+        };
+      case 'out_for_delivery':
+        return {
+          icon: FaMotorcycle,
+          tint: 'bg-yellow-50 dark:bg-yellow-900/20',
+          badgeBg: 'bg-yellow-100 dark:bg-yellow-800',
+          iconColor: 'text-yellow-600 dark:text-yellow-300',
+          chip: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-800 dark:text-yellow-200'
+        };
+      case 'nearby':
+        return {
+          icon: FaMapMarkerAlt,
+          tint: 'bg-blush-50 dark:bg-plum-900/25',
+          badgeBg: 'bg-blush-100 dark:bg-plum-800',
+          iconColor: 'text-blush-500 dark:text-plum-200',
+          chip: 'bg-blush-100 text-plum-800 dark:bg-plum-800 dark:text-plum-200'
+        };
+      default:
+        return {
+          icon: FaCalendarCheck,
+          tint: 'bg-green-50 dark:bg-green-900/20',
+          badgeBg: 'bg-green-100 dark:bg-green-800',
+          iconColor: 'text-green-600 dark:text-green-300',
+          chip: 'bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-200'
+        };
+    }
+  };
+
+  const getActionMeta = (nextStatus) => {
+    switch (nextStatus) {
+      case 'out_for_delivery':
+        return { icon: FaTruck, label: 'Start Delivery', className: 'bg-plum-700 hover:bg-plum-600 text-white' };
+      case 'nearby':
+        return { icon: FaMapMarkerAlt, label: 'Mark Nearby', className: 'bg-yellow-500 hover:bg-yellow-600 text-charcoal dark:text-charcoal' };
+      case 'delivered':
+        return { icon: FaCalendarCheck, label: 'Mark Delivered', className: 'bg-green-600 hover:bg-green-700 text-white' };
+      default:
+        return null;
+    }
+  };
+
   const formatDate = (dateString) => {
     return new Date(dateString).toLocaleString('en-US', {
       year: 'numeric',
@@ -192,55 +242,59 @@ const Dashboard = () => {
       </div>
       
       {/* Stats Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6 mb-4 sm:mb-8">
-        <div className="bg-white dark:bg-dm-card rounded-lg shadow p-3 sm:p-6">
-          <div className="flex items-center">
-            <div className="bg-plum-100 dark:bg-plum-900/40 p-2 sm:p-3 rounded-full">
-              <FaMotorcycle className="text-plum-600 dark:text-plum-300" size={20} />
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4 mb-4 sm:mb-8">
+        <div className="bg-plum-50 dark:bg-plum-900/20 rounded-lg shadow-sm border border-plum-100 dark:border-plum-800 p-3 sm:p-5">
+          <div className="flex items-start justify-between">
+            <div>
+              <p className="text-xs sm:text-sm font-medium text-plum-800 dark:text-plum-200">Pending</p>
+              <p className="text-2xl sm:text-3xl font-bold text-plum-900 dark:text-plum-100">{dashboardData?.pendingDeliveries || 0}</p>
             </div>
-            <div className="ml-2 sm:ml-4">
-              <h2 className="text-xs sm:text-sm font-medium text-brown-400 dark:text-white/40 leading-tight">Pending</h2>
-              <p className="text-2xl sm:text-3xl font-semibold text-charcoal dark:text-white">{dashboardData?.pendingDeliveries || 0}</p>
-            </div>
-          </div>
-        </div>
-        
-        <div className="bg-white dark:bg-dm-card rounded-lg shadow p-3 sm:p-6">
-          <div className="flex items-center">
-            <div className="bg-green-100 dark:bg-green-900 p-2 sm:p-3 rounded-full">
-              <FaCalendarCheck className="text-green-500 dark:text-green-300" size={20} />
-            </div>
-            <div className="ml-2 sm:ml-4">
-              <h2 className="text-xs sm:text-sm font-medium text-brown-400 dark:text-white/40 leading-tight">Today</h2>
-              <p className="text-2xl sm:text-3xl font-semibold text-charcoal dark:text-white">{dashboardData?.todayDeliveries || 0}</p>
+            <div className="bg-plum-100 dark:bg-plum-800 p-2 sm:p-3 rounded-full shrink-0">
+              <FaMotorcycle className="text-plum-600 dark:text-plum-200 w-4 h-4 sm:w-5 sm:h-5" />
             </div>
           </div>
+          <p className="hidden sm:block text-xs text-plum-700 dark:text-plum-200 mt-3">Ready to start</p>
         </div>
-        
-        <div className="bg-white dark:bg-dm-card rounded-lg shadow p-3 sm:p-6">
-          <div className="flex items-center">
-            <div className="bg-purple-100 dark:bg-purple-900 p-2 sm:p-3 rounded-full">
-              <FaBox className="text-purple-500 dark:text-purple-300" size={20} />
+
+        <div className="bg-green-50 dark:bg-green-900/20 rounded-lg shadow-sm border border-green-100 dark:border-green-800 p-3 sm:p-5">
+          <div className="flex items-start justify-between">
+            <div>
+              <p className="text-xs sm:text-sm font-medium text-green-800 dark:text-green-300">Today</p>
+              <p className="text-2xl sm:text-3xl font-bold text-green-900 dark:text-green-100">{dashboardData?.todayDeliveries || 0}</p>
             </div>
-            <div className="ml-2 sm:ml-4">
-              <h2 className="text-xs sm:text-sm font-medium text-brown-400 dark:text-white/40 leading-tight">Completed</h2>
-              <p className="text-2xl sm:text-3xl font-semibold text-charcoal dark:text-white">{dashboardData?.totalDeliveries || 0}</p>
+            <div className="bg-green-100 dark:bg-green-800 p-2 sm:p-3 rounded-full shrink-0">
+              <FaCalendarCheck className="text-green-500 dark:text-green-300 w-4 h-4 sm:w-5 sm:h-5" />
             </div>
           </div>
+          <p className="hidden sm:block text-xs text-green-700 dark:text-green-300 mt-3">Delivered today</p>
         </div>
-        
-        <div className="bg-white dark:bg-dm-card rounded-lg shadow p-3 sm:p-6">
-          <div className="flex items-center">
-            <div className="bg-yellow-100 dark:bg-yellow-900 p-2 sm:p-3 rounded-full">
-              <FaStar className="text-yellow-500 dark:text-yellow-300" size={20} />
+
+        <div className="bg-purple-50 dark:bg-purple-900/20 rounded-lg shadow-sm border border-purple-100 dark:border-purple-800 p-3 sm:p-5">
+          <div className="flex items-start justify-between">
+            <div>
+              <p className="text-xs sm:text-sm font-medium text-purple-800 dark:text-purple-300">Completed</p>
+              <p className="text-2xl sm:text-3xl font-bold text-purple-900 dark:text-purple-100">{dashboardData?.totalDeliveries || 0}</p>
             </div>
-            <div className="ml-2 sm:ml-4">
-              <h2 className="text-xs sm:text-sm font-medium text-brown-400 dark:text-white/40 leading-tight">Rating</h2>
-              <p className="text-2xl sm:text-3xl font-semibold text-charcoal dark:text-white">
+            <div className="bg-purple-100 dark:bg-purple-800 p-2 sm:p-3 rounded-full shrink-0">
+              <FaBox className="text-purple-500 dark:text-purple-300 w-4 h-4 sm:w-5 sm:h-5" />
+            </div>
+          </div>
+          <p className="hidden sm:block text-xs text-purple-700 dark:text-purple-300 mt-3">All-time total</p>
+        </div>
+
+        <div className="bg-yellow-50 dark:bg-yellow-900/20 rounded-lg shadow-sm border border-yellow-100 dark:border-yellow-800 p-3 sm:p-5">
+          <div className="flex items-start justify-between">
+            <div>
+              <p className="text-xs sm:text-sm font-medium text-yellow-800 dark:text-yellow-300">Rating</p>
+              <p className="text-2xl sm:text-3xl font-bold text-yellow-900 dark:text-yellow-100">
                 {dashboardData?.averageRating?.toFixed(1) || 'N/A'}
               </p>
             </div>
+            <div className="bg-yellow-100 dark:bg-yellow-800 p-2 sm:p-3 rounded-full shrink-0">
+              <FaStar className="text-yellow-500 dark:text-yellow-300 w-4 h-4 sm:w-5 sm:h-5" />
+            </div>
           </div>
+          <p className="hidden sm:block text-xs text-yellow-700 dark:text-yellow-300 mt-3">Avg. customer score</p>
         </div>
       </div>
       
@@ -251,113 +305,87 @@ const Dashboard = () => {
         </div>
         
         {activeOrders.length === 0 ? (
-          <div className="bg-white dark:bg-dm-card rounded-lg shadow p-8 text-center">
-            <FaTruck className="mx-auto text-brown-400 dark:text-brown-400 mb-4" size={48} />
-            <h3 className="text-lg font-medium text-charcoal dark:text-white/55 mb-2">No Active Deliveries</h3>
-            <p className="text-brown-400 dark:text-white/40">
+          <div className="rounded-2xl border border-brown-100 dark:border-dm-border bg-white dark:bg-dm-card shadow-sm p-6 sm:p-8 text-center">
+            <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-plum-50 dark:bg-plum-900/30">
+              <FaTruck className="text-plum-400 dark:text-plum-300" size={24} />
+            </div>
+            <h3 className="text-base font-semibold text-charcoal dark:text-white/85 mb-1">No Active Deliveries</h3>
+            <p className="text-sm text-brown-400 dark:text-white/40">
               You currently don&apos;t have any active deliveries assigned to you.
             </p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-6">
-            {activeOrders.map(order => (
-              <div key={order._id} className="bg-white dark:bg-dm-card rounded-lg shadow overflow-hidden">
-                <div className={`px-4 py-3 sm:px-6 sm:py-4 border-b border-brown-100 dark:border-dm-border ${
-                  order.status === 'driver_assigned' ? 'bg-plum-50 dark:bg-plum-900/20' :
-                  order.status === 'out_for_delivery' ? 'bg-yellow-50 dark:bg-yellow-900/20' :
-                  'bg-green-50 dark:bg-green-900/20'
-                }`}>
-                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                    <div>
-                      <h3 className="text-lg font-semibold text-charcoal dark:text-white">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4">
+            {activeOrders.map(order => {
+              const statusMeta = getStatusMeta(order.status);
+              const StatusIcon = statusMeta.icon;
+              const nextStatus = getNextStatus(order.status);
+              const actionMeta = getActionMeta(nextStatus);
+              const ActionIcon = actionMeta?.icon;
+
+              return (
+                <div key={order._id} className="rounded-2xl border border-brown-100 dark:border-dm-border bg-white dark:bg-dm-card shadow-sm overflow-hidden">
+                  <div className={`flex items-center gap-3 px-4 py-3 border-b border-brown-100 dark:border-dm-border ${statusMeta.tint}`}>
+                    <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${statusMeta.badgeBg}`}>
+                      <StatusIcon className={statusMeta.iconColor} size={16} />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-semibold text-charcoal dark:text-white">
                         Order #{order.orderId}
-                      </h3>
-                      <p className="text-sm text-brown-500 dark:text-white/40">
+                      </p>
+                      <p className="text-xs text-brown-400 dark:text-white/40">
                         {formatDate(order.createdAt)}
                       </p>
                     </div>
-                    <span className={`self-start sm:self-auto px-3 py-1 rounded-full text-xs font-medium ${
-                      order.status === 'driver_assigned' ? 'bg-plum-100 text-plum-800 dark:bg-plum-800 dark:text-plum-200' :
-                      order.status === 'out_for_delivery' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-800 dark:text-yellow-200' :
-                      'bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-200'
-                    }`}>
+                    <span className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold ${statusMeta.chip}`}>
                       {getStatusLabel(order.status)}
                     </span>
                   </div>
-                </div>
-                
-                <div className="p-4 sm:p-6">
-                  <div className="mb-3 sm:mb-4">
-                    <h4 className="text-xs sm:text-sm font-medium text-brown-400 dark:text-white/40 mb-1 sm:mb-2">Customer</h4>
-                    <div className="flex items-start">
-                      <FaUser className="text-brown-400 mt-1 mr-2" />
-                      <div>
-                        <p className="text-charcoal dark:text-white/70 font-medium">{order.customer.name}</p>
-                        <p className="text-sm text-brown-500 dark:text-white/40">{order.customer.phone}</p>
+
+                  <div className="p-4 space-y-3">
+                    <div className="flex items-start gap-2">
+                      <FaUser className="mt-0.5 shrink-0 text-brown-300 dark:text-white/30" size={13} />
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-semibold text-charcoal dark:text-white">{order.customer.name}</p>
+                        <p className="text-xs text-brown-400 dark:text-white/40">{order.customer.phone}</p>
                       </div>
                     </div>
-                  </div>
-                  
-                  <div className="mb-3 sm:mb-4">
-                    <h4 className="text-xs sm:text-sm font-medium text-brown-400 dark:text-white/40 mb-1 sm:mb-2">Address</h4>
-                    <div className="flex items-start">
-                      <FaMapMarkerAlt className="text-brown-400 mt-1 mr-2" />
-                      <div>
-                        <p className="text-charcoal dark:text-white/70">{order.deliveryAddress}</p>
-                      </div>
+
+                    <div className="flex items-start gap-2">
+                      <FaMapMarkerAlt className="mt-0.5 shrink-0 text-brown-300 dark:text-white/30" size={13} />
+                      <p className="text-sm text-charcoal/80 dark:text-white/70">{order.deliveryAddress}</p>
                     </div>
-                  </div>
-                  
-                  <div className="mb-3 sm:mb-6">
-                    <h4 className="text-xs sm:text-sm font-medium text-brown-400 dark:text-white/40 mb-1 sm:mb-2">Order Total</h4>
-                    <div className="flex justify-between text-charcoal dark:text-white/55">
-                      <span>Order Total:</span>
-                      <span className="font-medium">KSh {order.total.toFixed(2)}</span>
-                    </div>
-                  </div>
-                  
-                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                    <a
-                      href={
-                        order.coordinates?.lat && order.coordinates?.lng
-                          ? `https://maps.google.com/?q=${order.coordinates.lat},${order.coordinates.lng}`
-                          : `https://maps.google.com/?q=${encodeURIComponent(order.deliveryAddress || '')}`
-                      }
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center text-sm font-medium text-plum-600 hover:text-plum-500 dark:text-plum-300 dark:hover:text-plum-200"
-                    >
-                      <FaMapMarkerAlt className="mr-1" />
-                      Open in Maps
-                    </a>
-                    
-                    {getNextStatus(order.status) && (
-                      <button 
-                        onClick={() => handleStatusUpdate(order._id, getNextStatus(order.status))}
-                        className="w-full sm:w-auto px-4 py-2 bg-plum-700 text-white rounded-md hover:bg-plum-600 transition-colors flex items-center justify-center"
+
+                    <div className="flex items-center justify-between border-t border-brown-100 dark:border-dm-border pt-3">
+                      <span className="text-base font-bold text-charcoal dark:text-white">KSh {order.total.toFixed(2)}</span>
+                      <a
+                        href={
+                          order.coordinates?.lat && order.coordinates?.lng
+                            ? `https://maps.google.com/?q=${order.coordinates.lat},${order.coordinates.lng}`
+                            : `https://maps.google.com/?q=${encodeURIComponent(order.deliveryAddress || '')}`
+                        }
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1.5 rounded-full border border-plum-200 dark:border-plum-700 px-3 py-1.5 text-xs font-medium text-plum-700 dark:text-plum-200 transition hover:bg-plum-50 dark:hover:bg-plum-900/20"
                       >
-                        {order.status === 'nearby' ? (
-                          <>
-                            <FaCalendarCheck className="mr-2" />
-                            Mark Delivered
-                          </>
-                        ) : order.status === 'out_for_delivery' ? (
-                          <>
-                            <FaMapMarkerAlt className="mr-2" />
-                            Mark Nearby
-                          </>
-                        ) : (
-                          <>
-                            <FaTruck className="mr-2" />
-                            Start Delivery
-                          </>
-                        )}
+                        <FaMapMarkerAlt size={12} />
+                        Maps
+                      </a>
+                    </div>
+
+                    {actionMeta && (
+                      <button
+                        onClick={() => handleStatusUpdate(order._id, nextStatus)}
+                        className={`w-full px-4 py-2.5 rounded-lg font-semibold transition-colors flex items-center justify-center gap-2 ${actionMeta.className}`}
+                      >
+                        <ActionIcon size={14} />
+                        {actionMeta.label}
                       </button>
                     )}
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>
