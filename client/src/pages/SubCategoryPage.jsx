@@ -449,7 +449,7 @@ const SubCategoryPage = () => {
             {viewMode === 'table' ? (
               // Table View
               <div className='overflow-x-auto w-full'>
-                <div className='overflow-y-auto max-h-[70vh]'>
+                <div className='overflow-y-auto max-h-[50vh] sm:max-h-[70vh] pb-16 sm:pb-0'>
                   <div className="custom-table">
                     <DisplayTable
                       data={currentItems}

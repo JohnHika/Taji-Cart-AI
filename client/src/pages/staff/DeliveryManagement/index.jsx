@@ -111,7 +111,7 @@ const DeliveryManagement = () => {
                     key={tab.to}
                     to={tab.to}
                     className={({ isActive }) =>
-                      `inline-flex min-w-fit items-center gap-2 rounded-full border px-3 py-2 text-sm font-medium transition ${
+                      `inline-flex min-w-fit flex-shrink-0 items-center gap-2 whitespace-nowrap rounded-full border px-3 py-2 text-sm font-medium transition ${
                         isActive || location.pathname.endsWith(`/${tab.to}`)
                           ? 'border-plum-600 bg-plum-600 text-white shadow-sm'
                           : 'border-brown-100 bg-ivory text-charcoal hover:border-plum-300 hover:bg-plum-50 hover:text-plum-700 dark:border-dm-border dark:bg-dm-surface dark:text-white/70 dark:hover:border-plum-700 dark:hover:bg-plum-900/30 dark:hover:text-plum-200'

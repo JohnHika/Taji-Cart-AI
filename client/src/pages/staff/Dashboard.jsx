@@ -362,36 +362,44 @@ const Dashboard = () => {
               <h2 className="text-base sm:text-lg font-medium text-charcoal dark:text-white">Delivery Performance</h2>
             </div>
             {loading ? (
-              <div className="animate-pulse h-64 bg-brown-100 dark:bg-dm-card-2 rounded"></div>
+              <div className="animate-pulse h-32 bg-brown-100 dark:bg-dm-card-2 rounded"></div>
             ) : (
-              <div className="h-64 flex flex-col">
-                <div className="text-center mb-4">
+              <div className="flex flex-col">
+                <div className="text-center mb-3 sm:mb-4">
                   <div className="text-2xl font-bold">{dashboardData.deliveryPerformance.deliveriesLast7Days}</div>
                   <div className="text-sm text-brown-400 dark:text-white/40">Deliveries in the last 7 days</div>
                 </div>
-                
-                <div className="flex flex-col flex-grow justify-end">
-                  <div className="grid grid-cols-7 gap-1 h-full items-end">
-                    {dashboardData.deliveryPerformance.dailyStats.map((day, index) => {
-                      const maxCount = Math.max(...dashboardData.deliveryPerformance.dailyStats.map(d => d.count));
-                      const heightPercentage = maxCount > 0 ? (day.count / maxCount) * 100 : 0;
-                      
-                      return (
-                        <div key={index} className="flex flex-col items-center">
-                          <div 
-                            className="w-full bg-plum-600 dark:bg-plum-500 rounded-t"
-                            style={{ height: `${heightPercentage}%`, minHeight: '10px' }}
-                          ></div>
-                          <div className="text-xs mt-1">{day.date.split('-')[2]}</div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-                
-                <div className="text-xs text-center mt-2 text-brown-400 dark:text-white/40">
-                  Last 7 days
-                </div>
+
+                {dashboardData.deliveryPerformance.dailyStats.length > 0 ? (
+                  <>
+                    <div className="h-24 sm:h-32 flex flex-col justify-end">
+                      <div className="grid grid-cols-7 gap-1 h-full items-end">
+                        {dashboardData.deliveryPerformance.dailyStats.map((day, index) => {
+                          const maxCount = Math.max(...dashboardData.deliveryPerformance.dailyStats.map(d => d.count));
+                          const heightPercentage = maxCount > 0 ? (day.count / maxCount) * 100 : 0;
+
+                          return (
+                            <div key={index} className="flex flex-col items-center">
+                              <div
+                                className="w-full bg-plum-600 dark:bg-plum-500 rounded-t"
+                                style={{ height: `${heightPercentage}%`, minHeight: '10px' }}
+                              ></div>
+                              <div className="text-xs mt-1">{day.date.split('-')[2]}</div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    <div className="text-xs text-center mt-2 text-brown-400 dark:text-white/40">
+                      Last 7 days
+                    </div>
+                  </>
+                ) : (
+                  <p className="text-xs text-center text-brown-400 dark:text-white/40">
+                    No delivery activity recorded in the last 7 days
+                  </p>
+                )}
               </div>
             )}
           </div>
@@ -529,11 +537,11 @@ const Dashboard = () => {
           <div className="bg-white dark:bg-dm-card rounded-lg shadow border border-brown-100 dark:border-dm-border p-3 sm:p-5">
             <h2 className="text-base sm:text-lg font-medium text-charcoal dark:text-white mb-3 sm:mb-5">Delivery Status</h2>
             {loading ? (
-              <div className="animate-pulse h-64 bg-brown-100 dark:bg-dm-card-2 rounded"></div>
+              <div className="animate-pulse h-32 bg-brown-100 dark:bg-dm-card-2 rounded"></div>
             ) : (
-              <div className="h-64 flex flex-col justify-center">
+              <div className="space-y-3 sm:space-y-4">
                 {getDeliveryStatusData().map((status, index) => (
-                  <div key={index} className="mb-3">
+                  <div key={index}>
                     <div className="flex justify-between text-sm mb-1">
                       <span className="font-medium text-charcoal dark:text-white">
                         {status.name}
@@ -543,9 +551,9 @@ const Dashboard = () => {
                       </span>
                     </div>
                     <div className="w-full bg-brown-100 dark:bg-dm-card-2 rounded-full h-2.5">
-                      <div 
-                        className="h-2.5 rounded-full" 
-                        style={{ 
+                      <div
+                        className="h-2.5 rounded-full"
+                        style={{
                           width: `${status.percentage}%`,
                           backgroundColor: status.color
                         }}
