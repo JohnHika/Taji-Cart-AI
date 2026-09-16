@@ -157,16 +157,20 @@ const AdminDashboard = () => {
         </div>
       </div>
 
-      <div className="mb-6 grid grid-cols-3 gap-3 lg:grid-cols-5">
+      <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
         {roleSummary.map((item) => {
           const Icon = item.icon;
           return (
             <div key={item.label} className={`min-w-0 rounded-2xl p-4 shadow-sm ${item.tone}`}>
-              <div className={`mb-3 flex h-9 w-9 items-center justify-center rounded-xl ${item.iconBg}`}>
-                <Icon size={16} />
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <div className="break-words text-2xl sm:text-3xl font-black tracking-tight">{item.value}</div>
+                  <div className="mt-1 text-xs font-semibold uppercase tracking-wide opacity-75">{item.label}</div>
+                </div>
+                <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${item.iconBg}`}>
+                  <Icon size={16} />
+                </div>
               </div>
-              <div className="break-words text-2xl sm:text-3xl font-black tracking-tight">{item.value}</div>
-              <div className="mt-1 text-xs font-semibold uppercase tracking-wide opacity-75">{item.label}</div>
             </div>
           );
         })}
@@ -181,7 +185,7 @@ const AdminDashboard = () => {
               to={link.path}
               className="rounded-2xl border border-brown-100 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md dark:border-dm-border dark:bg-dm-card"
             >
-              <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-plum-100 text-plum-700 dark:bg-plum-900/30 dark:text-plum-300">
+              <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-plum-100 text-plum-700 dark:bg-plum-900/30 dark:text-plum-300">
                 <Icon size={16} />
               </div>
               <h2 className="text-sm font-semibold text-charcoal dark:text-white">{link.label}</h2>
@@ -299,9 +303,14 @@ const AdminDashboard = () => {
                 return (
                   <div key={user._id} className="rounded-2xl border border-brown-100 bg-ivory p-4 dark:border-dm-border dark:bg-dm-card-2">
                     <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <p className="truncate text-sm font-semibold text-charcoal dark:text-white">{user.name || 'Unnamed user'}</p>
-                        <p className="mt-1 truncate text-xs text-brown-500 dark:text-white/45">{user.email || 'No email yet'}</p>
+                      <div className="flex min-w-0 items-center gap-3">
+                        <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm font-bold ${roleMeta.className}`}>
+                          {(user.name || 'U').charAt(0).toUpperCase()}
+                        </div>
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-semibold text-charcoal dark:text-white">{user.name || 'Unnamed user'}</p>
+                          <p className="mt-1 truncate text-xs text-brown-500 dark:text-white/45">{user.email || 'No email yet'}</p>
+                        </div>
                       </div>
                       <span className={`inline-flex shrink-0 items-center rounded-pill px-2.5 py-1 text-[11px] font-semibold tracking-wide ${roleMeta.className}`}>
                         {roleMeta.label}

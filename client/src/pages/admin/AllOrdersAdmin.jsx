@@ -1228,6 +1228,13 @@ const AllOrdersAdmin = () => {
     }
   };
 
+  // Leading icon badge per fulfillment type, used on the mobile order card list
+  const FULFILLMENT_ICON = {
+    Pickup: { Icon: FaStore, bg: 'bg-gold-100 text-gold-700 dark:bg-gold-600/20 dark:text-gold-300' },
+    POS: { Icon: FaCashRegister, bg: 'bg-plum-100 text-plum-700 dark:bg-plum-900/30 dark:text-plum-200' },
+    Delivery: { Icon: FaTruck, bg: 'bg-blush-100 text-blush-500 dark:bg-blush-500/10 dark:text-blush-300' }
+  };
+
   const tabCount = (tabKey) => {
     if (tabKey === 'all') return scopedOrders.length;
     if (tabKey === 'in-transit') {
@@ -1572,30 +1579,38 @@ const AllOrdersAdmin = () => {
                 onClick={() => setSelectedOrder(order)}
               >
                 <div className="p-4">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-brown-500 dark:text-white/45">
-                        <OrderSourceBadge order={order} />
-                        <span className={`inline-block h-2.5 w-2.5 rounded-full ${
-                          getFulfillmentType(order) === 'Pickup' ? 'bg-gold-500' :
-                          getFulfillmentType(order) === 'POS' ? 'bg-plum-700' : 'bg-plum-500'
-                        }`}></span>
-                        <span>{getFulfillmentType(order)}</span>
-                        {order.cashier && <span className="truncate">• {order.cashier}</span>}
-                      </div>
-                      <div className="mt-2 text-base font-semibold dark:text-white truncate">#{order.orderId || order._id?.substring(order._id.length - 8)}</div>
-                      <div className="text-xs text-brown-400 dark:text-white/40">
-                        {format(new Date(order.saleDate || order.createdAt), 'dd MMM yyyy')} • {format(new Date(order.saleDate || order.createdAt), 'HH:mm')}
-                      </div>
-                      <p className="mt-2 text-xs font-medium text-plum-700 dark:text-plum-300">
-                        {getOrderActionHint(order)}
-                      </p>
-                    </div>
+                  <div className="flex items-start gap-3">
+                    {(() => {
+                      const { Icon: FulfillmentIcon, bg } = FULFILLMENT_ICON[getFulfillmentType(order)] || FULFILLMENT_ICON.Delivery;
+                      return (
+                        <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full ${bg}`}>
+                          <FulfillmentIcon size={16} />
+                        </div>
+                      );
+                    })()}
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-brown-500 dark:text-white/45">
+                            <OrderSourceBadge order={order} />
+                            <span>{getFulfillmentType(order)}</span>
+                            {order.cashier && <span className="truncate">• {order.cashier}</span>}
+                          </div>
+                          <div className="mt-1 text-base font-semibold dark:text-white truncate">#{order.orderId || order._id?.substring(order._id.length - 8)}</div>
+                          <div className="text-xs text-brown-400 dark:text-white/40">
+                            {format(new Date(order.saleDate || order.createdAt), 'dd MMM yyyy')} • {format(new Date(order.saleDate || order.createdAt), 'HH:mm')}
+                          </div>
+                          <p className="mt-2 text-xs font-medium text-plum-700 dark:text-plum-300">
+                            {getOrderActionHint(order)}
+                          </p>
+                        </div>
 
-                    <div className="text-right">
-                      {renderStatusBadge(order.status)}
-                      <div className="mt-2 text-base font-black tracking-tight text-brown-700 dark:text-brown-300">
-                        KSh {Number(order.totalAmt || order.totalPrice || 0).toLocaleString()}
+                        <div className="shrink-0 text-right">
+                          {renderStatusBadge(order.status)}
+                          <div className="mt-2 text-base font-black tracking-tight text-brown-700 dark:text-brown-300">
+                            KSh {Number(order.totalAmt || order.totalPrice || 0).toLocaleString()}
+                          </div>
+                        </div>
                       </div>
                     </div>
                   </div>
