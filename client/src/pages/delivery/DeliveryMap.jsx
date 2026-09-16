@@ -921,7 +921,7 @@ const DeliveryMap = () => {
   }
   
   return (
-    <div className="mobile-page-shell gap-4 md:gap-6">
+    <div className="mobile-page-shell flex flex-col gap-4 md:gap-6">
       <div className="mobile-surface flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
           <h1 className="text-2xl font-bold dark:text-white mb-1">Delivery Map</h1>

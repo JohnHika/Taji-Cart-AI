@@ -156,8 +156,8 @@ const CompletedDeliveries = () => {
                 className="bg-white dark:bg-dm-card rounded-lg shadow overflow-hidden"
               >
                 <div className="px-6 py-4 border-b border-brown-100 dark:border-dm-border bg-green-50 dark:bg-green-900/20">
-                  <div className="flex items-center justify-between">
-                    <div>
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="min-w-0">
                       <h3 className="text-lg font-semibold text-charcoal dark:text-white">
                         Order #{order.orderId}
                       </h3>
@@ -176,13 +176,13 @@ const CompletedDeliveries = () => {
                 </div>
                 
                 <div className="p-6">
-                  <div className="flex justify-between mb-4">
-                    <div>
+                  <div className="flex flex-col gap-3 sm:flex-row sm:justify-between mb-4">
+                    <div className="min-w-0">
                       <h4 className="text-sm font-medium text-brown-400 dark:text-white/40 mb-1">Customer</h4>
                       <p className="text-charcoal dark:text-white/70">{order.customer?.name || 'N/A'}</p>
                     </div>
-                    
-                    <div className="text-right">
+
+                    <div className="text-left sm:text-right">
                       <h4 className="text-sm font-medium text-brown-400 dark:text-white/40 mb-1">Amount</h4>
                       <p className="text-charcoal dark:text-white/70 font-medium">KSh {order.total != null ? Number(order.total).toFixed(2) : '0.00'}</p>
                     </div>
@@ -197,8 +197,8 @@ const CompletedDeliveries = () => {
                   </div>
                   
                   <div className="border-t dark:border-dm-border pt-4 mt-4">
-                    <div className="flex justify-between items-center">
-                      <div>
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                      <div className="min-w-0">
                         <h4 className="text-sm font-medium text-brown-400 dark:text-white/40 mb-1">
                           {order.customerRating?.rating ? 'You rated this customer' : 'Rate this customer'}
                         </h4>
@@ -211,7 +211,7 @@ const CompletedDeliveries = () => {
                           }}
                         />
                       </div>
-                      
+
                       <a
                         href={
                           order.coordinates?.lat && order.coordinates?.lng
@@ -220,7 +220,7 @@ const CompletedDeliveries = () => {
                         }
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="px-3 py-1 border border-brown-200 text-brown-500 dark:border-dm-border dark:text-white/55 rounded hover:bg-brown-50 dark:hover:bg-dm-card-2 flex items-center"
+                        className="px-3 py-1 border border-brown-200 text-brown-500 dark:border-dm-border dark:text-white/55 rounded hover:bg-brown-50 dark:hover:bg-dm-card-2 flex items-center justify-center"
                       >
                         <FaMapMarkerAlt className="mr-1" />
                         View on Map
