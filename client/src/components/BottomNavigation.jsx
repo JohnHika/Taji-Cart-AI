@@ -76,7 +76,7 @@ const BottomNavigation = () => {
                 key={index}
                 to={item.path}
                 aria-current={item.active ? 'page' : undefined}
-                className="press relative flex min-w-0 flex-col items-center gap-1 rounded-lg px-1 py-1 text-center select-none"
+                className="customer-touch-target press relative flex min-w-0 flex-col items-center gap-1 rounded-lg px-1 py-1 text-center select-none"
               >
                 {item.active && (
                   <motion.span

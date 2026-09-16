@@ -185,13 +185,13 @@ const AddAddress = ({ close }) => {
     >
       {/* ── Modal / bottom-sheet ── */}
       <div
-        className="w-full sm:max-w-[680px] sm:mx-4 overflow-y-auto rounded-t-2xl sm:rounded-xl safe-area-bottom"
+        className="customer-dialog w-full overflow-y-auto rounded-t-2xl sm:mx-4 sm:max-w-[680px] sm:rounded-xl safe-area-bottom"
         style={{
           background:  B.bg,
-          maxHeight:   '90dvh',
+          maxHeight:   'calc(100dvh - env(safe-area-inset-top) - 1rem)',
           boxShadow:   '0 25px 60px rgba(0,0,0,0.18)',
           border:      '1px solid #e2d5c8',
-          padding:     '20px 20px 32px',
+          padding:     '16px 16px calc(16px + env(safe-area-inset-bottom))',
         }}
       >
         {/* Drag handle – mobile only */}
@@ -218,7 +218,7 @@ const AddAddress = ({ close }) => {
             onClick={close}
             className="hover:bg-[#f5ece8] transition-colors"
             style={{
-              width: 30, height: 30, borderRadius: '50%',
+              width: 44, height: 44, borderRadius: '50%',
               border: `1px solid ${B.border}`, background: 'transparent',
               cursor: 'pointer', display: 'flex', alignItems: 'center',
               justifyContent: 'center', color: B.textMuted, flexShrink: 0,
@@ -250,7 +250,7 @@ const AddAddress = ({ close }) => {
           </div>
 
           {/* City / County - paired side-by-side on mobile */}
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 xs:grid-cols-2">
             <div>
               <FieldLabel>City / Area *</FieldLabel>
               <input type="text" placeholder="e.g., Nairobi CBD"
@@ -264,7 +264,7 @@ const AddAddress = ({ close }) => {
           </div>
 
           {/* Phone / Postal - paired side-by-side on mobile */}
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 xs:grid-cols-2">
             <div>
               <FieldLabel>Phone Number *</FieldLabel>
               <input type="tel" placeholder="e.g., 0712345678"

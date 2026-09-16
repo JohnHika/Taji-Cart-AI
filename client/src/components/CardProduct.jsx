@@ -31,7 +31,7 @@ const CardProduct = ({ data }) => {
 
   return (
     <motion.article
-      className="group relative flex w-[154px] flex-col overflow-hidden rounded-card border border-brown-200 bg-white shadow-sm transition-shadow duration-200 hover:shadow-md dark:border-dm-border dark:bg-dm-card sm:w-[176px] md:w-[196px] lg:w-[216px]"
+      className="group relative flex w-full min-w-0 flex-col overflow-hidden rounded-card border border-brown-200 bg-white shadow-sm transition-shadow duration-200 hover:shadow-md dark:border-dm-border dark:bg-dm-card"
       initial={reduceMotion ? false : { opacity: 0, y: 10 }}
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true, amount: 0.2 }}
@@ -49,7 +49,7 @@ const CardProduct = ({ data }) => {
       </Link>
       <WishlistButton
         productId={data._id}
-        className="absolute right-2 top-2 h-9 w-9 border border-brown-100/80 dark:border-dm-border"
+        className="customer-touch-target absolute right-2 top-2 h-11 w-11 border border-brown-100/80 dark:border-dm-border"
       />
 
       {/* Discount badge — anchored top-left over the photo, high-contrast so a
@@ -119,7 +119,7 @@ const CardProduct = ({ data }) => {
               <div className="min-w-0 flex-1">
                 <AddToCartButton data={data} className="min-h-11" />
               </div>
-              <WhatsAppOrderButton product={data} className="h-11 w-11 shrink-0 rounded-lg" />
+              <WhatsAppOrderButton product={data} className="customer-touch-target h-11 w-11 shrink-0 rounded-lg" />
             </div>
           ) : hasValidPrice ? (
             <p className="mt-2 text-left text-[11px] font-semibold text-red-600 dark:text-red-400">This style is currently unavailable</p>

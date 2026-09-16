@@ -88,12 +88,12 @@ const CategoryWiseProductDisplay = ({ id, name }) => {
                 >
                     {loading
                         ? loadingCardNumber.map((_, i) => (
-                            <div key={`loading-${id}-${i}`} className="snap-start flex-shrink-0">
+                            <div key={`loading-${id}-${i}`} className="w-[min(154px,calc(50vw-1.125rem))] flex-shrink-0 snap-start sm:w-[176px] md:w-[196px] lg:w-[216px]">
                                 <CardLoading />
                             </div>
                         ))
                         : data.map((p, i) => (
-                            <div key={`product-${p._id || i}`} className="snap-start flex-shrink-0">
+                            <div key={`product-${p._id || i}`} className="w-[min(154px,calc(50vw-1.125rem))] flex-shrink-0 snap-start sm:w-[176px] md:w-[196px] lg:w-[216px]">
                                 <CardProduct data={p} />
                             </div>
                         ))

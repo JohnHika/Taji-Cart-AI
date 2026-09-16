@@ -7,13 +7,38 @@ import {
 } from '../utils/catalogVisibility.js';
 
 const STOREFRONT_SETTINGS_KEY = 'storefront';
+let storefrontSettingsPromise = null;
 
-export const getStorefrontCatalogSettings = async () =>
+const loadStorefrontCatalogSettings = () =>
   CatalogSettingsModel.findOneAndUpdate(
     { key: STOREFRONT_SETTINGS_KEY },
     { $setOnInsert: { hideIncompleteProducts: true } },
     { new: true, upsert: true, setDefaultsOnInsert: true }
-  );
+  )
+    .exec()
+    .catch((error) => {
+      // Multiple pages can request the first settings document at once. One
+      // request may lose the unique-key upsert race; read the winner instead.
+      if (error?.code === 11000) {
+        return CatalogSettingsModel.findOne({ key: STOREFRONT_SETTINGS_KEY }).exec();
+      }
+      throw error;
+    });
+
+export const getStorefrontCatalogSettings = async () => {
+  if (!storefrontSettingsPromise) {
+    storefrontSettingsPromise = loadStorefrontCatalogSettings();
+  }
+
+  const pendingSettings = storefrontSettingsPromise;
+  try {
+    return await pendingSettings;
+  } finally {
+    if (storefrontSettingsPromise === pendingSettings) {
+      storefrontSettingsPromise = null;
+    }
+  }
+};
 
 export const getCustomerProductFilter = async () => {
   const settings = await getStorefrontCatalogSettings();

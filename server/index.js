@@ -17,7 +17,26 @@ initializeSocket(server);
 
 let connectionCheckInterval;
 let retrying = false;
+let retryingDb = false;
 let proofCleanupScheduleStarted = false;
+
+const getMongoConnectionUri = () => process.env.MONGODB_URI || process.env.MONGO_URI;
+
+const checkConnection = async () => {
+    if (retryingDb || mongoose.connection.readyState === 1) return;
+
+    retryingDb = true;
+    try {
+        console.log('⚠️ MongoDB connection lost. Reconnecting...');
+        const mongoUri = getMongoConnectionUri();
+        if (!mongoUri) throw new Error('MONGODB_URI is not configured');
+        await mongoose.connect(mongoUri);
+    } catch (error) {
+        console.error('❌ Connection check error:', error.message);
+    } finally {
+        retryingDb = false;
+    }
+};
 
 // Guard against starting the sweep before Mongoose has actually finished
 // connecting — server.listen()'s callback can fire before the separate
@@ -33,18 +52,7 @@ server.listen(PORT, () => {
     retrying = false;
     console.log(`✅ Server running on port ${PORT}`);
     startKeepalive();
-    connectionCheckInterval = setInterval(async () => {
-        try {
-            if (mongoose.connection.readyState !== 1) {
-                console.log('⚠️ MongoDB connection lost. Reconnecting...');
-                clearInterval(connectionCheckInterval);
-                await mongoose.connect(process.env.MONGO_URI);
-                connectionCheckInterval = setInterval(checkConnection, 60000);
-            }
-        } catch (error) {
-            console.error('❌ Connection check error:', error.message);
-        }
-    }, 60000);
+    connectionCheckInterval = setInterval(checkConnection, 60000);
 });
 
 server.on('error', (error) => {

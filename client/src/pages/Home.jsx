@@ -167,7 +167,7 @@ const Home = () => {
   };
 
   return (
-    <section className="bg-ivory transition-colors dark:bg-dm-surface">
+    <section className="customer-page-shell bg-ivory transition-colors dark:bg-dm-surface">
       <Helmet>
         <title>Nawiri Hair — Premium Hair Products in Kenya</title>
         <meta

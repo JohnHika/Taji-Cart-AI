@@ -19,12 +19,12 @@ const WishlistPage = () => {
   const wishlistedProducts = items.filter((item) => item?.name);
 
   return (
-    <section className="min-h-screen w-full bg-ivory dark:bg-dm-surface">
+    <section className="customer-page-shell min-h-screen w-full bg-ivory dark:bg-dm-surface">
       <Helmet>
         <title>My Wishlist — Nawiri Hair</title>
       </Helmet>
 
-      <div className="mx-auto max-w-7xl p-4 sm:p-6">
+      <div className="customer-content py-0 sm:py-0 lg:py-0">
         <button
           type="button"
           onClick={() => navigate(-1)}

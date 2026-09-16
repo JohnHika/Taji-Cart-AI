@@ -132,7 +132,7 @@ const DeliveryLocationModal = ({
       <div className="flex-1 min-h-[15%]" onClick={onClose} />
 
       {/* Bottom sheet */}
-      <div className="w-full max-w-xl mx-auto bg-white dark:bg-dm-card rounded-t-2xl shadow-2xl flex flex-col max-h-[92vh] animate-slide-up">
+      <div className="customer-dialog mx-auto flex min-h-0 w-full max-w-xl flex-col rounded-t-2xl bg-white shadow-2xl animate-slide-up dark:bg-dm-card">
         {/* Header */}
         <div className="px-4 pt-4 pb-3 border-b border-brown-100 dark:border-dm-border flex items-start justify-between gap-3">
           <div className="min-w-0">
@@ -147,7 +147,7 @@ const DeliveryLocationModal = ({
           <button
             type="button"
             onClick={onClose}
-            className="p-2 rounded-full bg-brown-100 dark:bg-dm-border text-brown-500 dark:text-white/60 active:scale-95 transition-transform"
+            className="customer-touch-target rounded-full bg-brown-100 text-brown-500 transition-transform active:scale-95 dark:bg-dm-border dark:text-white/60"
             aria-label="Close"
           >
             <FaTimes size={18} />
@@ -158,7 +158,7 @@ const DeliveryLocationModal = ({
         <div className="flex-1 overflow-y-auto">
           {/* Status + locate me */}
           <div className="px-4 pt-3">
-            <div className="flex items-center gap-2">
+            <div className="flex flex-col items-stretch gap-2 xs:flex-row xs:items-center">
               <div
                 className={`flex-1 px-3 py-2.5 rounded-lg text-sm font-medium ${
                   !position
@@ -187,7 +187,7 @@ const DeliveryLocationModal = ({
                 type="button"
                 onClick={handleDetectAgain}
                 disabled={detecting}
-                className="flex items-center gap-1.5 px-3 py-2.5 rounded-lg bg-plum-700 text-white text-sm font-semibold active:scale-95 disabled:opacity-60 transition-transform whitespace-nowrap"
+                className="customer-touch-target gap-1.5 rounded-lg bg-plum-700 px-3 py-2.5 text-sm font-semibold whitespace-nowrap text-white transition-transform active:scale-95 disabled:opacity-60"
               >
                 {detecting ? <FaSpinner className="animate-spin" /> : <FaCrosshairs />}
                 <span className="hidden sm:inline">{detecting ? 'Detecting…' : 'My location'}</span>

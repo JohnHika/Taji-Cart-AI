@@ -90,7 +90,7 @@ const Header = () => {
             </div>
           </div>
         ) : (
-          <div className="container mx-auto flex h-14 min-w-0 items-center gap-2 px-2 sm:gap-3 sm:px-3 md:gap-4 md:px-4">
+          <div className="container mx-auto flex h-14 min-w-0 items-center gap-1.5 px-2 sm:gap-3 sm:px-3 md:gap-4 md:px-4">
             <Link
               to="/"
               className="flex shrink-0 items-center gap-1.5 py-1 sm:gap-2"
@@ -131,7 +131,7 @@ const Header = () => {
 
             <div className="flex shrink-0 items-center gap-1.5 sm:gap-2 md:gap-3">
               <button
-                className="p-1 text-neutral-600 dark:text-white/80 sm:hidden"
+                className="customer-touch-target rounded-lg text-neutral-600 dark:text-white/80 sm:hidden"
                 onClick={() => navigate('/search')}
                 aria-label="Search"
               >
@@ -141,7 +141,7 @@ const Header = () => {
               <ThemeToggle />
 
               <button
-                className="relative p-1 text-neutral-600 dark:text-white/80 lg:hidden"
+                className="customer-touch-target relative rounded-lg text-neutral-600 dark:text-white/80 lg:hidden"
                 onClick={() => navigate('/mobile/cart')}
                 aria-label="Cart"
               >
@@ -210,7 +210,7 @@ const Header = () => {
 
               <button
                 onClick={() => setMobileMenuOpen((prev) => !prev)}
-                className="rounded-lg p-1.5 text-charcoal transition-colors hover:bg-plum-50 dark:text-white/80 dark:hover:bg-plum-900/30 lg:hidden"
+                className="customer-touch-target rounded-lg text-charcoal transition-colors hover:bg-plum-50 dark:text-white/80 dark:hover:bg-plum-900/30 lg:hidden"
                 aria-label="Menu"
               >
                 {mobileMenuOpen ? <FiX size={22} /> : <FiMenu size={22} />}
@@ -226,8 +226,8 @@ const Header = () => {
             className="fixed inset-0 z-40 bg-plum-900/50 lg:hidden"
             onClick={() => setMobileMenuOpen(false)}
           />
-          <div className="fixed left-0 top-0 z-50 flex h-full w-72 flex-col bg-white shadow-xl dark:bg-dm-card lg:hidden">
-            <div className="flex items-center justify-between bg-plum-800/95 px-5 py-4">
+          <div className="fixed left-0 top-0 z-50 flex h-full w-[min(18rem,calc(100vw-1rem))] flex-col bg-white pt-[env(safe-area-inset-top)] shadow-xl dark:bg-dm-card lg:hidden">
+            <div className="flex items-center justify-between bg-plum-800/95 px-4 py-3 sm:px-5 sm:py-4">
               <div className="flex items-center gap-2">
                 <img
                   src={nawiriBrand.logo}
@@ -240,7 +240,7 @@ const Header = () => {
               </div>
               <button
                 onClick={() => setMobileMenuOpen(false)}
-                className="text-white/80 transition-colors hover:text-white"
+                className="customer-touch-target rounded-lg text-white/80 transition-colors hover:text-white"
               >
                 <FiX size={22} />
               </button>
@@ -275,6 +275,18 @@ const Header = () => {
                       <p className="truncate font-semibold">{user?.name}</p>
                       <p className="truncate text-xs text-brown-400 dark:text-white/50">{user?.email}</p>
                     </div>
+                  </Link>
+                  <Link
+                    to="/wishlist"
+                    className="flex items-center gap-3 rounded-lg px-4 py-3 text-sm font-medium text-charcoal transition-colors hover:bg-plum-50 dark:text-white/80 dark:hover:bg-plum-900/30"
+                  >
+                    <FiHeart size={18} />
+                    Wishlist
+                    {wishlistCount > 0 && (
+                      <span className="ml-auto rounded-full bg-blush-500 px-2 py-0.5 text-xs font-bold text-white">
+                        {wishlistCount > 99 ? '99+' : wishlistCount}
+                      </span>
+                    )}
                   </Link>
                 </>
               )}

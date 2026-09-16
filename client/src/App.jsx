@@ -371,9 +371,11 @@ function App() {
 
   const isAuthPage = ['/login', '/register', '/forgot-password', '/verification-otp', '/reset-password', '/verify-email'].includes(location.pathname);
   const isDashboardShell = location.pathname.startsWith('/dashboard');
+  const isDeliveryShell = location.pathname.startsWith('/delivery');
   const isPOSPage = location.pathname.includes('/dashboard/sales-counter') || location.pathname.includes('/dashboard/staff-pos');
 
-  const showStoreChrome = !isAuthPage && !isDashboardShell;
+  const showStoreChrome = !isAuthPage && !isDashboardShell && !isDeliveryShell;
+  const showMobileNavigation = !isAuthPage && !isDashboardShell;
 
   // Show loading screen while app is initializing to prevent flash of empty state
   if (isLoading) {
@@ -402,7 +404,7 @@ function App() {
           </Suspense>
         </main>
         {showStoreChrome && <Footer />}
-        {showStoreChrome && <BottomNavigation />}
+        {showMobileNavigation && <BottomNavigation />}
         <Toaster />
         <ToastContainer position="top-right" autoClose={3000} />
         <AdminSecretGate />

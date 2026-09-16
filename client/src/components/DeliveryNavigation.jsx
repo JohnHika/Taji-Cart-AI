@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
 import {
     FaBars,
     FaBoxOpen,
     FaHistory,
     FaMapMarkedAlt,
+    FaPowerOff,
     FaSignOutAlt,
     FaTachometerAlt,
     FaTruck,
@@ -27,13 +28,67 @@ const DeliveryNavigation = () => {
   const user = useSelector(state => state.user);
   const { darkMode } = useTheme();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  
+  const [presenceLoaded, setPresenceLoaded] = useState(false);
+  const [isOnline, setIsOnline] = useState(false);
+  const [presenceUpdating, setPresenceUpdating] = useState(false);
+
   const isActive = (path) => {
-    return location.pathname === path ? 
-      'bg-primary-300 text-white' : 
+    return location.pathname === path ?
+      'bg-primary-300 text-white' :
       'text-charcoal hover:bg-primary-100 dark:text-white/70 dark:hover:bg-dm-card-2';
   };
-  
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const fetchPresence = async () => {
+      try {
+        const response = await Axios({ url: '/api/delivery/stats', method: 'GET' });
+        if (!cancelled && response.data.success) {
+          setIsOnline(response.data.data?.isOnline === true);
+        }
+      } catch (error) {
+        console.error('Error fetching driver presence:', error);
+      } finally {
+        if (!cancelled) setPresenceLoaded(true);
+      }
+    };
+
+    fetchPresence();
+
+    return () => { cancelled = true; };
+  }, []);
+
+  const handleTogglePresence = async () => {
+    if (presenceUpdating) return;
+    const nextOnline = !isOnline;
+    setPresenceUpdating(true);
+
+    try {
+      const response = await Axios({
+        url: '/api/delivery/presence',
+        method: 'POST',
+        data: { isOnline: nextOnline }
+      });
+
+      if (response.data?.success && typeof response.data?.data?.isOnline === 'boolean') {
+        const nextPresenceState = response.data.data.isOnline;
+        setIsOnline(nextPresenceState);
+        toast.success(
+          nextPresenceState
+            ? "You're online — new orders can now be assigned to you"
+            : "You're offline — you won't receive new orders"
+        );
+      } else {
+        toast.error(response.data?.message || 'Failed to update your status');
+      }
+    } catch (error) {
+      AxiosToastError(error);
+    } finally {
+      setPresenceUpdating(false);
+    }
+  };
+
   const handleLogout = async () => {
     try {
       const response = await Axios({
@@ -105,32 +160,52 @@ const DeliveryNavigation = () => {
             </nav>
           </div>
           
-          <div className="flex items-center space-x-4">
+          <div className="flex items-center space-x-3 sm:space-x-4">
+            {/* Online/offline presence toggle — visible on every driver page since
+                this is the switch that makes a driver eligible for dispatch assignment. */}
+            <button
+              type="button"
+              onClick={handleTogglePresence}
+              disabled={!presenceLoaded || presenceUpdating}
+              aria-pressed={isOnline}
+              aria-label={isOnline ? 'Go offline and stop receiving orders' : 'Go online to receive orders'}
+              title={isOnline ? 'Go offline' : 'Go online to receive orders'}
+              className={`customer-touch-target min-h-[44px] min-w-[44px] gap-1.5 rounded-full px-2.5 py-1.5 text-xs font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-60 sm:px-3 sm:text-sm ${
+                isOnline
+                  ? 'bg-green-100 text-green-800 hover:bg-green-200 dark:bg-green-900/40 dark:text-green-300 dark:hover:bg-green-900/60'
+                  : 'bg-brown-100 text-brown-500 hover:bg-brown-200 dark:bg-dm-card-2 dark:text-white/50 dark:hover:bg-dm-border'
+              }`}
+            >
+              <span className={`h-2 w-2 rounded-full ${isOnline ? 'bg-green-500 animate-pulse' : 'bg-brown-400 dark:bg-white/30'}`} />
+              <FaPowerOff size={11} className="hidden xs:inline" />
+              <span>{presenceUpdating ? 'Updating…' : isOnline ? 'Online' : 'Go online'}</span>
+            </button>
+
             {/* User info */}
             <span className="hidden md:block text-sm text-charcoal dark:text-white/55">
               {user.name}
             </span>
-            
+
             {/* Desktop menu */}
             <div className="hidden md:flex items-center space-x-4">
-              <Link 
-                to="/dashboard/profile" 
+              <Link
+                to="/dashboard/profile"
                 className="text-charcoal hover:text-primary-200 dark:text-white/70 dark:hover:text-primary-300"
                 title="Profile"
               >
                 <FaUserCircle size={20} />
               </Link>
-              <button 
+              <button
                 onClick={handleLogout}
                 className="text-charcoal hover:text-red-500 dark:text-white/70 dark:hover:text-red-400"
               >
                 <FaSignOutAlt size={20} />
               </button>
             </div>
-            
+
             {/* Mobile menu button */}
-            <button 
-              className="md:hidden text-charcoal dark:text-white/70 focus:outline-none" 
+            <button
+              className="md:hidden text-charcoal dark:text-white/70 focus:outline-none"
               onClick={toggleMobileMenu}
             >
               <FaBars size={24} />

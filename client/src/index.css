@@ -33,6 +33,7 @@
     scroll-behavior: smooth;
     overflow-x: hidden;
     font-size: 16px;
+    -webkit-text-size-adjust: 100%;
   }
 
   body {
@@ -93,6 +94,31 @@
   }
   .surface-card {
     @apply rounded-card border border-brown-100 bg-white dark:border-dm-border dark:bg-dm-card;
+  }
+
+  /* Shared storefront primitives. Customer pages use these to keep the
+     content edge, mobile bottom navigation clearance, and touch affordances
+     consistent without repeating breakpoint-specific one-off styles. */
+  .customer-page-shell {
+    @apply w-full min-w-0 max-w-full overflow-x-clip;
+    padding-bottom: calc(5rem + env(safe-area-inset-bottom));
+  }
+
+  .customer-content {
+    @apply mx-auto w-full max-w-7xl min-w-0 px-3 py-5 sm:px-4 sm:py-7 lg:px-6 lg:py-8;
+  }
+
+  .customer-touch-target {
+    @apply inline-flex min-h-11 min-w-11 items-center justify-center;
+  }
+
+  .customer-field {
+    @apply min-h-11;
+  }
+
+  .customer-dialog {
+    max-height: calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 1rem);
+    padding-bottom: calc(1rem + env(safe-area-inset-bottom));
   }
 }
 
@@ -347,6 +373,12 @@
   button {
     min-height: 44px;
     min-width: 44px;
+  }
+
+  input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]),
+  select,
+  textarea {
+    min-height: 44px !important;
   }
 
   .grid-cols-auto-fit-mobile {

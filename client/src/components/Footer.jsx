@@ -75,7 +75,7 @@ const FooterBanner = () => {
         {/* Shimmer sweep */}
         <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-transparent via-white/[0.04] to-transparent animate-shimmer bg-[length:200%_100%]" />
 
-        <div className="relative z-10 flex items-center justify-between gap-4 px-5 py-5 sm:px-8 sm:py-7 lg:px-12 lg:py-8">
+        <div className="relative z-10 flex flex-col items-stretch justify-between gap-4 px-5 py-5 sm:flex-row sm:items-center sm:px-8 sm:py-7 lg:px-12 lg:py-8">
           <div
             className={`flex items-center gap-3 sm:gap-5 transition-all duration-400 ${
               isAnimating ? 'translate-y-4 opacity-0' : 'translate-y-0 opacity-100'
@@ -92,7 +92,7 @@ const FooterBanner = () => {
             </div>
           </div>
 
-          <LinkWrapper className="shrink-0 inline-flex items-center gap-1.5 rounded-full bg-gold-500 px-4 py-2 text-xs font-bold text-charcoal shadow-gold transition-all hover:bg-gold-400 hover:shadow-lg active:scale-[0.96] sm:px-5 sm:py-2.5 sm:text-sm">
+          <LinkWrapper className="customer-touch-target w-full shrink-0 gap-1.5 rounded-full bg-gold-500 px-4 py-2 text-xs font-bold text-charcoal shadow-gold transition-all hover:bg-gold-400 hover:shadow-lg active:scale-[0.96] sm:w-auto sm:px-5 sm:py-2.5 sm:text-sm">
             {slide.cta}
             <FiChevronRight size={14} />
           </LinkWrapper>

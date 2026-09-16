@@ -60,25 +60,25 @@ const FulfillmentModal = ({ isOpen, onClose, pickupLocations = [] }) => {
     (selectedMethod === 'sacco_pickup' && (!selectedSaccoOperatorId || !saccoDestinationTown.trim()));
 
   return (
-    <div className="fixed inset-0 bg-plum-900/50 z-50 flex items-center justify-center p-4 backdrop-blur-[2px]">
-      <div className="bg-white dark:bg-dm-card p-6 rounded-card max-w-md w-full border border-brown-100 dark:border-dm-border shadow-hover transition-colors duration-200 max-h-[90vh] overflow-y-auto">
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-plum-900/50 p-2 backdrop-blur-[2px] sm:items-center sm:p-4">
+      <div className="customer-dialog w-full max-w-md overflow-y-auto rounded-t-2xl border border-brown-100 bg-white p-4 shadow-hover transition-colors duration-200 dark:border-dm-border dark:bg-dm-card sm:rounded-card sm:p-6">
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-lg font-semibold text-charcoal dark:text-white">How should we fulfill this order?</h2>
           <button
             type="button"
             onClick={onClose}
-            className="p-2 rounded-lg text-brown-400 hover:text-charcoal dark:text-white/50 dark:hover:text-white transition-colors"
+            className="customer-touch-target rounded-lg text-brown-400 hover:text-charcoal dark:text-white/50 dark:hover:text-white transition-colors"
             aria-label="Close"
           >
             <FaTimes />
           </button>
         </div>
 
-        <div className="grid grid-cols-3 gap-2 mb-6">
+        <div className="mb-6 grid grid-cols-1 gap-2 xs:grid-cols-3">
           <button
             type="button"
             onClick={() => setSelectedMethod('delivery')}
-            className={`p-3 rounded-card border-2 flex flex-col items-center justify-center transition-colors ${
+            className={`customer-touch-target min-h-[5.5rem] flex-col rounded-card border-2 p-3 transition-colors ${
               selectedMethod === 'delivery'
                 ? 'border-plum-600 bg-plum-50 dark:bg-plum-900/40 dark:border-plum-400'
                 : 'border-brown-100 dark:border-dm-border hover:bg-plum-50/50 dark:hover:bg-plum-900/20'
@@ -96,7 +96,7 @@ const FulfillmentModal = ({ isOpen, onClose, pickupLocations = [] }) => {
           <button
             type="button"
             onClick={() => setSelectedMethod('pickup')}
-            className={`p-3 rounded-card border-2 flex flex-col items-center justify-center transition-colors ${
+            className={`customer-touch-target min-h-[5.5rem] flex-col rounded-card border-2 p-3 transition-colors ${
               selectedMethod === 'pickup'
                 ? 'border-gold-500 bg-gold-50 dark:bg-gold-600/15 dark:border-gold-400'
                 : 'border-brown-100 dark:border-dm-border hover:bg-gold-50/40 dark:hover:bg-gold-900/10'
@@ -114,7 +114,7 @@ const FulfillmentModal = ({ isOpen, onClose, pickupLocations = [] }) => {
           <button
             type="button"
             onClick={() => setSelectedMethod('sacco_pickup')}
-            className={`p-3 rounded-card border-2 flex flex-col items-center justify-center transition-colors ${
+            className={`customer-touch-target min-h-[5.5rem] flex-col rounded-card border-2 p-3 transition-colors ${
               selectedMethod === 'sacco_pickup'
                 ? 'border-brown-600 bg-brown-50 dark:bg-brown-600/15 dark:border-brown-400'
                 : 'border-brown-100 dark:border-dm-border hover:bg-brown-50/40 dark:hover:bg-brown-900/10'
@@ -228,7 +228,7 @@ const FulfillmentModal = ({ isOpen, onClose, pickupLocations = [] }) => {
           type="button"
           onClick={handleSelect}
           disabled={isContinueDisabled}
-          className={`w-full py-3 px-4 rounded-pill font-semibold text-sm flex items-center justify-center gap-2 transition-colors ${
+          className={`customer-touch-target w-full rounded-pill px-4 py-3 text-sm font-semibold transition-colors ${
             !isContinueDisabled
               ? 'bg-gold-500 hover:bg-gold-400 text-charcoal press shadow-sm hover:shadow-gold'
               : 'bg-brown-100 dark:bg-dm-border text-brown-400 dark:text-white/35 cursor-not-allowed'

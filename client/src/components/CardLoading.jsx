@@ -1,8 +1,8 @@
 const CardLoading = () => {
-  // Widths match the real CardProduct exactly (154/176/196/216) so the
-  // skeleton doesn't shift the row by a few px when data lands.
+  // The parent shelf/grid owns the responsive width so the skeleton matches
+  // CardProduct without overflowing very narrow phone columns.
   return (
-    <div className="flex w-[154px] flex-col overflow-hidden rounded-card border border-brown-200 bg-white dark:border-dm-border dark:bg-dm-card sm:w-[176px] md:w-[196px] lg:w-[216px]">
+    <div className="flex w-full min-w-0 flex-col overflow-hidden rounded-card border border-brown-200 bg-white dark:border-dm-border dark:bg-dm-card">
       {/* Compact mobile image skeleton; desktop retains the portrait ratio. */}
       <div className="aspect-square w-full bg-shimmer xs:aspect-[4/5] sm:aspect-[3/4]" />
 

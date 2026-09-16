@@ -86,7 +86,7 @@ const SearchPage = () => {
   }
 
   return (
-    <section className='bg-ivory dark:bg-dm-surface min-h-[80vh]'>
+    <section className='customer-page-shell bg-ivory dark:bg-dm-surface min-h-[80vh]'>
       <div className='mobile-page-shell container mx-auto px-3 sm:px-4 py-4 sm:py-6'>
         <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <p className='font-semibold text-charcoal dark:text-white text-sm sm:text-base'>

@@ -87,6 +87,7 @@
 .ai-command__hero-title {
   margin: 0.5rem 0 0;
   max-width: 40rem;
+  color: #fff;
   font-size: clamp(1.55rem, 3vw, 2.7rem);
   font-weight: 900;
   letter-spacing: -0.05em;

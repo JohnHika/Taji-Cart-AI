@@ -61,7 +61,7 @@ const HomeProductShelf = ({
           {(loading ? Array.from({ length: 5 }) : products).map((item, index) => (
             <div
               key={loading ? `shelf-loading-${title}-${index}` : item._id}
-              className="flex-shrink-0 snap-start"
+              className="w-[min(154px,calc(50vw-1.125rem))] flex-shrink-0 snap-start sm:w-[176px] md:w-[196px] lg:w-[216px]"
             >
               {loading ? <CardLoading /> : <CardProduct data={item} />}
             </div>

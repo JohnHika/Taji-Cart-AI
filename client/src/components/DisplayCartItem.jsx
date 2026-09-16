@@ -78,10 +78,10 @@ const DisplayCartItem = ({ close, variant = 'drawer' }) => {
                     <h2 className='font-semibold dark:text-white'>Cart</h2>
                     {!isEmbedded && (
                       <>
-                    <Link to={"/"} className='lg:hidden dark:text-white/55 hover:dark:text-white'>
+                    <Link to={"/"} className='customer-touch-target rounded-lg lg:hidden dark:text-white/55 hover:dark:text-white' aria-label="Close cart">
                         <IoClose size={25}/>
                     </Link>
-                    <button type="button" onClick={close} className="hidden lg:block p-1 rounded-lg text-brown-500 dark:text-white/60 hover:text-plum-700 dark:hover:text-plum-200 transition-colors" aria-label="Close cart">
+                    <button type="button" onClick={close} className="customer-touch-target hidden rounded-lg text-brown-500 transition-colors hover:text-plum-700 dark:text-white/60 dark:hover:text-plum-200 lg:inline-flex" aria-label="Close cart">
                         <IoClose size={25}/>
                     </button>
                       </>
@@ -255,10 +255,17 @@ const DisplayCartItem = ({ close, variant = 'drawer' }) => {
                                     alt="Empty Cart"
                                     className="w-36 h-36 object-contain opacity-90"
                                 />
-                                <h1 className="font-semibold text-charcoal dark:text-white mt-4">Your cart is empty</h1>
-                                <p className="text-sm text-brown-400 dark:text-white/50 mx-2 text-center mt-2 max-w-xs">
-                                    Add something beautiful - browse categories from the shop.
+                                <h1 className="mt-4 font-semibold text-charcoal dark:text-white">Your cart is empty</h1>
+                                <p className="mx-2 mt-2 max-w-xs text-center text-sm text-brown-400 dark:text-white/50">
+                                    Add something beautiful — browse categories from the shop.
                                 </p>
+                                <Link
+                                    to="/"
+                                    className="customer-touch-target mt-5 w-full max-w-xs gap-2 rounded-pill bg-plum-700 px-5 py-3 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-plum-600"
+                                >
+                                    Browse products
+                                    <FaArrowRight size={13} />
+                                </Link>
                             </div>
                         )
                     }

@@ -44,15 +44,15 @@ const Search = () => {
   };
 
   return (
-    <div className='flex h-8 w-full min-w-0 max-w-full items-center overflow-hidden rounded-md border border-brown-200/80 bg-slate-50 text-xs text-neutral-500 dark:border-dm-border dark:bg-dm-card-2 sm:h-9 group focus-within:border-primary-200'>
+    <div className='flex h-11 w-full min-w-0 max-w-full items-center overflow-hidden rounded-lg border border-brown-200/80 bg-slate-50 text-xs text-neutral-500 transition-colors dark:border-dm-border dark:bg-dm-card-2 group focus-within:border-primary-200'>
         <div className="shrink-0">
             {
                 (isMobile && isSearchPage ) ? (
-                    <Link to={"/"} className='m-0.5 flex h-full items-center justify-center rounded-full bg-white p-1.5 shadow-sm group-focus-within:text-primary-200 dark:bg-dm-card'>
+                    <Link to={"/"} className='customer-touch-target m-0.5 rounded-full bg-white shadow-sm group-focus-within:text-primary-200 dark:bg-dm-card'>
                         <FaArrowLeft size={16}/>
                     </Link>
                 ) :(
-                    <button type="button" className='flex h-full items-center justify-center px-2 py-1 group-focus-within:text-primary-200' aria-label="Search">
+                    <button type="button" onClick={redirectToSearchPage} className='customer-touch-target group-focus-within:text-primary-200' aria-label="Search">
                         <IoSearch size={17}/>
                     </button>
                 )
@@ -62,7 +62,7 @@ const Search = () => {
             {
                 !isSearchPage ? (
                      //not in search page
-                     <div onClick={redirectToSearchPage} className='flex h-full w-full cursor-pointer items-center text-xs text-neutral-500 dark:text-white/50'>
+                     <button type="button" onClick={redirectToSearchPage} className='flex h-full w-full cursor-pointer items-center text-left text-xs text-neutral-500 dark:text-white/50'>
                         <TypeAnimation
                                 sequence={[
                                     'Search "HD lace wigs"',
@@ -112,7 +112,7 @@ const Search = () => {
                                 repeat={Infinity}
                                 className="truncate"
                             />
-                     </div>
+                     </button>
                 ) : (
                     //when i was search page
                     <div className='h-full w-full'>

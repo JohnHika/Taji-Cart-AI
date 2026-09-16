@@ -16,6 +16,8 @@ const formatSlugLabel = (slug = '') =>
     .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
     .join(' ');
 
+const EMPTY_NAVIGATION_STATE = Object.freeze({});
+
 const extractIdFromSegment = (segment = '') => {
   if (!segment) {
     return null;
@@ -84,7 +86,7 @@ const ProductListPage = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const allSubCategory = useSelector((state) => state.product.allSubCategory);
-  const navigationState = location.state || {};
+  const navigationState = location.state || EMPTY_NAVIGATION_STATE;
 
   const [{ categoryId, subcategoryId }, setResolvedIds] = useState(() =>
     resolveRouteIds(location.pathname, params, navigationState)
@@ -229,7 +231,7 @@ const ProductListPage = () => {
     : `Browse our full range of ${currentCategoryLabel} at Nawiri Hair. Premium quality, fast delivery across Kenya.`;
 
   return (
-    <section className="min-h-screen w-full bg-ivory dark:bg-dm-surface">
+    <section className="customer-page-shell min-h-screen w-full bg-ivory dark:bg-dm-surface">
       <Helmet>
         <title>{catTitle}</title>
         <meta name="description" content={catDesc} />
@@ -239,7 +241,7 @@ const ProductListPage = () => {
         <meta property="og:type" content="website" />
         <meta property="og:image" content="https://nawirihairke.com/images/nawiri_logo.jpeg" />
       </Helmet>
-      <div className="mx-auto max-w-7xl p-2 sm:p-4">
+      <div className="customer-content p-3 sm:p-4 lg:p-6">
         <div className="mb-6 sm:mb-8">
           <button
             type="button"
@@ -262,7 +264,7 @@ const ProductListPage = () => {
         </div>
 
         <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
-          <div className="sticky top-20 h-fit w-full rounded-xl border border-brown-200 bg-white p-4 shadow-sm dark:border-dm-border dark:bg-dm-card">
+          <div className="h-fit w-full rounded-xl border border-brown-200 bg-white p-4 shadow-sm dark:border-dm-border dark:bg-dm-card md:sticky md:top-20">
             <h2 className="mb-4 flex items-center text-lg font-bold text-charcoal dark:text-white">
               <span className="mr-3 h-6 w-1 rounded-full bg-gradient-to-b from-plum-700 to-plum-500"></span>
               Hair Types

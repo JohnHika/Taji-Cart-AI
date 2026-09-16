@@ -311,18 +311,18 @@ const AddToCartButton = ({ data, product: productProp, cartData, selectedVariant
                             onClick={decreaseQty} 
                             disabled={updateLoading}
                             aria-label="Decrease quantity"
-                            className='bg-plum-700 hover:bg-plum-600 active:bg-plum-800 text-white flex-1 w-full p-1.5 sm:p-2 flex items-center justify-center text-xs sm:text-sm touch-manipulation transition-all min-w-[24px]'
+                            className='customer-touch-target bg-plum-700 hover:bg-plum-600 active:bg-plum-800 text-white flex-1 w-full p-1.5 sm:p-2 text-xs sm:text-sm touch-manipulation transition-all'
                         >
                             {updateLoading ? <Loading /> : <FaMinus size={10} />}
                         </button>
 
-                        <div className='flex-1 w-full font-semibold px-1 sm:px-2 flex items-center justify-center text-xs sm:text-sm bg-plum-50 dark:bg-dm-card-2 dark:text-white min-w-[28px] border-x border-plum-200 dark:border-plum-700'>{qty}</div>
+                        <div className='flex min-h-11 min-w-[2.5rem] flex-1 items-center justify-center border-x border-plum-200 bg-plum-50 px-1 font-semibold text-xs dark:border-plum-700 dark:bg-dm-card-2 dark:text-white sm:px-2 sm:text-sm'>{qty}</div>
 
                         <button
                             onClick={increaseQty}
                             disabled={updateLoading}
                             aria-label="Increase quantity"
-                            className='bg-plum-700 hover:bg-plum-600 active:bg-plum-800 text-white flex-1 w-full p-1.5 sm:p-2 flex items-center justify-center text-xs sm:text-sm touch-manipulation transition-all min-w-[24px]'
+                            className='customer-touch-target bg-plum-700 hover:bg-plum-600 active:bg-plum-800 text-white flex-1 w-full p-1.5 sm:p-2 text-xs sm:text-sm touch-manipulation transition-all'
                         >
                             {updateLoading ? <Loading /> : <FaPlus size={10} />}
                         </button>
@@ -331,7 +331,7 @@ const AddToCartButton = ({ data, product: productProp, cartData, selectedVariant
                     <button
                         onClick={handleAddToCart}
                         disabled={loading || !product?._id || !hasValidPrice}
-                        className={`px-2 sm:px-3 lg:px-4 py-1.5 sm:py-2 rounded-lg text-[11px] sm:text-sm font-semibold w-full touch-manipulation transition-all shadow-sm ring-1 ${
+                        className={`customer-touch-target px-2 sm:px-3 lg:px-4 py-1.5 sm:py-2 rounded-lg text-[11px] sm:text-sm font-semibold w-full touch-manipulation transition-all shadow-sm ring-1 ${
                             hasValidPrice
                                 ? 'bg-gold-500 hover:bg-gold-400 active:bg-gold-600 text-charcoal hover:shadow-md ring-gold-300/50'
                                 : 'bg-brown-100 text-brown-500 dark:bg-dm-border dark:text-white/55 ring-brown-200/60 cursor-not-allowed'

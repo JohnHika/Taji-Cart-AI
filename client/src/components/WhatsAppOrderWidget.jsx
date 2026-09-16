@@ -139,7 +139,7 @@ const WhatsAppOrderWidget = () => {
             aria-label="Close WhatsApp order"
           />
           <section
-            className="flex max-h-[88vh] w-full flex-col rounded-t-2xl bg-white dark:bg-dm-card"
+            className="customer-dialog flex min-h-0 w-full flex-col rounded-t-2xl bg-white dark:bg-dm-card"
             aria-label="Buy via WhatsApp order"
           >
             <div className="flex items-center justify-between border-b border-brown-100 p-4 dark:border-dm-border">
@@ -161,11 +161,11 @@ const WhatsAppOrderWidget = () => {
               </button>
             </div>
 
-            <div className="flex-1 space-y-4 overflow-y-auto p-4">
+            <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-4">
               {items.map((item) => (
                 <div
                   key={item._id}
-                  className="flex items-center gap-3 rounded-xl bg-green-50/70 p-3 dark:bg-green-950/20"
+                  className="flex flex-col gap-3 rounded-xl bg-green-50/70 p-3 dark:bg-green-950/20 xs:flex-row xs:items-center"
                 >
                   <div className="h-12 w-12 shrink-0 overflow-hidden rounded-lg bg-white dark:bg-dm-border">
                     {item.image ? (
@@ -183,11 +183,11 @@ const WhatsAppOrderWidget = () => {
                       {formatWhatsAppOrderAmount(item.price * item.quantity)}
                     </p>
                   </div>
-                  <div className="flex items-center gap-1.5">
+                  <div className="flex items-center gap-1.5 self-end xs:self-auto">
                     <button
                       type="button"
                       onClick={() => updateItemQuantity(item._id, -1)}
-                      className="flex h-8 w-8 items-center justify-center rounded-full border border-brown-200 bg-white dark:border-dm-border dark:bg-dm-card-2"
+                      className="customer-touch-target h-11 w-11 rounded-full border border-brown-200 bg-white dark:border-dm-border dark:bg-dm-card-2"
                       aria-label={`Reduce ${item.name} quantity`}
                     >
                       <FaMinus size={11} />
@@ -196,7 +196,7 @@ const WhatsAppOrderWidget = () => {
                     <button
                       type="button"
                       onClick={() => updateItemQuantity(item._id, 1)}
-                      className="flex h-8 w-8 items-center justify-center rounded-full bg-green-600 text-white hover:bg-green-700"
+                      className="customer-touch-target h-11 w-11 rounded-full bg-green-600 text-white hover:bg-green-700"
                       aria-label={`Increase ${item.name} quantity`}
                     >
                       <FaPlus size={11} />
@@ -204,7 +204,7 @@ const WhatsAppOrderWidget = () => {
                     <button
                       type="button"
                       onClick={() => removeItem(item._id)}
-                      className="p-2 text-red-500"
+                      className="customer-touch-target text-red-500"
                       aria-label={`Remove ${item.name} from WhatsApp order`}
                     >
                       <FaTrash size={14} />
@@ -301,7 +301,7 @@ const WhatsAppOrderWidget = () => {
               </div>
             </div>
 
-            <div className="border-t border-brown-100 bg-white p-4 dark:border-dm-border dark:bg-dm-card">
+            <div className="safe-area-bottom border-t border-brown-100 bg-white p-4 dark:border-dm-border dark:bg-dm-card">
               <button
                 type="button"
                 onClick={openWhatsApp}

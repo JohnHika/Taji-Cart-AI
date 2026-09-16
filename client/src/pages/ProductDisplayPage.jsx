@@ -274,7 +274,7 @@ const ProductDisplayPage = () => {
   };
 
   return (
-    <div className="bg-ivory dark:bg-dm-surface min-h-screen">
+    <div className="customer-page-shell bg-ivory dark:bg-dm-surface min-h-screen">
       <Helmet>
         <title>{pageTitle}</title>
         <meta name="description" content={pageDesc} />
@@ -290,7 +290,7 @@ const ProductDisplayPage = () => {
         <meta name="twitter:image" content={pageImage} />
         <script type="application/ld+json">{JSON.stringify(jsonLd)}</script>
       </Helmet>
-      <div className="max-w-7xl mx-auto px-3 sm:px-5 lg:px-8 py-6 sm:py-8">
+      <div className="customer-content py-6 sm:py-8">
 
         {/* Breadcrumb */}
         <nav className="flex items-center gap-2 text-xs text-brown-400 dark:text-white/40 mb-5">
