@@ -377,7 +377,7 @@ const FeatureReleases = () => {
                   key={flag._id}
                   className="rounded-card border border-brown-100 bg-white p-4 dark:border-dm-border dark:bg-dm-card"
                 >
-                  <div className="flex flex-wrap items-start justify-between gap-2">
+                  <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-start sm:justify-between">
                     <div className="min-w-0 flex-1">
                       {editId === flag._id ? (
                         <div className="flex flex-col gap-2 sm:flex-row">
@@ -429,7 +429,7 @@ const FeatureReleases = () => {
                       )}
                     </div>
 
-                    <div className="flex flex-col items-end gap-2">
+                    <div className="flex flex-col items-start gap-2 sm:items-end">
                       <StatusBadge flag={flag} />
                       {releasedAt ? (
                         <p className="text-[10px] text-brown-400 dark:text-white/40">Released {releasedAt}</p>

@@ -397,6 +397,7 @@
 }
 
 .admin-queue__title {
+  display: block;
   overflow: hidden;
   margin: 0;
   color: var(--aw-ink);
@@ -407,6 +408,7 @@
 }
 
 .admin-queue__detail {
+  display: block;
   overflow: hidden;
   margin: 0.2rem 0 0;
   color: var(--aw-muted);

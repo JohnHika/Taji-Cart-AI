@@ -68,6 +68,14 @@
   scrollbar-width: thin;
 }
 
+/* Horizontal-scroll rows (pill/tab filters, chip lists) must scroll their
+   children, not shrink them. Without this, the .flex > * min-width:0 reset
+   above lets buttons collapse below their text's natural width, and
+   overflow-wrap: anywhere then breaks the label mid-word. */
+.operations-shell :where(.overflow-x-auto) > * {
+  flex-shrink: 0;
+}
+
 .operations-shell :where(table) {
   max-width: 100%;
 }
