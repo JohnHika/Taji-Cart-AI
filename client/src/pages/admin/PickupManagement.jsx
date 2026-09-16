@@ -153,7 +153,7 @@ const PickupManagement = () => {
   };
 
   return (
-    <div>
+    <div className="p-4 sm:p-6">
       <div className="flex items-center mb-6">
         <FaStore className="text-primary-100 text-2xl mr-2" />
         <h1 className="text-2xl font-bold dark:text-white">Pickup Management</h1>

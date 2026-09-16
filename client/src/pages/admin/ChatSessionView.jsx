@@ -234,7 +234,7 @@ const ChatSessionView = () => {
       {/* Feedback Modal */}
       {showFeedbackForm && (
         <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-dm-card rounded-lg shadow-xl max-w-md w-full p-6">
+          <div className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-lg bg-white p-6 shadow-xl dark:bg-dm-card">
             <h3 className="text-xl font-semibold mb-4 text-charcoal dark:text-white">Rate Your Experience</h3>
             <p className="text-brown-500 dark:text-white/55 mb-6">
               Your feedback helps us improve our service. Please rate your experience with this chat session.

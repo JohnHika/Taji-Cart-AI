@@ -116,10 +116,10 @@ const AdminChatMonitor = () => {
 
       {/* Filters and Search */}
       <div className="mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div className="flex items-center">
+        <div className="flex flex-wrap items-center gap-3">
           <button
             onClick={() => setShowActiveOnly(!showActiveOnly)}
-            className={`mr-4 px-4 py-2 rounded-md ${
+            className={`px-4 py-2 rounded-md ${
               showActiveOnly 
                 ? 'bg-brown-600 text-white' 
                 : 'bg-brown-100 dark:bg-dm-card-2 text-charcoal dark:text-white'
@@ -257,7 +257,7 @@ const AdminChatMonitor = () => {
         </div>
         
         {/* Pagination */}
-        <div className="px-6 py-3 flex items-center justify-between border-t border-brown-100 dark:border-dm-border">
+        <div className="flex flex-col gap-3 border-t border-brown-100 px-4 py-3 dark:border-dm-border sm:flex-row sm:items-center sm:justify-between sm:px-6">
           <div className="text-sm text-brown-500 dark:text-white/55">
             Showing {pagination.offset + 1} to {Math.min(pagination.offset + pagination.limit, pagination.total)} of {pagination.total} results
           </div>

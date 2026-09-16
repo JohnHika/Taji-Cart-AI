@@ -182,20 +182,20 @@ const CommunityPerksAdmin = () => {
   };
 
   return (
-    <div className="container mx-auto p-6">
-      <div className="flex justify-between items-center mb-6">
+    <div className="container mx-auto p-4 sm:p-6">
+      <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-2xl font-bold dark:text-white">Community Perks Management</h1>
         {!isCreating ? (
           <button
             onClick={() => setIsCreating(true)}
-            className="px-4 py-2 bg-primary-200 text-white rounded-lg hover:bg-primary-300 flex items-center"
+            className="flex items-center justify-center rounded-lg bg-primary-200 px-4 py-2 text-white hover:bg-primary-300"
           >
             <FaPlus className="mr-2" /> New Community Perk
           </button>
         ) : (
           <button
             onClick={resetForm}
-            className="px-4 py-2 bg-brown-400 text-white rounded-lg hover:bg-brown-500 flex items-center"
+            className="flex items-center justify-center rounded-lg bg-brown-400 px-4 py-2 text-white hover:bg-brown-500"
           >
             <FaTimes className="mr-2" /> Cancel
           </button>
@@ -363,8 +363,8 @@ const CommunityPerksAdmin = () => {
                     : 'bg-white dark:bg-dm-card dark:border-dm-border'
                   }`}
                 >
-                  <div className="flex justify-between items-start">
-                    <div className="flex items-start">
+                  <div className="flex flex-col gap-3 xs:flex-row xs:justify-between xs:items-start">
+                    <div className="flex min-w-0 items-start">
                       <div className={`p-2 rounded-full ${
                         isPerk 
                         ? 'bg-gold-100 dark:bg-gold-600/20' 

@@ -487,7 +487,7 @@ const FeatureReleases = () => {
                     )}
 
                     {confirmDeleteId === flag._id ? (
-                      <span className="flex items-center gap-2">
+                      <span className="flex flex-wrap items-center gap-2">
                         <span className="text-[11px] font-medium text-brown-500 dark:text-white/50">Delete? Re-hides it from everyone.</span>
                         <button
                           type="button"
