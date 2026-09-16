@@ -425,21 +425,21 @@ const Dashboard = () => {
                   const statusInfo = getStatusInfo(order.status);
                   return (
                     <div key={order._id} className="px-4 sm:px-5 py-3 sm:py-4 hover:bg-plum-50/50 dark:hover:bg-dm-card-2">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center">
-                          <div className="p-2 rounded-full bg-ivory dark:bg-dm-card-2">
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex min-w-0 items-center">
+                          <div className="p-2 rounded-full bg-ivory dark:bg-dm-card-2 shrink-0">
                             {statusInfo.icon}
                           </div>
-                          <div className="ml-4">
-                            <p className="text-sm font-medium text-charcoal dark:text-white">
+                          <div className="ml-4 min-w-0">
+                            <p className="truncate text-sm font-medium text-charcoal dark:text-white">
                               Order #{order.orderId}
                             </p>
-                            <p className="text-xs text-brown-400 dark:text-white/40">
+                            <p className="truncate text-xs text-brown-400 dark:text-white/40">
                               {order.customerName} • ${order.total?.toFixed(2)}
                             </p>
                           </div>
                         </div>
-                        <div>
+                        <div className="shrink-0">
                           <span className={`text-xs px-2 py-1 rounded-full ${statusInfo.color}`}>
                             {formatStatus(order.status)}
                           </span>
@@ -597,25 +597,25 @@ const Dashboard = () => {
                   {dashboardData.activeDrivers.map((driver) => (
                     <div key={driver._id} className="py-3">
                       <div className="flex items-center">
-                        <div className={`p-2 rounded-full ${driver.isAvailable ? 'bg-green-100 dark:bg-green-900/30' : 'bg-ivory dark:bg-dm-card-2'}`}>
+                        <div className={`shrink-0 p-2 rounded-full ${driver.isAvailable ? 'bg-green-100 dark:bg-green-900/30' : 'bg-ivory dark:bg-dm-card-2'}`}>
                           {driver.isAvailable
                             ? <HiOutlineStatusOnline className="text-green-500 dark:text-green-300 w-5 h-5" />
                             : <FaTruck className="text-brown-400 dark:text-white/40 w-5 h-5" />
                           }
                         </div>
-                        <div className="ml-3 flex-1">
-                          <p className="text-sm font-medium text-charcoal dark:text-white">{driver.name}</p>
-                          <p className="text-xs text-brown-400 dark:text-white/40">
-                            {driver.isAvailable 
+                        <div className="ml-3 min-w-0 flex-1">
+                          <p className="truncate text-sm font-medium text-charcoal dark:text-white">{driver.name}</p>
+                          <p className="truncate text-xs text-brown-400 dark:text-white/40">
+                            {driver.isAvailable
                               ? 'Available now'
                               : `${driver.activeOrdersCount} active order${driver.activeOrdersCount !== 1 ? 's' : ''}`
                             }
-                            {driver.currentLocation?.lastUpdated && 
+                            {driver.currentLocation?.lastUpdated &&
                               ` • Updated ${new Date(driver.currentLocation.lastUpdated).toLocaleTimeString()}`
                             }
                           </p>
                         </div>
-                        <div className={`flex h-6 w-6 items-center justify-center rounded-full text-xs font-medium ${
+                        <div className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-medium ${
                           driver.isAvailable 
                             ? 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-200' 
                             : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-200'

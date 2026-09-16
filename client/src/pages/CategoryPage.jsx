@@ -120,7 +120,7 @@ const CategoryPage = () => {
                     <h2 className="text-xl font-semibold dark:text-white transition-colors duration-200">Categories</h2>
                     
                     {/* Search input */}
-                    <div className="relative flex-grow max-w-md">
+                    <div className="relative w-full max-w-md flex-grow md:w-auto">
                         <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                             <FaSearch className="text-brown-400 dark:text-white/40 transition-colors duration-200" />
                         </div>
@@ -132,10 +132,10 @@ const CategoryPage = () => {
                             onChange={(e) => setSearchTerm(e.target.value)}
                         />
                     </div>
-                    
-                    <button 
-                        onClick={() => setOpenUploadCategory(true)} 
-                        className="flex items-center gap-2 bg-primary-200 hover:bg-primary-100 dark:bg-primary-300 dark:hover:bg-primary-200 text-white px-4 py-2 rounded-md transition-colors duration-200"
+
+                    <button
+                        onClick={() => setOpenUploadCategory(true)}
+                        className="flex w-full items-center justify-center gap-2 rounded-md bg-primary-200 px-4 py-2 text-white transition-colors duration-200 hover:bg-primary-100 dark:bg-primary-300 dark:hover:bg-primary-200 md:w-auto"
                     >
                         <FaPlus /> Add Category
                     </button>

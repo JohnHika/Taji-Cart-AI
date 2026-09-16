@@ -293,11 +293,11 @@ const DispatchedOrders = () => {
 
       {selectedOrder && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-          <div className="w-full max-w-2xl rounded-2xl bg-white p-5 shadow-xl dark:bg-dm-card">
+          <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-white p-5 shadow-xl dark:bg-dm-card">
             <div className="flex items-start justify-between gap-4">
-              <div>
+              <div className="min-w-0">
                 <h3 className="text-xl font-semibold text-charcoal dark:text-white">Assign Driver</h3>
-                <p className="mt-1 text-sm text-brown-400 dark:text-white/40">
+                <p className="mt-1 truncate text-sm text-brown-400 dark:text-white/40">
                   Order {selectedOrder.orderId} for {selectedOrder.customer?.name}
                 </p>
               </div>
@@ -308,7 +308,7 @@ const DispatchedOrders = () => {
                   setSelectedDriver('');
                   setAssignmentNote('');
                 }}
-                className="rounded-lg border border-brown-100 px-3 py-2 text-sm text-brown-500 dark:border-dm-border dark:text-white/55"
+                className="shrink-0 rounded-lg border border-brown-100 px-3 py-2 text-sm text-brown-500 dark:border-dm-border dark:text-white/55"
               >
                 Close
               </button>
