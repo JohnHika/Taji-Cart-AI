@@ -287,14 +287,14 @@ const SubCategoryPage = () => {
   // Render pagination controls
   const renderPagination = () => (
     <div className="flex flex-col sm:flex-row items-center justify-between px-4 py-3 bg-white dark:bg-dm-card border-t dark:border-dm-border transition-colors duration-200">
-      <div className="flex items-center mb-3 sm:mb-0">
+      <div className="flex flex-wrap items-center gap-2 mb-3 sm:mb-0">
         <span className="text-sm text-charcoal dark:text-white/55 transition-colors duration-200">
           Showing {filteredData.length > 0 ? (currentPage - 1) * itemsPerPage + 1 : 0} to {Math.min(currentPage * itemsPerPage, filteredData.length)} of {filteredData.length} results
         </span>
         <select
           value={itemsPerPage}
           onChange={handleItemsPerPageChange}
-          className="ml-2 bg-white dark:bg-dm-card-2 border border-brown-200 dark:border-dm-border rounded-md text-charcoal dark:text-white/55 py-1 px-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-200 dark:focus:ring-primary-300 transition-colors duration-200"
+          className="bg-white dark:bg-dm-card-2 border border-brown-200 dark:border-dm-border rounded-md text-charcoal dark:text-white/55 py-1 px-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-200 dark:focus:ring-primary-300 transition-colors duration-200"
         >
           <option value={8}>8 per page</option>
           <option value={12}>12 per page</option>
@@ -303,7 +303,7 @@ const SubCategoryPage = () => {
         </select>
       </div>
       
-      <div className="flex items-center space-x-1">
+      <div className="flex flex-wrap items-center gap-1">
         <button
           onClick={goToPreviousPage}
           disabled={currentPage === 1}

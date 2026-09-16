@@ -127,35 +127,37 @@ const CompletedDeliveriesManagement = () => {
                 className="w-full rounded-xl border border-brown-100 bg-white py-3 pl-10 pr-4 text-sm outline-none transition focus:border-cyan-500 focus:ring-2 focus:ring-cyan-100 dark:border-dm-border dark:bg-dm-surface dark:text-white"
               />
             </div>
-            <div className="flex items-end gap-2">
-              <div className="flex-1">
-                <label className="mb-1 flex items-center gap-2 text-xs font-medium uppercase tracking-[0.16em] text-brown-400">
-                  <FaCalendarAlt />
-                  From
-                </label>
-                <input
-                  type="date"
-                  value={dateFrom}
-                  onChange={(e) => setDateFrom(e.target.value)}
-                  className="w-full rounded-xl border border-brown-100 bg-white px-4 py-3 text-sm outline-none transition focus:border-cyan-500 focus:ring-2 focus:ring-cyan-100 dark:border-dm-border dark:bg-dm-surface dark:text-white"
-                />
-              </div>
-              <div className="flex-1">
-                <label className="mb-1 flex items-center gap-2 text-xs font-medium uppercase tracking-[0.16em] text-brown-400">
-                  <FaCalendarAlt />
-                  To
-                </label>
-                <input
-                  type="date"
-                  value={dateTo}
-                  onChange={(e) => setDateTo(e.target.value)}
-                  className="w-full rounded-xl border border-brown-100 bg-white px-4 py-3 text-sm outline-none transition focus:border-cyan-500 focus:ring-2 focus:ring-cyan-100 dark:border-dm-border dark:bg-dm-surface dark:text-white"
-                />
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
+              <div className="flex flex-1 gap-2">
+                <div className="flex-1">
+                  <label className="mb-1 flex items-center gap-2 text-xs font-medium uppercase tracking-[0.16em] text-brown-400">
+                    <FaCalendarAlt />
+                    From
+                  </label>
+                  <input
+                    type="date"
+                    value={dateFrom}
+                    onChange={(e) => setDateFrom(e.target.value)}
+                    className="w-full rounded-xl border border-brown-100 bg-white px-4 py-3 text-sm outline-none transition focus:border-cyan-500 focus:ring-2 focus:ring-cyan-100 dark:border-dm-border dark:bg-dm-surface dark:text-white"
+                  />
+                </div>
+                <div className="flex-1">
+                  <label className="mb-1 flex items-center gap-2 text-xs font-medium uppercase tracking-[0.16em] text-brown-400">
+                    <FaCalendarAlt />
+                    To
+                  </label>
+                  <input
+                    type="date"
+                    value={dateTo}
+                    onChange={(e) => setDateTo(e.target.value)}
+                    className="w-full rounded-xl border border-brown-100 bg-white px-4 py-3 text-sm outline-none transition focus:border-cyan-500 focus:ring-2 focus:ring-cyan-100 dark:border-dm-border dark:bg-dm-surface dark:text-white"
+                  />
+                </div>
               </div>
               <button
                 type="button"
                 onClick={fetchOrders}
-                className="shrink-0 rounded-xl bg-cyan-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-cyan-700"
+                className="shrink-0 rounded-xl bg-cyan-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-cyan-700 sm:w-auto"
               >
                 Apply
               </button>
