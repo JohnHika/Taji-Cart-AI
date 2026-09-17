@@ -897,6 +897,7 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
                   deliveryInstructions={deliveryInstructions}
                   deliveryMode={deliveryMode}
                   deliveryZoneId={deliveryZoneId}
+                  customerLocation={customerLocation}
                   onSuccess={handleJengaPaymentSuccess}
                   onError={handleJengaPaymentError}
                 />
@@ -1479,6 +1480,7 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
                 deliveryInstructions={deliveryInstructions}
                 deliveryMode={deliveryMode}
                 deliveryZoneId={deliveryZoneId}
+                customerLocation={customerLocation}
                 onSuccess={handleJengaPaymentSuccess}
                 onError={handleJengaPaymentError}
               />

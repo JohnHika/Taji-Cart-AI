@@ -26,6 +26,7 @@ const JengaPayment = ({
   deliveryInstructions = '',
   deliveryMode = 'standard',
   deliveryZoneId = '',
+  customerLocation = null,
 }) => {
   const [phoneNumber, setPhoneNumber] = useState('');
   const [stage, setStage] = useState('idle'); // idle | initiating | pending | done
@@ -124,6 +125,7 @@ const JengaPayment = ({
           deliveryInstructions,
           delivery_mode: fulfillment_type === 'delivery' ? deliveryMode : 'standard',
           deliveryZoneId: fulfillment_type === 'delivery' && deliveryMode === 'bike' ? deliveryZoneId : undefined,
+          customerLocation: fulfillment_type === 'delivery' ? customerLocation : undefined,
         },
         requestLockKey: `payment:jenga:${phoneNumber}:${totalAmount}:${addressId || pickup_location || 'pickup'}`,
       });
