@@ -359,7 +359,7 @@ export const initiateJengaPayment = async (request, response) => {
       // non-2xx, so a failure here must be caught explicitly or the customer
       // is told to expect an STK prompt that will never arrive.
       if (jengaResponse.data?.status !== true) {
-        const err = new Error(jengaResponse.data?.message || 'Jenga declined to initiate the STK push');
+        const err = new Error(jengaResponse.data?.message || 'Could not start the M-Pesa payment. Please try again.');
         err.statusCode = 502;
         throw err;
       }
@@ -382,7 +382,7 @@ export const initiateJengaPayment = async (request, response) => {
     const message =
       error?.response?.data?.message ||
       error?.message ||
-      'Failed to initiate Jenga payment';
+      'Failed to start M-Pesa payment';
     return response.status(error.statusCode || 500).json({ success: false, error: true, message });
   }
 };

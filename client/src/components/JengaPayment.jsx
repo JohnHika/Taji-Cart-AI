@@ -149,9 +149,9 @@ const JengaPayment = ({
   return (
     <div className="jenga-payment-form">
       <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
-        <p className="text-sm font-medium text-blue-800 dark:text-blue-300 mb-1">M-Pesa via Equity (Jenga)</p>
+        <p className="text-sm font-medium text-blue-800 dark:text-blue-300 mb-1">Pay with M-Pesa</p>
         <p className="text-xs text-blue-600 dark:text-blue-400">
-          Pay via M-Pesa STK push, settled directly to Nawiri's Equity account.
+          Enter your M-Pesa number below and approve the payment prompt on your phone.
         </p>
       </div>
 
