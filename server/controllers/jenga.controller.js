@@ -63,12 +63,35 @@ const pricewithDiscount = (price, dis = 0) => {
   return Math.max(0, basePrice - discountAmount);
 };
 
-// Jenga requires payment.ref to be 6-20 alphanumeric characters (no separators).
-// Epoch seconds (not ms) fits in 10 digits; combined with a 4-char random
-// suffix this is 17 chars total, comfortably under the limit while keeping
-// enough entropy to avoid collisions across concurrent checkouts.
-const buildOrderReference = () =>
-  `JGA${Math.floor(Date.now() / 1000)}${crypto.randomBytes(2).toString('hex').toUpperCase()}`;
+// Jenga's stkussdpush/initiate docs cap payment.ref at 6 alphanumeric
+// characters ("For now we support up to 6 alphanumeric characters length but
+// will later update to more characters") — UAT did not enforce this against
+// a longer reference, but production is expected to, so this must stay <= 6.
+const ORDER_REFERENCE_CHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+const ORDER_REFERENCE_LENGTH = 6;
+const buildOrderReference = () => {
+  const bytes = crypto.randomBytes(ORDER_REFERENCE_LENGTH);
+  let ref = '';
+  for (let i = 0; i < ORDER_REFERENCE_LENGTH; i++) {
+    ref += ORDER_REFERENCE_CHARS[bytes[i] % ORDER_REFERENCE_CHARS.length];
+  }
+  return ref;
+};
+
+// 6 alphanumeric characters is a small enough space (36^6) that collisions
+// are plausible at scale, and Jenga itself rejects a duplicate ref with a
+// 400 — so claim a reference that isn't already in use before it's written
+// to any record.
+const claimOrderReference = async () => {
+  for (let attempt = 0; attempt < 5; attempt++) {
+    const candidate = buildOrderReference();
+    const exists = await JengaPayment.exists({ orderReference: candidate });
+    if (!exists) return candidate;
+  }
+  const err = new Error('Could not generate a unique payment reference. Please try again.');
+  err.statusCode = 500;
+  throw err;
+};
 
 const priceItems = async (items) => {
   const orderItems = Array.isArray(items) ? items : [];
@@ -243,7 +266,7 @@ export const initiateJengaPayment = async (request, response) => {
       return response.status(400).json({ message: 'Order amount is invalid', error: true, success: false });
     }
 
-    const orderReference = buildOrderReference();
+    const orderReference = await claimOrderReference();
     const sharedOrderId = `ORD-${new mongoose.Types.ObjectId()}`;
 
     // Create the local pending order BEFORE contacting Jenga.
@@ -285,56 +308,75 @@ export const initiateJengaPayment = async (request, response) => {
       status: 'pending',
     });
 
-    const merchantAccountNumber = requireEnv('JENGA_ACCOUNT_NUMBER');
-    const merchantName = requireEnv('JENGA_MERCHANT_NAME');
-    const callbackUrl = buildJengaCallbackUrl(requireEnv('JENGA_CALLBACK_URL'));
+    try {
+      const merchantAccountNumber = requireEnv('JENGA_ACCOUNT_NUMBER');
+      const merchantName = requireEnv('JENGA_MERCHANT_NAME');
+      const callbackUrl = buildJengaCallbackUrl(requireEnv('JENGA_CALLBACK_URL'));
 
-    const token = await getAuthToken();
-    const signature = signStkPushRequest({
-      accountNumber: merchantAccountNumber,
-      ref: orderReference,
-      mobileNumber: normalizedPhone,
-      telco: 'Safaricom',
-      amount: totalAmt.toFixed(2),
-      currency: 'KES',
-    });
+      const token = await getAuthToken();
+      const signature = signStkPushRequest({
+        accountNumber: merchantAccountNumber,
+        ref: orderReference,
+        mobileNumber: normalizedPhone,
+        telco: 'Safaricom',
+        amount: totalAmt.toFixed(2),
+        currency: 'KES',
+      });
 
-    const today = new Date().toISOString().slice(0, 10);
+      const today = new Date().toISOString().slice(0, 10);
 
-    const jengaResponse = await axios.post(
-      JENGA_STK_PUSH_URL,
-      {
-        merchant: {
-          accountNumber: merchantAccountNumber,
-          countryCode: 'KE',
-          name: merchantName,
+      const jengaResponse = await axios.post(
+        JENGA_STK_PUSH_URL,
+        {
+          merchant: {
+            accountNumber: merchantAccountNumber,
+            countryCode: 'KE',
+            name: merchantName,
+          },
+          payment: {
+            ref: orderReference,
+            mobileNumber: normalizedPhone,
+            telco: 'Safaricom',
+            amount: totalAmt.toFixed(2),
+            currency: 'KES',
+            date: today,
+            callBackUrl: callbackUrl,
+            pushType: 'STK',
+          },
         },
-        payment: {
-          ref: orderReference,
-          mobileNumber: normalizedPhone,
-          telco: 'Safaricom',
-          amount: totalAmt.toFixed(2),
-          currency: 'KES',
-          date: today,
-          callBackUrl: callbackUrl,
-          pushType: 'STK',
-        },
-      },
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-          Signature: signature,
-        },
-        timeout: 15000,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json',
+            Signature: signature,
+          },
+          timeout: 15000,
+        }
+      );
+
+      // Jenga acknowledges a failed push initiation with HTTP 200 too (e.g.
+      // code 106201 "push initiation failed") — axios only throws on
+      // non-2xx, so a failure here must be caught explicitly or the customer
+      // is told to expect an STK prompt that will never arrive.
+      if (jengaResponse.data?.status !== true) {
+        const err = new Error(jengaResponse.data?.message || 'Jenga declined to initiate the STK push');
+        err.statusCode = 502;
+        throw err;
       }
-    );
 
-    return response.status(200).json({
-      success: true,
-      message: 'Payment request sent. Approve the STK prompt on your phone.',
-      data: { orderReference, orderId: sharedOrderId, status: 'pending', jenga: jengaResponse.data },
-    });
+      return response.status(200).json({
+        success: true,
+        message: 'Payment request sent. Approve the STK prompt on your phone.',
+        data: { orderReference, orderId: sharedOrderId, status: 'pending', jenga: jengaResponse.data },
+      });
+    } catch (jengaError) {
+      // The STK push was never actually sent — don't leave behind a PENDING
+      // order/payment that can never resolve (no callback will ever arrive
+      // for a request Jenga never processed).
+      await OrderModel.deleteMany({ orderId: sharedOrderId });
+      await JengaPayment.deleteOne({ orderReference });
+      throw jengaError;
+    }
   } catch (error) {
     console.error('Jenga initiate error:', error?.response?.data || error.message);
     const message =

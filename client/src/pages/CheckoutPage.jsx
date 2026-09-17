@@ -854,7 +854,9 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
                   onClick={handleCashOnDelivery}
                   disabled={!isPaymentEnabled || isCheckoutBusy}
                 >
-                  {checkoutAction === 'cash' ? 'Placing order...' : `Cash on Delivery ${!isPaymentEnabled ? '(Select Address First)' : ''}`}
+                  {checkoutAction === 'cash'
+                    ? 'Placing order...'
+                    : `${fulfillmentMethod === 'sacco_pickup' ? 'Place Order — Pay at SACCO terminal' : `Cash on ${fulfillmentMethod === 'delivery' ? 'Delivery' : 'Pickup'}`}${!isPaymentEnabled ? ' (Select Address First)' : ''}`}
                 </button>
               )}
 
@@ -868,6 +870,8 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
                   fulfillment_type={fulfillmentMethod}
                   pickup_location={pickupLocation}
                   pickup_instructions={pickupInstructions}
+                  saccoOperatorId={fulfillmentMethod === 'sacco_pickup' ? saccoOperatorId : undefined}
+                  saccoDestinationTown={fulfillmentMethod === 'sacco_pickup' ? saccoDestinationTown : undefined}
                   deliveryCharge={deliveryCharge}
                   deliveryInstructions={deliveryInstructions}
                   deliveryMode={deliveryMode}
@@ -875,6 +879,15 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
                   onSuccess={handleJengaPaymentSuccess}
                   onError={handleJengaPaymentError}
                 />
+              )}
+
+              {selectedPaymentMethod === 'jenga' && !isPaymentEnabled && (
+                <div className="flex items-center justify-between w-full py-2 px-3 rounded border-2 border-brown-200 text-brown-400 dark:border-dm-border dark:text-white/30 font-semibold text-sm">
+                  <span>M-Pesa</span>
+                  <span className="text-xs font-normal opacity-60">
+                    {fulfillmentMethod === 'delivery' ? 'Select address first' : fulfillmentMethod === 'pickup' ? 'Select pickup location' : 'Select operator and destination'}
+                  </span>
+                </div>
               )}
             </div>
           </div>
@@ -1443,9 +1456,20 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
                 saccoDestinationTown={fulfillmentMethod === 'sacco_pickup' ? saccoDestinationTown : undefined}
                 deliveryCharge={deliveryCharge}
                 deliveryInstructions={deliveryInstructions}
+                deliveryMode={deliveryMode}
+                deliveryZoneId={deliveryZoneId}
                 onSuccess={handleJengaPaymentSuccess}
                 onError={handleJengaPaymentError}
               />
+            )}
+
+            {selectedPaymentMethod === 'jenga' && !isPaymentEnabled && (
+              <div className="flex items-center justify-between w-full py-3 px-4 rounded-card border-2 border-brown-100 dark:border-dm-border text-brown-300 dark:text-white/20 font-semibold text-sm">
+                <span>M-Pesa</span>
+                <span className="text-xs font-normal opacity-60">
+                  {fulfillmentMethod === 'delivery' ? 'Select address first' : fulfillmentMethod === 'pickup' ? 'Select pickup location' : 'Select operator and destination'}
+                </span>
+              </div>
             )}
 
             {/* Guest Checkout CTA — only show for unauthenticated users */}
