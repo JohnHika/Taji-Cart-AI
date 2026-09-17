@@ -55,9 +55,14 @@ const InventoryAuditTrail = () => {
                 <td className="si-muted">{entry.reason}</td>
               </tr>
             ))}
-            {!loading && !(entries || []).length && <tr><td colSpan="5" className="si-table-empty">No activity recorded yet for this filter.</td></tr>}
           </tbody>
         </table>
+        {/* A colSpan cell centers within the *table's* full column width, not
+            the viewport -- on a table this wide (5 columns) that puts the
+            message off to the right of a phone screen with no way to scroll
+            to it (there's nothing else to scroll). Rendering it as a plain
+            block sibling of the table keeps it sized to the visible card. */}
+        {!loading && !(entries || []).length && <p className="si-table-empty">No activity recorded yet for this filter.</p>}
       </section>
     </div>
   );

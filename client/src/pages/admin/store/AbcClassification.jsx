@@ -28,7 +28,7 @@ const AbcClassification = () => {
 
   return (
     <div className="si-grid" style={{ gap: '1.25rem' }}>
-      <section className="si-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(11rem, 1fr))' }}>
+      <section className="si-grid si-stat-grid">
         <div className="si-card">
           <p className="si-stat__label">Class A</p>
           <p className="si-stat__value si-mono">{loading ? '—' : (result?.counts.A ?? 0)}</p>
@@ -101,9 +101,14 @@ const AbcClassification = () => {
                 <td>{classChip(item.classification)}</td>
               </tr>
             ))}
-            {!loading && !items.length && <tr><td colSpan="6" className="si-table-empty">No products match this filter.</td></tr>}
           </tbody>
         </table>
+        {/* A colSpan cell centers within the *table's* full column width, not
+            the viewport -- on a table this wide that puts the message off to
+            the right of a phone screen with no way to scroll to it (there's
+            nothing else to scroll). Rendering it as a plain block sibling of
+            the table keeps it sized to the visible card instead. */}
+        {!loading && !items.length && <p className="si-table-empty">No products match this filter.</p>}
       </section>
 
       {items.length > PAGE_SIZE && (

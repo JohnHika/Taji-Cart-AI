@@ -58,7 +58,12 @@ const ReorderIntelligence = () => {
         </p>
       </section>
 
-      <section className="si-table-wrap">
+      {/* Below sm, this 10-column table would collapse to Product + one
+          metric, scrolling the actual Draft PO action and supplier picker
+          off-screen with no hint they exist. A dedicated card list keeps
+          every field and the primary action visible; the table (unchanged)
+          still carries desktop and up. */}
+      <section className="si-table-wrap hidden sm:block">
         <table className="si-table">
           <thead>
             <tr>
@@ -126,6 +131,65 @@ const ReorderIntelligence = () => {
             )}
           </tbody>
         </table>
+      </section>
+
+      <section className="si-grid sm:hidden" style={{ gap: '0.75rem' }}>
+        {(queue || []).map((item) => (
+          <div key={item.productId} className="si-card">
+            <div className="si-row" style={{ justifyContent: 'space-between', alignItems: 'flex-start' }}>
+              <div>
+                <p style={{ fontWeight: 600, color: 'var(--si-text)' }}>{item.name}</p>
+                <p className="si-mono" style={{ fontSize: '0.6875rem', color: 'var(--si-text-faint)' }}>{item.sku}</p>
+              </div>
+              {urgencyChip(item.urgency)}
+            </div>
+            <div className="si-grid" style={{ marginTop: '0.75rem', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.5rem' }}>
+              <div><p className="si-stat__label">Shop</p><p className="si-mono" style={{ fontWeight: 600 }}>{item.currentStock}</p></div>
+              <div><p className="si-stat__label">Backroom</p><p className="si-mono si-muted" style={{ fontWeight: 600 }}>{item.warehouseStock}</p></div>
+              <div><p className="si-stat__label">Cover</p><p className="si-mono" style={{ fontWeight: 600 }}>{item.daysOfCover ?? '—'}</p></div>
+              <div><p className="si-stat__label">Velocity/day</p><p className="si-mono" style={{ fontWeight: 600 }}>{item.velocityPerDay}</p></div>
+              <div><p className="si-stat__label">Lead time</p><p className="si-mono" style={{ fontWeight: 600 }}>{item.leadTimeDays}d</p></div>
+              <div>
+                <p className="si-stat__label">Reorder pt</p>
+                <p className="si-mono" style={{ fontWeight: 600 }}>
+                  {item.reorderPoint}
+                  {item.isManualOverride && <span title="Manual override" style={{ color: 'var(--si-accent)' }}> *</span>}
+                  {!item.isManualOverride && item.safetyStockMethod === 'statistical' && <span title={`Statistical safety stock at a ${Math.round((item.serviceLevel || 0.95) * 100)}% service level`} style={{ marginLeft: '0.2rem', fontSize: '0.625rem', color: 'var(--si-accent-strong)' }}>stat</span>}
+                </p>
+              </div>
+            </div>
+            <div style={{ marginTop: '0.75rem' }}>
+              <p className="si-stat__label">Supplier</p>
+              {item.supplierName ? <p className="si-mono" style={{ marginTop: '0.3rem', fontWeight: 600 }}>{item.supplierName}</p> : (
+                <select
+                  className="si-mono"
+                  style={{ marginTop: '0.4rem', width: '100%', background: 'var(--si-surface-2)', color: 'var(--si-text)', border: '1px solid var(--si-hairline-strong)', borderRadius: '0.5rem', padding: '0.5rem 0.6rem', fontSize: '0.8125rem' }}
+                  value={supplierChoice[item.productId] || ''}
+                  onChange={(event) => setSupplierChoice((current) => ({ ...current, [item.productId]: event.target.value }))}
+                >
+                  <option value="">Choose supplier</option>
+                  {(suppliers || []).map((supplier) => <option key={supplier.supplierId} value={supplier.supplierId}>{supplier.name}</option>)}
+                </select>
+              )}
+            </div>
+            <p className="si-mono" style={{ marginTop: '0.75rem', fontSize: '0.8125rem' }}>
+              Suggested order: {item.suggestedOrderQuantity} · {item.costPrice > 0 ? formatKes(item.suggestedOrderQuantity * item.costPrice) : <span style={{ color: 'var(--si-warn)' }}>no cost set</span>}
+            </p>
+            <button
+              type="button"
+              className="si-btn si-btn--primary"
+              style={{ marginTop: '0.85rem', width: '100%', justifyContent: 'center' }}
+              disabled={creatingId === item.productId || !(item.costPrice > 0)}
+              title={item.costPrice > 0 ? undefined : 'Set a cost price for this product first'}
+              onClick={() => createDraftPO(item)}
+            >
+              {creatingId === item.productId ? '…' : <><FaTruckFast size={11} /> Draft PO</>}
+            </button>
+          </div>
+        ))}
+        {!loading && !(queue || []).length && (
+          <div className="si-table-empty"><FaCheck style={{ marginRight: '0.35rem', color: 'var(--si-good)' }} />Every product is above its reorder point.</div>
+        )}
       </section>
     </div>
   );

@@ -341,7 +341,13 @@ const InventoryControl = () => {
         </label>
         </div>
       </div>
-      <div className="overflow-x-auto" data-tour="inventory-table">
+      {/* Below sm, a table wide enough for 5 columns leaves the actual
+          release/receive controls scrolled off-screen with no visual hint
+          they exist -- across 500+ rows that hides this tab's core action
+          entirely. A dedicated mobile card list keeps every control visible
+          without horizontal scrolling; the table (unchanged) still carries
+          desktop and up. */}
+      <div className="hidden overflow-x-auto sm:block" data-tour="inventory-table">
         <table className="w-full min-w-[840px] text-left text-sm">
           <thead className="bg-ivory text-[11px] uppercase tracking-wide text-brown-400 dark:bg-dm-card-2">
             <tr>
@@ -387,6 +393,47 @@ const InventoryControl = () => {
             {!loading && !products.length && <tr><td colSpan="5" className="p-8 text-center text-brown-500">No inventory matches that search.</td></tr>}
           </tbody>
         </table>
+      </div>
+      <div className="divide-y divide-brown-100 dark:divide-dm-border sm:hidden">
+        {products.map((product) => {
+          const releasePending = Boolean(releaseKeys[`dispatch:${product._id}`]);
+          return (
+            <div key={product._id} className="p-4">
+              <p className="font-bold text-charcoal dark:text-white">{product.name}</p>
+              <p className="text-xs text-brown-500">{product.sku || 'No SKU'}</p>
+              <div className="mt-3 grid grid-cols-3 gap-2 text-center">
+                <div className="rounded-lg bg-ivory px-2 py-2 dark:bg-dm-card-2">
+                  <p className="text-[9px] font-black uppercase tracking-wide text-brown-400">Backroom</p>
+                  <p className="mt-0.5 font-bold text-plum-700 dark:text-plum-300">{product.warehouseStock || 0}</p>
+                </div>
+                <div className="rounded-lg bg-ivory px-2 py-2 dark:bg-dm-card-2">
+                  <p className="text-[9px] font-black uppercase tracking-wide text-brown-400">In transit</p>
+                  <p className="mt-0.5 font-bold text-gold-700 dark:text-gold-300">{product.inTransitStock || 0}</p>
+                </div>
+                <div className="rounded-lg bg-ivory px-2 py-2 dark:bg-dm-card-2">
+                  <p className="text-[9px] font-black uppercase tracking-wide text-brown-400">Shop floor</p>
+                  <p className={`mt-0.5 font-bold ${product.stock <= 3 ? 'text-red-600' : 'text-charcoal dark:text-white'}`}>{product.stock || 0}</p>
+                </div>
+              </div>
+              <div className="mt-3 flex gap-2">
+                <input
+                  type="number"
+                  min="1"
+                  max={MAX_TRANSFER_QUANTITY}
+                  step="1"
+                  value={quantities[product._id] || ''}
+                  disabled={releasePending || busyId === product._id}
+                  onChange={(event) => setQuantities((current) => ({ ...current, [product._id]: event.target.value }))}
+                  placeholder="Qty"
+                  className="w-16 shrink-0 rounded-lg border border-brown-200 bg-white px-2 py-1.5 outline-none dark:border-dm-border dark:bg-dm-card-2"
+                />
+                <button type="button" disabled={busyId === product._id || releasePending} onClick={() => moveStock(product, 'receive')} className="flex-1 rounded-lg border border-plum-200 px-2 py-1.5 text-xs font-bold text-plum-700 hover:bg-plum-50">Receive</button>
+                <button type="button" disabled={busyId === product._id || !product.warehouseStock} onClick={() => moveStock(product, 'dispatch')} className="flex-1 rounded-lg bg-plum-700 px-2 py-1.5 text-xs font-bold text-white disabled:opacity-40">Release</button>
+              </div>
+            </div>
+          );
+        })}
+        {!loading && !products.length && <p className="p-8 text-center text-brown-500">No inventory matches that search.</p>}
       </div>
       <div className="flex flex-col gap-2 border-t border-brown-100 p-4 text-xs text-brown-500 dark:border-dm-border sm:flex-row sm:items-center sm:justify-between">
         <span>{loading ? 'Loading…' : `Showing ${rangeStart}–${rangeEnd} of ${total} products`}</span>

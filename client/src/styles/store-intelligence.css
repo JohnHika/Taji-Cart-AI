@@ -151,6 +151,17 @@
   padding: 1.125rem;
 }
 
+/* ── Stat grid — the 4-tile KPI rows (Overview, Dead stock, ABC) ───────── */
+/* `minmax(11rem, 1fr)` collapses to one full-width column under ~380px,
+   which leaves each tile's short label + number stranded in a mostly-blank
+   card. Force 2-up below 640px instead so the row stays compact -- the
+   content that fits inside was never dense enough to need a full row. */
+.si-stat-grid { grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr)); }
+@media (max-width: 640px) {
+  .si-stat-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .si-stat-grid .si-stat__value { font-size: 1.375rem; }
+}
+
 /* ── Stat tile — one verdict, largest type, top-left ───────────────────── */
 
 .si-stat__label {
@@ -176,7 +187,27 @@
 
 /* ── Table — the primary surface for records ───────────────────────────── */
 
-.si-table-wrap { overflow-x: auto; border: 1px solid var(--si-hairline); border-radius: 0.875rem; }
+/* No-JS scroll shadow: the two "local" layers scroll with the table and mask
+   themselves out once you've scrolled past them; the two "scroll" layers stay
+   pinned to the viewport edge so the hint only shows while there's actually
+   more to see in that direction. Needed because every si-table has more
+   columns than a phone width and nothing else hints they're reachable by
+   swiping right. */
+.si-table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--si-hairline);
+  border-radius: 0.875rem;
+  background-color: var(--si-surface);
+  background-image:
+    linear-gradient(to right, var(--si-surface) 50%, transparent),
+    linear-gradient(to left, var(--si-surface) 50%, transparent),
+    linear-gradient(to right, var(--si-hairline-strong), transparent),
+    linear-gradient(to left, var(--si-hairline-strong), transparent);
+  background-repeat: no-repeat;
+  background-size: 24px 100%, 24px 100%, 10px 100%, 10px 100%;
+  background-position: left center, right center, left center, right center;
+  background-attachment: local, local, scroll, scroll;
+}
 
 .si-table { width: 100%; min-width: 640px; border-collapse: collapse; font-size: 0.8125rem; }
 
@@ -205,11 +236,18 @@
 .si-table td.si-muted { color: var(--si-text-muted); }
 
 .si-table-empty {
+  margin: 0;
   padding: 2.5rem 1rem;
   text-align: center;
   color: var(--si-text-muted);
   font-size: 0.875rem;
 }
+
+/* When used as a <p> sibling of a table (see AbcClassification, DeadStockReport,
+   SupplierScorecards) rather than a colSpan <td>, it needs its own top hairline
+   -- a <td> in an empty tbody row would have picked one up from `.si-table
+   tbody tr`, but a plain paragraph outside the table has no such border. */
+.si-table-wrap > p.si-table-empty { border-top: 1px solid var(--si-hairline); }
 
 /* ── Chips — state, never decoration ───────────────────────────────────── */
 

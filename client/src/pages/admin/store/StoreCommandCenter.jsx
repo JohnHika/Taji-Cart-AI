@@ -36,7 +36,7 @@ const StoreCommandCenter = ({ onOpenArea }) => {
 
   return (
     <div className="si-grid" style={{ gap: '1.25rem' }}>
-      <section className="si-grid" data-tour="overview-kpis" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(11rem, 1fr))' }}>
+      <section className="si-grid si-stat-grid" data-tour="overview-kpis">
         {[
           ['Today’s revenue', formatKes(metrics.revenue), `${(metrics.counterSaleCount || 0) + (metrics.onlineOrderCount || 0)} transactions`],
           ['Counter', formatKes(metrics.counterRevenue), `${metrics.counterItemsSold || 0} items sold`],
