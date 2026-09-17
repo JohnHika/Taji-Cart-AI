@@ -22,7 +22,6 @@ const SCAN_BOX_WIDTH = 220;
 const SCAN_BOX_HEIGHT = 90;
 
 const SCAN_FORMAT_NAMES = [
-  'QR_CODE',
   'CODE_128',
   'CODE_39',
   'CODE_93',
@@ -354,7 +353,7 @@ const ProductCodeScanner = ({ onDetected, onClose, cart = [], onIncrement, onDec
           await stopAndClear(scanner);
           return;
         }
-        setStatus('Point the camera at a hair label. QR codes and barcodes both work.');
+        setStatus('Point the camera at a hair label barcode.');
 
         // Not every device/browser exposes torch control — only show the
         // button once we know toggling it will actually do something.
@@ -411,11 +410,17 @@ const ProductCodeScanner = ({ onDetected, onClose, cart = [], onIncrement, onDec
 
   return (
     <div
-      className="fixed inset-0 z-[70] touch-manipulation overflow-hidden overscroll-contain bg-charcoal motion-reduce:animate-none animate-scanner-open"
+      className="fixed inset-0 z-[70] touch-manipulation overflow-hidden overscroll-contain bg-charcoal"
       role="dialog"
       aria-modal="true"
       aria-labelledby="product-code-scanner-title"
     >
+      {/* This root is opaque from the very first frame, with no entrance
+          animation — it's the layer solely responsible for hiding the real
+          page underneath. The entrance polish lives on the foreground UI
+          wrapper below instead; putting it here previously meant the whole
+          dialog (background included) faded in from opacity 0, letting the
+          page underneath show through for the first ~350ms. */}
       {/* Full-bleed camera feed — this screen IS the camera, not a card
           floating over one. */}
       <div className="absolute inset-0">
@@ -441,7 +446,7 @@ const ProductCodeScanner = ({ onDetected, onClose, cart = [], onIncrement, onDec
           middle (flex-1) reticle section only ever centers within whatever
           space is actually left over — overlap becomes impossible by
           construction, not just hidden in one specific state. */}
-      <div className="relative z-10 flex h-full flex-col">
+      <div className="relative z-10 flex h-full flex-col motion-reduce:animate-none animate-scanner-open">
         {/* Top bar */}
         <div className="safe-area-top flex items-center justify-between gap-3 p-4">
         <h2

@@ -32,7 +32,7 @@ const router = express.Router();
 // — pass this to every $hour aggregation on Sale.saleDate.
 const BUSINESS_TIMEZONE = 'Africa/Nairobi';
 
-// Case-insensitive collation matching the ci indexes on barcode/qrCode/sku
+// Case-insensitive collation matching the ci indexes on barcode/sku
 // (product.model.js) — a query needs this passed explicitly for Mongo to
 // use those indexes instead of falling back to a collection scan.
 const CASE_INSENSITIVE_COLLATION = { locale: 'en', strength: 2 };
@@ -129,24 +129,23 @@ router.get('/products/lookup', auth, Staff, requireStaffPermission('pos.open_cou
   try {
     const rawCode = String(req.query.code || '').trim();
     // Camera/manual code entry must never fall back to a product-name search:
-    // a QR payload that merely contains a name could otherwise add the wrong
-    // hair item. Keep the legacy name lookup available for older Staff POS
-    // screens unless the caller opts into this strict scan contract.
+    // a scanned payload that merely contains a name could otherwise add the
+    // wrong hair item. Keep the legacy name lookup available for older Staff
+    // POS screens unless the caller opts into this strict scan contract.
     const strictCodeLookup = ['1', 'true'].includes(String(req.query.strict || '').toLowerCase());
 
     if (!rawCode) {
-      return res.status(400).json({ success: false, message: 'Barcode, QR code, or SKU is required' });
+      return res.status(400).json({ success: false, message: 'Barcode or SKU is required' });
     }
 
-    // Three exact-match lookups (one per scan-code field), each a direct
+    // Two exact-match lookups (one per scan-code field), each a direct
     // index seek via its own case-insensitive index — run in parallel so a
     // scanned item resolves in one index hit instead of a collection scan.
-    const [barcodeMatch, qrMatch, skuMatch] = await Promise.all([
+    const [barcodeMatch, skuMatch] = await Promise.all([
       Product.findOne({ barcode: rawCode }).collation(CASE_INSENSITIVE_COLLATION),
-      Product.findOne({ qrCode: rawCode }).collation(CASE_INSENSITIVE_COLLATION),
       Product.findOne({ sku: rawCode }).collation(CASE_INSENSITIVE_COLLATION),
     ]);
-    const exactCodeMatch = barcodeMatch || qrMatch || skuMatch;
+    const exactCodeMatch = barcodeMatch || skuMatch;
 
     if (exactCodeMatch) {
       return res.json({ success: true, data: exactCodeMatch });
@@ -155,7 +154,7 @@ router.get('/products/lookup', auth, Staff, requireStaffPermission('pos.open_cou
     if (strictCodeLookup) {
       return res.status(404).json({
         success: false,
-        message: 'No product matches that barcode, QR code, or SKU'
+        message: 'No product matches that barcode or SKU'
       });
     }
 
@@ -177,7 +176,7 @@ router.get('/products/lookup', auth, Staff, requireStaffPermission('pos.open_cou
 
     return res.status(404).json({
       success: false,
-      message: 'No product matches that barcode, QR code, or SKU'
+      message: 'No product matches that barcode or SKU'
     });
   } catch (error) {
     console.error('Product lookup error:', error);

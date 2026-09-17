@@ -29,14 +29,7 @@ const productSchema = new mongoose.Schema({
         trim: true,
         description: "Printed product barcode value scanned at the sales counter"
     },
-    qrCode : {
-        type : String,
-        unique : true,
-        sparse : true,
-        trim: true,
-        description: "Printed product QR payload scanned at the sales counter"
-    },
-    
+
     // Hair product variants
     variants : {
         color : {
@@ -191,7 +184,7 @@ productSchema.index({
 productSchema.index({ publish: 1, stock: 1 });
 productSchema.index({ category: 1 });
 
-// Sales Counter's barcode/QR/SKU scanner (server/routes/pos.js /products/lookup)
+// Sales Counter's barcode/SKU scanner (server/routes/pos.js /products/lookup)
 // matches case-insensitively on every scanned item. The unique indexes from
 // `unique: true` above use default (case-sensitive) collation, so a
 // case-insensitive regex match against them still falls back to a full
@@ -199,7 +192,6 @@ productSchema.index({ category: 1 });
 // case-insensitive so an exact-match lookup is a true index seek.
 const caseInsensitiveCollation = { locale: 'en', strength: 2 };
 productSchema.index({ barcode: 1 }, { collation: caseInsensitiveCollation, name: 'barcode_ci', sparse: true });
-productSchema.index({ qrCode: 1 }, { collation: caseInsensitiveCollation, name: 'qrCode_ci', sparse: true });
 productSchema.index({ sku: 1 }, { collation: caseInsensitiveCollation, name: 'sku_ci', sparse: true });
 
 const ProductModel = mongoose.model('product',productSchema)

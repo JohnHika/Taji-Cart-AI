@@ -40,7 +40,6 @@ import isStaff from '../utils/isStaff';
 const SALES_RECORDS_LABEL = 'Sales Records';
 const BARCODE_SCAN_FORMATS = ['ean_13', 'ean_8', 'upc_a', 'upc_e', 'code_128', 'code_39', 'code_93', 'codabar', 'itf'];
 const QR_SCAN_FORMATS = ['qr_code'];
-const PRODUCT_SCAN_FORMATS = [...BARCODE_SCAN_FORMATS, ...QR_SCAN_FORMATS];
 
 const StaffPOS = () => {
   const user = useSelector(state => state.user);
@@ -265,8 +264,7 @@ const StaffPOS = () => {
         product.description?.toLowerCase().includes(s) ||
         product.brand?.toLowerCase().includes(s) ||
         product.sku?.toLowerCase().includes(s) ||
-        product.barcode?.toLowerCase().includes(s) ||
-        product.qrCode?.toLowerCase().includes(s);
+        product.barcode?.toLowerCase().includes(s);
       // Normalize category IDs from various shapes
       const catIds = (() => {
         const ids = [];
@@ -292,7 +290,6 @@ const StaffPOS = () => {
 
   const getProductScanLabel = (product) => {
     if (product.barcode) return { label: 'Barcode', value: product.barcode };
-    if (product.qrCode) return { label: 'QR', value: product.qrCode };
     if (product.sku) return { label: 'SKU', value: product.sku };
     return null;
   };
@@ -599,12 +596,10 @@ const StaffPOS = () => {
   };
 
   const resolveScannerFormats = async (mode) => {
-    const requestedFormats =
-      mode === 'qr'
-        ? QR_SCAN_FORMATS
-        : mode === 'product'
-          ? PRODUCT_SCAN_FORMATS
-          : BARCODE_SCAN_FORMATS;
+    // Product scanning is barcode-only by design; only the loyalty-card
+    // scanner (mode 'qr') still reads QR codes, since physical loyalty
+    // cards may print either symbology.
+    const requestedFormats = mode === 'qr' ? QR_SCAN_FORMATS : BARCODE_SCAN_FORMATS;
 
     if (typeof window === 'undefined' || !('BarcodeDetector' in window)) {
       return null;
@@ -639,7 +634,11 @@ const StaffPOS = () => {
     }
 
     if (!navigator.mediaDevices?.getUserMedia) {
-      setError('This browser does not support camera access. You can still type or paste the barcode, QR code, or SKU.');
+      setError(
+        mode === 'product'
+          ? 'This browser does not support camera access. You can still type or paste the barcode or SKU.'
+          : 'This browser does not support camera access. You can still type or paste the barcode or QR code.'
+      );
       setStatus('');
       return;
     }
@@ -665,12 +664,7 @@ const StaffPOS = () => {
       }
 
       const detector = new window.BarcodeDetector({ formats: detectorFormats });
-      const readableLabel =
-        mode === 'qr'
-          ? 'QR code'
-          : mode === 'product'
-            ? 'barcode or QR code'
-            : 'barcode';
+      const readableLabel = mode === 'qr' ? 'QR code' : 'barcode';
       setStatus(`Camera is ready. Point it at the ${subjectLabel} ${readableLabel} and hold steady.`);
 
       scannerIntervalRef.current = window.setInterval(async () => {
@@ -700,7 +694,11 @@ const StaffPOS = () => {
       if (error?.name === 'NotAllowedError') {
         setError('Camera permission was denied. Allow camera access in your browser or use manual code entry.');
       } else if (error?.name === 'NotFoundError') {
-        setError('No camera was found on this device. You can still type or paste the barcode, QR code, or SKU.');
+        setError(
+          mode === 'product'
+            ? 'No camera was found on this device. You can still type or paste the barcode or SKU.'
+            : 'No camera was found on this device. You can still type or paste the barcode or QR code.'
+        );
       } else {
         setError('Could not start the camera scanner. Please try again or use manual entry.');
       }
@@ -802,7 +800,6 @@ const StaffPOS = () => {
 
     return products.find(product =>
       product.barcode?.toLowerCase() === normalizedCode ||
-      product.qrCode?.toLowerCase() === normalizedCode ||
       product.sku?.toLowerCase() === normalizedCode ||
       String(product._id).toLowerCase() === normalizedCode ||
       product.name?.toLowerCase() === normalizedCode ||
@@ -845,7 +842,7 @@ const StaffPOS = () => {
         }
         toast.success(`${product.name} added from scan`);
       } else {
-        toast.error('No product matched that barcode, QR code, SKU, or item name');
+        toast.error('No product matched that barcode, SKU, or item name');
       }
     } catch (error) {
       AxiosToastError(error);
@@ -1918,7 +1915,7 @@ Applied: {discount}% loyalty discount applied to cart
                 <div className="absolute inset-4 border-2 border-primary-500 rounded-2xl pointer-events-none" />
                 <div className="absolute bottom-3 left-3 right-3 text-center">
                   <span className="inline-flex items-center rounded-full bg-black/60 px-3 py-1 text-xs text-white">
-                    Center the product barcode or QR code inside the frame
+                    Center the product barcode inside the frame
                   </span>
                 </div>
               </div>
@@ -1937,7 +1934,7 @@ Applied: {discount}% loyalty discount applied to cart
                   value={barcode}
                   onChange={(e) => setBarcode(e.target.value)}
                   onKeyPress={(e) => e.key === 'Enter' && addByBarcode()}
-                  placeholder="Type or paste barcode / QR / SKU"
+                  placeholder="Type or paste barcode / SKU"
                   className="w-full px-3 py-2 text-sm border border-brown-200 dark:border-dm-border rounded-lg dark:bg-dm-card-2 dark:text-white"
                 />
                 <button

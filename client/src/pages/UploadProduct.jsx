@@ -25,7 +25,6 @@ const UploadProduct = () => {
       name: "",
       sku: "",
       barcode: "",
-      qrCode: "",
       image: [],
       category: [],
       subCategory: [],
@@ -80,7 +79,6 @@ const UploadProduct = () => {
         setData({
           ...productData,
           barcode: productData.barcode || "",
-          qrCode: productData.qrCode || "",
           wholesalePrice: productData.wholesalePrice ?? "",
           // Ensure these are arrays even if API returns objects or null
           image: Array.isArray(productData.image) ? productData.image : [],
@@ -280,7 +278,6 @@ const UploadProduct = () => {
             name: "",
             sku: "",
             barcode: "",
-            qrCode: "",
             image: [],
             category: [],
             subCategory: [],
@@ -395,39 +392,23 @@ const UploadProduct = () => {
             />
           </div>
 
-          <div className='grid gap-4 md:grid-cols-2'>
-            <div className='grid gap-1'>
-              <label htmlFor='barcode' className='font-medium dark:text-white'>Barcode Reference (Auto-generated if blank)</label>
-              <input 
-                id='barcode'
-                type='text'
-                placeholder='e.g., 6151234567890'
-                name='barcode'
-                value={data.barcode}
-                onChange={handleChange}
-                className='bg-plum-50/90 dark:bg-dm-card p-2 outline-none border dark:border-dm-border focus-within:border-plum-500 dark:focus-within:border-plum-400 rounded dark:text-white transition-colors duration-200'
-              />
-              <p className='text-xs text-brown-400 dark:text-white/40 mt-1'>Leave blank to create a Nawiri Hair barcode automatically. Enter a supplier barcode only when it is already printed on the product packaging.</p>
-            </div>
-
-            <div className='grid gap-1'>
-              <label htmlFor='qrCode' className='font-medium dark:text-white'>QR Code Value</label>
-              <input 
-                id='qrCode'
-                type='text'
-                placeholder='e.g., TAJI-PROD-BR-STR-18-001'
-                name='qrCode'
-                value={data.qrCode}
-                onChange={handleChange}
-                className='bg-plum-50/90 dark:bg-dm-card p-2 outline-none border dark:border-dm-border focus-within:border-plum-500 dark:focus-within:border-plum-400 rounded dark:text-white transition-colors duration-200'
-              />
-              <p className='text-xs text-brown-400 dark:text-white/40 mt-1'>If the packaging has a QR label, save its exact value here. Sellers can scan the barcode, QR code, or SKU.</p>
-            </div>
+          <div className='grid gap-1'>
+            <label htmlFor='barcode' className='font-medium dark:text-white'>Barcode Reference (Auto-generated if blank)</label>
+            <input
+              id='barcode'
+              type='text'
+              placeholder='e.g., 6151234567890'
+              name='barcode'
+              value={data.barcode}
+              onChange={handleChange}
+              className='bg-plum-50/90 dark:bg-dm-card p-2 outline-none border dark:border-dm-border focus-within:border-plum-500 dark:focus-within:border-plum-400 rounded dark:text-white transition-colors duration-200'
+            />
+            <p className='text-xs text-brown-400 dark:text-white/40 mt-1'>Leave blank to create a Nawiri Hair barcode automatically. Enter a supplier barcode only when it is already printed on the product packaging.</p>
           </div>
 
           <div className='rounded-lg border border-dashed border-plum-200 dark:border-plum-700 bg-plum-50/60 dark:bg-plum-900/20 p-3 text-sm text-charcoal dark:text-white'>
             <p className='font-medium'>Scanning flow</p>
-            <p className='mt-1'>Product images still upload to Cloudinary. Barcode and QR fields store the scan value itself, so the sales counter can fetch the matching product immediately after scanning without needing a barcode image upload.</p>
+            <p className='mt-1'>Product images still upload to Cloudinary. The barcode field stores the scan value itself, so the sales counter can fetch the matching product immediately after scanning without needing a barcode image upload.</p>
           </div>
 
           <div className='grid gap-1'>

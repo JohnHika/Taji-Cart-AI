@@ -437,7 +437,7 @@ const SalesCounter = () => {
   const addProductByCode = async (rawCode) => {
     const code = normalizeProductCode(rawCode);
     if (!code) {
-      const message = 'Enter or scan a barcode, QR code, or SKU first.';
+      const message = 'Enter or scan a barcode or SKU first.';
       toast.error(message);
       return { added: false, message };
     }
@@ -470,7 +470,7 @@ const SalesCounter = () => {
       }
 
       if (!product) {
-        const message = 'No product matches that barcode, QR code, or SKU.';
+        const message = 'No product matches that barcode or SKU.';
         toast.error(message);
         return { added: false, message };
       }
@@ -1512,7 +1512,7 @@ const SalesCounter = () => {
                   type="submit"
                   disabled={lookingUpScannedCode || !search.trim()}
                   className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-plum-700 transition-colors hover:bg-plum-100 disabled:opacity-40 dark:text-plum-300 dark:hover:bg-dm-border"
-                  aria-label="Add entered barcode, QR code, or SKU"
+                  aria-label="Add entered barcode or SKU"
                   title="Add entered code"
                 >
                   <FaBarcode size={15} />
@@ -1660,7 +1660,7 @@ const SalesCounter = () => {
                   type="submit"
                   disabled={lookingUpScannedCode || !search.trim()}
                   className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-plum-700 transition-colors hover:bg-plum-100 disabled:opacity-40 dark:text-plum-300 dark:hover:bg-dm-border"
-                  aria-label="Add entered barcode, QR code, or SKU"
+                  aria-label="Add entered barcode or SKU"
                   title="Add entered code"
                 >
                   <FaBarcode size={15} />

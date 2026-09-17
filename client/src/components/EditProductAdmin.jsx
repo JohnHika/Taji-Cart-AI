@@ -19,7 +19,6 @@ const EditProductAdmin = ({ close ,data : propsData,fetchProductData}) => {
     name: propsData.name,
     sku: propsData.sku || "",
     barcode: propsData.barcode || "",
-    qrCode: propsData.qrCode || "",
     image: propsData.image,
     category: propsData.category,
     subCategory: propsData.subCategory,
@@ -142,7 +141,6 @@ const EditProductAdmin = ({ close ,data : propsData,fetchProductData}) => {
           name: "",
           sku: "",
           barcode: "",
-          qrCode: "",
           image: [],
           category: [],
           subCategory: [],
@@ -200,31 +198,17 @@ const EditProductAdmin = ({ close ,data : propsData,fetchProductData}) => {
                   className='bg-plum-50/80 p-2 outline-none border focus-within:border-plum-500 rounded'
                 />
               </div>
-              <div className='grid gap-4 md:grid-cols-2'>
-                <div className='grid gap-1'>
-                  <label htmlFor='barcode' className='font-medium'>Barcode Value</label>
-                  <input
-                    id='barcode'
-                    type='text'
-                    placeholder='Enter barcode value'
-                    name='barcode'
-                    value={data.barcode}
-                    onChange={handleChange}
-                    className='bg-plum-50/80 p-2 outline-none border focus-within:border-plum-500 rounded'
-                  />
-                </div>
-                <div className='grid gap-1'>
-                  <label htmlFor='qrCode' className='font-medium'>QR Code Value</label>
-                  <input
-                    id='qrCode'
-                    type='text'
-                    placeholder='Enter QR value'
-                    name='qrCode'
-                    value={data.qrCode}
-                    onChange={handleChange}
-                    className='bg-plum-50/80 p-2 outline-none border focus-within:border-plum-500 rounded'
-                  />
-                </div>
+              <div className='grid gap-1'>
+                <label htmlFor='barcode' className='font-medium'>Barcode Value</label>
+                <input
+                  id='barcode'
+                  type='text'
+                  placeholder='Enter barcode value'
+                  name='barcode'
+                  value={data.barcode}
+                  onChange={handleChange}
+                  className='bg-plum-50/80 p-2 outline-none border focus-within:border-plum-500 rounded'
+                />
               </div>
               <div className='grid gap-1'>
                 <label htmlFor='description' className='font-medium'>Description</label>

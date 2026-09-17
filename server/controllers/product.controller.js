@@ -44,7 +44,6 @@ export const createProductController = async(request,response)=>{
             name ,
             sku,
             barcode,
-            qrCode,
             variants,
             image ,
             imageFilename,
@@ -63,7 +62,6 @@ export const createProductController = async(request,response)=>{
 
         const normalizedSku = normalizeScanValue(sku);
         const normalizedBarcode = normalizeScanValue(barcode);
-        const normalizedQrCode = normalizeScanValue(qrCode);
 
         // Validate required fields for hair products
         if(!handle || !name || !normalizedSku || !image?.[0] || !category?.[0] || !subCategory?.[0] || !unit || !costPrice || !price || !description ){
@@ -129,15 +127,6 @@ export const createProductController = async(request,response)=>{
             });
         }
 
-        const existingQrCode = await ensureUniqueProductField({ field: 'qrCode', value: normalizedQrCode });
-        if (existingQrCode) {
-            return response.status(400).json({
-                message: "QR code already exists. Each product QR value must be unique",
-                error: true,
-                success: false
-            });
-        }
-
         const resolvedBarcode = normalizedBarcode || await reserveNextProductBarcode();
 
         const product = new ProductModel({
@@ -145,7 +134,6 @@ export const createProductController = async(request,response)=>{
             name ,
             sku: normalizedSku,
             barcode: resolvedBarcode,
-            qrCode: normalizedQrCode || undefined,
             variants,
             image ,
             imageFilename,
@@ -184,7 +172,7 @@ export const createProductController = async(request,response)=>{
 // more_details/ratings keeps the payload light for the Sales Counter, which
 // loads the full catalog on every shift and can't afford a slow first paint.
 const POS_PRODUCT_PROJECTION =
-  'name handle sku barcode qrCode variants image imageFilename category subCategory unit price wholesalePrice discount stock description publish averageRating createdAt updatedAt';
+  'name handle sku barcode variants image imageFilename category subCategory unit price wholesalePrice discount stock description publish averageRating createdAt updatedAt';
 
 export const getProductController = async (req, res) => {
   try {
@@ -870,11 +858,10 @@ export const getProductDetailsForAdminController = async (request, response) => 
 export const updateProductDetails = async(request,response)=>{
     try {
         // Accept both _id and productId parameters for better API compatibility
-        const { _id, productId, sku, barcode, qrCode } = request.body;
+        const { _id, productId, sku, barcode } = request.body;
         const productIdToUse = _id || productId;
         const normalizedSku = normalizeScanValue(sku);
         const normalizedBarcode = normalizeScanValue(barcode);
-        const normalizedQrCode = normalizeScanValue(qrCode);
 
         if(!productIdToUse){
             return response.status(400).json({
@@ -941,21 +928,6 @@ export const updateProductDetails = async(request,response)=>{
             }
         }
 
-        if (normalizedQrCode) {
-            const existingQrCode = await ensureUniqueProductField({
-                field: 'qrCode',
-                value: normalizedQrCode,
-                excludeId: productIdToUse
-            });
-            if (existingQrCode) {
-                return response.status(400).json({
-                    message: "QR code already exists. Each product QR value must be unique",
-                    error: true,
-                    success: false
-                });
-            }
-        }
-
         const updatePayload = {
             ...request.body,
             sku: normalizedSku || request.body.sku
@@ -982,15 +954,6 @@ export const updateProductDetails = async(request,response)=>{
                 if (!normalizeScanValue(existingProduct.barcode)) {
                     updatePayload.barcode = await reserveNextProductBarcode();
                 }
-            }
-        }
-
-        if ('qrCode' in request.body) {
-            if (normalizedQrCode) {
-                updatePayload.qrCode = normalizedQrCode;
-            } else {
-                delete updatePayload.qrCode;
-                unsetPayload.qrCode = 1;
             }
         }
 

@@ -1,7 +1,7 @@
 import { saveAs } from 'file-saver';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import QRCode from 'qrcode';
+import JsBarcode from 'jsbarcode';
 import ExcelJS from 'exceljs';
 
 // Brand palette used consistently across every export format
@@ -40,7 +40,6 @@ const buildExportRows = (products = []) =>
     name: product.name || 'Untitled product',
     sku: product.sku || '',
     barcode: product.barcode || '',
-    qrCode: product.qrCode || '',
     category: Array.isArray(product.category)
       ? product.category.map((cat) => cat?.name || '').filter(Boolean).join(', ')
       : (product.category || ''),
@@ -76,7 +75,6 @@ const COLUMN_DEFS = [
   { key: 'stockStatus', header: 'Status', width: 14 },
   { key: 'published', header: 'Visibility', width: 12 },
   { key: 'barcode', header: 'Barcode', width: 18 },
-  { key: 'qrCode', header: 'QR Code', width: 18 },
   { key: 'description', header: 'Description', width: 45 },
   { key: 'createdAt', header: 'Created', width: 14 },
   { key: 'updatedAt', header: 'Updated', width: 14 },
@@ -302,13 +300,13 @@ const exportToPDF = (products, filename = 'products') => {
 
 // ---------------------------------------------------------------------------
 // Barcode labels — production-ready A4 sheet: 3 columns × 8 rows = 24 labels.
-// Each label is a standalone QR scan target and prints its plain-text
-// reference underneath for manual lookup if a scanner is unavailable. QR
-// over a 1D barcode specifically because every label is scanned with a
-// phone camera at the counter, not a laser gun: QR's square finder pattern
-// locks a camera decoder onto ONE code far more reliably than a 1D strip
-// when several labels sit close together on an uncut sheet (the same
-// cross-read failure mode fixed in the Sales Counter scanner itself).
+// Each label is a real CODE 128 barcode (the same symbology product.barcode
+// values are already validated against — see isCode128BarcodeValue on the
+// server) and prints its plain-text reference underneath for manual lookup
+// if a scanner is unavailable. Purely 1D by design: the store scans with a
+// dedicated barcode reader, which cannot decode QR at all — cut the sheet
+// apart, or leave a visible gap between labels, before scanning a dense
+// page to avoid one scan crossing into a neighbouring label.
 // ---------------------------------------------------------------------------
 const BARCODE_LABEL_COLUMNS = 3;
 const BARCODE_LABEL_ROWS = 8;
@@ -326,12 +324,21 @@ const barcodeLabelDetails = (product) => {
   return variant || String(product?.unit || 'Hair product');
 };
 
-const createQrCodeImage = (value) =>
-  QRCode.toDataURL(value, {
-    width: 300,
-    margin: 0,
-    color: { dark: '#2D2233', light: '#FFFFFF' },
+// Renders onto an offscreen canvas rather than an on-page one — this runs
+// once per product in a loop that can cover the full catalog (564 labels
+// and counting), so nothing here should touch the DOM tree.
+const createBarcodeImage = (value) => {
+  const canvas = document.createElement('canvas');
+  JsBarcode(canvas, value, {
+    format: 'CODE128',
+    displayValue: false,
+    margin: 8,
+    height: 80,
+    background: '#FFFFFF',
+    lineColor: '#2D2233',
   });
+  return canvas.toDataURL('image/png');
+};
 
 const exportToBarcodeLabelsPDF = async (products, filename = 'nawiri-hair-barcode-labels') => {
   const allProducts = Array.isArray(products) ? products : [];
@@ -368,7 +375,7 @@ const exportToBarcodeLabelsPDF = async (products, filename = 'nawiri-hair-barcod
     const x = marginX + (column * (labelWidth + columnGap));
     const y = marginY + (row * (labelHeight + rowGap));
     const barcode = String(product.barcode).trim();
-    const qrImage = await createQrCodeImage(barcode);
+    const barcodeImage = createBarcodeImage(barcode);
 
     doc.setDrawColor(227, 213, 222);
     doc.setLineWidth(0.65);
@@ -384,10 +391,14 @@ const exportToBarcodeLabelsPDF = async (products, filename = 'nawiri-hair-barcod
     doc.setFontSize(6.8);
     doc.text(trimLabelText(barcodeLabelDetails(product), 52), x + 8, y + 22);
 
-    // Square, not a full-width strip — kept scannable-sized and centred
-    // rather than stretched to the label width.
-    const qrSize = 40;
-    doc.addImage(qrImage, 'PNG', x + ((labelWidth - qrSize) / 2), y + 26, qrSize, qrSize);
+    // Full-width strip, not a square — a 1D barcode needs its horizontal
+    // run to fill as much of the label as the layout allows for a reliable
+    // scan; jsPDF stretches the source image uniformly to this box, which
+    // only rescales the bar widths proportionally and doesn't affect
+    // decodability.
+    const barcodeImageWidth = labelWidth - 16;
+    const barcodeImageHeight = 36;
+    doc.addImage(barcodeImage, 'PNG', x + 8, y + 26, barcodeImageWidth, barcodeImageHeight);
 
     doc.setFont('courier', 'bold');
     doc.setTextColor(45, 34, 51);

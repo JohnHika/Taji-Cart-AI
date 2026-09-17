@@ -40,7 +40,7 @@ const ExportButton = ({ data, onExport, exporting = false }) => {
       name: 'Barcode label sheet',
       icon: <FaBarcode className="text-plum-600" />,
       format: 'barcode-labels',
-      description: 'Printable QR code labels for every product (.pdf)'
+      description: 'Printable barcode labels for every product (.pdf)'
     },
     {
       name: 'Word',
