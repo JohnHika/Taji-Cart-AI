@@ -83,6 +83,15 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
   const [selectedReward, setSelectedReward] = useState(null);
   const [communityDiscount, setCommunityDiscount] = useState(0);
 
+  // Declared before isPaymentEnabled — that check reads footDeliveryEligibility
+  // for foot-delivery customers, and as a `const` it would otherwise throw a
+  // temporal-dead-zone ReferenceError (crashing this page) for exactly the
+  // customers who select foot delivery, pick an address, and share location.
+  const footDeliveryEligibility = useMemo(
+    () => getFootDeliveryEligibility(customerLocation),
+    [customerLocation]
+  );
+
   // Check if payments should be enabled
   // For delivery: need a selected address
   // For pickup: need a pickup location
@@ -96,6 +105,22 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
       && (deliveryMode !== 'bike' || deliveryZoneId)) ||
     (fulfillmentMethod === 'pickup' && pickupLocation) ||
     (fulfillmentMethod === 'sacco_pickup' && saccoOperatorId && saccoDestinationTown);
+
+  // The specific reason payment is blocked — shown next to the disabled Cash
+  // and M-Pesa options. A blanket "Select address first" was misleading once
+  // an address IS selected but location/zone/eligibility is still missing.
+  const paymentBlockedReason = (() => {
+    if (isPaymentEnabled) return '';
+    if (fulfillmentMethod === 'pickup') return 'Select pickup location';
+    if (fulfillmentMethod === 'sacco_pickup') return 'Select operator and destination';
+    if (selectAddress === null || !addressList[selectAddress] || !addressList[selectAddress].status) {
+      return 'Select address first';
+    }
+    if (deliveryMode === 'bike' && !deliveryZoneId) return 'Select delivery zone';
+    if (deliveryMode !== 'bike' && !customerLocation) return 'Share your location';
+    if (deliveryMode === 'foot' && !footDeliveryEligibility.eligible) return 'Outside delivery zone';
+    return 'Complete delivery details';
+  })();
 
   // For foot delivery, only allow addresses whose saved coordinates are within Nairobi CBD.
   // Bike (zone-fare) and standard delivery can use any active address —
@@ -281,10 +306,6 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
     ? Math.max(0, priceAfterCommunityDiscount + deliveryCharge - pointsValue) 
     : priceAfterCommunityDiscount + deliveryCharge;
   const isCheckoutBusy = checkoutAction !== '';
-  const footDeliveryEligibility = useMemo(
-    () => getFootDeliveryEligibility(customerLocation),
-    [customerLocation]
-  );
   const hasCheckoutAmount = useMemo(() => {
     const numericTotal = Number(totalPrice || 0);
 
@@ -856,7 +877,7 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
                 >
                   {checkoutAction === 'cash'
                     ? 'Placing order...'
-                    : `${fulfillmentMethod === 'sacco_pickup' ? 'Place Order — Pay at SACCO terminal' : `Cash on ${fulfillmentMethod === 'delivery' ? 'Delivery' : 'Pickup'}`}${!isPaymentEnabled ? ' (Select Address First)' : ''}`}
+                    : `${fulfillmentMethod === 'sacco_pickup' ? 'Place Order — Pay at SACCO terminal' : `Cash on ${fulfillmentMethod === 'delivery' ? 'Delivery' : 'Pickup'}`}${!isPaymentEnabled ? ' (' + paymentBlockedReason + ')' : ''}`}
                 </button>
               )}
 
@@ -885,7 +906,7 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
                 <div className="flex items-center justify-between w-full py-2 px-3 rounded border-2 border-brown-200 text-brown-400 dark:border-dm-border dark:text-white/30 font-semibold text-sm">
                   <span>M-Pesa</span>
                   <span className="text-xs font-normal opacity-60">
-                    {fulfillmentMethod === 'delivery' ? 'Select address first' : fulfillmentMethod === 'pickup' ? 'Select pickup location' : 'Select operator and destination'}
+                    {paymentBlockedReason}
                   </span>
                 </div>
               )}
@@ -1436,7 +1457,7 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
                 <span>{checkoutAction === 'cash' ? 'Placing order...' : `${fulfillmentMethod === 'sacco_pickup' ? 'Place Order —' : 'Cash on'} ${fulfillmentMethod === 'delivery' ? 'Delivery' : fulfillmentMethod === 'pickup' ? 'Pickup' : 'Pay at SACCO terminal'}`}</span>
                 {!isPaymentEnabled && (
                   <span className="text-xs font-normal opacity-60">
-                    {fulfillmentMethod === 'delivery' ? 'Select address first' : fulfillmentMethod === 'pickup' ? 'Select pickup location' : 'Select operator and destination'}
+                    {paymentBlockedReason}
                   </span>
                 )}
               </button>
@@ -1467,7 +1488,7 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
               <div className="flex items-center justify-between w-full py-3 px-4 rounded-card border-2 border-brown-100 dark:border-dm-border text-brown-300 dark:text-white/20 font-semibold text-sm">
                 <span>M-Pesa</span>
                 <span className="text-xs font-normal opacity-60">
-                  {fulfillmentMethod === 'delivery' ? 'Select address first' : fulfillmentMethod === 'pickup' ? 'Select pickup location' : 'Select operator and destination'}
+                  {paymentBlockedReason}
                 </span>
               </div>
             )}
