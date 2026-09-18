@@ -7,6 +7,9 @@ const jengaPaymentSchema = new mongoose.Schema(
     orderReference:  { type: String, index: true, unique: true },
     orderId:         { type: String, index: true }, // links to OrderModel.orderId once the order exists
     userId:          { type: mongoose.Schema.ObjectId, ref: 'User' },
+    // 'mpesa' = account-based STK push (existing flow). 'card' = Jenga PGW
+    // hosted checkout redirect (Visa/Mastercard/Amex/UnionPay).
+    channel:         { type: String, enum: ['mpesa', 'card'], default: 'mpesa' },
     phoneNumber:     { type: String },
     amount:          { type: Number },
     currency:        { type: String, default: 'KES' },

@@ -249,6 +249,10 @@ const SummaryApi = {
         url: `${baseURL}/api/jenga/status/:orderReference`,
         method: 'get'
     },
+    jengaCardPayment: {
+        url: `${baseURL}/api/jenga/card/pay`,
+        method: 'post'
+    },
     getAllProducts: {
         url: `${baseURL}/api/product/admin/all`,
         method: 'POST',

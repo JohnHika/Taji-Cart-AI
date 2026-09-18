@@ -13,6 +13,23 @@ const JENGA_STK_PUSH_URL = `${JENGA_BASE_URL}/v3-apis/payment-api/v3.0/stkussdpu
 // Jenga's docs, final status only arrives via the POST callback (see
 // server/controllers/jenga.controller.js: reconcilePayment).
 
+// Jenga PGW (card checkout) is a distinct product from the account-based STK
+// settlement above, but shares the same merchant credentials and the same
+// /authenticate/merchant bearer token. Its hosted checkout form posts to a
+// jengapgw.io host (not finserve.africa). Jenga's public docs only publish
+// the UAT form action (https://v3-uat.jengapgw.io/processPayment) — the
+// production URL isn't documented anywhere we could find, so it must be
+// supplied explicitly via JENGA_PGW_CHECKOUT_URL once Jenga support/the
+// merchant portal confirms it. Never silently fall back to UAT in production.
+const JENGA_PGW_CHECKOUT_URL = process.env.JENGA_PGW_CHECKOUT_URL
+  || (process.env.JENGA_ENV === 'production' ? null : 'https://v3-uat.jengapgw.io/processPayment');
+
+// Unlike STK, Jenga PGW transactions (card, Equitel, etc.) have a real
+// status-query endpoint — use it as the authoritative source in the card
+// callback handler rather than trusting the callback's own status param.
+const getTransactionDetailsUrl = (ref) =>
+  `${JENGA_BASE_URL}/v3-apis/transaction-api/v3.0/transactions/details/${encodeURIComponent(ref)}`;
+
 const requireEnv = (name) => {
   const value = process.env[name];
   if (!value) {
@@ -74,9 +91,28 @@ const signStkPushRequest = ({ accountNumber, ref, mobileNumber, telco, amount, c
   return signer.sign(privateKey, 'base64');
 };
 
+/**
+ * Signs a single reference string with the merchant's RSA private key
+ * (SHA256, Base64) — used for the Query Transaction Details `Signature`
+ * header. Jenga's own docs describe this generically (see the
+ * "Generate Signature" guide) as "concatenate the request fields in order,
+ * RSA-SHA256 sign, Base64 encode"; for this endpoint the only field is the
+ * transaction reference itself.
+ */
+const signReference = (ref) => {
+  const privateKey = getPrivateKey();
+  const signer = crypto.createSign('RSA-SHA256');
+  signer.update(String(ref));
+  signer.end();
+  return signer.sign(privateKey, 'base64');
+};
+
 export {
   getAuthToken,
   signStkPushRequest,
+  signReference,
   JENGA_STK_PUSH_URL,
+  JENGA_PGW_CHECKOUT_URL,
+  getTransactionDetailsUrl,
   requireEnv,
 };

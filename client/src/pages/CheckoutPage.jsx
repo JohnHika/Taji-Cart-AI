@@ -14,6 +14,7 @@ import CommunityCampaignProgress from '../components/CommunityCampaignProgress';
 import DeliveryLocationModal from '../components/DeliveryLocationModal';
 import FulfillmentModal from '../components/FulfillmentModal';
 import JengaPayment from '../components/JengaPayment';
+import JengaCardPayment from '../components/JengaCardPayment';
 import { useTheme } from '../context/ThemeContext';
 import useCriteriaGate from '../hooks/useCriteriaGate';
 import { useGlobalContext } from '../provider/GlobalProvider';
@@ -559,11 +560,17 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
               )}
               {!isPaymentEnabled && hasActiveAddresses && !addressError && (
                 <div className="bg-plum-50 dark:bg-plum-900/30 border border-plum-200 dark:border-plum-700 text-plum-800 dark:text-plum-200 px-4 py-2 rounded-card mb-4 text-sm">
-                  {deliveryMode === 'foot'
-                    ? `Foot delivery is only available for addresses within Nairobi CBD (${NAIROBI_CBD_RADIUS_KM}km radius).`
-                    : deliveryMode === 'bike'
-                      ? 'Select an address and your delivery zone to enable payment options.'
-                      : 'Select an address to enable payment options.'}
+                  {selectAddress === null || !addressList[selectAddress]?.status
+                    ? (deliveryMode === 'foot'
+                        ? `Select an address within Nairobi CBD (${NAIROBI_CBD_RADIUS_KM}km radius) for foot delivery.`
+                        : deliveryMode === 'bike'
+                          ? 'Select an address and your delivery zone to enable payment options.'
+                          : 'Select an address to enable payment options.')
+                    : deliveryMode === 'bike' && !deliveryZoneId
+                      ? 'Address selected — now pick your delivery zone above to enable payment options.'
+                      : deliveryMode === 'foot' && !footDeliveryEligibility.eligible
+                        ? `This address is outside the Nairobi CBD foot-delivery radius (${NAIROBI_CBD_RADIUS_KM}km). Choose another address or switch delivery type.`
+                        : 'Address selected — now tap "Use My Current Location" above to share your delivery location and enable payment.'}
                 </div>
               )}
               <div className='bg-white dark:bg-dm-card p-2 grid gap-4 rounded shadow transition-colors duration-200'>
@@ -863,6 +870,17 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
                 >
                   M-Pesa
                 </button>
+                <button
+                  type="button"
+                  onClick={() => setSelectedPaymentMethod('jenga-card')}
+                  className={`flex-1 py-2 px-3 rounded text-sm font-semibold border-2 transition-colors ${
+                    selectedPaymentMethod === 'jenga-card'
+                      ? 'border-plum-600 text-plum-700 bg-plum-50 dark:border-plum-500 dark:text-plum-200 dark:bg-plum-900/20'
+                      : 'border-brown-200 text-brown-400 dark:border-dm-border dark:text-white/40'
+                  }`}
+                >
+                  Card
+                </button>
               </div>
 
               {selectedPaymentMethod === 'cash' && (
@@ -906,6 +924,36 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
               {selectedPaymentMethod === 'jenga' && !isPaymentEnabled && (
                 <div className="flex items-center justify-between w-full py-2 px-3 rounded border-2 border-brown-200 text-brown-400 dark:border-dm-border dark:text-white/30 font-semibold text-sm">
                   <span>M-Pesa</span>
+                  <span className="text-xs font-normal opacity-60">
+                    {paymentBlockedReason}
+                  </span>
+                </div>
+              )}
+
+              {selectedPaymentMethod === 'jenga-card' && isPaymentEnabled && (
+                <JengaCardPayment
+                  cartItems={cartItemsList}
+                  totalAmount={finalPrice}
+                  addressId={fulfillmentMethod === 'delivery' ? addressList[selectAddress]?._id : null}
+                  communityRewardId={selectedReward ? selectedReward._id : null}
+                  communityDiscountAmount={selectedReward && selectedReward.type === 'discount' ? communityDiscount : 0}
+                  fulfillment_type={fulfillmentMethod}
+                  pickup_location={pickupLocation}
+                  pickup_instructions={pickupInstructions}
+                  saccoOperatorId={fulfillmentMethod === 'sacco_pickup' ? saccoOperatorId : undefined}
+                  saccoDestinationTown={fulfillmentMethod === 'sacco_pickup' ? saccoDestinationTown : undefined}
+                  deliveryCharge={deliveryCharge}
+                  deliveryInstructions={deliveryInstructions}
+                  deliveryMode={deliveryMode}
+                  deliveryZoneId={deliveryZoneId}
+                  customerLocation={customerLocation}
+                  onError={handleJengaPaymentError}
+                />
+              )}
+
+              {selectedPaymentMethod === 'jenga-card' && !isPaymentEnabled && (
+                <div className="flex items-center justify-between w-full py-2 px-3 rounded border-2 border-brown-200 text-brown-400 dark:border-dm-border dark:text-white/30 font-semibold text-sm">
+                  <span>Card</span>
                   <span className="text-xs font-normal opacity-60">
                     {paymentBlockedReason}
                   </span>
@@ -966,11 +1014,17 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
           )}
           {!isPaymentEnabled && hasActiveAddresses && !addressError && (
             <div className="bg-plum-50 dark:bg-plum-900/20 border border-plum-200 dark:border-plum-700/40 text-plum-700 dark:text-plum-300 px-4 py-2 rounded-card mb-4 text-sm">
-              {deliveryMode === 'foot'
-                ? `Foot delivery is only available for addresses within Nairobi CBD (${NAIROBI_CBD_RADIUS_KM}km radius).`
-                : deliveryMode === 'bike'
-                  ? 'Select an address and your delivery zone to enable payment options.'
-                  : 'Select an address to enable payment options.'}
+              {selectAddress === null || !addressList[selectAddress]?.status
+                ? (deliveryMode === 'foot'
+                    ? `Select an address within Nairobi CBD (${NAIROBI_CBD_RADIUS_KM}km radius) for foot delivery.`
+                    : deliveryMode === 'bike'
+                      ? 'Select an address and your delivery zone to enable payment options.'
+                      : 'Select an address to enable payment options.')
+                : deliveryMode === 'bike' && !deliveryZoneId
+                  ? 'Address selected — now pick your delivery zone above to enable payment options.'
+                  : deliveryMode === 'foot' && !footDeliveryEligibility.eligible
+                    ? `This address is outside the Nairobi CBD foot-delivery radius (${NAIROBI_CBD_RADIUS_KM}km). Choose another address or switch delivery type.`
+                    : 'Address selected — now tap "Use My Current Location" above to share your delivery location and enable payment.'}
             </div>
           )}
           <div className='grid gap-3 mb-4'>
@@ -1443,6 +1497,17 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
               >
                 M-Pesa
               </button>
+              <button
+                type="button"
+                onClick={() => setSelectedPaymentMethod('jenga-card')}
+                className={`flex-1 py-2 px-3 rounded-card text-sm font-semibold border-2 transition-colors ${
+                  selectedPaymentMethod === 'jenga-card'
+                    ? 'border-plum-600 text-plum-700 bg-plum-50 dark:border-plum-500 dark:text-plum-200 dark:bg-plum-900/20'
+                    : 'border-brown-100 dark:border-dm-border text-brown-300 dark:text-white/40'
+                }`}
+              >
+                Card
+              </button>
             </div>
 
             {selectedPaymentMethod === 'cash' && (
@@ -1489,6 +1554,36 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
             {selectedPaymentMethod === 'jenga' && !isPaymentEnabled && (
               <div className="flex items-center justify-between w-full py-3 px-4 rounded-card border-2 border-brown-100 dark:border-dm-border text-brown-300 dark:text-white/20 font-semibold text-sm">
                 <span>M-Pesa</span>
+                <span className="text-xs font-normal opacity-60">
+                  {paymentBlockedReason}
+                </span>
+              </div>
+            )}
+
+            {selectedPaymentMethod === 'jenga-card' && isPaymentEnabled && (
+              <JengaCardPayment
+                cartItems={cartItemsList}
+                totalAmount={finalPrice}
+                addressId={fulfillmentMethod === 'delivery' ? addressList[selectAddress]?._id : null}
+                communityRewardId={selectedReward ? selectedReward._id : null}
+                communityDiscountAmount={selectedReward && selectedReward.type === 'discount' ? communityDiscount : 0}
+                fulfillment_type={fulfillmentMethod}
+                pickup_location={pickupLocation}
+                pickup_instructions={pickupInstructions}
+                saccoOperatorId={fulfillmentMethod === 'sacco_pickup' ? saccoOperatorId : undefined}
+                saccoDestinationTown={fulfillmentMethod === 'sacco_pickup' ? saccoDestinationTown : undefined}
+                deliveryCharge={deliveryCharge}
+                deliveryInstructions={deliveryInstructions}
+                deliveryMode={deliveryMode}
+                deliveryZoneId={deliveryZoneId}
+                customerLocation={customerLocation}
+                onError={handleJengaPaymentError}
+              />
+            )}
+
+            {selectedPaymentMethod === 'jenga-card' && !isPaymentEnabled && (
+              <div className="flex items-center justify-between w-full py-3 px-4 rounded-card border-2 border-brown-100 dark:border-dm-border text-brown-300 dark:text-white/20 font-semibold text-sm">
+                <span>Card</span>
                 <span className="text-xs font-normal opacity-60">
                   {paymentBlockedReason}
                 </span>

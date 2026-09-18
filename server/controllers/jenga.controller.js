@@ -3,7 +3,10 @@ import crypto from 'crypto';
 import {
   getAuthToken,
   signStkPushRequest,
+  signReference,
   JENGA_STK_PUSH_URL,
+  JENGA_PGW_CHECKOUT_URL,
+  getTransactionDetailsUrl,
   requireEnv,
 } from '../config/jenga.js';
 import axios from 'axios';
@@ -12,6 +15,7 @@ import OrderModel from '../models/order.model.js';
 import ProductModel from '../models/product.model.js';
 import CartProductModel from '../models/cartproduct.model.js';
 import UserModel from '../models/user.model.js';
+import AddressModel from '../models/address.model.js';
 import NotificationModel from '../models/notification.model.js';
 import DeliveryZoneModel from '../models/deliveryzone.model.js';
 import SaccoOperatorModel from '../models/saccooperator.model.js';
@@ -160,6 +164,142 @@ const priceItems = async (items) => {
 };
 
 /**
+ * Shared by both the STK (M-Pesa) and Jenga PGW (card) payment paths:
+ * validates fulfillment/delivery inputs, prices the cart, and creates the
+ * local PENDING order rows before any request reaches Jenga. Throws an
+ * Error with .statusCode (and optionally .code, matching the SACCO/delivery
+ * zone error codes the client already handles) on any validation failure —
+ * callers are expected to catch and translate that into the JSON response.
+ * Does not touch JengaPayment — each channel creates its own record with
+ * its own channel-specific fields (e.g. phoneNumber semantics differ).
+ */
+const buildPendingOrder = async (request) => {
+  const userId = request.userId;
+  const {
+    list_items,
+    addressId,
+    fulfillment_type = 'delivery',
+    pickup_location,
+    pickup_instructions,
+    saccoOperatorId,
+    saccoDestinationTown,
+  } = request.body;
+
+  const deliveryMode = getDeliveryModeFromPayload(request.body);
+  const customerLocation = extractCoordinatesFromPayload(request.body);
+
+  if (fulfillment_type === 'delivery' && !addressId) {
+    const err = new Error('Delivery address is required for delivery orders');
+    err.statusCode = 400;
+    throw err;
+  }
+  if (fulfillment_type === 'pickup' && !pickup_location) {
+    const err = new Error('Pickup location is required for pickup orders');
+    err.statusCode = 400;
+    throw err;
+  }
+
+  let saccoOperator = null;
+  if (fulfillment_type === 'sacco_pickup') {
+    if (!saccoOperatorId || !mongoose.Types.ObjectId.isValid(String(saccoOperatorId)) || !saccoDestinationTown) {
+      const err = new Error('Please select a SACCO/coach operator and destination town');
+      err.statusCode = 400;
+      err.code = 'INVALID_SACCO_OPERATOR';
+      throw err;
+    }
+    saccoOperator = await SaccoOperatorModel.findOne({ _id: saccoOperatorId, isActive: true });
+    if (!saccoOperator) {
+      const err = new Error('Selected operator is no longer available. Please pick another.');
+      err.statusCode = 400;
+      err.code = 'INVALID_SACCO_OPERATOR';
+      throw err;
+    }
+  }
+
+  if (fulfillment_type === 'delivery' && deliveryMode === 'foot') {
+    const cbdStatus = getCbdFootDeliveryStatus(customerLocation);
+    if (!cbdStatus.allowed) {
+      const message = cbdStatus.reason === 'outside_cbd'
+        ? `Foot delivery is only available within Nairobi CBD (${cbdStatus.radiusKm}km radius). Your selected location is ${Number(cbdStatus.distanceKm || 0).toFixed(2)}km away.`
+        : 'Please enable location and pin your delivery point within Nairobi CBD.';
+      const err = new Error(message);
+      err.statusCode = 400;
+      err.code = 'DELIVERY_OUTSIDE_CBD';
+      throw err;
+    }
+  }
+
+  let deliveryZone = null;
+  if (fulfillment_type === 'delivery' && isBikeDeliveryMode(deliveryMode)) {
+    const zoneId = request.body.deliveryZoneId;
+    if (!zoneId || !mongoose.Types.ObjectId.isValid(String(zoneId))) {
+      const err = new Error('Please select a delivery zone for bike delivery.');
+      err.statusCode = 400;
+      err.code = 'INVALID_DELIVERY_ZONE';
+      throw err;
+    }
+    deliveryZone = await DeliveryZoneModel.findOne({ _id: zoneId, isActive: true });
+    if (!deliveryZone) {
+      const err = new Error('Selected delivery zone is no longer available. Please pick another zone.');
+      err.statusCode = 400;
+      err.code = 'INVALID_DELIVERY_ZONE';
+      throw err;
+    }
+  }
+
+  const { normalizedItems, subTotalAmt } = await priceItems(list_items);
+  // Never trust a client-supplied deliveryCharge — recompute from the
+  // authoritative zone fare or the flat default, same as the other
+  // order-creation paths in order.controller.js.
+  const deliveryCharge = fulfillment_type === 'delivery'
+    ? (deliveryZone ? deliveryZone.fare : DEFAULT_DELIVERY_CHARGE)
+    : fulfillment_type === 'sacco_pickup'
+      ? SACCO_TERMINAL_DROPOFF_CHARGE
+      : 0;
+  const totalAmt = roundMoney(subTotalAmt + deliveryCharge);
+
+  if (!isValidAmount(totalAmt)) {
+    const err = new Error('Order amount is invalid');
+    err.statusCode = 400;
+    throw err;
+  }
+
+  const orderReference = await claimOrderReference();
+  const sharedOrderId = `ORD-${new mongoose.Types.ObjectId()}`;
+
+  // Create the local pending order BEFORE contacting Jenga.
+  const orderPayload = normalizedItems.map((item) => ({
+    userId,
+    orderId: sharedOrderId,
+    productId: item.productId._id,
+    product_details: { name: item.productId.name, image: item.productId.image },
+    quantity: item.quantity,
+    paymentId: orderReference,
+    payment_status: 'PENDING',
+    delivery_address: fulfillment_type === 'delivery' ? addressId : null,
+    fulfillment_type,
+    delivery_mode: deliveryMode || 'standard',
+    delivery_zone: deliveryZone ? deliveryZone._id : undefined,
+    delivery_zone_name: deliveryZone ? deliveryZone.name : '',
+    delivery_zone_fare: deliveryZone ? deliveryZone.fare : undefined,
+    customer_location: customerLocation || undefined,
+    deliveryInstructions: request.body.deliveryInstructions || '',
+    pickup_location: pickup_location || '',
+    pickup_instructions: pickup_instructions || '',
+    sacco_operator: saccoOperator ? saccoOperator._id : undefined,
+    sacco_operator_name: saccoOperator ? saccoOperator.name : '',
+    sacco_destination_town: fulfillment_type === 'sacco_pickup' ? saccoDestinationTown : '',
+    subTotalAmt,
+    deliveryCharge,
+    totalAmt,
+  }));
+
+  await OrderModel.insertMany(orderPayload);
+
+  return { orderReference, sharedOrderId, totalAmt, fulfillment_type };
+};
+
+/**
  * POST /api/jenga/pay
  * Authenticated. Validates phone/amount, creates a PENDING order + payment
  * record locally, then initiates the Jenga STK push. Order is not finalized
@@ -168,19 +308,7 @@ const priceItems = async (items) => {
 export const initiateJengaPayment = async (request, response) => {
   try {
     const userId = request.userId;
-    const {
-      list_items,
-      addressId,
-      fulfillment_type = 'delivery',
-      pickup_location,
-      pickup_instructions,
-      saccoOperatorId,
-      saccoDestinationTown,
-      phoneNumber,
-    } = request.body;
-
-    const deliveryMode = getDeliveryModeFromPayload(request.body);
-    const customerLocation = extractCoordinatesFromPayload(request.body);
+    const { phoneNumber } = request.body;
 
     const normalizedPhone = normalizeKenyanPhone(phoneNumber);
     if (!normalizedPhone) {
@@ -191,117 +319,13 @@ export const initiateJengaPayment = async (request, response) => {
       });
     }
 
-    if (fulfillment_type === 'delivery' && !addressId) {
-      return response.status(400).json({ message: 'Delivery address is required for delivery orders', error: true, success: false });
-    }
-    if (fulfillment_type === 'pickup' && !pickup_location) {
-      return response.status(400).json({ message: 'Pickup location is required for pickup orders', error: true, success: false });
-    }
-
-    let saccoOperator = null;
-    if (fulfillment_type === 'sacco_pickup') {
-      if (!saccoOperatorId || !mongoose.Types.ObjectId.isValid(String(saccoOperatorId)) || !saccoDestinationTown) {
-        return response.status(400).json({
-          message: 'Please select a SACCO/coach operator and destination town',
-          error: true,
-          success: false,
-          code: 'INVALID_SACCO_OPERATOR',
-        });
-      }
-      saccoOperator = await SaccoOperatorModel.findOne({ _id: saccoOperatorId, isActive: true });
-      if (!saccoOperator) {
-        return response.status(400).json({
-          message: 'Selected operator is no longer available. Please pick another.',
-          error: true,
-          success: false,
-          code: 'INVALID_SACCO_OPERATOR',
-        });
-      }
-    }
-
-    if (fulfillment_type === 'delivery' && deliveryMode === 'foot') {
-      const cbdStatus = getCbdFootDeliveryStatus(customerLocation);
-      if (!cbdStatus.allowed) {
-        const message = cbdStatus.reason === 'outside_cbd'
-          ? `Foot delivery is only available within Nairobi CBD (${cbdStatus.radiusKm}km radius). Your selected location is ${Number(cbdStatus.distanceKm || 0).toFixed(2)}km away.`
-          : 'Please enable location and pin your delivery point within Nairobi CBD.';
-        return response.status(400).json({ message, error: true, success: false, code: 'DELIVERY_OUTSIDE_CBD' });
-      }
-    }
-
-    let deliveryZone = null;
-    if (fulfillment_type === 'delivery' && isBikeDeliveryMode(deliveryMode)) {
-      const zoneId = request.body.deliveryZoneId;
-      if (!zoneId || !mongoose.Types.ObjectId.isValid(String(zoneId))) {
-        return response.status(400).json({
-          message: 'Please select a delivery zone for bike delivery.',
-          error: true,
-          success: false,
-          code: 'INVALID_DELIVERY_ZONE',
-        });
-      }
-      deliveryZone = await DeliveryZoneModel.findOne({ _id: zoneId, isActive: true });
-      if (!deliveryZone) {
-        return response.status(400).json({
-          message: 'Selected delivery zone is no longer available. Please pick another zone.',
-          error: true,
-          success: false,
-          code: 'INVALID_DELIVERY_ZONE',
-        });
-      }
-    }
-
-    const { normalizedItems, subTotalAmt } = await priceItems(list_items);
-    // Never trust a client-supplied deliveryCharge — recompute from the
-    // authoritative zone fare or the flat default, same as the other
-    // order-creation paths in order.controller.js.
-    const deliveryCharge = fulfillment_type === 'delivery'
-      ? (deliveryZone ? deliveryZone.fare : DEFAULT_DELIVERY_CHARGE)
-      : fulfillment_type === 'sacco_pickup'
-        ? SACCO_TERMINAL_DROPOFF_CHARGE
-        : 0;
-    const totalAmt = roundMoney(subTotalAmt + deliveryCharge);
-
-    if (!isValidAmount(totalAmt)) {
-      return response.status(400).json({ message: 'Order amount is invalid', error: true, success: false });
-    }
-
-    const orderReference = await claimOrderReference();
-    const sharedOrderId = `ORD-${new mongoose.Types.ObjectId()}`;
-
-    // Create the local pending order BEFORE contacting Jenga.
-    const orderPayload = normalizedItems.map((item) => ({
-      userId,
-      orderId: sharedOrderId,
-      productId: item.productId._id,
-      product_details: { name: item.productId.name, image: item.productId.image },
-      quantity: item.quantity,
-      paymentId: orderReference,
-      payment_status: 'PENDING',
-      delivery_address: fulfillment_type === 'delivery' ? addressId : null,
-      fulfillment_type,
-      delivery_mode: deliveryMode || 'standard',
-      delivery_zone: deliveryZone ? deliveryZone._id : undefined,
-      delivery_zone_name: deliveryZone ? deliveryZone.name : '',
-      delivery_zone_fare: deliveryZone ? deliveryZone.fare : undefined,
-      customer_location: customerLocation || undefined,
-      deliveryInstructions: request.body.deliveryInstructions || '',
-      pickup_location: pickup_location || '',
-      pickup_instructions: pickup_instructions || '',
-      sacco_operator: saccoOperator ? saccoOperator._id : undefined,
-      sacco_operator_name: saccoOperator ? saccoOperator.name : '',
-      sacco_destination_town: fulfillment_type === 'sacco_pickup' ? saccoDestinationTown : '',
-      subTotalAmt,
-      deliveryCharge,
-      totalAmt,
-    }));
-
-    await OrderModel.insertMany(orderPayload);
+    const { orderReference, sharedOrderId, totalAmt } = await buildPendingOrder(request);
 
     await JengaPayment.create({
       orderReference,
       orderId: sharedOrderId,
       userId,
+      channel: 'mpesa',
       phoneNumber: normalizedPhone,
       amount: totalAmt,
       currency: 'KES',
@@ -383,7 +407,113 @@ export const initiateJengaPayment = async (request, response) => {
       error?.response?.data?.message ||
       error?.message ||
       'Failed to start M-Pesa payment';
-    return response.status(error.statusCode || 500).json({ success: false, error: true, message });
+    return response.status(error.statusCode || 500).json({ success: false, error: true, message, code: error.code });
+  }
+};
+
+// Jenga's PGW checkout form docs don't publish a fixed enum for productType —
+// it renders as a free-text merchant-supplied label in every example. Kept
+// as a constant so it's one place to fix if a live UAT submission rejects it.
+const JENGA_PGW_PRODUCT_TYPE = 'General';
+// Minutes the hosted checkout session stays valid before Jenga expires it.
+// Docs don't specify units explicitly; 30 is a safe, common default to
+// verify against a real UAT run.
+const JENGA_PGW_PAYMENT_TIME_LIMIT = '30';
+const JENGA_PGW_DEFAULT_COUNTRY_CODE = 'KE';
+const JENGA_PGW_DEFAULT_POSTAL_CODE = '00100';
+
+/**
+ * POST /api/jenga/card/pay
+ * Authenticated. Creates the same kind of PENDING order as the M-Pesa path,
+ * then returns the fields for Jenga PGW's hosted Web Checkout Form. The
+ * client builds a hidden form from these fields and submits it, which
+ * navigates the browser to Jenga's hosted page to collect the card —
+ * raw card numbers never touch this server.
+ */
+export const initiateJengaCardPayment = async (request, response) => {
+  let orderReference;
+  let sharedOrderId;
+  try {
+    if (!JENGA_PGW_CHECKOUT_URL) {
+      const err = new Error('Card payments are not configured yet. Please pay with M-Pesa instead.');
+      err.statusCode = 503;
+      throw err;
+    }
+
+    const userId = request.userId;
+    const built = await buildPendingOrder(request);
+    orderReference = built.orderReference;
+    sharedOrderId = built.sharedOrderId;
+    const { totalAmt, fulfillment_type } = built;
+
+    const user = await UserModel.findById(userId).select('name email mobile').lean();
+    const [firstName, ...lastNameParts] = String(user?.name || 'Customer').trim().split(/\s+/);
+    const lastName = lastNameParts.join(' ') || firstName;
+
+    let customerAddress = 'Nairobi';
+    let customerPostalCodeZip = JENGA_PGW_DEFAULT_POSTAL_CODE;
+    if (fulfillment_type === 'delivery' && request.body.addressId) {
+      const address = await AddressModel.findById(request.body.addressId).select('address_line city pincode').lean();
+      if (address) {
+        customerAddress = address.address_line || address.city || customerAddress;
+        customerPostalCodeZip = address.pincode || customerPostalCodeZip;
+      }
+    }
+
+    await JengaPayment.create({
+      orderReference,
+      orderId: sharedOrderId,
+      userId,
+      channel: 'card',
+      phoneNumber: user?.mobile ? String(user.mobile) : '',
+      amount: totalAmt,
+      currency: 'KES',
+      status: 'pending',
+    });
+
+    const merchantCode = requireEnv('JENGA_MERCHANT_CODE');
+    const callbackUrl = buildJengaCallbackUrl(requireEnv('JENGA_CARD_CALLBACK_URL'));
+    const token = await getAuthToken();
+
+    return response.status(200).json({
+      success: true,
+      data: {
+        orderReference,
+        orderId: sharedOrderId,
+        checkoutUrl: JENGA_PGW_CHECKOUT_URL,
+        fields: {
+          token,
+          merchantCode,
+          currency: 'KES',
+          orderAmount: totalAmt.toFixed(2),
+          orderReference,
+          productType: JENGA_PGW_PRODUCT_TYPE,
+          productDescription: `Nawiri Hair order ${sharedOrderId}`,
+          paymentTimeLimit: JENGA_PGW_PAYMENT_TIME_LIMIT,
+          customerFirstName: firstName || 'Customer',
+          customerLastName: lastName || 'Customer',
+          customerEmail: user?.email || '',
+          customerPhone: user?.mobile ? String(user.mobile) : '',
+          customerAddress,
+          customerPostalCodeZip,
+          countryCode: JENGA_PGW_DEFAULT_COUNTRY_CODE,
+          callbackUrl,
+        },
+      },
+    });
+  } catch (error) {
+    // Nothing was ever sent to Jenga (the browser form POST is what starts
+    // the checkout, not this call) — but if we got as far as creating the
+    // pending order/payment before failing, don't leave it behind.
+    if (sharedOrderId) await OrderModel.deleteMany({ orderId: sharedOrderId });
+    if (orderReference) await JengaPayment.deleteOne({ orderReference });
+
+    console.error('Jenga card initiate error:', error?.response?.data || error.message);
+    const message =
+      error?.response?.data?.message ||
+      error?.message ||
+      'Failed to start card payment';
+    return response.status(error.statusCode || 500).json({ success: false, error: true, message, code: error.code });
   }
 };
 
@@ -425,6 +555,17 @@ const mapJengaCallbackToLocal = (callbackData) => {
   if (JENGA_CANCELLED_CODES.has(code)) return 'cancelled';
   if (JENGA_REJECTED_CODES.has(code) || !success) return 'failed';
   return 'unknown';
+};
+
+// State codes documented for the Query Transaction Details API (used by the
+// card/PGW flow, which — unlike account-based STK — has a real status-query
+// endpoint): 2 = Success, 1 = Failed, -1 = Awaiting callback response.
+const mapTxnDetailsToLocal = (txn) => {
+  const stateCode = Number(txn?.stateCode);
+  if (stateCode === 2) return 'paid';
+  if (stateCode === 1) return 'failed';
+  // -1 (awaiting) and anything undocumented: fail closed, stay pending.
+  return 'pending';
 };
 
 /**
@@ -517,22 +658,24 @@ const markOrderUnpaid = async (paymentDoc, localStatus) => {
 };
 
 /**
- * Reconciles a pending payment against a Jenga callback payload. Account-based
- * settlement has no dedicated status-query endpoint (Jenga's docs: "await
- * final transaction status on callback"), so the callback is authoritative —
- * but reference, amount, and status/code are still validated strictly before
- * anything is marked paid. Idempotent: a second call with status !== 'pending'
- * is a no-op.
+ * Reconciles a pending payment against a normalized result from Jenga —
+ * shared by both the STK callback (server/controllers/jenga.controller.js:
+ * handleJengaCallback) and the card flow's status-query result
+ * (handleJengaCardCallback). `normalized` is { localStatus, returnedRef,
+ * returnedAmount, resultCode, resultDesc, raw } — callers are responsible
+ * for mapping their channel-specific payload into that shape first, since
+ * the STK callback and the Query Transaction Details response use entirely
+ * different field names and status codes. Reference, amount, and status are
+ * still validated strictly before anything is marked paid. Idempotent: a
+ * second call once status !== 'pending' is a no-op.
  */
-const reconcilePayment = async (paymentDoc, callbackData) => {
+const reconcilePayment = async (paymentDoc, normalized) => {
   if (paymentDoc.status !== 'pending') {
     // Already resolved (paid/failed/cancelled/expired) — repeated calls are no-ops.
     return paymentDoc;
   }
 
-  const localStatus = mapJengaCallbackToLocal(callbackData);
-  const returnedAmount = callbackData?.debitedAmount ?? callbackData?.requestAmount;
-  const returnedRef = callbackData?.transactionReference;
+  const { localStatus, returnedRef, returnedAmount, resultCode, resultDesc, raw } = normalized;
 
   if (localStatus === 'paid') {
     if (returnedRef && String(returnedRef) !== String(paymentDoc.orderReference)) {
@@ -550,7 +693,7 @@ const reconcilePayment = async (paymentDoc, callbackData) => {
         $set: {
           status: 'paid',
           verifiedAt: new Date(),
-          rawCallback: callbackData,
+          rawCallback: raw,
         },
       },
       { new: true }
@@ -565,7 +708,7 @@ const reconcilePayment = async (paymentDoc, callbackData) => {
   if (['failed', 'cancelled', 'expired'].includes(localStatus)) {
     const updated = await JengaPayment.findOneAndUpdate(
       { _id: paymentDoc._id, status: 'pending' },
-      { $set: { status: localStatus, resultCode: String(callbackData?.code ?? ''), resultDesc: callbackData?.message, rawCallback: callbackData } },
+      { $set: { status: localStatus, resultCode: String(resultCode ?? ''), resultDesc, rawCallback: raw } },
       { new: true }
     );
     if (updated) {
@@ -602,13 +745,24 @@ export const getJengaPaymentStatus = async (request, response) => {
       return response.status(400).json({ success: false, message: 'orderReference is required' });
     }
 
-    const doc = await JengaPayment.findOne({ orderReference });
+    let doc = await JengaPayment.findOne({ orderReference });
     if (!doc) {
       return response.json({ success: true, status: 'unknown' });
     }
 
     if (doc.userId && String(doc.userId) !== String(request.userId)) {
       return response.status(403).json({ success: false, message: 'Access denied' });
+    }
+
+    // Card payments have a real status-query API (unlike STK) — worth a
+    // fresh check on every poll rather than only at the one-shot redirect
+    // callback, since that's the only self-healing path this flow gets.
+    if (doc.channel === 'card' && doc.status === 'pending') {
+      try {
+        doc = (await queryAndReconcileCardPayment(doc)) || doc;
+      } catch (queryErr) {
+        console.error('Jenga card status re-query error:', queryErr?.response?.data || queryErr.message);
+      }
     }
 
     const isStale = doc.status === 'pending'
@@ -659,12 +813,110 @@ export const handleJengaCallback = async (request, response) => {
       return response.status(200).json({ success: true });
     }
 
-    await reconcilePayment(doc, callbackData);
+    await reconcilePayment(doc, {
+      localStatus: mapJengaCallbackToLocal(callbackData),
+      returnedRef: callbackData?.transactionReference,
+      returnedAmount: callbackData?.debitedAmount ?? callbackData?.requestAmount,
+      resultCode: callbackData?.code,
+      resultDesc: callbackData?.message,
+      raw: callbackData,
+    });
 
     return response.status(200).json({ success: true });
   } catch (err) {
     console.error('Jenga callback error:', err);
     // Still 200 — Jenga should not indefinitely retry on our internal errors.
     return response.status(200).json({ success: true });
+  }
+};
+
+/**
+ * Queries Jenga's Query Transaction Details API for a still-pending card
+ * payment and reconciles the result. Shared by the redirect callback (which
+ * only fires once, when the customer's browser bounces back from Jenga) and
+ * the status-poll endpoint (which can retry this on the card flow's behalf
+ * if that one redirect-time check hit a transient network/auth error — the
+ * card flow has no second delivery mechanism the way STK's callback does).
+ * No-op if the payment isn't 'pending' or isn't a card payment.
+ */
+const queryAndReconcileCardPayment = async (doc) => {
+  if (!doc || doc.channel !== 'card' || doc.status !== 'pending') {
+    return doc;
+  }
+
+  const token = await getAuthToken();
+  const txnResponse = await axios.get(getTransactionDetailsUrl(doc.orderReference), {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      Signature: signReference(doc.orderReference),
+      'Content-Type': 'application/json',
+    },
+    timeout: 15000,
+  });
+
+  const txn = txnResponse.data?.data;
+  return reconcilePayment(doc, {
+    localStatus: mapTxnDetailsToLocal(txn),
+    returnedRef: txn?.transactionReference,
+    returnedAmount: txn?.amount,
+    resultCode: txn?.code ?? txn?.stateCode,
+    resultDesc: txn?.message,
+    raw: txnResponse.data,
+  });
+};
+
+/**
+ * GET /api/jenga/card/callback
+ * Public — Jenga PGW redirects the customer's browser here (not a
+ * server-to-server POST) after they complete or abandon the hosted card
+ * checkout. Unlike the STK flow, PGW has a real status-query endpoint
+ * (Query Transaction Details), so that's treated as authoritative here
+ * rather than trusting the GET query params, which are visible to and could
+ * be replayed/edited by the customer's own browser. Always ends by
+ * redirecting to the SPA's result page — never renders JSON, since this is
+ * a browser navigation, not an API call.
+ */
+export const handleJengaCardCallback = async (request, response) => {
+  const frontendBase = (process.env.FRONTEND_URL || '').replace(/\/$/, '');
+  const redirectTo = (status, orderReference) => {
+    const url = `${frontendBase}/order/card-result?status=${encodeURIComponent(status)}${
+      orderReference ? `&orderReference=${encodeURIComponent(orderReference)}` : ''
+    }`;
+    return response.redirect(302, url);
+  };
+
+  try {
+    const expectedToken = process.env.JENGA_CALLBACK_SECRET;
+    if (expectedToken && request.query?.token !== expectedToken) {
+      console.error('Jenga card callback rejected: missing/incorrect token');
+      return redirectTo('error');
+    }
+
+    const orderReference = request.query?.orderReference;
+    if (!orderReference) {
+      console.error('Jenga card callback missing orderReference:', request.query);
+      return redirectTo('error');
+    }
+
+    const doc = await JengaPayment.findOne({ orderReference });
+    if (!doc) {
+      console.error(`Jenga card callback for unknown orderReference: ${orderReference}`);
+      return redirectTo('error');
+    }
+
+    if (doc.status !== 'pending') {
+      // Already reconciled (e.g. customer hit back/refresh on Jenga's page).
+      return redirectTo(doc.status, orderReference);
+    }
+
+    const updated = await queryAndReconcileCardPayment(doc);
+    return redirectTo(updated.status, orderReference);
+  } catch (err) {
+    console.error('Jenga card callback error:', err?.response?.data || err.message);
+    // The Query Transaction Details call itself failed (network/auth) —
+    // leave the payment 'pending' rather than guessing; the status-poll
+    // endpoint retries this same query on every poll, so a transient
+    // failure here isn't the end of the road for this payment.
+    return redirectTo('pending', request.query?.orderReference);
   }
 };
