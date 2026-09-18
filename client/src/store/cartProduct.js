@@ -2,7 +2,6 @@ import { createAsyncThunk, createSlice } from '@reduxjs/toolkit';
 import { toast } from 'react-toastify';
 import { baseURL } from '../common/SummaryApi';
 import Axios from '../utils/Axios';
-import { hasStoredAccessToken } from '../utils/authStorage';
 import { getGuestCart } from '../utils/guestCart';
 
 // Fetch cart items thunk
@@ -10,9 +9,11 @@ export const fetchCartItems = createAsyncThunk(
   'cart/fetchItems',
   async (_, { getState, rejectWithValue }) => {
     try {
-      const hasAuthenticatedSession = Boolean(
-        hasStoredAccessToken() || getState()?.user?._id
-      );
+      // A browser may retain an expired access token after the user has been
+      // logged out. Treat the cart as authenticated only after the user has
+      // been hydrated into Redux; otherwise a guest cart can get stuck waiting
+      // on a doomed token refresh request.
+      const hasAuthenticatedSession = Boolean(getState()?.user?._id);
 
       // If user is logged in, fetch from server
       if (hasAuthenticatedSession) {
@@ -39,9 +40,7 @@ export const clearCartItems = createAsyncThunk(
   async (_, { getState, rejectWithValue }) => {
     try {
       console.log("Explicitly clearing cart items");
-      const hasAuthenticatedSession = Boolean(
-        hasStoredAccessToken() || getState()?.user?._id
-      );
+      const hasAuthenticatedSession = Boolean(getState()?.user?._id);
 
       if (hasAuthenticatedSession) {
         try {

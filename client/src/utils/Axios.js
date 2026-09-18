@@ -238,8 +238,18 @@ instance.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config;
+    const requestUrl = String(originalRequest?.url || '');
+    const isRefreshRequest = requestUrl.includes('/api/user/refresh-token');
 
     if (!error.response || error.response.status !== 401 || originalRequest._retry) {
+      return Promise.reject(error);
+    }
+
+    // A rejected refresh request must never enter the refresh queue itself.
+    // Doing so makes refreshToken wait for a queue that only it can resolve,
+    // leaving cart and checkout requests permanently pending.
+    if (isRefreshRequest) {
+      gracefulLogout();
       return Promise.reject(error);
     }
 
