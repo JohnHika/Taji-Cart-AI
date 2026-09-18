@@ -1,6 +1,7 @@
 import { Router } from 'express'
 import {
     assignDeliveryPersonnel,
+    CashOnDeliveryOrderController,
     checkoutController,
     completePickupController,
     getAllOrdersAdmin,
@@ -37,6 +38,7 @@ const adminOrStaff = (req, res, next) => {
 };
 
 // User order routes
+orderRouter.post("/cash-on-delivery", auth, CashOnDeliveryOrderController)
 orderRouter.post('/checkout', auth, checkoutController) // Checkout with payment redirect
 orderRouter.post('/guest-checkout', guestCheckoutController) // Guest checkout (no auth required)
 orderRouter.get('/track-guest', trackGuestOrderController) // Guest order tracking (no auth required)

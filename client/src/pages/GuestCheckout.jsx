@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { FaStore, FaCheckCircle, FaLock } from 'react-icons/fa';
@@ -24,7 +24,11 @@ function GuestCheckout() {
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const cart = useSelector(state => state.cartItem?.cart || []);
+  const [submitting, setSubmitting] = useState(false);
+  const submitLockRef = useRef(false);
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState('cash'); // 'cash' | 'jenga'
   const [orderSuccess, setOrderSuccess] = useState(null);
+  const [orderPaymentLabel, setOrderPaymentLabel] = useState('Cash on Delivery');
   const [locationLoading, setLocationLoading] = useState(false);
 
   const [formData, setFormData] = useState({
@@ -154,6 +158,7 @@ function GuestCheckout() {
   const handleGuestPaymentSuccess = (statusData) => {
     clearGuestCart();
     dispatch(fetchCartItems());
+    setOrderPaymentLabel('M-Pesa');
     setOrderSuccess({
       orderId: statusData?.orderId,
       total,
@@ -164,6 +169,49 @@ function GuestCheckout() {
 
   const handleGuestPaymentError = (message) => {
     toast.error(message || 'Payment failed. Please try again.');
+  };
+
+  const handleGuestCashOrder = async () => {
+    if (submitLockRef.current) return;
+
+    submitLockRef.current = true;
+    setSubmitting(true);
+    try {
+      const response = await Axios({
+        ...SummaryApi.guestCheckout,
+        data: {
+          items: cart,
+          guestEmail: formData.guestEmail.trim().toLowerCase(),
+          guestPhone: formData.guestPhone.trim(),
+          guestShipping,
+          fulfillment_type: formData.fulfillment_type,
+          delivery_mode: formData.delivery_mode,
+          deliveryZoneId: isDelivery && isBikeDelivery ? formData.deliveryZoneId : undefined,
+          deliveryCharge: deliveryCharge,
+          totalAmt: orderTotal,
+          customerLocation: formData.customerLocation,
+          deliveryInstructions: formData.deliveryInstructions,
+          pickup_location: formData.pickup_location,
+        },
+      });
+
+      if (response.data?.success) {
+        clearGuestCart();
+        dispatch(fetchCartItems());
+        setOrderPaymentLabel('Cash on Delivery');
+        setOrderSuccess({
+          orderId: response.data.data.orderId,
+          total,
+          email: formData.guestEmail,
+        });
+        toast.success(response.data.message || 'Order placed successfully!');
+      }
+    } catch (error) {
+      AxiosToastError(error);
+    } finally {
+      submitLockRef.current = false;
+      setSubmitting(false);
+    }
   };
 
   // ─── Order Success screen ─────────────────────────────────────────────────
@@ -189,7 +237,7 @@ function GuestCheckout() {
             </div>
             <div className="flex justify-between">
               <span className="text-brown-500 dark:text-white/60">Payment</span>
-              <span className="font-medium text-charcoal dark:text-white">M-Pesa</span>
+              <span className="font-medium text-charcoal dark:text-white">{orderPaymentLabel}</span>
             </div>
           </div>
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
@@ -245,7 +293,7 @@ function GuestCheckout() {
           <div>
             <h1 className="text-2xl font-bold text-charcoal dark:text-white">Guest Checkout</h1>
             <p className="text-sm text-brown-400 dark:text-white/50 mt-0.5">
-              No account needed — pay securely with M-Pesa.{' '}
+              No account needed — pay on {formData.fulfillment_type === 'delivery' ? 'delivery' : 'pickup'}, or pay securely with M-Pesa.{' '}
               <Link to="/login" className="text-plum-600 dark:text-plum-300 hover:underline font-medium">Have an account? Sign in</Link>
             </p>
           </div>
@@ -488,41 +536,93 @@ function GuestCheckout() {
           <div className="mt-5 space-y-3">
             <p className="text-xs font-semibold uppercase tracking-widest text-brown-300 dark:text-white/30 mb-1">Payment Method</p>
 
-            {isReadyToOrder ? (
-              <JengaPayment
-                cartItems={cart}
-                totalAmount={orderTotal}
-                addressId={null}
-                fulfillment_type={formData.fulfillment_type}
-                pickup_location={formData.pickup_location}
-                deliveryCharge={deliveryCharge}
-                deliveryInstructions={formData.deliveryInstructions}
-                deliveryMode={formData.delivery_mode}
-                deliveryZoneId={formData.deliveryZoneId}
-                customerLocation={formData.customerLocation}
-                payEndpoint={SummaryApi.jengaGuestPayment}
-                statusEndpoint={SummaryApi.checkJengaGuestStatus}
-                extraData={{
-                  guestEmail: formData.guestEmail.trim().toLowerCase(),
-                  guestPhone: formData.guestPhone.trim(),
-                  guestShipping,
-                }}
-                onSuccess={handleGuestPaymentSuccess}
-                onError={handleGuestPaymentError}
-              />
-            ) : (
-              <div className="flex items-center justify-between w-full py-3 px-4 rounded-card border-2 border-brown-100 dark:border-dm-border text-brown-300 dark:text-white/20 font-semibold text-sm">
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setSelectedPaymentMethod('cash')}
+                className={`flex-1 py-2 px-3 rounded-card text-sm font-semibold border-2 transition-colors ${
+                  selectedPaymentMethod === 'cash'
+                    ? 'border-plum-600 text-plum-700 bg-plum-50 dark:border-plum-500 dark:text-plum-200 dark:bg-plum-900/20'
+                    : 'border-brown-100 dark:border-dm-border text-brown-300 dark:text-white/40'
+                }`}
+              >
+                Cash
+              </button>
+              <button
+                type="button"
+                onClick={() => setSelectedPaymentMethod('jenga')}
+                className={`flex-1 py-2 px-3 rounded-card text-sm font-semibold border-2 transition-colors ${
+                  selectedPaymentMethod === 'jenga'
+                    ? 'border-plum-600 text-plum-700 bg-plum-50 dark:border-plum-500 dark:text-plum-200 dark:bg-plum-900/20'
+                    : 'border-brown-100 dark:border-dm-border text-brown-300 dark:text-white/40'
+                }`}
+              >
+                M-Pesa
+              </button>
+            </div>
+
+            {selectedPaymentMethod === 'cash' && (
+              <button
+                onClick={handleGuestCashOrder}
+                disabled={submitting || !isReadyToOrder}
+                className={`flex items-center justify-between w-full py-3 px-4 rounded-card border-2 font-semibold text-sm transition-all duration-200 ${
+                  isReadyToOrder && !submitting
+                    ? 'border-plum-600 text-plum-700 dark:border-plum-500 dark:text-plum-200 bg-plum-50 dark:bg-plum-900/20 hover:bg-plum-100 dark:hover:bg-plum-900/40'
+                    : 'border-brown-100 dark:border-dm-border text-brown-300 dark:text-white/20 cursor-not-allowed'
+                }`}
+              >
                 <span className="flex items-center gap-2">
                   <FaLock className="text-xs opacity-70" />
-                  M-Pesa
+                  {submitting ? 'Placing order…' : `Cash on ${formData.fulfillment_type === 'delivery' ? 'Delivery' : 'Pickup'}`}
                 </span>
-                <span className="text-xs font-normal opacity-60">
-                  {!formData.guestEmail || !formData.guestPhone ? 'Fill contact info' :
-                   isDelivery && (!formData.firstName || !formData.address) ? 'Fill delivery address' :
-                   isDelivery && isBikeDelivery && !formData.deliveryZoneId ? 'Select delivery zone' :
-                   !isDelivery && !formData.pickup_location ? 'Select pickup location' : ''}
-                </span>
-              </div>
+                {!isReadyToOrder && !submitting && (
+                  <span className="text-xs font-normal opacity-60">
+                    {!formData.guestEmail || !formData.guestPhone ? 'Fill contact info' :
+                     isDelivery && (!formData.firstName || !formData.address) ? 'Fill delivery address' :
+                     isDelivery && isBikeDelivery && !formData.deliveryZoneId ? 'Select delivery zone' :
+                     !isDelivery && !formData.pickup_location ? 'Select pickup location' : ''}
+                  </span>
+                )}
+              </button>
+            )}
+
+            {selectedPaymentMethod === 'jenga' && (
+              isReadyToOrder ? (
+                <JengaPayment
+                  cartItems={cart}
+                  totalAmount={orderTotal}
+                  addressId={null}
+                  fulfillment_type={formData.fulfillment_type}
+                  pickup_location={formData.pickup_location}
+                  deliveryCharge={deliveryCharge}
+                  deliveryInstructions={formData.deliveryInstructions}
+                  deliveryMode={formData.delivery_mode}
+                  deliveryZoneId={formData.deliveryZoneId}
+                  customerLocation={formData.customerLocation}
+                  payEndpoint={SummaryApi.jengaGuestPayment}
+                  statusEndpoint={SummaryApi.checkJengaGuestStatus}
+                  extraData={{
+                    guestEmail: formData.guestEmail.trim().toLowerCase(),
+                    guestPhone: formData.guestPhone.trim(),
+                    guestShipping,
+                  }}
+                  onSuccess={handleGuestPaymentSuccess}
+                  onError={handleGuestPaymentError}
+                />
+              ) : (
+                <div className="flex items-center justify-between w-full py-3 px-4 rounded-card border-2 border-brown-100 dark:border-dm-border text-brown-300 dark:text-white/20 font-semibold text-sm">
+                  <span className="flex items-center gap-2">
+                    <FaLock className="text-xs opacity-70" />
+                    M-Pesa
+                  </span>
+                  <span className="text-xs font-normal opacity-60">
+                    {!formData.guestEmail || !formData.guestPhone ? 'Fill contact info' :
+                     isDelivery && (!formData.firstName || !formData.address) ? 'Fill delivery address' :
+                     isDelivery && isBikeDelivery && !formData.deliveryZoneId ? 'Select delivery zone' :
+                     !isDelivery && !formData.pickup_location ? 'Select pickup location' : ''}
+                  </span>
+                </div>
+              )
             )}
 
             <p className="text-xs text-center text-brown-400 dark:text-white/40">

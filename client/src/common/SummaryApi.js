@@ -225,6 +225,10 @@ const SummaryApi = {
         url: `${baseURL}/api/address/disable`,
         method: 'delete'
     },
+    CashOnDeliveryOrder: {
+        url: `${baseURL}/api/order/cash-on-delivery`,
+        method: 'post'
+    },
     payment_url: {
         url: `${baseURL}/api/order/checkout`,
         method: 'post'
