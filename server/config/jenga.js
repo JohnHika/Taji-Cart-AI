@@ -92,6 +92,22 @@ const signStkPushRequest = ({ accountNumber, ref, mobileNumber, telco, amount, c
 };
 
 /**
+ * Sign the hosted PGW checkout fields when the merchant has enabled PGW secure
+ * mode. Jenga specifies this exact concatenation order in its checkout
+ * reference: merchantCode + orderReference + currency + orderAmount +
+ * callbackUrl. The result is an RSA-SHA256 signature encoded as Base64, just
+ * like the other Jenga request signatures.
+ */
+const signPgwCheckoutRequest = ({ merchantCode, orderReference, currency, orderAmount, callbackUrl }) => {
+  const privateKey = getPrivateKey();
+  const dataToSign = `${merchantCode}${orderReference}${currency}${orderAmount}${callbackUrl}`;
+  const signer = crypto.createSign('RSA-SHA256');
+  signer.update(dataToSign);
+  signer.end();
+  return signer.sign(privateKey, 'base64');
+};
+
+/**
  * Signs a single reference string with the merchant's RSA private key
  * (SHA256, Base64) — used for the Query Transaction Details `Signature`
  * header. Jenga's own docs describe this generically (see the
@@ -110,6 +126,7 @@ const signReference = (ref) => {
 export {
   getAuthToken,
   signStkPushRequest,
+  signPgwCheckoutRequest,
   signReference,
   JENGA_STK_PUSH_URL,
   JENGA_PGW_CHECKOUT_URL,

@@ -3,6 +3,7 @@ import crypto from 'crypto';
 import {
   getAuthToken,
   signStkPushRequest,
+  signPgwCheckoutRequest,
   signReference,
   JENGA_STK_PUSH_URL,
   JENGA_PGW_CHECKOUT_URL,
@@ -73,10 +74,14 @@ const pricewithDiscount = (price, dis = 0) => {
 // a longer reference, but production is expected to, so this must stay <= 6.
 const ORDER_REFERENCE_CHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
 const ORDER_REFERENCE_LENGTH = 6;
-const buildOrderReference = () => {
-  const bytes = crypto.randomBytes(ORDER_REFERENCE_LENGTH);
+// PGW checkout requires an alphanumeric merchant reference of at least eight
+// characters. Keep the M-Pesa reference at Jenga's documented six-character
+// limit, while generating a longer reference for card checkout.
+const PGW_ORDER_REFERENCE_LENGTH = 12;
+const buildOrderReference = (length = ORDER_REFERENCE_LENGTH) => {
+  const bytes = crypto.randomBytes(length);
   let ref = '';
-  for (let i = 0; i < ORDER_REFERENCE_LENGTH; i++) {
+  for (let i = 0; i < length; i++) {
     ref += ORDER_REFERENCE_CHARS[bytes[i] % ORDER_REFERENCE_CHARS.length];
   }
   return ref;
@@ -86,9 +91,9 @@ const buildOrderReference = () => {
 // are plausible at scale, and Jenga itself rejects a duplicate ref with a
 // 400 — so claim a reference that isn't already in use before it's written
 // to any record.
-const claimOrderReference = async () => {
+const claimOrderReference = async (length = ORDER_REFERENCE_LENGTH) => {
   for (let attempt = 0; attempt < 5; attempt++) {
-    const candidate = buildOrderReference();
+    const candidate = buildOrderReference(length);
     const exists = await JengaPayment.exists({ orderReference: candidate });
     if (!exists) return candidate;
   }
@@ -173,7 +178,7 @@ const priceItems = async (items) => {
  * Does not touch JengaPayment — each channel creates its own record with
  * its own channel-specific fields (e.g. phoneNumber semantics differ).
  */
-const buildPendingOrder = async (request) => {
+const buildPendingOrder = async (request, { orderReferenceLength = ORDER_REFERENCE_LENGTH } = {}) => {
   const userId = request.userId;
   const {
     list_items,
@@ -264,7 +269,7 @@ const buildPendingOrder = async (request) => {
     throw err;
   }
 
-  const orderReference = await claimOrderReference();
+  const orderReference = await claimOrderReference(orderReferenceLength);
   const sharedOrderId = `ORD-${new mongoose.Types.ObjectId()}`;
 
   // Create the local pending order BEFORE contacting Jenga.
@@ -415,10 +420,10 @@ export const initiateJengaPayment = async (request, response) => {
 // it renders as a free-text merchant-supplied label in every example. Kept
 // as a constant so it's one place to fix if a live UAT submission rejects it.
 const JENGA_PGW_PRODUCT_TYPE = 'General';
-// Minutes the hosted checkout session stays valid before Jenga expires it.
-// Docs don't specify units explicitly; 30 is a safe, common default to
-// verify against a real UAT run.
-const JENGA_PGW_PAYMENT_TIME_LIMIT = '30';
+// Jenga's checkout reference expresses this duration with the `mins` suffix
+// (for example, `15mins`). Use the same documented format rather than a bare
+// number that the hosted form could reject.
+const JENGA_PGW_PAYMENT_TIME_LIMIT = '30mins';
 const JENGA_PGW_DEFAULT_COUNTRY_CODE = 'KE';
 const JENGA_PGW_DEFAULT_POSTAL_CODE = '00100';
 
@@ -441,7 +446,7 @@ export const initiateJengaCardPayment = async (request, response) => {
     }
 
     const userId = request.userId;
-    const built = await buildPendingOrder(request);
+    const built = await buildPendingOrder(request, { orderReferenceLength: PGW_ORDER_REFERENCE_LENGTH });
     orderReference = built.orderReference;
     sharedOrderId = built.sharedOrderId;
     const { totalAmt, fulfillment_type } = built;
@@ -472,8 +477,13 @@ export const initiateJengaCardPayment = async (request, response) => {
     });
 
     const merchantCode = requireEnv('JENGA_MERCHANT_CODE');
-    const callbackUrl = buildJengaCallbackUrl(requireEnv('JENGA_CARD_CALLBACK_URL'));
+    // The checkout fields are browser-visible while the form is submitted.
+    // Do not append a private callback token here: it would be exposed to the
+    // customer. The card callback is instead safe because it only triggers a
+    // server-side, RSA-signed transaction-status query before finalization.
+    const callbackUrl = requireEnv('JENGA_CARD_CALLBACK_URL');
     const token = await getAuthToken();
+    const orderAmount = totalAmt.toFixed(2);
 
     return response.status(200).json({
       success: true,
@@ -485,7 +495,7 @@ export const initiateJengaCardPayment = async (request, response) => {
           token,
           merchantCode,
           currency: 'KES',
-          orderAmount: totalAmt.toFixed(2),
+          orderAmount,
           orderReference,
           productType: JENGA_PGW_PRODUCT_TYPE,
           productDescription: `Nawiri Hair order ${sharedOrderId}`,
@@ -498,6 +508,13 @@ export const initiateJengaCardPayment = async (request, response) => {
           customerPostalCodeZip,
           countryCode: JENGA_PGW_DEFAULT_COUNTRY_CODE,
           callbackUrl,
+          signature: signPgwCheckoutRequest({
+            merchantCode,
+            orderReference,
+            currency: 'KES',
+            orderAmount,
+            callbackUrl,
+          }),
         },
       },
     });
@@ -886,12 +903,6 @@ export const handleJengaCardCallback = async (request, response) => {
   };
 
   try {
-    const expectedToken = process.env.JENGA_CALLBACK_SECRET;
-    if (expectedToken && request.query?.token !== expectedToken) {
-      console.error('Jenga card callback rejected: missing/incorrect token');
-      return redirectTo('error');
-    }
-
     const orderReference = request.query?.orderReference;
     if (!orderReference) {
       console.error('Jenga card callback missing orderReference:', request.query);
