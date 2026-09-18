@@ -73,7 +73,7 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const user = useSelector(state => state.user);
-  const { ensureCriteria, gateModal } = useCriteriaGate();
+  const { gateModal } = useCriteriaGate();
 
   const [usePoints, setUsePoints] = useState(false);
   const [availablePoints, setAvailablePoints] = useState(0);
@@ -216,9 +216,7 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
       setAddressError(true);
     }
   }, [eligibleAddressIndexes, selectAddress]);
-  const checkoutLockRef = useRef(false);
-  const [checkoutAction, setCheckoutAction] = useState('');
-  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState('cash'); // 'cash' | 'jenga'
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState('jenga'); // 'jenga' | 'jenga-card'
 
   // Display only — the server always recomputes this from the authoritative
   // zone fare or the flat default, never trusting a client-supplied amount.
@@ -306,147 +304,21 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
   const finalPrice = usePoints 
     ? Math.max(0, priceAfterCommunityDiscount + deliveryCharge - pointsValue) 
     : priceAfterCommunityDiscount + deliveryCharge;
-  const isCheckoutBusy = checkoutAction !== '';
   const hasCheckoutAmount = useMemo(() => {
     const numericTotal = Number(totalPrice || 0);
 
     return cartItemsList.length > 0 && totalQty > 0 && numericTotal > 0;
   }, [cartItemsList.length, totalPrice, totalQty]);
-  const cartFingerprint = cartItemsList
-    .map((item) => `${item?._id || item?.productId?._id}:${item?.quantity || 0}`)
-    .join('|');
-  const checkoutScope = `${user?._id || 'guest'}:${fulfillmentMethod}:${selectAddress ?? 'pickup'}:${pickupLocation}:${cartFingerprint}:${finalPrice}`;
   const checkoutRedirectedRef = useRef(false);
-
-  const runCheckoutAction = async (actionName, callback) => {
-    if (checkoutLockRef.current) {
-      return;
-    }
-
-    checkoutLockRef.current = true;
-    setCheckoutAction(actionName);
-
-    try {
-      await callback();
-    } finally {
-      checkoutLockRef.current = false;
-      setCheckoutAction('');
-    }
-  };
 
   // Pickup locations (in a real app, these would likely come from an API)
   const pickupLocations = [
     { name: 'Main Store', address: nawiriBrand.location }
   ];
 
-  // Validate address is selected before payment
-  const validateAddress = () => {
-    if (fulfillmentMethod === 'delivery') {
-      if (!isPaymentEnabled) {
-        setAddressError(true);
-        toast.error('Please select a delivery address and share your location before proceeding');
-        return false;
-      }
-
-      if (deliveryMode === 'bike' && !deliveryZoneId) {
-        toast.error('Please select your delivery zone.');
-        return false;
-      }
-
-      if (deliveryMode !== 'bike' && !customerLocation) {
-        toast.error('Delivery requires your live location within Nairobi CBD.');
-        setShowLocationModal(true);
-        return false;
-      }
-
-      if (deliveryMode !== 'bike' && !deliveryInstructions.trim()) {
-        toast.error('Please enter exact delivery instructions so the rider can find you.');
-        setShowLocationModal(true);
-        return false;
-      }
-
-      if (deliveryMode === 'foot' && !footDeliveryEligibility.eligible) {
-        toast.error(
-          `Foot delivery is only available within Nairobi CBD (${NAIROBI_CBD_RADIUS_KM}km radius).`
-        );
-        setShowLocationModal(true);
-        return false;
-      }
-    } else if (fulfillmentMethod === 'pickup' && !pickupLocation) {
-      toast.error('Please select a pickup location');
-      return false;
-    } else if (fulfillmentMethod === 'sacco_pickup' && (!saccoOperatorId || !saccoDestinationTown)) {
-      toast.error('Please select a SACCO/bus operator and destination town');
-      return false;
-    }
-    return true;
-  };
-
   const captureCustomerLocation = () => {
     setShowLocationModal(true);
   };
-
-  const handleCashOnDelivery = async() => {
-    if (!(await ensureCriteria('checkout'))) return;
-    if (!validateAddress()) return;
-
-    await runCheckoutAction('cash', async () => {
-      try {
-        const response = await Axios({
-          ...SummaryApi.CashOnDeliveryOrder,
-          data : {
-            list_items : cartItemsList,
-            addressId : fulfillmentMethod === 'delivery' ? addressList[selectAddress]._id : null,
-            subTotalAmt : totalPrice,
-            deliveryCharge: deliveryCharge,
-            totalAmt : finalPrice,
-            usePoints: usePoints,
-            pointsUsed: usePoints ? pointsValue : 0,
-            communityRewardId: selectedReward ? selectedReward._id : null,
-            communityDiscountAmount: selectedReward && selectedReward.type === 'discount' ? communityDiscount : 0,
-            fulfillment_type: fulfillmentMethod,
-            delivery_mode: fulfillmentMethod === 'delivery' ? deliveryMode : 'standard',
-            deliveryZoneId: fulfillmentMethod === 'delivery' && deliveryMode === 'bike' ? deliveryZoneId : undefined,
-            customerLocation,
-            deliveryInstructions,
-            pickup_location: pickupLocation,
-            pickup_instructions: pickupInstructions,
-            saccoOperatorId: fulfillmentMethod === 'sacco_pickup' ? saccoOperatorId : undefined,
-            saccoDestinationTown: fulfillmentMethod === 'sacco_pickup' ? saccoDestinationTown : undefined
-          },
-          requestLockKey: `checkout:cash:${checkoutScope}`
-        });
-
-        const { data: responseData } = response;
-
-        if(responseData.success){
-            dispatch(clearCartItems());
-            toast.success(responseData.message);
-
-            if(fetchCartItem){
-              fetchCartItem();
-            }
-
-            if(fetchOrder){
-              fetchOrder();
-            }
-
-            if (isCutView && onClose) {
-              onClose();
-            }
-
-            navigate('/success', {
-              state: {
-                text: "Order",
-                receipt: responseData.data.map(order => order.invoice_receipt)
-              }
-            });
-        }
-      } catch (error) {
-        AxiosToastError(error);
-      }
-    });
-  }
 
   const handleJengaPaymentSuccess = () => {
     dispatch(clearCartItems());
@@ -850,17 +722,6 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
               <div className="flex gap-2">
                 <button
                   type="button"
-                  onClick={() => setSelectedPaymentMethod('cash')}
-                  className={`flex-1 py-2 px-3 rounded text-sm font-semibold border-2 transition-colors ${
-                    selectedPaymentMethod === 'cash'
-                      ? 'border-plum-600 text-plum-700 bg-plum-50 dark:border-plum-500 dark:text-plum-200 dark:bg-plum-900/20'
-                      : 'border-brown-200 text-brown-400 dark:border-dm-border dark:text-white/40'
-                  }`}
-                >
-                  Cash on Delivery
-                </button>
-                <button
-                  type="button"
                   onClick={() => setSelectedPaymentMethod('jenga')}
                   className={`flex-1 py-2 px-3 rounded text-sm font-semibold border-2 transition-colors ${
                     selectedPaymentMethod === 'jenga'
@@ -882,22 +743,6 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
                   Card
                 </button>
               </div>
-
-              {selectedPaymentMethod === 'cash' && (
-                <button
-                  className={`w-full py-2 px-4 border-2 font-semibold transition-colors duration-200 rounded ${
-                    isPaymentEnabled && !isCheckoutBusy
-                      ? 'border-plum-600 text-plum-700 hover:bg-plum-50 hover:text-plum-900 dark:border-plum-500 dark:text-plum-200 dark:hover:bg-plum-900/40 dark:hover:text-white'
-                      : 'border-brown-200 text-brown-300 dark:border-dm-border dark:text-white/30 cursor-not-allowed'
-                  }`}
-                  onClick={handleCashOnDelivery}
-                  disabled={!isPaymentEnabled || isCheckoutBusy}
-                >
-                  {checkoutAction === 'cash'
-                    ? 'Placing order...'
-                    : `${fulfillmentMethod === 'sacco_pickup' ? 'Place Order — Pay at SACCO terminal' : `Cash on ${fulfillmentMethod === 'delivery' ? 'Delivery' : 'Pickup'}`}${!isPaymentEnabled ? ' (' + paymentBlockedReason + ')' : ''}`}
-                </button>
-              )}
 
               {selectedPaymentMethod === 'jenga' && isPaymentEnabled && (
                 <JengaPayment
@@ -1477,17 +1322,6 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
             <div className="flex gap-2">
               <button
                 type="button"
-                onClick={() => setSelectedPaymentMethod('cash')}
-                className={`flex-1 py-2 px-3 rounded-card text-sm font-semibold border-2 transition-colors ${
-                  selectedPaymentMethod === 'cash'
-                    ? 'border-plum-600 text-plum-700 bg-plum-50 dark:border-plum-500 dark:text-plum-200 dark:bg-plum-900/20'
-                    : 'border-brown-100 dark:border-dm-border text-brown-300 dark:text-white/40'
-                }`}
-              >
-                Cash
-              </button>
-              <button
-                type="button"
                 onClick={() => setSelectedPaymentMethod('jenga')}
                 className={`flex-1 py-2 px-3 rounded-card text-sm font-semibold border-2 transition-colors ${
                   selectedPaymentMethod === 'jenga'
@@ -1509,25 +1343,6 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
                 Card
               </button>
             </div>
-
-            {selectedPaymentMethod === 'cash' && (
-              <button
-                className={`flex items-center justify-between w-full py-3 px-4 rounded-card border-2 font-semibold text-sm transition-all duration-200 press ${
-                  isPaymentEnabled && !isCheckoutBusy
-                    ? 'border-plum-600 text-plum-700 dark:border-plum-500 dark:text-plum-200 bg-plum-50 dark:bg-plum-900/20 hover:bg-plum-100 dark:hover:bg-plum-900/40'
-                    : 'border-brown-100 dark:border-dm-border text-brown-300 dark:text-white/20 cursor-not-allowed'
-                }`}
-                onClick={handleCashOnDelivery}
-                disabled={!isPaymentEnabled || isCheckoutBusy}
-              >
-                <span>{checkoutAction === 'cash' ? 'Placing order...' : `${fulfillmentMethod === 'sacco_pickup' ? 'Place Order —' : 'Cash on'} ${fulfillmentMethod === 'delivery' ? 'Delivery' : fulfillmentMethod === 'pickup' ? 'Pickup' : 'Pay at SACCO terminal'}`}</span>
-                {!isPaymentEnabled && (
-                  <span className="text-xs font-normal opacity-60">
-                    {paymentBlockedReason}
-                  </span>
-                )}
-              </button>
-            )}
 
             {selectedPaymentMethod === 'jenga' && isPaymentEnabled && (
               <JengaPayment

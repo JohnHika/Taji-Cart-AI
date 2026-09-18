@@ -11,6 +11,9 @@ import {
   requireEnv,
 } from '../config/jenga.js';
 import axios from 'axios';
+import sendEmail from '../config/sendEmail.js';
+import { renderOrderNoticeEmail } from '../utils/emailTemplates.js';
+import { nawiriBrand } from '../utils/brand.js';
 import JengaPayment from '../models/jengaPayment.model.js';
 import OrderModel from '../models/order.model.js';
 import ProductModel from '../models/product.model.js';
@@ -178,7 +181,7 @@ const priceItems = async (items) => {
  * Does not touch JengaPayment — each channel creates its own record with
  * its own channel-specific fields (e.g. phoneNumber semantics differ).
  */
-const buildPendingOrder = async (request, { orderReferenceLength = ORDER_REFERENCE_LENGTH } = {}) => {
+const buildPendingOrder = async (request, { orderReferenceLength = ORDER_REFERENCE_LENGTH, isGuest = false } = {}) => {
   const userId = request.userId;
   const {
     list_items,
@@ -188,12 +191,20 @@ const buildPendingOrder = async (request, { orderReferenceLength = ORDER_REFEREN
     pickup_instructions,
     saccoOperatorId,
     saccoDestinationTown,
+    guestEmail,
+    guestPhone,
+    guestShipping,
   } = request.body;
 
   const deliveryMode = getDeliveryModeFromPayload(request.body);
   const customerLocation = extractCoordinatesFromPayload(request.body);
 
-  if (fulfillment_type === 'delivery' && !addressId) {
+  if (fulfillment_type === 'delivery' && isGuest && (!guestShipping?.address || !guestShipping?.city)) {
+    const err = new Error('Delivery address is required for delivery orders');
+    err.statusCode = 400;
+    throw err;
+  }
+  if (fulfillment_type === 'delivery' && !isGuest && !addressId) {
     const err = new Error('Delivery address is required for delivery orders');
     err.statusCode = 400;
     throw err;
@@ -274,14 +285,18 @@ const buildPendingOrder = async (request, { orderReferenceLength = ORDER_REFEREN
 
   // Create the local pending order BEFORE contacting Jenga.
   const orderPayload = normalizedItems.map((item) => ({
-    userId,
+    userId: isGuest ? undefined : userId,
+    isGuest,
+    guestEmail: isGuest ? (guestEmail || '') : undefined,
+    guestPhone: isGuest ? (guestPhone || '') : undefined,
+    guestShipping: isGuest ? (guestShipping || {}) : undefined,
     orderId: sharedOrderId,
     productId: item.productId._id,
     product_details: { name: item.productId.name, image: item.productId.image },
     quantity: item.quantity,
     paymentId: orderReference,
     payment_status: 'PENDING',
-    delivery_address: fulfillment_type === 'delivery' ? addressId : null,
+    delivery_address: fulfillment_type === 'delivery' && !isGuest ? addressId : null,
     fulfillment_type,
     delivery_mode: deliveryMode || 'standard',
     delivery_zone: deliveryZone ? deliveryZone._id : undefined,
@@ -305,14 +320,14 @@ const buildPendingOrder = async (request, { orderReferenceLength = ORDER_REFEREN
 };
 
 /**
- * POST /api/jenga/pay
- * Authenticated. Validates phone/amount, creates a PENDING order + payment
- * record locally, then initiates the Jenga STK push. Order is not finalized
- * and stock is not touched here — only after verified payment.
+ * Shared by both the authenticated and guest M-Pesa STK entry points:
+ * validates the phone number, builds the PENDING order (guest or
+ * authenticated per `isGuest`), and initiates the Jenga STK push. Order is
+ * not finalized and stock is not touched here — only after verified payment.
  */
-export const initiateJengaPayment = async (request, response) => {
+const performJengaStkInitiate = async (request, response, { isGuest = false } = {}) => {
   try {
-    const userId = request.userId;
+    const userId = isGuest ? undefined : request.userId;
     const { phoneNumber } = request.body;
 
     const normalizedPhone = normalizeKenyanPhone(phoneNumber);
@@ -324,7 +339,7 @@ export const initiateJengaPayment = async (request, response) => {
       });
     }
 
-    const { orderReference, sharedOrderId, totalAmt } = await buildPendingOrder(request);
+    const { orderReference, sharedOrderId, totalAmt } = await buildPendingOrder(request, { isGuest });
 
     await JengaPayment.create({
       orderReference,
@@ -415,6 +430,22 @@ export const initiateJengaPayment = async (request, response) => {
     return response.status(error.statusCode || 500).json({ success: false, error: true, message, code: error.code });
   }
 };
+
+/**
+ * POST /api/jenga/pay
+ * Authenticated.
+ */
+export const initiateJengaPayment = (request, response) =>
+  performJengaStkInitiate(request, response, { isGuest: false });
+
+/**
+ * POST /api/jenga/guest/pay
+ * Public — no account required. Same STK flow, but the PENDING order is
+ * tagged isGuest with guestEmail/guestPhone/guestShipping instead of a
+ * userId/addressId (see buildPendingOrder).
+ */
+export const initiateGuestJengaPayment = (request, response) =>
+  performJengaStkInitiate(request, response, { isGuest: true });
 
 // Jenga's PGW checkout form docs don't publish a fixed enum for productType —
 // it renders as a free-text merchant-supplied label in every example. Kept
@@ -655,16 +686,45 @@ const finalizePaidOrder = async (paymentDoc) => {
     { $set: { payment_status: 'PAID', paymentId: paymentDoc.orderReference } }
   );
 
-  await CartProductModel.deleteMany({ userId: paymentDoc.userId });
-  await UserModel.updateOne({ _id: paymentDoc.userId }, { shopping_cart: [] });
+  if (paymentDoc.userId) {
+    await CartProductModel.deleteMany({ userId: paymentDoc.userId });
+    await UserModel.updateOne({ _id: paymentDoc.userId }, { shopping_cart: [] });
 
-  await NotificationModel.create({
-    type: 'order_placed',
-    title: 'Order Placed Successfully',
-    message: 'Your payment was received and your order is confirmed.',
-    isRead: false,
-    userId: paymentDoc.userId,
-  });
+    await NotificationModel.create({
+      type: 'order_placed',
+      title: 'Order Placed Successfully',
+      message: 'Your payment was received and your order is confirmed.',
+      isRead: false,
+      userId: paymentDoc.userId,
+    });
+  } else {
+    // Guest payment — no cart/notification to clean up server-side (the
+    // guest cart lives client-side), but they still need an email since
+    // they have no "My Orders" to check.
+    const guestEmail = orders[0]?.guestEmail;
+    if (guestEmail) {
+      try {
+        await sendEmail({
+          sendTo: guestEmail,
+          subject: `Order Confirmed! - ${nawiriBrand.shortName}`,
+          html: renderOrderNoticeEmail({
+            name: orders[0]?.guestShipping?.firstName || guestEmail.split('@')[0],
+            title: 'Order Confirmed!',
+            intro: 'Thank you for your order! Your M-Pesa payment was received and we\'re processing it now.',
+            orderId: paymentDoc.orderId,
+            total: `KES ${Number(paymentDoc.amount || 0).toLocaleString()}`,
+            fulfillmentType: orders[0]?.fulfillment_type === 'pickup' ? 'Store pickup' : 'Delivery',
+            pickupLocation: orders[0]?.pickup_location,
+            verificationCode: orders[0]?.pickupVerificationCode,
+            ctaLabel: 'Visit Nawiri Hair Kenya',
+            ctaUrl: nawiriBrand.websiteUrl,
+          }),
+        });
+      } catch (emailError) {
+        console.error('Error sending guest order confirmation email:', emailError);
+      }
+    }
+  }
 };
 
 const markOrderUnpaid = async (paymentDoc, localStatus) => {
@@ -788,6 +848,7 @@ export const getJengaPaymentStatus = async (request, response) => {
     return response.json({
       success: true,
       status: isStale ? 'stale' : doc.status,
+      orderId: doc.orderId,
       resultDesc: isStale
         ? 'No confirmation received yet. If you approved the payment, contact support with your order reference.'
         : doc.resultDesc,

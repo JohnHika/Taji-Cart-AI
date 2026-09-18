@@ -27,6 +27,9 @@ const JengaPayment = ({
   deliveryMode = 'standard',
   deliveryZoneId = '',
   customerLocation = null,
+  payEndpoint = SummaryApi.jengaPayment,
+  statusEndpoint = SummaryApi.checkJengaStatus,
+  extraData = {},
 }) => {
   const [phoneNumber, setPhoneNumber] = useState('');
   const [stage, setStage] = useState('idle'); // idle | initiating | pending | done
@@ -56,8 +59,8 @@ const JengaPayment = ({
 
       try {
         const response = await Axios({
-          ...SummaryApi.checkJengaStatus,
-          url: SummaryApi.checkJengaStatus.url.replace(':orderReference', orderReference),
+          ...statusEndpoint,
+          url: statusEndpoint.url.replace(':orderReference', orderReference),
         });
 
         const status = response?.data?.status;
@@ -109,7 +112,7 @@ const JengaPayment = ({
 
     try {
       const response = await Axios({
-        ...SummaryApi.jengaPayment,
+        ...payEndpoint,
         data: {
           phoneNumber,
           list_items: cartItems,
@@ -126,6 +129,7 @@ const JengaPayment = ({
           delivery_mode: fulfillment_type === 'delivery' ? deliveryMode : 'standard',
           deliveryZoneId: fulfillment_type === 'delivery' && deliveryMode === 'bike' ? deliveryZoneId : undefined,
           customerLocation: fulfillment_type === 'delivery' ? customerLocation : undefined,
+          ...extraData,
         },
         requestLockKey: `payment:jenga:${phoneNumber}:${totalAmount}:${addressId || pickup_location || 'pickup'}`,
       });

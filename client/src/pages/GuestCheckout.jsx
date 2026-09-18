@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useRef, useEffect } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { FaStore, FaCheckCircle, FaLock } from 'react-icons/fa';
@@ -11,6 +11,7 @@ import { fetchCartItems } from '../store/cartProduct';
 import { nawiriBrand } from '../config/brand';
 import CheckoutRoyalCard from '../components/CheckoutRoyalCard'; // Premium Royal Card teaser
 import GuestAccountPrompt from '../components/GuestAccountPrompt';
+import JengaPayment from '../components/JengaPayment';
 import { DEFAULT_DELIVERY_CHARGE, formatDistanceKm, getFootDeliveryEligibility, NAIROBI_CBD_RADIUS_KM } from '../utils/cbdDelivery';
 import DeliveryLocationModal from '../components/DeliveryLocationModal';
 import { DisplayPriceInShillings } from '../utils/DisplayPriceInShillings';
@@ -23,8 +24,6 @@ function GuestCheckout() {
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const cart = useSelector(state => state.cartItem?.cart || []);
-  const [submitting, setSubmitting] = useState(false);
-  const submitLockRef = useRef(false);
   const [orderSuccess, setOrderSuccess] = useState(null);
   const [locationLoading, setLocationLoading] = useState(false);
 
@@ -106,7 +105,8 @@ function GuestCheckout() {
 
   // Delivery needs address form + location; pickup does not
   const isReadyToOrder = useMemo(() => {
-    if (!formData.guestEmail || !formData.guestPhone) return false;
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.guestEmail)) return false;
+    if (!formData.guestPhone || formData.guestPhone.length < 10) return false;
     if (isDelivery) {
       if (!formData.firstName || !formData.lastName || !formData.address || !formData.city) return false;
       if (isBikeDelivery) {
@@ -140,78 +140,30 @@ function GuestCheckout() {
     setShowLocationModal(true);
   };
 
-  const validate = () => {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!formData.guestEmail) { toast.error('Email is required'); return false; }
-    if (!emailRegex.test(formData.guestEmail)) { toast.error('Please enter a valid email address'); return false; }
-    if (!formData.guestPhone || formData.guestPhone.length < 10) { toast.error('Please enter a valid phone number (min 10 digits)'); return false; }
-    if (isDelivery) {
-      if (!formData.firstName || !formData.lastName) { toast.error('Please enter your full name'); return false; }
-      if (!formData.address || !formData.city) { toast.error('Please fill in your delivery address'); return false; }
-      if (isBikeDelivery) {
-        if (!formData.deliveryZoneId) { toast.error('Please select your delivery zone'); return false; }
-      } else {
-        if (!formData.customerLocation) { toast.error('Delivery requires your live location within Nairobi CBD'); setShowLocationModal(true); return false; }
-        if (!formData.deliveryInstructions?.trim()) { toast.error('Please enter exact delivery instructions so the rider can find you'); setShowLocationModal(true); return false; }
-        if (!footDeliveryEligibility.eligible) { toast.error(`Delivery is only available within Nairobi CBD (${NAIROBI_CBD_RADIUS_KM}km radius)`); setShowLocationModal(true); return false; }
-      }
-    } else {
-      if (!formData.pickup_location) { toast.error('Please select a pickup location'); return false; }
-    }
-    return true;
+  const guestShipping = {
+    firstName: formData.firstName,
+    lastName: formData.lastName,
+    address: formData.address,
+    city: formData.city,
+    zipCode: formData.zipCode,
+    phone: formData.guestPhone,
+    name: `${formData.firstName} ${formData.lastName}`.trim(),
+    coordinates: formData.customerLocation,
   };
 
-  const handlePlaceOrder = async () => {
-    if (submitLockRef.current) return;
-    if (!validate()) return;
-    if (cart.length === 0) { toast.error('Your cart is empty'); return; }
+  const handleGuestPaymentSuccess = (statusData) => {
+    clearGuestCart();
+    dispatch(fetchCartItems());
+    setOrderSuccess({
+      orderId: statusData?.orderId,
+      total,
+      email: formData.guestEmail,
+    });
+    toast.success('Payment confirmed! Your order is placed.');
+  };
 
-    submitLockRef.current = true;
-    setSubmitting(true);
-    try {
-      const response = await Axios({
-        ...SummaryApi.guestCheckout,
-        data: {
-          items: cart,
-          guestEmail: formData.guestEmail.trim().toLowerCase(),
-          guestPhone: formData.guestPhone.trim(),
-          guestShipping: {
-            firstName: formData.firstName,
-            lastName: formData.lastName,
-            address: formData.address,
-            city: formData.city,
-            zipCode: formData.zipCode,
-            phone: formData.guestPhone,
-            name: `${formData.firstName} ${formData.lastName}`.trim(),
-            coordinates: formData.customerLocation,
-          },
-          fulfillment_type: formData.fulfillment_type,
-          delivery_mode: formData.delivery_mode,
-          deliveryZoneId: isDelivery && isBikeDelivery ? formData.deliveryZoneId : undefined,
-          deliveryCharge: deliveryCharge,
-          totalAmt: orderTotal,
-          customerLocation: formData.customerLocation,
-          deliveryInstructions: formData.deliveryInstructions,
-          pickup_location: formData.pickup_location,
-        },
-      });
-
-      if (response.data?.success) {
-        clearGuestCart();
-        dispatch(fetchCartItems());
-        setOrderSuccess({
-          orderId: response.data.data.orderId,
-          total,
-          email: formData.guestEmail,
-        });
-        toast.success(response.data.message || 'Order placed successfully!');
-      }
-    } catch (error) {
-      AxiosToastError(error);
-    } finally {
-      submitLockRef.current = false;
-      setSubmitting(false);
-    }
+  const handleGuestPaymentError = (message) => {
+    toast.error(message || 'Payment failed. Please try again.');
   };
 
   // ─── Order Success screen ─────────────────────────────────────────────────
@@ -237,7 +189,7 @@ function GuestCheckout() {
             </div>
             <div className="flex justify-between">
               <span className="text-brown-500 dark:text-white/60">Payment</span>
-              <span className="font-medium text-charcoal dark:text-white">Cash on {formData.fulfillment_type === 'delivery' ? 'Delivery' : 'Pickup'}</span>
+              <span className="font-medium text-charcoal dark:text-white">M-Pesa</span>
             </div>
           </div>
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
@@ -293,7 +245,7 @@ function GuestCheckout() {
           <div>
             <h1 className="text-2xl font-bold text-charcoal dark:text-white">Guest Checkout</h1>
             <p className="text-sm text-brown-400 dark:text-white/50 mt-0.5">
-              No account needed — pay on {formData.fulfillment_type === 'delivery' ? 'delivery' : 'pickup'}.{' '}
+              No account needed — pay securely with M-Pesa.{' '}
               <Link to="/login" className="text-plum-600 dark:text-plum-300 hover:underline font-medium">Have an account? Sign in</Link>
             </p>
           </div>
@@ -535,28 +487,43 @@ function GuestCheckout() {
           {/* Place order */}
           <div className="mt-5 space-y-3">
             <p className="text-xs font-semibold uppercase tracking-widest text-brown-300 dark:text-white/30 mb-1">Payment Method</p>
-            <button
-              onClick={handlePlaceOrder}
-              disabled={submitting || !isReadyToOrder}
-              className={`flex items-center justify-between w-full py-3 px-4 rounded-card border-2 font-semibold text-sm transition-all duration-200 ${
-                isReadyToOrder && !submitting
-                  ? 'border-plum-600 text-plum-700 dark:border-plum-500 dark:text-plum-200 bg-plum-50 dark:bg-plum-900/20 hover:bg-plum-100 dark:hover:bg-plum-900/40'
-                  : 'border-brown-100 dark:border-dm-border text-brown-300 dark:text-white/20 cursor-not-allowed'
-              }`}
-            >
-              <span className="flex items-center gap-2">
-                <FaLock className="text-xs opacity-70" />
-                {submitting ? 'Placing order…' : `Cash on ${formData.fulfillment_type === 'delivery' ? 'Delivery' : 'Pickup'}`}
-              </span>
-              {!isReadyToOrder && !submitting && (
+
+            {isReadyToOrder ? (
+              <JengaPayment
+                cartItems={cart}
+                totalAmount={orderTotal}
+                addressId={null}
+                fulfillment_type={formData.fulfillment_type}
+                pickup_location={formData.pickup_location}
+                deliveryCharge={deliveryCharge}
+                deliveryInstructions={formData.deliveryInstructions}
+                deliveryMode={formData.delivery_mode}
+                deliveryZoneId={formData.deliveryZoneId}
+                customerLocation={formData.customerLocation}
+                payEndpoint={SummaryApi.jengaGuestPayment}
+                statusEndpoint={SummaryApi.checkJengaGuestStatus}
+                extraData={{
+                  guestEmail: formData.guestEmail.trim().toLowerCase(),
+                  guestPhone: formData.guestPhone.trim(),
+                  guestShipping,
+                }}
+                onSuccess={handleGuestPaymentSuccess}
+                onError={handleGuestPaymentError}
+              />
+            ) : (
+              <div className="flex items-center justify-between w-full py-3 px-4 rounded-card border-2 border-brown-100 dark:border-dm-border text-brown-300 dark:text-white/20 font-semibold text-sm">
+                <span className="flex items-center gap-2">
+                  <FaLock className="text-xs opacity-70" />
+                  M-Pesa
+                </span>
                 <span className="text-xs font-normal opacity-60">
                   {!formData.guestEmail || !formData.guestPhone ? 'Fill contact info' :
                    isDelivery && (!formData.firstName || !formData.address) ? 'Fill delivery address' :
                    isDelivery && isBikeDelivery && !formData.deliveryZoneId ? 'Select delivery zone' :
                    !isDelivery && !formData.pickup_location ? 'Select pickup location' : ''}
                 </span>
-              )}
-            </button>
+              </div>
+            )}
 
             <p className="text-xs text-center text-brown-400 dark:text-white/40">
               By placing this order you agree to our{' '}

@@ -225,10 +225,6 @@ const SummaryApi = {
         url: `${baseURL}/api/address/disable`,
         method: 'delete'
     },
-    CashOnDeliveryOrder: {
-        url: `${baseURL}/api/order/cash-on-delivery`,
-        method: 'post'
-    },
     payment_url: {
         url: `${baseURL}/api/order/checkout`,
         method: 'post'
@@ -252,6 +248,14 @@ const SummaryApi = {
     jengaCardPayment: {
         url: `${baseURL}/api/jenga/card/pay`,
         method: 'post'
+    },
+    jengaGuestPayment: {
+        url: `${baseURL}/api/jenga/guest/pay`,
+        method: 'post'
+    },
+    checkJengaGuestStatus: {
+        url: `${baseURL}/api/jenga/guest/status/:orderReference`,
+        method: 'get'
     },
     getAllProducts: {
         url: `${baseURL}/api/product/admin/all`,
