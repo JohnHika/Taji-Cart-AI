@@ -40,9 +40,86 @@ const requireEnv = (name) => {
   return value;
 };
 
+/**
+ * PEM private keys travel through environment variables, which mangles them
+ * in predictable ways depending on where they were pasted (dashboard
+ * single-line inputs, CI secret stores). Repair every whitespace-shaped
+ * mangling — literal \n sequences, CRLF, %0A/%0D URL-encoding, wrapping
+ * quotes, spaces where line breaks were, stray blank lines — then re-emit
+ * canonical 64-char-wrapped PEM. Truncation is the one unrecoverable case;
+ * it surfaces as a diagnostic error telling the operator to re-paste.
+ */
+const normalizePrivateKeyPem = (raw) => {
+  const unescaped = String(raw ?? '')
+    .trim()
+    .replace(/^["']|["']$/g, '')
+    .replace(/\\r\\n/g, '\n')
+    .replace(/\\n/g, '\n')
+    .replace(/\r\n?/g, '\n')
+    .replace(/%0D%0A/gi, '\n')
+    .replace(/%0A/gi, '\n')
+    .replace(/%0D/gi, '\n');
+
+  const headerMatch = unescaped.match(/-----BEGIN ([^-]+)-----/);
+  if (!headerMatch) return null;
+  const type = headerMatch[1].trim();
+
+  // Stripping every non-base64 character also repairs keys whose line breaks
+  // were replaced with spaces or which had blank lines inserted.
+  const body = unescaped
+    .replace(/-----BEGIN [^-]+-----/g, '')
+    .replace(/-----END [^-]+-----/g, '')
+    .replace(/[^A-Za-z0-9+/=]/g, '');
+
+  const wrapped = (body.match(/.{1,64}/g) || []).join('\n');
+  return `-----BEGIN ${type}-----\n${wrapped}\n-----END ${type}-----\n`;
+};
+
+// Shape metadata for failure diagnostics — never includes key material.
+const describeKeyShape = (raw) => {
+  const value = String(raw ?? '');
+  return {
+    length: value.length,
+    header: (value.match(/-----BEGIN [^-]+-----/) || ['missing'])[0],
+    hasEndMarker: value.includes('-----END'),
+    realNewlines: (value.match(/\n/g) || []).length,
+    carriageReturns: (value.match(/\r/g) || []).length,
+    literalBackslashN: (value.match(/\\n/g) || []).length,
+    urlEncodedNewlines: (value.match(/%0A/gi) || []).length,
+    wrappedInQuotes: /^["'].+["']$/.test(value.trim()),
+    singleLine: !/[\n\\%]/.test(value),
+    base64BodyChars: (value
+      .replace(/-----BEGIN [^-]+-----/, '')
+      .replace(/-----END [^-]+-----/, '')
+      .match(/[A-Za-z0-9+/=]/g) || []).length,
+  };
+};
+
 const getPrivateKey = () => {
   const raw = requireEnv('JENGA_PRIVATE_KEY');
-  return raw.replace(/\\n/g, '\n');
+  // Try the value as-is first (correctly stored PEM), then the repaired
+  // canonical form (every paste-damage mode except truncation).
+  for (const candidate of [raw, normalizePrivateKeyPem(raw)]) {
+    if (!candidate) continue;
+    try {
+      crypto.createPrivateKey(candidate); // fail fast here, not inside createSign
+      return candidate;
+    } catch {
+      // fall through to the next strategy
+    }
+  }
+
+  console.error(
+    'JENGA_PRIVATE_KEY could not be parsed as a private key. Shape (metadata only, never key material):',
+    JSON.stringify(describeKeyShape(raw))
+  );
+  console.error(
+    'Likely cause: the key was truncated or corrupted when entered into the environment settings. ' +
+    'Re-copy the full key from JengaHQ (Integrations & Keys); a single line with literal \\n sequences also works.'
+  );
+  const err = new Error('Payment signing is unavailable: the server RSA key failed to load (see server logs).');
+  err.statusCode = 500;
+  throw err;
 };
 
 /**
