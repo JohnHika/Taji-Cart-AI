@@ -8,7 +8,9 @@
  */
 
 import dotenv from 'dotenv';
-dotenv.config({ path: './.env' });
+// Resolve from this file, so the documented root-level command works instead
+// of accidentally searching for a repository-root `.env`.
+dotenv.config({ path: new URL('../../.env', import.meta.url) });
 
 const { getAuthToken } = await import('../../config/jenga.js');
 
