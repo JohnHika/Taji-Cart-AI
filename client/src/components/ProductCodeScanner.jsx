@@ -165,6 +165,9 @@ const describeError = (err) => {
 
 const ProductCodeScanner = ({ onDetected, onClose, cart = [], onIncrement, onDecrement, onRemove, onCheckout }) => {
   const generatedId = useId();
+  // scannerSession increments on a lens switch so the start effect re-runs
+  // and the lib container remounts cleanly with the newly-pinned camera.
+  const [scannerSession, setScannerSession] = useState(0);
   const scannerIdRef = useRef(`sales-counter-scanner-${generatedId.replace(/[^a-zA-Z0-9_-]/g, '')}`);
   const scannerRef = useRef(null);
   const detectingRef = useRef(false);
@@ -202,6 +205,14 @@ const ProductCodeScanner = ({ onDetected, onClose, cart = [], onIncrement, onDec
   // button only renders once we know it'll actually do something.
   const [torchSupported, setTorchSupported] = useState(false);
   const [torchOn, setTorchOn] = useState(false);
+  // Multi-lens support (S25 Ultra and friends expose wide + ultrawide +
+  // telephoto rear cameras to the browser): 'auto' picks the best sensor
+  // automatically; a specific lens pins that device. Devices list is
+  // populated once permission is granted (labels are empty before that).
+  const [cameraDevices, setCameraDevices] = useState([]);
+  const [cameraChoice, setCameraChoice] = useState('auto'); // 'auto' | deviceId
+  const cameraChoiceRef = useRef('auto');
+  const [switchingCamera, setSwitchingCamera] = useState(false);
   // Back-gesture / Escape closes the scanner — phones default to closing
   // overlays via the system back button, and blocking it (as a plain fixed
   // overlay does) makes the scanner feel inescapable. We push a history
@@ -278,6 +289,32 @@ const ProductCodeScanner = ({ onDetected, onClose, cart = [], onIncrement, onDec
       setTorchOn(nextOn);
     } catch (torchError) {
       console.error('Product code scanner: failed to toggle torch:', torchError);
+    }
+  };
+
+  // Live lens switch: stop the current instance (releases its camera track),
+  // flip the choice, and let the start effect re-run with the new camera —
+  // without closing the scanner overlay.
+  const handleSwitchCamera = async (choice) => {
+    if (choice === cameraChoice || switchingCamera) return;
+    try {
+      setSwitchingCamera(true);
+      const instance = scannerRef.current;
+      scannerRef.current = null;
+      if (instance?.isScanning) {
+        try { await instance.stop(); } catch { /* already stopping */ }
+        try { instance.clear(); } catch { /* nothing rendered yet */ }
+      }
+      cameraChoiceRef.current = choice;
+      setCameraChoice(choice);
+      setTorchOn(false);
+      setTorchSupported(false);
+      // The start effect's deps include cameraChoice — it re-runs and opens
+      // the newly-pinned sensor. Keying a fresh session id remounts the lib
+      // container cleanly (the lib caches element children between runs).
+      setScannerSession((n) => n + 1);
+    } finally {
+      setSwitchingCamera(false);
     }
   };
 
@@ -419,9 +456,27 @@ const ProductCodeScanner = ({ onDetected, onClose, cart = [], onIncrement, onDec
         // which is how a scan aimed at one label on a multi-label sheet
         // could resolve to a completely different, unrelated product. The
         // pure-JS decoder is the one guaranteed to only read the boxed area.
-        const attempts = [
-          { cameraIdOrConfig: { facingMode: 'environment' }, label: 'js-decoder/facingMode=environment' },
-        ];
+
+        // Multi-lens phones (S25 Ultra etc.) expose several rear sensors.
+        // AUTO picks the best scanning sensor by label heuristics — prefer
+        // the main wide camera (largest sensor, fastest focus, handles low
+        // light), never the ultrawide (distortion at the frame edge bends
+        // 1D barcodes), and telephoto only as a last resort (tight FOV makes
+        // aiming harder even though it resolves fine detail). Labels are
+        // only populated AFTER permission is granted, which is why this
+        // runs after the first successful start.
+        const pickAutoCamera = (devices) => {
+          const rear = devices.filter((d) => /back|rear|environment/i.test(d.label || ''));
+          const pool = rear.length ? rear : devices;
+          const main = pool.find((d) => /wide|main|camera ?1|rear.*wide/i.test(d.label || ''))
+            || pool.find((d) => !/ultra|tele|macro|depth|portrait|zoom/i.test(d.label || ''));
+          return (main || pool[0])?.id || null;
+        };
+
+        const requestedId = cameraChoiceRef.current;
+        const attempts = requestedId !== 'auto'
+          ? [{ cameraIdOrConfig: requestedId, label: `pinned:${requestedId}` }]
+          : [{ cameraIdOrConfig: { facingMode: 'environment' }, label: 'js-decoder/facingMode=environment' }];
 
         // If facingMode isn't honoured/supported on this device, fall back
         // to enumerating actual cameras (html5-qrcode's own supported way to
@@ -430,9 +485,14 @@ const ProductCodeScanner = ({ onDetected, onClose, cart = [], onIncrement, onDec
         try {
           const cameras = await Html5Qrcode.getCameras();
           if (Array.isArray(cameras) && cameras.length > 0) {
-            const rearCamera = cameras.find((c) => /back|rear|environment/i.test(c.label || ''));
-            const cameraId = (rearCamera || cameras[0]).id;
-            attempts.push({ cameraIdOrConfig: cameraId, label: `js-decoder/device:${cameraId}` });
+            setCameraDevices(cameras);
+            if (requestedId === 'auto') {
+              const autoId = pickAutoCamera(cameras);
+              if (autoId) attempts.push({ cameraIdOrConfig: autoId, label: `auto-pick:${autoId}` });
+              const rearCamera = cameras.find((c) => /back|rear|environment/i.test(c.label || ''));
+              const cameraId = (rearCamera || cameras[0]).id;
+              attempts.push({ cameraIdOrConfig: cameraId, label: `js-decoder/device:${cameraId}` });
+            }
           }
         } catch (getCamerasError) {
           // Usually the same underlying permission/hardware problem as the
@@ -543,7 +603,7 @@ const ProductCodeScanner = ({ onDetected, onClose, cart = [], onIncrement, onDec
       lastAddedCodeRef.current = '';
       stopAndClear(instance);
     };
-  }, []);
+  }, [cameraChoice, scannerSession]);
 
   return (
     <div
@@ -621,6 +681,49 @@ const ProductCodeScanner = ({ onDetected, onClose, cart = [], onIncrement, onDec
           </button>
         </div>
       </div>
+
+        {/* Lens switcher — multi-lens phones (S25 Ultra etc.) expose wide /
+            ultrawide / telephoto rear sensors to the browser. AUTO picks the
+            main wide camera (largest sensor, fastest focus, best low light);
+            ultrawide is never auto-chosen (edge distortion bends 1D bars) and
+            telephoto stays manual (tight FOV is hard to aim). Shows only once
+            permission has revealed the device list. */}
+        {!error && cameraDevices.length > 1 && (
+          <div className="pointer-events-auto mx-auto flex max-w-full items-center gap-1.5 overflow-x-auto px-4 py-1 scrollbar-hide">
+            <button
+              type="button"
+              onClick={() => handleSwitchCamera('auto')}
+              className={`press shrink-0 rounded-full px-3 py-1.5 text-xs font-bold transition-colors ${
+                cameraChoice === 'auto' ? 'bg-gold-400 text-charcoal' : 'glass-dark text-white/85'
+              }`}
+              aria-pressed={cameraChoice === 'auto'}
+            >
+              Auto
+            </button>
+            {cameraDevices
+              .filter((d) => /back|rear|environment/i.test(d.label || ''))
+              .map((device) => {
+                const label = device.label || '';
+                const name = /ultra/i.test(label) ? 'Ultra-wide'
+                  : /tele/i.test(label) ? 'Telephoto'
+                  : 'Main';
+                const active = cameraChoice === device.id;
+                return (
+                  <button
+                    key={device.id}
+                    type="button"
+                    onClick={() => handleSwitchCamera(device.id)}
+                    className={`press shrink-0 rounded-full px-3 py-1.5 text-xs font-bold transition-colors ${
+                      active ? 'bg-gold-400 text-charcoal' : 'glass-dark text-white/85'
+                    }`}
+                    aria-pressed={active}
+                  >
+                    {name}
+                  </button>
+                );
+              })}
+          </div>
+        )}
 
         {/* Animated scan reticle — absolutely pinned to the EXACT geometry of
             html5-qrcode's decode region. The library centers its qrbox in the
