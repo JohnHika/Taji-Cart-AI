@@ -405,10 +405,9 @@ const exportToBarcodeLabelsPDF = async (products, filename = 'nawiri-hair-barcod
     doc.setFontSize(7.3);
     doc.text(barcode, x + (labelWidth / 2), y + 73, { align: 'center' });
 
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(107, 96, 112);
-    doc.setFontSize(7);
-    doc.text('Nawiri Hair', x + (labelWidth / 2), y + labelHeight - 8, { align: 'center' });
+    // No brand name on the sticker itself — labels are handed to resellers,
+    // so they stay unbranded (only the sheet footer, outside the label grid,
+    // identifies the source).
 
     // Yield once per page so a full 564-label export keeps the admin page responsive.
     if ((index + 1) % BARCODE_LABELS_PER_PAGE === 0) {
