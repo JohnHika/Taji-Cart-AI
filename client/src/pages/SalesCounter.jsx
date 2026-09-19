@@ -261,6 +261,21 @@ const SalesCounter = () => {
     }
   };
 
+  // Refresh just the stock fields of the products we're showing — lighter than
+  // a full reload, so hold/discard/resume-complete reflect on the cards right away.
+  const refreshProductStock = async () => {
+    try {
+      const res = await Axios({ ...SummaryApi.getProduct });
+      if (res.data.success) {
+        const fresh = res.data.data || [];
+        setProducts(prev => prev.map(p => {
+          const f = fresh.find(x => x._id === p._id);
+          return f ? { ...p, stock: f.stock } : p;
+        }));
+      }
+    } catch { /* silent — cards just show slightly stale counts */ }
+  };
+
   const loadCategories = async () => {
     try {
       const res = await Axios({ ...SummaryApi.getCategory });
@@ -322,6 +337,7 @@ const SalesCounter = () => {
         toast.success('Sale held — its items are reserved so they can\'t be sold elsewhere. Resume it anytime from Held Sales.');
         resetSale();
         loadHeldSales();
+        refreshProductStock();
       }
     } catch (err) {
       AxiosToastError(err);
@@ -372,6 +388,7 @@ const SalesCounter = () => {
       await Axios({ url: `/api/pos/held-sales/${heldSaleToDiscard._id}`, method: 'DELETE' });
       setHeldSales((prev) => prev.filter((h) => h._id !== heldSaleToDiscard._id));
       toast.success('Held sale discarded');
+      refreshProductStock();
     } catch (err) {
       AxiosToastError(err);
     }
@@ -813,6 +830,7 @@ const SalesCounter = () => {
           setActiveHeldSaleId(null);
           loadHeldSales();
         }
+        refreshProductStock();
       }
     } catch (err) {
       AxiosToastError(err);
