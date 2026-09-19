@@ -6,12 +6,101 @@ import { DisplayPriceInShillings } from '../utils/DisplayPriceInShillings';
 
 // Short tactile confirmation so a cashier doesn't have to watch the screen
 // for every single scan — standard on native scanner apps. No-ops silently
-// where the Vibration API isn't available (iOS Safari, some browsers).
+// where the Vibration API isn't available (iOS Safari has none at all).
+//
+// Chrome's sticky-activation rule: navigator.vibrate() only fires within a
+// window after a real user gesture (a tap). The scanner's decode callback is
+// asynchronous, so by the time a barcode is recognized the original tap can
+// be stale and Chrome silently drops the vibration — which is exactly the
+// "vibration never works" report from the field. Fix: stamp a freshness
+// window on the tap that opens the scanner (and refresh it on every touch
+// inside the scanner via a capture listener), then vibrate inside it. The
+// camera-preview touches (torch, basket) keep that window warm during a
+// scanning session.
+const VIBRATION_WINDOW_MS = 5000;
+let lastGestureAt = 0;
+export const unlockScannerFeedback = () => {
+  lastGestureAt = Date.now();
+  unlockScanAudio();
+  return true;
+};
 const vibrate = (pattern) => {
   try {
+    if (Date.now() - lastGestureAt > VIBRATION_WINDOW_MS) return;
     navigator.vibrate?.(pattern);
   } catch {
     // Best-effort only.
+  }
+};
+
+// Scan confirmation beep, synthesized with WebAudio — no audio file to load,
+// works offline, and plays instantly (a fetched <audio> clip can lag behind
+// the scan by a frame or two on slow shop Wi-Fi). This is the PRIMARY
+// confirmation channel: iPhones cannot vibrate from websites at all (iOS
+// exposes no Vibration API to browsers), so the cashier's reliable signal
+// on every device is the beep — it's loud enough to hear over shop chatter.
+// Android additionally vibrates. Browsers require a user gesture before
+// audio can start; the scan button tap that opens this overlay is that
+// gesture, and we also re-unlock on the first touch inside the scanner.
+let scanBeepContext = null;
+const unlockScanAudio = () => {
+  try {
+    const Ctx = window.AudioContext || window.webkitAudioContext;
+    if (!Ctx) return false;
+    if (!scanBeepContext) scanBeepContext = new Ctx();
+    if (scanBeepContext.state === 'suspended') {
+      scanBeepContext.resume().catch(() => {});
+      return false;
+    }
+    return scanBeepContext.state === 'running';
+  } catch {
+    return false;
+  }
+};
+// (unlockScannerFeedback is exported above with the vibration-window stamp.)
+const playScanBeep = (mode = 'success') => {
+  try {
+    const Ctx = window.AudioContext || window.webkitAudioContext;
+    if (!Ctx) return;
+    if (!scanBeepContext) scanBeepContext = new Ctx();
+    if (scanBeepContext.state === 'suspended') scanBeepContext.resume().catch(() => {});
+
+    const ctx = scanBeepContext;
+    const now = ctx.currentTime;
+    const gain = ctx.createGain();
+    gain.connect(ctx.destination);
+
+    // Classic retail-scanner "beep": a sharp two-tone chirp with an octave
+    // harmonic so it cuts through shop noise. Distinct patterns per outcome
+    // so the cashier can tell them apart without looking up:
+    //   success    — single high "beep" (the sound of "yes, added")
+    //   duplicate  — two quick identical beeps ("already in the basket")
+    //   error      — low double-buzz (clearly not a confirmation)
+    const tone = (freq, start, duration, level) => {
+      const osc = ctx.createOscillator();
+      const g = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, start);
+      g.gain.setValueAtTime(0.0001, start);
+      g.gain.exponentialRampToValueAtTime(level, start + 0.008);
+      g.gain.exponentialRampToValueAtTime(0.0001, start + duration);
+      osc.connect(g).connect(gain);
+      osc.start(start);
+      osc.stop(start + duration + 0.02);
+    };
+
+    if (mode === 'success') {
+      tone(1318, now, 0.09, 0.28);        // E6 — crisp, unmistakable
+      tone(1975, now + 0.07, 0.10, 0.16); // octave-up tail for sharpness
+    } else if (mode === 'duplicate') {
+      tone(1046, now, 0.07, 0.24);
+      tone(1046, now + 0.11, 0.07, 0.24);
+    } else {
+      tone(320, now, 0.11, 0.22);
+      tone(260, now + 0.14, 0.13, 0.22);
+    }
+  } catch {
+    // Audio is a bonus, never a blocker.
   }
 };
 
@@ -138,6 +227,16 @@ const ProductCodeScanner = ({ onDetected, onClose, cart = [], onIncrement, onDec
     };
   }, []);
 
+  // Keep the vibration gesture-window warm: every touch inside the scanner
+  // (torch, basket peek, drawer) re-stamps the freshness window Chrome
+  // requires before honoring navigator.vibrate(). Capture-phase so it fires
+  // even on elements that stopPropagation.
+  useEffect(() => {
+    const refreshGestureWindow = () => { lastGestureAt = Date.now(); };
+    window.addEventListener('pointerdown', refreshGestureWindow, { capture: true });
+    return () => window.removeEventListener('pointerdown', refreshGestureWindow, { capture: true });
+  }, []);
+
   const handleUndoLastScan = () => {
     if (!lastAdded) return;
     onDecrementRef.current?.(lastAdded.productId);
@@ -223,6 +322,7 @@ const ProductCodeScanner = ({ onDetected, onClose, cart = [], onIncrement, onDec
           const normalizedCode = String(decodedText || '').trim();
           if (normalizedCode && normalizedCode === lastAddedCodeRef.current) {
             vibrate(30);
+            playScanBeep('duplicate');
             setStatusTone('duplicate');
             // Otherwise the Undo button lingers, still offering to undo
             // whatever was added several scans ago — confusing right below
@@ -242,12 +342,16 @@ const ProductCodeScanner = ({ onDetected, onClose, cart = [], onIncrement, onDec
               setLastAdded(result.productId ? { productId: result.productId, productName: result.productName } : null);
               setScanFlashKey((key) => key + 1);
               setStatusTone('success');
-              // 45ms was too brief to reliably feel — long enough to
-              // register as a deliberate confirming buzz, not a twitch.
-              vibrate(70);
+              // Beep + buzz on EVERY successful product scan — the cashier
+              // hears/confirms without watching the screen (standard retail
+              // scanner feedback). The beep is the reliable channel on all
+              // phones; Android additionally buzzes in a double-tap pattern.
+              playScanBeep('success');
+              vibrate([60, 40, 60]);
             } else {
               setStatusTone('warning');
               setLastAdded(null);
+              playScanBeep('error');
               vibrate([30, 70, 30]);
             }
             // Echo the code that was actually matched — on a dense, uncut
@@ -422,11 +526,20 @@ const ProductCodeScanner = ({ onDetected, onClose, cart = [], onIncrement, onDec
           dialog (background included) faded in from opacity 0, letting the
           page underneath show through for the first ~350ms. */}
       {/* Full-bleed camera feed — this screen IS the camera, not a card
-          floating over one. */}
-      <div className="absolute inset-0">
+          floating over one. The video element is forced to a 16:9 box that
+          fills the width and is vertically centered — NO object-cover crop.
+          html5-qrcode maps displayed pixels onto camera-frame pixels with a
+          plain ratio (videoWidth/clientWidth), which is only correct when the
+          whole frame is visible. Cropping (object-cover) makes it sample a
+          wider, shifted strip of the frame than the on-screen box shows — the
+          long-standing "box is off from what it scans" bug. Uncropped video
+          + a reticle pinned to the same geometry (see below) makes displayed
+          box == decoded box on every device, by construction. */}
+      <div className="absolute inset-0 flex items-center justify-center overflow-hidden bg-charcoal">
         <div
           id={scannerIdRef.current}
-          className="h-full w-full [&_video]:h-full [&_video]:w-full [&_video]:object-cover"
+          className="w-full [&_video]:!block [&_video]:!h-auto [&_video]:!w-full"
+          style={{ aspectRatio: '16 / 9' }}
         />
       </div>
 
@@ -436,17 +549,13 @@ const ProductCodeScanner = ({ onDetected, onClose, cart = [], onIncrement, onDec
         <div className="absolute inset-0 bg-gradient-to-b from-plum-900 via-charcoal to-charcoal" />
       )}
 
-      {/* Foreground UI as ONE flex column — not three independently
-          absolutely-positioned layers guessing at each other's size. That
-          was the actual bug behind the reticle/basket overlap: the reticle
-          was centered across the FULL screen with zero awareness of how
-          tall the top bar or bottom stack actually were, so on a shorter
-          viewport (or a taller bottom stack) they could collide. Here the
-          top bar and bottom stack take their natural height first, and the
-          middle (flex-1) reticle section only ever centers within whatever
-          space is actually left over — overlap becomes impossible by
-          construction, not just hidden in one specific state. */}
-      <div className="relative z-10 flex h-full flex-col motion-reduce:animate-none animate-scanner-open">
+      {/* Foreground UI — top bar and bottom stack are flex siblings; the
+          reticle is NOT part of this flow anymore (it's a full-viewport
+          overlay pinned to the library's decode geometry, positioned after
+          this block). The old design centered the reticle in the leftover
+          flex space, which shoved it upward whenever the bottom stack grew —
+          away from the library's actual decode region. */}
+      <div className="pointer-events-none relative z-10 flex h-full flex-col motion-reduce:animate-none animate-scanner-open [&_button]:pointer-events-auto">
         {/* Top bar */}
         <div className="safe-area-top flex items-center justify-between gap-3 p-4">
         <h2
@@ -480,19 +589,18 @@ const ProductCodeScanner = ({ onDetected, onClose, cart = [], onIncrement, onDec
         </div>
       </div>
 
-        {/* Animated scan reticle — sized to match the real decode region
-            (SCAN_BOX_WIDTH/HEIGHT above), not just decorative. The box-shadow
-            spread dims everything OUTSIDE the box (the classic scanner
-            "spotlight" look — iOS Camera's QR mode, WhatsApp, Google Pay all
-            do this) instead of just the top/bottom edges. min-h-0 lets this
-            flex-1 section actually shrink (its default min-height is auto,
-            which otherwise refuses to shrink below the box's own size and
-            would push the bottom stack off-screen instead of overlapping).
-            Still fades out while the drawer's expanded, since a squeezed-flat
-            reticle reads worse than no reticle. */}
+        {/* Animated scan reticle — absolutely pinned to the EXACT geometry of
+            html5-qrcode's decode region. The library centers its qrbox in the
+            video element ((element - qrbox) / 2, both axes), and the video
+            element here is the full-screen 16:9 band centered in the viewport.
+            This overlay therefore positions the gold frame at the viewport
+            center too — the same point the library decodes — so the "two
+            boxes" offset is structurally impossible on every device. As a
+            full-viewport overlay it's also independent of the top bar / bottom
+            stack heights, which is what used to shove it upward. */}
         {!error && (
           <div
-            className={`pointer-events-none flex min-h-0 flex-1 flex-col items-center justify-center overflow-hidden transition-opacity duration-300 ${
+            className={`pointer-events-none absolute inset-0 z-10 flex items-center justify-center transition-opacity duration-300 ${
               basketExpanded ? 'opacity-0' : 'opacity-100'
             }`}
           >

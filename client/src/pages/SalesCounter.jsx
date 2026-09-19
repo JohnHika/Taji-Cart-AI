@@ -32,7 +32,7 @@ import { useNavigate } from 'react-router-dom';
 import SummaryApi from '../common/SummaryApi';
 import DeliveryModeSelector from '../components/DeliveryModeSelector';
 import LoadingSpinner from '../components/LoadingSpinner';
-import ProductCodeScanner from '../components/ProductCodeScanner';
+import ProductCodeScanner, { unlockScannerFeedback } from '../components/ProductCodeScanner';
 import CartItemRow from '../components/CartItemRow';
 import useMobile from '../hooks/useMobile';
 import Axios from '../utils/Axios';
@@ -1537,7 +1537,7 @@ const SalesCounter = () => {
                 </button>
                 <button
                   type="button"
-                  onClick={() => setShowProductScanner(true)}
+                  onClick={() => { unlockScannerFeedback(); setShowProductScanner(true); }}
                   className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-plum-700 text-white transition-colors hover:bg-plum-800"
                   aria-label="Open phone camera scanner"
                   title="Scan hair label with camera"
@@ -1685,7 +1685,7 @@ const SalesCounter = () => {
                 </button>
                 <button
                   type="button"
-                  onClick={() => setShowProductScanner(true)}
+                  onClick={() => { unlockScannerFeedback(); setShowProductScanner(true); }}
                   className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-plum-700 text-white transition-colors hover:bg-plum-800"
                   aria-label="Open phone camera scanner"
                   title="Scan hair label with camera"
