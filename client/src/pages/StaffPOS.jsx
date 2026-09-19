@@ -35,6 +35,7 @@ import Axios from '../utils/Axios';
 import AxiosToastError from '../utils/AxiosToastError';
 import { DisplayPriceInShillings } from '../utils/DisplayPriceInShillings';
 import isStaff from '../utils/isStaff';
+import { calculatePosCartTotals, getLoyaltyDiscountRate } from '../utils/posCartTotals';
 
 const SALES_RECORDS_LABEL = 'Sales Records';
 const BARCODE_SCAN_FORMATS = ['ean_13', 'ean_8', 'upc_a', 'upc_e', 'code_128', 'code_39', 'code_93', 'codabar', 'itf'];
@@ -75,7 +76,6 @@ const StaffPOS = () => {
   const [productScannerStatus, setProductScannerStatus] = useState('');
   const [loyaltyScannerStatus, setLoyaltyScannerStatus] = useState('');
   const [cameraDetectionAvailable, setCameraDetectionAvailable] = useState(false);
-  const TAX_RATE = 0.16; // 16%
   
   // Customer state
   const [customer, setCustomer] = useState(null);
@@ -115,18 +115,14 @@ const StaffPOS = () => {
   const [showReceiptModal, setShowReceiptModal] = useState(false);
   const [qrCodeDataUrl, setQrCodeDataUrl] = useState('');
   
-  // Parked/Held sales (local)
-  const [parkedSales, setParkedSales] = useState(() => {
-    try {
-      const raw = localStorage.getItem('pos_parkedSales');
-      return raw ? JSON.parse(raw) : [];
-    } catch {
-      return [];
-    }
-  });
+  // Held (parked) sales — persisted server-side so every staff device sees them.
+  // `heldSalesLoading` covers drawer fetch; `holdSaleBusy` guards the Hold button.
+  const [parkedSales, setParkedSales] = useState([]);
   const [showParkedDrawer, setShowParkedDrawer] = useState(false);
   const [parkedSearch, setParkedSearch] = useState('');
   const [expandedParked, setExpandedParked] = useState({});
+  const [heldSalesLoading, setHeldSalesLoading] = useState(false);
+  const [holdSaleBusy, setHoldSaleBusy] = useState(false);
 
   // Loading states
   const [loading, setLoading] = useState(false);
@@ -354,39 +350,23 @@ const StaffPOS = () => {
     setCart(cart.filter(item => item._id !== productId));
   };
 
-  // Calculate totals
+  // Calculate totals (shared with held-sale snapshots via utils/posCartTotals.js)
   const calculateTotals = () => {
-    const lineTotals = cart.map(item => {
-      const lineSub = item.price * item.quantity;
-      const lineDiscountPct = item.discountPct ? Math.min(100, Math.max(0, item.discountPct)) : 0;
-      const lineDiscount = lineSub * (lineDiscountPct / 100);
-      return { lineSub, lineDiscount };
+    return calculatePosCartTotals({
+      cart,
+      discount,
+      discountMode,
+      discountAmount,
+      applyTax,
+      loyaltyDiscountPct: customer?.loyaltyCard ? getLoyaltyDiscountRate(customer.loyaltyCard) : 0
     });
-    const subtotal = lineTotals.reduce((s, l) => s + l.lineSub, 0);
-    const perLineDiscount = lineTotals.reduce((s, l) => s + l.lineDiscount, 0);
-    const orderDiscount = discountMode === 'percent'
-      ? subtotal * (discount / 100)
-      : Math.min(subtotal, Math.max(0, Number(discountAmount) || 0));
-    const loyaltyDiscount = customer?.loyaltyCard ? getCustomerDiscount() : 0;
-    const loyaltyAmount = subtotal * (loyaltyDiscount / 100);
-    const preTaxTotal = Math.max(0, subtotal - (perLineDiscount + orderDiscount + loyaltyAmount));
-    const tax = applyTax ? preTaxTotal * TAX_RATE : 0;
-    const total = preTaxTotal + tax;
-    
-    return {
-      subtotal,
-      discountAmount: perLineDiscount + orderDiscount + loyaltyAmount,
-      tax,
-      total: Math.max(0, total),
-      itemCount: cart.reduce((sum, item) => sum + item.quantity, 0)
-    };
   };
 
   const getCustomerDiscount = () => {
     if (!customer?.loyaltyCard) return 0;
-    
+
     // Use the enhanced discount rate logic
-    return getDiscountRate(customer.loyaltyCard);
+    return getLoyaltyDiscountRate(customer.loyaltyCard);
   };
 
   // Search customers
@@ -503,7 +483,7 @@ const StaffPOS = () => {
         
         // Auto-apply loyalty discount if customer has one and cart has items
         if (loyaltyCard && cart.length > 0) {
-          const customerDiscount = getDiscountRate(loyaltyCard);
+          const customerDiscount = getLoyaltyDiscountRate(loyaltyCard);
           if (customerDiscount > 0) {
             setDiscount(customerDiscount);
             setDiscountMode('percent');
@@ -534,24 +514,6 @@ const StaffPOS = () => {
     } finally {
       setScanningCard(false);
     }
-  };
-
-  // Helper function to get discount rate based on loyalty card
-  const getDiscountRate = (loyaltyCard) => {
-    if (!loyaltyCard) return 0;
-    
-    // Use the card's discount rate if available, otherwise use tier-based rates
-    if (loyaltyCard.discountRate) return loyaltyCard.discountRate;
-    
-    // Fallback tier-based discount rates
-    const tierDiscounts = {
-      'Bronze': 2,
-      'Silver': 5,
-      'Gold': 8,
-      'Platinum': 12
-    };
-    
-    return tierDiscounts[loyaltyCard.tier] || 0;
   };
 
   const stopActiveScanner = () => {
@@ -1195,55 +1157,157 @@ const StaffPOS = () => {
     return () => clearInterval(interval);
   }, [splitPayments]);
 
-  const parkCurrentSale = () => {
+  const parkCurrentSale = async () => {
+    if (holdSaleBusy) return false;
     if (cart.length === 0) {
       toast.error('Nothing to hold');
-      return;
+      return false;
     }
-    const id = `${Date.now()}`;
-    const entry = { id, when: new Date().toISOString(), cart, customer, discount, applyTax, orderNote };
-    const next = [entry, ...parkedSales].slice(0, 20);
-    setParkedSales(next);
-    localStorage.setItem('pos_parkedSales', JSON.stringify(next));
-    clearCart();
-    toast.success('Sale held');
+
+    try {
+      setHoldSaleBusy(true);
+      const response = await Axios({
+        ...SummaryApi.holdSale,
+        data: {
+          items: cart.map(item => ({
+            product: item._id,
+            sku: item.sku || '',
+            name: item.name,
+            price: item.price,
+            quantity: item.quantity,
+            discountPct: item.discountPct || 0
+          })),
+          customer: customer?._id || null,
+          customerName: (customer?.name || walkInName || '').trim(),
+          customerPhone: (customer?.phone || walkInPhone || '').trim(),
+          discount,
+          discountMode,
+          discountAmountValue: Number(discountAmount) || 0,
+          applyTax,
+          loyaltyDiscountPct: customer?.loyaltyCard ? getLoyaltyDiscountRate(customer.loyaltyCard) : 0,
+          orderNote
+        }
+      });
+
+      if (response.data.success) {
+        setParkedSales(prev => [response.data.data, ...prev].slice(0, 50));
+        clearCart();
+        toast.success('Sale held — visible to all staff devices');
+        return true;
+      }
+      return false;
+    } catch (error) {
+      AxiosToastError(error);
+      return false;
+    } finally {
+      setHoldSaleBusy(false);
+    }
   };
 
-  const resumeParkedSale = (id) => {
-    const found = parkedSales.find(p => p.id === id);
+  // Resume: if the current cart already has items, offer to park it first instead of losing it.
+  const resumeParkedSale = async (id) => {
+    const found = parkedSales.find(p => p._id === id);
     if (!found) return;
-    setCart(found.cart);
-    setCustomer(found.customer || null);
-    setDiscount(found.discount || 0);
-    setApplyTax(!!found.applyTax);
-    setOrderNote(found.orderNote || '');
-    const next = parkedSales.filter(p => p.id !== id);
-    setParkedSales(next);
-    localStorage.setItem('pos_parkedSales', JSON.stringify(next));
-    setShowParkedDrawer(false);
+
+    if (cart.length > 0) {
+      const parkFirst = window.confirm(
+        'Your current basket has items. Hold them first before resuming this held sale? (Cancel resumes anyway and clears the current basket.)'
+      );
+      if (parkFirst) {
+        const parked = await parkCurrentSale();
+        if (!parked) {
+          toast.error('Could not hold the current basket — held sale not resumed.');
+          return;
+        }
+      }
+    }
+
+    try {
+      const response = await Axios({ ...SummaryApi.resumeHeldSale, url: `${SummaryApi.resumeHeldSale.url}/${id}/resume` });
+      if (!response.data.success) {
+        toast.error(response.data.message || 'Could not resume that held sale');
+        loadHeldSales();
+        return;
+      }
+
+      const d = response.data.data;
+      setCart((d.items || []).map(item => ({
+        _id: item.product?._id || item.product,
+        name: item.name,
+        sku: item.sku || '',
+        price: item.price,
+        quantity: item.quantity,
+        discountPct: item.discountPct || 0,
+        stock: item.product?.stock
+      })));
+      setCustomer(d.customer || null);
+      setWalkInName(!d.customer ? (d.customerName || '') : '');
+      setWalkInPhone(!d.customer ? (d.customerPhone || '') : '');
+      setDiscount(d.discount || 0);
+      setDiscountMode(d.discountMode === 'amount' ? 'amount' : 'percent');
+      setDiscountAmount(d.discountAmountValue || 0);
+      setApplyTax(!!d.applyTax);
+      setOrderNote(d.orderNote || '');
+      setParkedSales(prev => prev.filter(p => p._id !== id));
+      toast.success('Held sale resumed');
+    } catch (error) {
+      AxiosToastError(error);
+      loadHeldSales();
+    }
   };
 
-  const deleteParkedSale = (id) => {
-    const next = parkedSales.filter(p => p.id !== id);
-    setParkedSales(next);
-    localStorage.setItem('pos_parkedSales', JSON.stringify(next));
+  const deleteParkedSale = async (id) => {
+    try {
+      const response = await Axios({ ...SummaryApi.deleteHeldSale, url: `${SummaryApi.deleteHeldSale.url}/${id}` });
+      if (response.data.success) {
+        setParkedSales(prev => prev.filter(p => p._id !== id));
+        toast.success('Held sale deleted');
+      }
+    } catch (error) {
+      AxiosToastError(error);
+      loadHeldSales();
+    }
+  };
+
+  const loadHeldSales = async () => {
+    try {
+      setHeldSalesLoading(true);
+      const response = await Axios({ ...SummaryApi.getHeldSales, params: { status: 'held', limit: 50 } });
+      if (response.data.success) {
+        setParkedSales(response.data.data || []);
+      }
+    } catch (error) {
+      AxiosToastError(error);
+    } finally {
+      setHeldSalesLoading(false);
+    }
   };
 
   const filteredParked = useMemo(() => {
     const q = parkedSearch.trim().toLowerCase();
     if (!q) return parkedSales;
     const match = (p) => {
-      const customerStr = `${p.customer?.name || ''} ${p.customer?.email || ''}`.toLowerCase();
+      const customerStr = `${p.customerName || ''} ${p.customerPhone || ''} ${p.customer?.name || ''} ${p.customer?.email || ''}`.toLowerCase();
       const noteStr = (p.orderNote || '').toLowerCase();
-      const productStr = (p.cart || []).map(i => i.name).join(' ').toLowerCase();
-      return customerStr.includes(q) || noteStr.includes(q) || productStr.includes(q);
+      const productStr = (p.items || []).map(i => i.name).join(' ').toLowerCase();
+      const heldByStr = (p.heldByName || p.heldBy?.name || '').toLowerCase();
+      return customerStr.includes(q) || noteStr.includes(q) || productStr.includes(q) || heldByStr.includes(q);
     };
     return parkedSales.filter(match);
   }, [parkedSales, parkedSearch]);
 
+  // True expected total of a held sale (discounts + tax re-applied exactly as they will be on resume)
+  // via the same shared math the live cart uses.
   const parkedTotal = (p) => {
     try {
-      return (p.cart || []).reduce((s, i) => s + (i.price * i.quantity), 0);
+      return calculatePosCartTotals({
+        cart: p.items || [],
+        discount: p.discount || 0,
+        discountMode: p.discountMode === 'amount' ? 'amount' : 'percent',
+        discountAmount: p.discountAmountValue || 0,
+        applyTax: !!p.applyTax,
+        loyaltyDiscountPct: p.loyaltyDiscountPct || 0
+      }).total;
     } catch { return 0; }
   };
 
@@ -1256,7 +1320,7 @@ const StaffPOS = () => {
         case 'F4': e.preventDefault(); setShowPaymentModal(true); break;
         case 'F6': e.preventDefault(); setDiscount(d => Math.min(100, d + 1)); break;
         case 'F7': e.preventDefault(); parkCurrentSale(); break;
-        case 'F8': e.preventDefault(); setShowParkedDrawer(true); break;
+        case 'F8': e.preventDefault(); loadHeldSales(); setShowParkedDrawer(true); break;
         default: break;
       }
     };
@@ -1828,8 +1892,8 @@ Applied: {discount}% loyalty discount applied to cart
                 >
                   Pay Now
                 </button>
-                <button onClick={parkCurrentSale} disabled={cart.length===0} className="px-3 py-2 text-sm border border-brown-200 dark:border-dm-border rounded-pill hover:bg-plum-50 dark:hover:bg-dm-card-2 text-charcoal dark:text-white/70 disabled:opacity-50 flex items-center justify-center gap-2 transition-colors"><FaSave size={12}/> Hold</button>
-                <button onClick={()=>setShowParkedDrawer(true)} className="px-3 py-2 text-sm border border-brown-200 dark:border-dm-border rounded-pill hover:bg-plum-50 dark:hover:bg-dm-card-2 text-charcoal dark:text-white/70 flex items-center justify-center gap-2 transition-colors"><FaListUl size={12}/> Held</button>
+                <button onClick={parkCurrentSale} disabled={cart.length===0 || holdSaleBusy} className="px-3 py-2 text-sm border border-brown-200 dark:border-dm-border rounded-pill hover:bg-plum-50 dark:hover:bg-dm-card-2 text-charcoal dark:text-white/70 disabled:opacity-50 flex items-center justify-center gap-2 transition-colors"><FaSave size={12}/> {holdSaleBusy ? 'Holding…' : 'Hold'}</button>
+                <button onClick={()=>{ loadHeldSales(); setShowParkedDrawer(true); }} className="px-3 py-2 text-sm border border-brown-200 dark:border-dm-border rounded-pill hover:bg-plum-50 dark:hover:bg-dm-card-2 text-charcoal dark:text-white/70 flex items-center justify-center gap-2 transition-colors"><FaListUl size={12}/> Held{parkedSales.length > 0 && ` (${parkedSales.length})`}</button>
               </div>
             </div>
           </div>
@@ -2684,7 +2748,10 @@ Applied: {discount}% loyalty discount applied to cart
           <div className="absolute right-0 top-0 h-full w-[380px] bg-ivory dark:bg-dm-card p-4 overflow-y-auto scrollbar-hide shadow-hover">
             <div className="flex items-center justify-between mb-3">
               <h3 className="text-lg font-semibold text-charcoal dark:text-white">{SALES_RECORDS_LABEL} on Hold</h3>
-              <button onClick={()=>setShowParkedDrawer(false)} className="text-brown-400"><FaTimes/></button>
+              <div className="flex items-center gap-2">
+                <button onClick={loadHeldSales} disabled={heldSalesLoading} className="text-brown-400 hover:text-plum-700 disabled:opacity-50" title="Refresh">{/* refresh */}↻</button>
+                <button onClick={()=>setShowParkedDrawer(false)} className="text-brown-400"><FaTimes/></button>
+              </div>
             </div>
             <div className="mb-3">
               <input
@@ -2695,29 +2762,33 @@ Applied: {discount}% loyalty discount applied to cart
                 className="w-full px-3 py-2 text-sm border border-blush-200 dark:border-dm-border rounded-pill bg-blush-100 dark:bg-dm-card-2 text-charcoal dark:text-white placeholder:text-brown-300 outline-none"
               />
             </div>
-            {parkedSales.length === 0 ? (
+            {heldSalesLoading ? (
+              <p className="text-sm text-brown-400 dark:text-white/40">Loading held sales…</p>
+            ) : parkedSales.length === 0 ? (
               <p className="text-sm text-brown-300 dark:text-white/30">No held sales</p>
             ) : (
               <div className="space-y-3">
                 {filteredParked.map(p => (
-                  <div key={p.id} className="border border-brown-100 dark:border-dm-border rounded-card p-3 bg-white dark:bg-dm-card">
+                  <div key={p._id} className="border border-brown-100 dark:border-dm-border rounded-card p-3 bg-white dark:bg-dm-card">
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0">
-                        <p className="text-sm font-medium text-charcoal dark:text-white truncate">{new Date(p.when).toLocaleString()}</p>
+                        <p className="text-sm font-medium text-charcoal dark:text-white truncate">{new Date(p.heldAt || p.createdAt).toLocaleString()}</p>
                         <p className="text-xs text-brown-400 dark:text-white/50">
-                          {p.cart.length} items | {p.customer?.name || 'Walk-in'} | <span className="font-price text-gold-600">{DisplayPriceInShillings(parkedTotal(p))}</span>
+                          {p.items.length} items | {p.customerName || p.customer?.name || 'Walk-in'}
+                          {(p.heldByName || p.heldBy?.name) && ` | by ${p.heldByName || p.heldBy?.name}`}
+                          {' '}| <span className="font-price text-gold-600">{DisplayPriceInShillings(parkedTotal(p))}</span>
                         </p>
                         {p.orderNote && <p className="text-xs text-brown-300 dark:text-white/30 truncate">Note: {p.orderNote}</p>}
                       </div>
                       <div className="flex items-center gap-2 flex-shrink-0">
-                        <button onClick={()=>resumeParkedSale(p.id)} className="px-3 py-1 text-xs rounded-pill bg-plum-700 hover:bg-plum-800 text-white transition-colors">Resume</button>
-                        <button onClick={()=>deleteParkedSale(p.id)} className="px-2 py-1 text-xs rounded-pill border border-brown-200 dark:border-dm-border hover:bg-blush-50 dark:hover:bg-dm-card-2 text-charcoal dark:text-white/60 transition-colors">Del</button>
+                        <button onClick={()=>resumeParkedSale(p._id)} className="px-3 py-1 text-xs rounded-pill bg-plum-700 hover:bg-plum-800 text-white transition-colors">Resume</button>
+                        <button onClick={()=>deleteParkedSale(p._id)} className="px-2 py-1 text-xs rounded-pill border border-brown-200 dark:border-dm-border hover:bg-blush-50 dark:hover:bg-dm-card-2 text-charcoal dark:text-white/60 transition-colors">Del</button>
                       </div>
                     </div>
                     <div className="mt-2">
-                      {expandedParked[p.id] ? (
+                      {expandedParked[p._id] ? (
                         <div className="space-y-1">
-                          {(p.cart || []).map((i, idx) => (
+                          {(p.items || []).map((i, idx) => (
                             <div key={idx} className="text-xs text-brown-400 dark:text-white/50 flex justify-between gap-2">
                               <span className="truncate">{i.quantity} x {i.name}</span>
                               <span className="flex-shrink-0 font-price text-gold-600 dark:text-gold-400">{DisplayPriceInShillings(i.price * i.quantity)}</span>
@@ -2726,25 +2797,25 @@ Applied: {discount}% loyalty discount applied to cart
                         </div>
                       ) : (
                         <div className="space-y-1">
-                          {(p.cart || []).slice(0,3).map((i, idx) => (
+                          {(p.items || []).slice(0,3).map((i, idx) => (
                             <div key={idx} className="text-xs text-brown-400 dark:text-white/50 flex justify-between gap-2">
                               <span className="truncate">{i.quantity} x {i.name}</span>
                               <span className="flex-shrink-0">{DisplayPriceInShillings(i.price * i.quantity)}</span>
                             </div>
                           ))}
-                          {(p.cart || []).length > 3 && (
-                            <div className="text-xs text-brown-300 dark:text-white/30">+ {(p.cart || []).length - 3} more...</div>
+                          {(p.items || []).length > 3 && (
+                            <div className="text-xs text-brown-300 dark:text-white/30">+ {(p.items || []).length - 3} more...</div>
                           )}
                         </div>
                       )}
                     </div>
-                    {(p.cart || []).length > 0 && (
+                    {(p.items || []).length > 0 && (
                       <div className="mt-2">
                         <button
-                          onClick={()=>setExpandedParked(prev => ({ ...prev, [p.id]: !prev[p.id] }))}
+                          onClick={()=>setExpandedParked(prev => ({ ...prev, [p._id]: !prev[p._id] }))}
                           className="text-xs text-plum-600 dark:text-plum-300 hover:underline"
                         >
-                          {expandedParked[p.id] ? 'Hide items' : 'Show items'}
+                          {expandedParked[p._id] ? 'Hide items' : 'Show items'}
                         </button>
                       </div>
                     )}

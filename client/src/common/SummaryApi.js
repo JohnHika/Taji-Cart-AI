@@ -320,6 +320,29 @@ const SummaryApi = {
         url: `${baseURL}/api/pos/sale`,
         method: 'PUT'
     },
+    // Held (parked) sales — persisted server-side so all staff devices see them
+    getHeldSales: {
+        url: `${baseURL}/api/pos/held`,
+        method: 'GET',
+        params: {}
+    },
+    getHeldSale: {
+        url: `${baseURL}/api/pos/held`,
+        method: 'GET',
+        params: {}
+    },
+    holdSale: {
+        url: `${baseURL}/api/pos/held`,
+        method: 'POST'
+    },
+    resumeHeldSale: {
+        url: `${baseURL}/api/pos/held`,
+        method: 'POST'
+    },
+    deleteHeldSale: {
+        url: `${baseURL}/api/pos/held`,
+        method: 'DELETE'
+    },
     searchUsers: {
         url: `${baseURL}/api/user/search`,
         method: 'GET'
