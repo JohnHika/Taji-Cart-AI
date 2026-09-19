@@ -107,8 +107,30 @@ const playScanBeep = (mode = 'success') => {
 // Mirrors the html5-qrcode `qrbox` size below in real px so the on-screen
 // reticle is a true representation of the region actually being decoded,
 // not just decoration.
+// Adaptive sizing: the box is computed from the live video band (see
+// scanBoxFor), so it scales with the device — big and comfortable on
+// phones, proportionally capped on desktop.
 const SCAN_BOX_WIDTH = 220;
 const SCAN_BOX_HEIGHT = 90;
+// The scan box takes this fraction of the video band's width, clamped to a
+// decoder-friendly range (very large boxes slow the JS decoder; very small
+// ones miss the label).
+const SCAN_BOX_WIDTH_RATIO = 0.78;
+const SCAN_BOX_WIDTH_MIN = 180;
+const SCAN_BOX_WIDTH_MAX = 560;
+// Barcode strips are wide and short — height follows width, not the viewport.
+const SCAN_BOX_HEIGHT_RATIO = 0.42;
+// Computes the box for a given band size. Used in TWO places that must agree
+// exactly: the decoder config (qrbox function — the lib calls it with the
+// live viewfinder size) and the reticle overlay (measured via the band ref).
+const computeScanBox = (bandWidth, bandHeight) => {
+  const w = Math.max(
+    SCAN_BOX_WIDTH_MIN,
+    Math.min(SCAN_BOX_WIDTH_MAX, Math.round(bandWidth * SCAN_BOX_WIDTH_RATIO))
+  );
+  const h = Math.max(60, Math.round(w * SCAN_BOX_HEIGHT_RATIO));
+  return { width: Math.min(w, Math.round(bandWidth)), height: Math.min(h, Math.round(bandHeight)) };
+};
 
 const SCAN_FORMAT_NAMES = [
   'CODE_128',
@@ -213,6 +235,17 @@ const ProductCodeScanner = ({ onDetected, onClose, cart = [], onIncrement, onDec
   const [cameraChoice, setCameraChoice] = useState('auto'); // 'auto' | deviceId
   const cameraChoiceRef = useRef('auto');
   const [switchingCamera, setSwitchingCamera] = useState(false);
+  // Adaptive scan box: the reticle and the decoder must agree on the box
+  // size for the CURRENT video band. The band is measured live (it changes
+  // with device size and orientation), and the box is recomputed from it.
+  const videoBandRef = useRef(null);
+  const [scanBox, setScanBox] = useState({ width: SCAN_BOX_WIDTH, height: SCAN_BOX_HEIGHT });
+  // The band's aspect ratio is set from the camera's DELIVERED frame ratio
+  // (videoWidth/videoHeight — Android Chrome rotates portrait frames, so the
+  // real ratio differs from the requested one). Matching element to frame =
+  // zero cropping and exact pixel mapping, with the band as large as the
+  // screen allows. Defaults to 16/9 until the first frame arrives.
+  const [bandAspectRatio, setBandAspectRatio] = useState('16 / 9');
   // Back-gesture / Escape closes the scanner — phones default to closing
   // overlays via the system back button, and blocking it (as a plain fixed
   // overlay does) makes the scanner feel inescapable. We push a history
@@ -266,6 +299,29 @@ const ProductCodeScanner = ({ onDetected, onClose, cart = [], onIncrement, onDec
     window.addEventListener('pointerdown', refreshGestureWindow, { capture: true });
     return () => window.removeEventListener('pointerdown', refreshGestureWindow, { capture: true });
   }, []);
+
+  // Adaptive scan-box measurement: recompute whenever the band's on-screen
+  // size changes (device rotation, window resize, soft keyboard, different
+  // phone). Uses ResizeObserver on the band element — fires for all of those
+  // without listening to half-a-dozen separate events.
+  useEffect(() => {
+    const band = videoBandRef.current;
+    if (!band) return undefined;
+    const measure = () => {
+      const rect = band.getBoundingClientRect();
+      if (rect.width > 10 && rect.height > 10) {
+        setScanBox(computeScanBox(rect.width, rect.height));
+      }
+    };
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(band);
+    window.addEventListener('orientationchange', measure);
+    return () => {
+      observer.disconnect();
+      window.removeEventListener('orientationchange', measure);
+    };
+  }, [scannerSession]);
 
   const handleUndoLastScan = () => {
     if (!lastAdded) return;
@@ -438,7 +494,10 @@ const ProductCodeScanner = ({ onDetected, onClose, cart = [], onIncrement, onDec
           // Tight and short (barcodes are wide, short strips) — on a dense,
           // uncut sheet of labels a loose box can straddle two adjacent
           // codes and the decoder can't tell which one the cashier meant.
-          qrbox: { width: SCAN_BOX_WIDTH, height: SCAN_BOX_HEIGHT },
+          // Function form: the lib calls this with the LIVE viewfinder size,
+          // so the decode region always matches the on-screen reticle
+          // (scanBox state) — same computeScanBox, same inputs, same result.
+          qrbox: (vfWidth, vfHeight) => computeScanBox(vfWidth, vfHeight),
           aspectRatio: 1.7778,
           disableFlip: false,
         };
@@ -560,6 +619,22 @@ const ProductCodeScanner = ({ onDetected, onClose, cart = [], onIncrement, onDec
         // leaving a dead black box behind a cheerful "point the camera" line.
         const videoEl = document.getElementById(scannerIdRef.current)?.querySelector('video');
         if (videoEl) {
+          // Adaptive band: once the first real frame arrives, read the frame's
+          // TRUE aspect ratio (Android Chrome delivers rotated portrait frames
+          // — e.g. 720x1280 — regardless of the requested aspectRatio) and size
+          // the video band to exactly that ratio. The band then fills as much
+          // of the phone as possible with zero cropping, and the library's
+          // element→frame pixel mapping stays exact.
+          const adaptBandToFrame = () => {
+            if (cancelled || !videoEl.videoWidth || !videoEl.videoHeight) return;
+            const ratio = videoEl.videoWidth / videoEl.videoHeight;
+            if (Number.isFinite(ratio) && ratio > 0) {
+              setBandAspectRatio(`${videoEl.videoWidth} / ${videoEl.videoHeight}`);
+            }
+          };
+          if (videoEl.videoWidth > 0) adaptBandToFrame();
+          else videoEl.addEventListener('loadeddata', adaptBandToFrame, { once: true });
+
           const markFrameArrived = () => window.clearTimeout(frameWatchdog);
           videoEl.addEventListener('loadeddata', markFrameArrived, { once: true });
           frameWatchdog = window.setTimeout(() => {
@@ -630,9 +705,10 @@ const ProductCodeScanner = ({ onDetected, onClose, cart = [], onIncrement, onDec
           box == decoded box on every device, by construction. */}
       <div className="absolute inset-0 flex items-center justify-center overflow-hidden bg-charcoal">
         <div
+          ref={videoBandRef}
           id={scannerIdRef.current}
-          className="w-full [&_video]:!block [&_video]:!h-auto [&_video]:!w-full"
-          style={{ aspectRatio: '16 / 9' }}
+          className="w-full max-h-[72dvh] [&_video]:!block [&_video]:!h-auto [&_video]:!w-full"
+          style={{ aspectRatio: bandAspectRatio }}
         />
       </div>
 
@@ -741,8 +817,8 @@ const ProductCodeScanner = ({ onDetected, onClose, cart = [], onIncrement, onDec
             }`}
           >
           <div
-            className="relative rounded-xl shadow-[0_0_0_9999px_rgba(0,0,0,0.5)]"
-            style={{ width: SCAN_BOX_WIDTH, height: SCAN_BOX_HEIGHT }}
+            className="relative rounded-xl shadow-[0_0_0_9999px_rgba(0,0,0,0.5)] transition-[width,height] duration-200"
+            style={{ width: scanBox.width, height: scanBox.height }}
           >
             <span className="absolute -left-1 -top-1 h-7 w-7 rounded-tl-xl border-l-[3px] border-t-[3px] border-gold-300" />
             <span className="absolute -right-1 -top-1 h-7 w-7 rounded-tr-xl border-r-[3px] border-t-[3px] border-gold-300" />
