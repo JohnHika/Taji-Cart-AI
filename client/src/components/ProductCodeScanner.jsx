@@ -707,7 +707,7 @@ const ProductCodeScanner = ({ onDetected, onClose, cart = [], onIncrement, onDec
         <div
           ref={videoBandRef}
           id={scannerIdRef.current}
-          className="w-full max-h-[72dvh] [&_video]:!block [&_video]:!h-auto [&_video]:!w-full"
+          className="w-full max-h-[72dvh] [&_video]:!block [&_video]:!h-auto [&_video]:!w-full [&_div#qr-shaded-region]:!hidden"
           style={{ aspectRatio: bandAspectRatio }}
         />
       </div>
@@ -778,10 +778,11 @@ const ProductCodeScanner = ({ onDetected, onClose, cart = [], onIncrement, onDec
             </button>
             {cameraDevices
               .filter((d) => /back|rear|environment/i.test(d.label || ''))
-              .map((device) => {
+              .map((device, index, arr) => {
                 const label = device.label || '';
                 const name = /ultra/i.test(label) ? 'Ultra-wide'
                   : /tele/i.test(label) ? 'Telephoto'
+                  : arr.length > 1 ? `Main ${index === 0 ? '' : index + 1}`.trim()
                   : 'Main';
                 const active = cameraChoice === device.id;
                 return (
@@ -845,9 +846,12 @@ const ProductCodeScanner = ({ onDetected, onClose, cart = [], onIncrement, onDec
         </div>
       )}
 
-        {/* Status/error, and the basket — a normal flex-column sibling of
-            the reticle now, not a competing absolutely-positioned layer. */}
-        <div className="safe-area-bottom flex shrink-0 flex-col gap-2.5 px-3 pb-3">
+        {/* Status/error, and the basket — pinned to the bottom edge. The
+            reticle is a full-viewport overlay, so this stack must anchor
+            itself to the bottom (absolute) instead of flowing after the
+            top bar; flex spacing would otherwise leave it floating just
+            under the pills. */}
+        <div className="safe-area-bottom absolute inset-x-0 bottom-0 z-10 flex flex-col gap-2.5 px-3 pb-3">
         {error ? (
           <div className="glass-dark rounded-2xl border-l-4 border-red-400/70 px-4 py-3">
             <p className="text-sm font-medium text-red-300">{error}</p>
