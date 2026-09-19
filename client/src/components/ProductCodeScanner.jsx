@@ -190,6 +190,10 @@ const ProductCodeScanner = ({ onDetected, onClose, cart = [], onIncrement, onDec
   // glanceable outcome signal alongside the vibration pattern and reticle
   // flash, so a cashier scanning fast doesn't have to actually read the text.
   const [statusTone, setStatusTone] = useState('idle');
+  // True while the decoder is paused for the success/error feedback beat —
+  // the sweep line freezes and the reticle dims slightly, so a cashier who
+  // glances back mid-rhythm knows the scanner is processing, not frozen.
+  const [feedbackPause, setFeedbackPause] = useState(false);
   // The basket starts tucked away as a peek bar so the camera owns the
   // screen; tapping it slides the full itemised list up over the feed.
   const [basketExpanded, setBasketExpanded] = useState(false);
@@ -198,6 +202,21 @@ const ProductCodeScanner = ({ onDetected, onClose, cart = [], onIncrement, onDec
   // button only renders once we know it'll actually do something.
   const [torchSupported, setTorchSupported] = useState(false);
   const [torchOn, setTorchOn] = useState(false);
+  // Back-gesture / Escape closes the scanner — phones default to closing
+  // overlays via the system back button, and blocking it (as a plain fixed
+  // overlay does) makes the scanner feel inescapable. We push a history
+  // entry on mount and treat popstate as "close", exactly like native sheets.
+  useEffect(() => {
+    window.history.pushState({ scannerOpen: true }, '');
+    const handlePopState = () => onCloseRef.current?.();
+    window.addEventListener('popstate', handlePopState);
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+      // If the scanner is closed via the X (not back), consume our history
+      // entry so the next back-press doesn't land on a stale scanner state.
+      if (window.history.state?.scannerOpen) window.history.back();
+    };
+  }, []);
 
   const itemCount = useMemo(() => cart.reduce((sum, item) => sum + item.quantity, 0), [cart]);
   const cartTotal = useMemo(
@@ -240,6 +259,12 @@ const ProductCodeScanner = ({ onDetected, onClose, cart = [], onIncrement, onDec
   const handleUndoLastScan = () => {
     if (!lastAdded) return;
     onDecrementRef.current?.(lastAdded.productId);
+    // Release the duplicate-lock for that code too — the whole point of Undo
+    // is "I scanned the wrong label", so the cashier must be able to
+    // immediately re-scan the CORRECT one, and often the same label again
+    // after fixing their aim. Without this, re-scanning it reports
+    // "already in this basket" until some other product is scanned.
+    lastAddedCodeRef.current = '';
     setStatus(`Removed ${lastAdded.productName}. Point at the correct item.`);
     setLastAdded(null);
   };
@@ -311,12 +336,14 @@ const ProductCodeScanner = ({ onDetected, onClose, cart = [], onIncrement, onDec
               }
             }
             detectingRef.current = false;
+            setFeedbackPause(false);
           }, 850);
         };
 
         const handleDecoded = async (decodedText) => {
           if (detectingRef.current || cancelled) return;
           detectingRef.current = true;
+          setFeedbackPause(true);
           scannerRef.current?.pause(true);
 
           const normalizedCode = String(decodedText || '').trim();
@@ -508,6 +535,12 @@ const ProductCodeScanner = ({ onDetected, onClose, cart = [], onIncrement, onDec
       window.clearTimeout(frameWatchdog);
       const instance = scannerRef.current;
       scannerRef.current = null;
+      // Reset torch UI state — the camera track (and its light) dies with the
+      // unmount, so reopening must not show the torch as still-on.
+      setTorchOn(false);
+      setTorchSupported(false);
+      // Allow the same label to be re-scanned after a session ends.
+      lastAddedCodeRef.current = '';
       stopAndClear(instance);
     };
   }, []);
@@ -617,7 +650,9 @@ const ProductCodeScanner = ({ onDetected, onClose, cart = [], onIncrement, onDec
                 convention), with a light glow instead of the previous heavy
                 one — that glow was blowing out to a washed-out haze in a
                 real phone photo, reading as mismatched rather than intentional. */}
-            <div className="motion-reduce:hidden absolute inset-x-2 top-1/2 h-0.5 -translate-y-1/2 rounded-full bg-white/90 shadow-[0_0_6px_1px_rgba(255,255,255,0.5)] animate-scan-sweep" />
+            <div className={`motion-reduce:hidden absolute inset-x-2 top-1/2 h-0.5 -translate-y-1/2 rounded-full bg-white/90 shadow-[0_0_6px_1px_rgba(255,255,255,0.5)] animate-scan-sweep ${
+              feedbackPause ? 'opacity-30 [animation-play-state:paused]' : ''
+            }`} />
             {/* inset-0/rounded-xl — exactly the box's own bounds, not a
                 larger ring floating 8px outside it. */}
             {scanFlashKey > 0 && (
