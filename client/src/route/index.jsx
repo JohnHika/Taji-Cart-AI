@@ -22,6 +22,7 @@ const SearchPage                    = lazyWithRetry(() => import('../pages/Searc
 const OrderTracking                 = lazyWithRetry(() => import('../pages/OrderTracking'));
 const ProductDisplayPage            = lazyWithRetry(() => import('../pages/ProductDisplayPage'));
 const CollectionsPage               = lazyWithRetry(() => import('../pages/CollectionsPage'));
+const PrivacyPolicy                 = lazyWithRetry(() => import('../pages/PrivacyPolicy'));
 const WishlistPage                  = lazyWithRetry(() => import('../pages/WishlistPage'));
 const ShopTheLookGallery            = lazyWithRetry(() => import('../components/ShopTheLookGallery'));
 const GuestCheckout                 = lazyWithRetry(() => import('../pages/GuestCheckout'));
@@ -158,6 +159,7 @@ const router = createBrowserRouter([
       { path: 'dashboard/store-inventory', element: <Navigate to="/" replace /> },
       { path: 'search',                  element: S(SearchPage) },
       { path: 'order-tracking/:orderId', element: S(OrderTracking) },
+      { path: 'privacy',                 element: S(PrivacyPolicy) },
       { path: 'product/:productId',      element: S(ProductDisplayPage) },
       { path: 'categories',              element: <Navigate to="/" replace /> },
       { path: 'collections',             element: S(CollectionsPage) },

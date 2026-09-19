@@ -209,6 +209,7 @@ const Footer = () => {
               <li><Link to="/dashboard/address" className="text-brown-600 transition-colors hover:text-plum-700 dark:text-white/60 dark:hover:text-plum-300">Saved Addresses</Link></li>
               <li><a href={`mailto:${nawiriBrand.email}`} className="text-brown-600 transition-colors hover:text-plum-700 dark:text-white/60 dark:hover:text-plum-300">Email Support</a></li>
               <li><a href={nawiriBrand.whatsappUrl} target="_blank" rel="noopener noreferrer" className="text-brown-600 transition-colors hover:text-plum-700 dark:text-white/60 dark:hover:text-plum-300">WhatsApp Support</a></li>
+              <li><Link to="/privacy" className="text-brown-600 transition-colors hover:text-plum-700 dark:text-white/60 dark:hover:text-plum-300">Privacy Policy</Link></li>
             </ul>
           </div>
 

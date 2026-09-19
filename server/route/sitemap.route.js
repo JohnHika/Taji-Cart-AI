@@ -32,6 +32,7 @@ router.get('/', async (req, res) => {
       buildSitemapUrl(`${BASE}/shop-the-look`, 'weekly', '0.8'),
       buildSitemapUrl(`${BASE}/campaigns`, 'weekly', '0.8'),
       buildSitemapUrl(`${BASE}/search`, 'weekly', '0.7'),
+      buildSitemapUrl(`${BASE}/privacy`, 'monthly', '0.3'),
     ];
 
     const categoryUrls = categories.map(c =>
