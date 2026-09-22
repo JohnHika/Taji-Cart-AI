@@ -253,6 +253,10 @@ const SummaryApi = {
         url: `${baseURL}/api/jenga/card/pay`,
         method: 'post'
     },
+    jengaCheckoutPayment: {
+        url: `${baseURL}/api/jenga/checkout/pay`,
+        method: 'post'
+    },
     jengaGuestPayment: {
         url: `${baseURL}/api/jenga/guest/pay`,
         method: 'post'

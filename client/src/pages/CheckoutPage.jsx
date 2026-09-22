@@ -13,7 +13,6 @@ import CheckoutRoyalCard from '../components/CheckoutRoyalCard'; // Premium Roya
 import CommunityCampaignProgress from '../components/CommunityCampaignProgress'; // Import the CommunityCampaignProgress component
 import DeliveryLocationModal from '../components/DeliveryLocationModal';
 import FulfillmentModal from '../components/FulfillmentModal';
-import JengaPayment from '../components/JengaPayment';
 import JengaCardPayment from '../components/JengaCardPayment';
 import { useTheme } from '../context/ThemeContext';
 import useCriteriaGate from '../hooks/useCriteriaGate';
@@ -218,7 +217,7 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
   }, [eligibleAddressIndexes, selectAddress]);
   const checkoutLockRef = useRef(false);
   const [checkoutAction, setCheckoutAction] = useState('');
-  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState('cash'); // 'cash' | 'jenga' | 'jenga-card'
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState('jenga-checkout'); // 'cash' | 'jenga' (direct STK) | 'jenga-checkout' (hosted M-Pesa)
 
   // SACCO/coach terminal drop-off (outside Nairobi) has no Cash option —
   // its trust/risk profile is different from a rider we control delivering
@@ -227,7 +226,7 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
   // rather than leaving the payment area showing nothing.
   useEffect(() => {
     if (fulfillmentMethod === 'sacco_pickup' && selectedPaymentMethod === 'cash') {
-      setSelectedPaymentMethod('jenga');
+      setSelectedPaymentMethod('jenga-checkout');
     }
   }, [fulfillmentMethod, selectedPaymentMethod]);
 
@@ -878,25 +877,14 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
                 )}
                 <button
                   type="button"
-                  onClick={() => setSelectedPaymentMethod('jenga')}
+                  onClick={() => setSelectedPaymentMethod('jenga-checkout')}
                   className={`flex-1 py-2 px-3 rounded text-sm font-semibold border-2 transition-colors ${
-                    selectedPaymentMethod === 'jenga'
+                    selectedPaymentMethod === 'jenga-checkout'
                       ? 'border-plum-600 text-plum-700 bg-plum-50 dark:border-plum-500 dark:text-plum-200 dark:bg-plum-900/20'
                       : 'border-brown-200 text-brown-400 dark:border-dm-border dark:text-white/40'
                   }`}
                 >
                   M-Pesa
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setSelectedPaymentMethod('jenga-card')}
-                  className={`flex-1 py-2 px-3 rounded text-sm font-semibold border-2 transition-colors ${
-                    selectedPaymentMethod === 'jenga-card'
-                      ? 'border-plum-600 text-plum-700 bg-plum-50 dark:border-plum-500 dark:text-plum-200 dark:bg-plum-900/20'
-                      : 'border-brown-200 text-brown-400 dark:border-dm-border dark:text-white/40'
-                  }`}
-                >
-                  Card
                 </button>
               </div>
 
@@ -916,38 +904,7 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
                 </button>
               )}
 
-              {selectedPaymentMethod === 'jenga' && isPaymentEnabled && (
-                <JengaPayment
-                  cartItems={cartItemsList}
-                  totalAmount={finalPrice}
-                  addressId={fulfillmentMethod === 'delivery' ? addressList[selectAddress]?._id : null}
-                  communityRewardId={selectedReward ? selectedReward._id : null}
-                  communityDiscountAmount={selectedReward && selectedReward.type === 'discount' ? communityDiscount : 0}
-                  fulfillment_type={fulfillmentMethod}
-                  pickup_location={pickupLocation}
-                  pickup_instructions={pickupInstructions}
-                  saccoOperatorId={fulfillmentMethod === 'sacco_pickup' ? saccoOperatorId : undefined}
-                  saccoDestinationTown={fulfillmentMethod === 'sacco_pickup' ? saccoDestinationTown : undefined}
-                  deliveryCharge={deliveryCharge}
-                  deliveryInstructions={deliveryInstructions}
-                  deliveryMode={deliveryMode}
-                  deliveryZoneId={deliveryZoneId}
-                  customerLocation={customerLocation}
-                  onSuccess={handleJengaPaymentSuccess}
-                  onError={handleJengaPaymentError}
-                />
-              )}
-
-              {selectedPaymentMethod === 'jenga' && !isPaymentEnabled && (
-                <div className="flex items-center justify-between w-full py-2 px-3 rounded border-2 border-brown-200 text-brown-400 dark:border-dm-border dark:text-white/30 font-semibold text-sm">
-                  <span>M-Pesa</span>
-                  <span className="text-xs font-normal opacity-60">
-                    {paymentBlockedReason}
-                  </span>
-                </div>
-              )}
-
-              {selectedPaymentMethod === 'jenga-card' && isPaymentEnabled && (
+              {selectedPaymentMethod === 'jenga-checkout' && isPaymentEnabled && (
                 <JengaCardPayment
                   cartItems={cartItemsList}
                   totalAmount={finalPrice}
@@ -968,9 +925,9 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
                 />
               )}
 
-              {selectedPaymentMethod === 'jenga-card' && !isPaymentEnabled && (
+              {selectedPaymentMethod === 'jenga-checkout' && !isPaymentEnabled && (
                 <div className="flex items-center justify-between w-full py-2 px-3 rounded border-2 border-brown-200 text-brown-400 dark:border-dm-border dark:text-white/30 font-semibold text-sm">
-                  <span>Card</span>
+                  <span>M-Pesa</span>
                   <span className="text-xs font-normal opacity-60">
                     {paymentBlockedReason}
                   </span>
@@ -1507,25 +1464,14 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
               )}
               <button
                 type="button"
-                onClick={() => setSelectedPaymentMethod('jenga')}
+                onClick={() => setSelectedPaymentMethod('jenga-checkout')}
                 className={`flex-1 py-2 px-3 rounded-card text-sm font-semibold border-2 transition-colors ${
-                  selectedPaymentMethod === 'jenga'
+                  selectedPaymentMethod === 'jenga-checkout'
                     ? 'border-plum-600 text-plum-700 bg-plum-50 dark:border-plum-500 dark:text-plum-200 dark:bg-plum-900/20'
                     : 'border-brown-100 dark:border-dm-border text-brown-300 dark:text-white/40'
                 }`}
               >
                 M-Pesa
-              </button>
-              <button
-                type="button"
-                onClick={() => setSelectedPaymentMethod('jenga-card')}
-                className={`flex-1 py-2 px-3 rounded-card text-sm font-semibold border-2 transition-colors ${
-                  selectedPaymentMethod === 'jenga-card'
-                    ? 'border-plum-600 text-plum-700 bg-plum-50 dark:border-plum-500 dark:text-plum-200 dark:bg-plum-900/20'
-                    : 'border-brown-100 dark:border-dm-border text-brown-300 dark:text-white/40'
-                }`}
-              >
-                Card
               </button>
             </div>
 
@@ -1548,38 +1494,7 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
               </button>
             )}
 
-            {selectedPaymentMethod === 'jenga' && isPaymentEnabled && (
-              <JengaPayment
-                cartItems={cartItemsList}
-                totalAmount={finalPrice}
-                addressId={fulfillmentMethod === 'delivery' ? addressList[selectAddress]?._id : null}
-                communityRewardId={selectedReward ? selectedReward._id : null}
-                communityDiscountAmount={selectedReward && selectedReward.type === 'discount' ? communityDiscount : 0}
-                fulfillment_type={fulfillmentMethod}
-                pickup_location={pickupLocation}
-                pickup_instructions={pickupInstructions}
-                saccoOperatorId={fulfillmentMethod === 'sacco_pickup' ? saccoOperatorId : undefined}
-                saccoDestinationTown={fulfillmentMethod === 'sacco_pickup' ? saccoDestinationTown : undefined}
-                deliveryCharge={deliveryCharge}
-                deliveryInstructions={deliveryInstructions}
-                deliveryMode={deliveryMode}
-                deliveryZoneId={deliveryZoneId}
-                customerLocation={customerLocation}
-                onSuccess={handleJengaPaymentSuccess}
-                onError={handleJengaPaymentError}
-              />
-            )}
-
-            {selectedPaymentMethod === 'jenga' && !isPaymentEnabled && (
-              <div className="flex items-center justify-between w-full py-3 px-4 rounded-card border-2 border-brown-100 dark:border-dm-border text-brown-300 dark:text-white/20 font-semibold text-sm">
-                <span>M-Pesa</span>
-                <span className="text-xs font-normal opacity-60">
-                  {paymentBlockedReason}
-                </span>
-              </div>
-            )}
-
-            {selectedPaymentMethod === 'jenga-card' && isPaymentEnabled && (
+            {selectedPaymentMethod === 'jenga-checkout' && isPaymentEnabled && (
               <JengaCardPayment
                 cartItems={cartItemsList}
                 totalAmount={finalPrice}
@@ -1600,9 +1515,9 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
               />
             )}
 
-            {selectedPaymentMethod === 'jenga-card' && !isPaymentEnabled && (
+            {selectedPaymentMethod === 'jenga-checkout' && !isPaymentEnabled && (
               <div className="flex items-center justify-between w-full py-3 px-4 rounded-card border-2 border-brown-100 dark:border-dm-border text-brown-300 dark:text-white/20 font-semibold text-sm">
-                <span>Card</span>
+                <span>M-Pesa</span>
                 <span className="text-xs font-normal opacity-60">
                   {paymentBlockedReason}
                 </span>

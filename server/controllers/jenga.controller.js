@@ -512,19 +512,19 @@ const JENGA_PGW_DEFAULT_COUNTRY_CODE = 'KE';
 const JENGA_PGW_DEFAULT_POSTAL_CODE = '00100';
 
 /**
- * POST /api/jenga/card/pay
+ * POST /api/jenga/checkout/pay
  * Authenticated. Creates the same kind of PENDING order as the M-Pesa path,
  * then returns the fields for Jenga PGW's hosted Web Checkout Form. The
  * client builds a hidden form from these fields and submits it, which
- * navigates the browser to Jenga's hosted page to collect the card —
- * raw card numbers never touch this server.
+ * navigates the browser to Jenga's hosted page. Jenga then presents the
+ * merchant's active methods, including M-Pesa for Nawiri Hair.
  */
 export const initiateJengaCardPayment = async (request, response) => {
   let orderReference;
   let sharedOrderId;
   try {
     if (!JENGA_PGW_CHECKOUT_URL) {
-      const err = new Error('Card payments are not configured yet. Please pay with M-Pesa instead.');
+      const err = new Error('Secure M-Pesa checkout is not configured yet.');
       err.statusCode = 503;
       throw err;
     }

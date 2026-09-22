@@ -7,8 +7,9 @@ const jengaPaymentSchema = new mongoose.Schema(
     orderReference:  { type: String, index: true, unique: true },
     orderId:         { type: String, index: true }, // links to OrderModel.orderId once the order exists
     userId:          { type: mongoose.Schema.ObjectId, ref: 'User' },
-    // 'mpesa' = Jenga Payment Gateway wallet-based STK push. 'card' = Jenga PGW
-    // hosted checkout redirect (Visa/Mastercard/Amex/UnionPay).
+    // 'mpesa' = Jenga Payment Gateway wallet-based STK push. 'card' is the
+    // legacy storage value for Jenga PGW hosted checkout, whose active methods
+    // can include M-Pesa as well as card networks.
     channel:         { type: String, enum: ['mpesa', 'card'], default: 'mpesa' },
     phoneNumber:     { type: String },
     amount:          { type: Number },

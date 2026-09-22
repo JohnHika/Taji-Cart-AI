@@ -15,6 +15,10 @@ const jengaRouter = Router();
 jengaRouter.post('/pay', auth, initiateJengaPayment);
 jengaRouter.get('/status/:orderReference', auth, getJengaPaymentStatus);
 jengaRouter.post('/card/pay', auth, initiateJengaCardPayment);
+// Jenga Payment Gateway hosted checkout. The legacy /card/pay endpoint is
+// retained for any in-flight clients, but the app uses this payment-method-
+// neutral route because Jenga presents the active M-Pesa option on its page.
+jengaRouter.post('/checkout/pay', auth, initiateJengaCardPayment);
 
 // Public — no account required. getJengaPaymentStatus's ownership check
 // (doc.userId && ...) already no-ops when doc.userId is unset, which is

@@ -13,14 +13,14 @@ const JENGA_BASE_URL = process.env.JENGA_ENV === 'production'
 const JENGA_AUTH_URL = `${JENGA_BASE_URL}/authentication/api/v3/authenticate/merchant`;
 const JENGA_STK_PUSH_URL = `${JENGA_BASE_URL}/api-checkout/mpesa-stk-push/v3.0/init`;
 
-// Jenga PGW (card checkout) is a distinct product from the wallet-based STK
+// Jenga PGW hosted checkout is a distinct product from the wallet-based STK
 // flow above, but shares the same merchant credentials and the same
 // /authenticate/merchant bearer token. Its hosted checkout form posts to a
 // jengapgw.io host (not finserve.africa). Jenga's public docs only publish
 // the UAT form action (https://v3-uat.jengapgw.io/processPayment) — the
 // production URL isn't documented anywhere we could find, so it must be
-// supplied explicitly via JENGA_PGW_CHECKOUT_URL once Jenga support/the
-// merchant portal confirms it. Never silently fall back to UAT in production.
+// supplied explicitly via JENGA_PGW_CHECKOUT_URL. Never silently fall back to
+// UAT in production.
 const JENGA_PGW_CHECKOUT_URL = process.env.JENGA_PGW_CHECKOUT_URL
   || (process.env.JENGA_ENV === 'production' ? null : 'https://v3-uat.jengapgw.io/processPayment');
 
