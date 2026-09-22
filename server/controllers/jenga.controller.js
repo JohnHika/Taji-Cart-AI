@@ -40,11 +40,9 @@ import { reserveStockGuarded } from '../utils/stockGuard.js';
 // against ProductModel to keep this module self-contained.
 const roundMoney = (amount = 0) => Number(Number(amount || 0).toFixed(2));
 
-// Jenga's callback has no signature (unlike Stripe-style HMAC webhooks), so
-// orderReference alone is not enough to trust it. Appending a shared secret
-// to the callback URL we register per-request means a forged callback also
-// needs to know this value, which never reaches the client. Optional but
-// strongly recommended: set JENGA_CALLBACK_SECRET in the environment.
+// The request-level STK callback is protected by a URL token. Jenga's
+// account-level IPN uses HTTP Basic authentication instead; both are accepted
+// below because Jenga can send both notifications for one successful payment.
 let warnedMissingJengaCallbackSecret = false;
 const buildJengaCallbackUrl = (baseUrl) => {
   const secret = process.env.JENGA_CALLBACK_SECRET;
@@ -500,10 +498,10 @@ export const initiateJengaPayment = (request, response) =>
 export const initiateGuestJengaPayment = (request, response) =>
   performJengaStkInitiate(request, response, { isGuest: true });
 
-// Jenga's PGW checkout form docs don't publish a fixed enum for productType —
-// it renders as a free-text merchant-supplied label in every example. Kept
-// as a constant so it's one place to fix if a live UAT submission rejects it.
-const JENGA_PGW_PRODUCT_TYPE = 'General';
+// Jenga documents this as the product category, with Product/Service as the
+// accepted values. Nawiri sells physical products, so avoid the undocumented
+// "General" value previously sent to the hosted checkout.
+const JENGA_PGW_PRODUCT_TYPE = 'Product';
 // Jenga's checkout reference expresses this duration with the `mins` suffix
 // (for example, `15mins`). Use the same documented format rather than a bare
 // number that the hosted form could reject.
@@ -538,6 +536,13 @@ export const initiateJengaCardPayment = async (request, response) => {
     const user = await UserModel.findById(userId).select('name email mobile').lean();
     const [firstName, ...lastNameParts] = String(user?.name || 'Customer').trim().split(/\s+/);
     const lastName = lastNameParts.join(' ') || firstName;
+    const customerEmail = String(user?.email || '').trim();
+    const normalizedCustomerPhone = normalizeKenyanPhone(user?.mobile);
+    if (!customerEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(customerEmail) || !normalizedCustomerPhone) {
+      const err = new Error('Add a valid email address and Kenyan mobile number to your profile before paying with M-Pesa.');
+      err.statusCode = 400;
+      throw err;
+    }
 
     let customerAddress = 'Nairobi';
     let customerPostalCodeZip = JENGA_PGW_DEFAULT_POSTAL_CODE;
@@ -586,8 +591,11 @@ export const initiateJengaCardPayment = async (request, response) => {
           paymentTimeLimit: JENGA_PGW_PAYMENT_TIME_LIMIT,
           customerFirstName: firstName || 'Customer',
           customerLastName: lastName || 'Customer',
-          customerEmail: user?.email || '',
-          customerPhone: user?.mobile ? String(user.mobile) : '',
+          customerEmail,
+          // Jenga's PGW requires an international Kenyan number. The profile
+          // may contain 07…, 01…, 254…, or +254…; normalize every accepted
+          // form before submitting the hosted checkout form.
+          customerPhone: `+${normalizedCustomerPhone}`,
           customerAddress,
           customerPostalCodeZip,
           countryCode: JENGA_PGW_DEFAULT_COUNTRY_CODE,
@@ -890,8 +898,27 @@ export const getJengaPaymentStatus = async (request, response) => {
 export const handleJengaCallback = async (request, response) => {
   try {
     const expectedToken = process.env.JENGA_CALLBACK_SECRET;
-    if (expectedToken && request.query?.token !== expectedToken) {
-      console.error('Jenga callback rejected: missing/incorrect token');
+    const ipnUsername = process.env.JENGA_IPN_USERNAME;
+    const ipnPassword = process.env.JENGA_IPN_PASSWORD;
+    const receivedAuthorization = request.get('authorization') || '';
+    const expectedAuthorization = (ipnUsername && ipnPassword)
+      ? `Basic ${Buffer.from(`${ipnUsername}:${ipnPassword}`).toString('base64')}`
+      : null;
+
+    const isConstantTimeMatch = (left, right) => {
+      const leftBuffer = Buffer.from(String(left));
+      const rightBuffer = Buffer.from(String(right));
+      return leftBuffer.length === rightBuffer.length
+        && crypto.timingSafeEqual(leftBuffer, rightBuffer);
+    };
+
+    const hasValidRequestToken = Boolean(expectedToken)
+      && isConstantTimeMatch(request.query?.token || '', expectedToken);
+    const hasValidIpnAuthorization = Boolean(expectedAuthorization)
+      && isConstantTimeMatch(receivedAuthorization, expectedAuthorization);
+
+    if (!hasValidRequestToken && !hasValidIpnAuthorization) {
+      console.error('Jenga callback rejected: invalid request token or IPN Basic authentication');
       // 200 (not 401) so a genuine misconfiguration doesn't trigger Jenga's
       // retry storm — this is logged for investigation either way.
       return response.status(200).json({ success: true });
