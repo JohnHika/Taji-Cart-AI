@@ -592,11 +592,11 @@ export const initiateJengaCardPayment = async (request, response) => {
           customerFirstName: firstName || 'Customer',
           customerLastName: lastName || 'Customer',
           customerEmail,
-          // PGW's browser widget expects the documented 2547…/2541… MSISDN
-          // value (without a leading '+'). It renders the country dial-code
-          // itself; passing an E.164 '+' value leaves its phone control
-          // invalid and blocks the M-Pesa charge lookup.
-          customerPhone: normalizedCustomerPhone,
+          // The live PGW widget parses this field with libphonenumber before
+          // it loads Mobile-MPESA charges. Its runtime requires an E.164
+          // Kenyan value (+254…), even though the checkout-reference sample
+          // omits the plus sign.
+          customerPhone: `+${normalizedCustomerPhone}`,
           customerAddress,
           customerPostalCodeZip,
           countryCode: JENGA_PGW_DEFAULT_COUNTRY_CODE,
