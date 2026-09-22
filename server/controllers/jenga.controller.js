@@ -40,13 +40,11 @@ import { reserveStockGuarded } from '../utils/stockGuard.js';
 // against ProductModel to keep this module self-contained.
 const roundMoney = (amount = 0) => Number(Number(amount || 0).toFixed(2));
 
-// Jenga's account-based settlement flow has no status-query API and doesn't
-// document a signature on its inbound callback (unlike Stripe-style HMAC
-// webhooks) — so orderReference alone (client-visible, needed for polling)
-// isn't enough to trust a callback. Appending a shared secret to the
-// callBackUrl we register per-request means a forged callback also needs to
-// know this value, which never reaches the client. Optional but strongly
-// recommended: set JENGA_CALLBACK_SECRET in the environment.
+// Jenga's callback has no signature (unlike Stripe-style HMAC webhooks), so
+// orderReference alone is not enough to trust it. Appending a shared secret
+// to the callback URL we register per-request means a forged callback also
+// needs to know this value, which never reaches the client. Optional but
+// strongly recommended: set JENGA_CALLBACK_SECRET in the environment.
 let warnedMissingJengaCallbackSecret = false;
 const buildJengaCallbackUrl = (baseUrl) => {
   const secret = process.env.JENGA_CALLBACK_SECRET;
@@ -71,10 +69,8 @@ const pricewithDiscount = (price, dis = 0) => {
   return Math.max(0, basePrice - discountAmount);
 };
 
-// Jenga's stkussdpush/initiate docs cap payment.ref at 6 alphanumeric
-// characters ("For now we support up to 6 alphanumeric characters length but
-// will later update to more characters") — UAT did not enforce this against
-// a longer reference, but production is expected to, so this must stay <= 6.
+// Jenga Payment Gateway wallet-STK uses the order reference in both the order
+// and payment sections. Keep the merchant reference compact and alphanumeric.
 const ORDER_REFERENCE_CHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
 const ORDER_REFERENCE_LENGTH = 6;
 // PGW checkout requires an alphanumeric merchant reference of at least eight
@@ -319,11 +315,47 @@ const buildPendingOrder = async (request, { orderReferenceLength = ORDER_REFEREN
   return { orderReference, sharedOrderId, totalAmt, fulfillment_type };
 };
 
+// Jenga Payment Gateway's wallet-STK API documents MSISDN values in Kenyan
+// local format (07XXXXXXXX). The checkout accepts either local or 254-prefixed
+// values, so normalize once then convert only for this provider request.
+const toJengaWalletMsisdn = (normalizedPhone) =>
+  normalizedPhone.startsWith('254') ? `0${normalizedPhone.slice(3)}` : normalizedPhone;
+
+const resolveJengaWalletCustomer = async (request, { isGuest, userId, normalizedPhone }) => {
+  if (isGuest) {
+    const shipping = request.body.guestShipping || {};
+    const name = String(
+      shipping.name || shipping.recipientName ||
+      `${shipping.firstName || ''} ${shipping.lastName || ''}`.trim() ||
+      'Guest Customer'
+    ).trim();
+    const email = String(request.body.guestEmail || '').trim();
+    if (!email) {
+      const err = new Error('Guest email is required for M-Pesa checkout.');
+      err.statusCode = 400;
+      throw err;
+    }
+    return { name, email, phoneNumber: toJengaWalletMsisdn(normalizedPhone) };
+  }
+
+  const user = await UserModel.findById(userId).select('name email').lean();
+  if (!user?.email) {
+    const err = new Error('Your account needs an email address before starting an M-Pesa payment.');
+    err.statusCode = 400;
+    throw err;
+  }
+  return {
+    name: String(user.name || 'Customer').trim() || 'Customer',
+    email: String(user.email).trim(),
+    phoneNumber: toJengaWalletMsisdn(normalizedPhone),
+  };
+};
+
 /**
  * Shared by both the authenticated and guest M-Pesa STK entry points:
- * validates the phone number, builds the PENDING order (guest or
- * authenticated per `isGuest`), and initiates the Jenga STK push. Order is
- * not finalized and stock is not touched here — only after verified payment.
+ * validates the phone number, builds the PENDING order (guest or authenticated
+ * per `isGuest`), and initiates the Jenga Payment Gateway wallet-STK push.
+ * Order is not finalized and stock is not touched here — only after verified payment.
  */
 const performJengaStkInitiate = async (request, response, { isGuest = false } = {}) => {
   try {
@@ -339,6 +371,12 @@ const performJengaStkInitiate = async (request, response, { isGuest = false } = 
       });
     }
 
+    const customer = await resolveJengaWalletCustomer(request, {
+      isGuest,
+      userId,
+      normalizedPhone,
+    });
+
     const { orderReference, sharedOrderId, totalAmt } = await buildPendingOrder(request, { isGuest });
 
     await JengaPayment.create({
@@ -353,39 +391,54 @@ const performJengaStkInitiate = async (request, response, { isGuest = false } = 
     });
 
     try {
-      const merchantAccountNumber = requireEnv('JENGA_ACCOUNT_NUMBER');
-      const merchantName = requireEnv('JENGA_MERCHANT_NAME');
       const callbackUrl = buildJengaCallbackUrl(requireEnv('JENGA_CALLBACK_URL'));
 
       const token = await getAuthToken();
+      // Keep the numeric request value and the signed value identical. Jenga
+      // signs the literal value sent in payment.details.paymentAmount.
+      const paymentAmount = Number(totalAmt.toFixed(2));
       const signature = signStkPushRequest({
-        accountNumber: merchantAccountNumber,
-        ref: orderReference,
-        mobileNumber: normalizedPhone,
-        telco: 'Safaricom',
-        amount: totalAmt.toFixed(2),
+        orderReference,
         currency: 'KES',
+        mobileNumber: customer.phoneNumber,
+        amount: paymentAmount,
       });
-
-      const today = new Date().toISOString().slice(0, 10);
 
       const jengaResponse = await axios.post(
         JENGA_STK_PUSH_URL,
         {
-          merchant: {
-            accountNumber: merchantAccountNumber,
+          order: {
+            orderReference,
+            orderAmount: paymentAmount,
+            orderCurrency: 'KES',
+            source: 'APICHECKOUT',
             countryCode: 'KE',
-            name: merchantName,
+            // The wallet-STK validator rejects punctuation in this field.
+            // Keep it merchant-readable while limiting it to letters/digits.
+            description: `NawiriHairOrder${orderReference}`,
+          },
+          customer: {
+            name: customer.name,
+            email: customer.email,
+            phoneNumber: customer.phoneNumber,
+            // Jenga documents this as required for wallet STK. Nawiri does
+            // not collect national IDs at checkout, so use its documented
+            // placeholder unless a caller explicitly supplies one.
+            identityNumber: String(request.body.identityNumber || '0000000'),
+            firstAddress: '',
+            secondAddress: '',
           },
           payment: {
-            ref: orderReference,
-            mobileNumber: normalizedPhone,
-            telco: 'Safaricom',
-            amount: totalAmt.toFixed(2),
-            currency: 'KES',
-            date: today,
-            callBackUrl: callbackUrl,
-            pushType: 'STK',
+            paymentReference: orderReference,
+            paymentCurrency: 'KES',
+            channel: 'MOBILE',
+            service: 'MPESA',
+            provider: 'JENGA',
+            callbackUrl,
+            details: {
+              msisdn: customer.phoneNumber,
+              paymentAmount,
+            },
           },
         },
         {
@@ -565,48 +618,21 @@ export const initiateJengaCardPayment = async (request, response) => {
   }
 };
 
-// Account-based settlement has no dedicated STK status-query endpoint — Jenga's
-// own docs say to "await final transaction status on callback". The callback
-// body is therefore authoritative for this flow, but every field we rely on
-// (reference, amount, status/code) is still validated strictly below.
-//
-// Documented codes (developer.jengahq.io, account-based settlement callback):
-//   0  PENDING            "Request pending to be processed"
-//   1  FAILED             "Transaction Failed due to various reasons"
-//   2  AWAITING_SETTLEMENT "Transaction Successful - Awaiting Third Party Settlement"
-//   3  COMPLETED          "Transaction completed successfully and credited to merchant"
-//   4  AWAITING_SETTLEMENT "Transaction was successful, But failed to credit merchant account"
-//   5  CANCELLED          "Transaction was Cancelled, E.g by user"
-//   6  CANCELLED          "Transaction was Cancelled"
-//   7  REJECTED           "Transaction rejected due to validation errors"
-//
-// Note: an earlier version of this mapping treated code 6 as "expired" based
-// on a single observed message string ("No response from user.") without
-// checking Jenga's documented code table — that message text does not
-// determine the code's general meaning, and code 6 is documented as
-// "Cancelled". Fixed after live testing showed real PAID transactions (code
-// 3, status: true) were never being recognized because this function only
-// checked for code === 0.
-const JENGA_SUCCESS_CODES = new Set([3]);
-const JENGA_AWAITING_SETTLEMENT_CODES = new Set([2, 4]);
-const JENGA_CANCELLED_CODES = new Set([5, 6]);
-const JENGA_REJECTED_CODES = new Set([1, 7]);
-
+// Wallet-STK Complete Callback messages expose the merchant reference in
+// customer.reference and the final state in transaction.status. We only mark
+// an order paid for the documented SUCCESS state; all other/unrecognized
+// states fail closed as pending or failed.
 const mapJengaCallbackToLocal = (callbackData) => {
-  const success = callbackData?.status === true;
-  const code = Number(callbackData?.code);
-
-  if (success && JENGA_SUCCESS_CODES.has(code)) return 'paid';
-  // Successful debit but merchant settlement is still pending/failed on
-  // Jenga's side — not yet safe to treat as paid; keep polling.
-  if (JENGA_AWAITING_SETTLEMENT_CODES.has(code)) return 'pending';
-  if (JENGA_CANCELLED_CODES.has(code)) return 'cancelled';
-  if (JENGA_REJECTED_CODES.has(code) || !success) return 'failed';
+  const status = String(callbackData?.transaction?.status || '').trim().toUpperCase();
+  if (status === 'SUCCESS' || status === 'COMPLETED') return 'paid';
+  if (['PENDING', 'PROCESSING', 'AWAITING_SETTLEMENT'].includes(status)) return 'pending';
+  if (['CANCELLED', 'CANCELED'].includes(status)) return 'cancelled';
+  if (['FAILED', 'REJECTED', 'DECLINED', 'EXPIRED'].includes(status)) return 'failed';
   return 'unknown';
 };
 
 // State codes documented for the Query Transaction Details API (used by the
-// card/PGW flow, which — unlike account-based STK — has a real status-query
+// card/PGW flow, which has a real status-query
 // endpoint): 2 = Success, 1 = Failed, -1 = Awaiting callback response.
 const mapTxnDetailsToLocal = (txn) => {
   const stateCode = Number(txn?.stateCode);
@@ -736,7 +762,7 @@ const markOrderUnpaid = async (paymentDoc, localStatus) => {
 
 /**
  * Reconciles a pending payment against a normalized result from Jenga —
- * shared by both the STK callback (server/controllers/jenga.controller.js:
+ * shared by both the wallet-STK callback (server/controllers/jenga.controller.js:
  * handleJengaCallback) and the card flow's status-query result
  * (handleJengaCardCallback). `normalized` is { localStatus, returnedRef,
  * returnedAmount, resultCode, resultDesc, raw } — callers are responsible
@@ -798,11 +824,7 @@ const reconcilePayment = async (paymentDoc, normalized) => {
   return paymentDoc;
 };
 
-// Jenga's UAT environment has been observed to never deliver a callback for
-// some genuinely paid account-based STK transactions (confirmed via real
-// M-Pesa SMS receipts with no corresponding callback after 5+ minutes), while
-// still delivering callbacks promptly for expired/no-response outcomes. A
-// payment stuck in 'pending' past this window is reported to the client as
+// A payment stuck in 'pending' past this window is reported to the client as
 // 'stale' — never auto-promoted to paid/failed — so the UI stops polling and
 // prompts the customer to contact support instead of waiting forever.
 // Kept just under the client's 2-minute poll timeout so the client sees a
@@ -812,8 +834,7 @@ const PENDING_STALE_AFTER_MS = 100 * 1000;
 /**
  * GET /api/jenga/status/:orderReference
  * Authenticated. Polled by the checkout UI while a payment is pending. Reads
- * whatever the callback has already reconciled — this endpoint does not call
- * out to Jenga itself, since account-based settlement has no status-query API.
+ * whatever the callback has already reconciled.
  */
 export const getJengaPaymentStatus = async (request, response) => {
   try {
@@ -861,9 +882,8 @@ export const getJengaPaymentStatus = async (request, response) => {
 
 /**
  * POST /api/jenga/callback
- * Public — Jenga calls this after the customer approves/rejects the STK
- * prompt. This is the sole source of truth for account-based settlement (no
- * separate status-query API exists for this flow), so every field we act on
+ * Public — Jenga calls this after the customer approves/rejects the wallet-STK
+ * prompt. Every field we act on
  * — reference, amount, status/code — is validated strictly in reconcilePayment
  * before anything is marked paid or finalized.
  */
@@ -878,10 +898,10 @@ export const handleJengaCallback = async (request, response) => {
     }
 
     const callbackData = request.body;
-    const orderReference = callbackData?.transactionReference;
+    const orderReference = callbackData?.customer?.reference;
 
     if (!orderReference) {
-      console.error('Jenga callback missing transactionReference:', callbackData);
+      console.error('Jenga IPN callback missing customer.reference:', callbackData);
       return response.status(200).json({ success: true });
     }
 
@@ -893,10 +913,10 @@ export const handleJengaCallback = async (request, response) => {
 
     await reconcilePayment(doc, {
       localStatus: mapJengaCallbackToLocal(callbackData),
-      returnedRef: callbackData?.transactionReference,
-      returnedAmount: callbackData?.debitedAmount ?? callbackData?.requestAmount,
-      resultCode: callbackData?.code,
-      resultDesc: callbackData?.message,
+      returnedRef: callbackData?.customer?.reference,
+      returnedAmount: callbackData?.transaction?.orderAmount ?? callbackData?.transaction?.amount,
+      resultCode: callbackData?.transaction?.status,
+      resultDesc: callbackData?.transaction?.remarks || callbackData?.transaction?.status,
       raw: callbackData,
     });
 

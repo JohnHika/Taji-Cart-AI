@@ -1,20 +1,20 @@
 import axios from 'axios';
 import crypto from 'crypto';
 
-// Account-based settlement flow (Jenga/Finserve API v3.0).
-// Funds settle directly into JENGA_ACCOUNT_NUMBER — no wallet sweep step.
+// Nawiri Hair is subscribed to Jenga Payment Gateway → MPESA. That product
+// uses the wallet-based STK API: funds land in the linked Jenga wallet and
+// are then settled to the connected bank account. It is a different product
+// from Jenga's account-based STK API, with a different endpoint and
+// signature formula.
 const JENGA_BASE_URL = process.env.JENGA_ENV === 'production'
   ? 'https://api.finserve.africa'
   : 'https://uat.finserve.africa';
 
 const JENGA_AUTH_URL = `${JENGA_BASE_URL}/authentication/api/v3/authenticate/merchant`;
-const JENGA_STK_PUSH_URL = `${JENGA_BASE_URL}/v3-apis/payment-api/v3.0/stkussdpush/initiate`;
-// Account-based settlement has no dedicated STK status-query endpoint — per
-// Jenga's docs, final status only arrives via the POST callback (see
-// server/controllers/jenga.controller.js: reconcilePayment).
+const JENGA_STK_PUSH_URL = `${JENGA_BASE_URL}/api-checkout/mpesa-stk-push/v3.0/init`;
 
-// Jenga PGW (card checkout) is a distinct product from the account-based STK
-// settlement above, but shares the same merchant credentials and the same
+// Jenga PGW (card checkout) is a distinct product from the wallet-based STK
+// flow above, but shares the same merchant credentials and the same
 // /authenticate/merchant bearer token. Its hosted checkout form posts to a
 // jengapgw.io host (not finserve.africa). Jenga's public docs only publish
 // the UAT form action (https://v3-uat.jengapgw.io/processPayment) — the
@@ -153,13 +153,14 @@ const getAuthToken = async () => {
 };
 
 /**
- * Signature formula per Jenga docs (exact field order, no separators):
- * merchant.accountNumber + payment.ref + payment.mobileNumber + payment.telco + payment.amount + payment.currency
+ * Signature formula for Jenga Payment Gateway's wallet-based M-Pesa STK API
+ * (exact field order, no separators):
+ * order.orderReference + payment.paymentCurrency + payment.details.msisdn + payment.details.paymentAmount
  * Signed with the merchant's RSA private key (SHA256), then Base64 encoded.
  */
-const signStkPushRequest = ({ accountNumber, ref, mobileNumber, telco, amount, currency }) => {
+const signStkPushRequest = ({ orderReference, currency, mobileNumber, amount }) => {
   const privateKey = getPrivateKey();
-  const dataToSign = `${accountNumber}${ref}${mobileNumber}${telco}${amount}${currency}`;
+  const dataToSign = `${orderReference}${currency}${mobileNumber}${amount}`;
 
   const signer = crypto.createSign('RSA-SHA256');
   signer.update(dataToSign);

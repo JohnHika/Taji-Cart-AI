@@ -7,7 +7,7 @@ const jengaPaymentSchema = new mongoose.Schema(
     orderReference:  { type: String, index: true, unique: true },
     orderId:         { type: String, index: true }, // links to OrderModel.orderId once the order exists
     userId:          { type: mongoose.Schema.ObjectId, ref: 'User' },
-    // 'mpesa' = account-based STK push (existing flow). 'card' = Jenga PGW
+    // 'mpesa' = Jenga Payment Gateway wallet-based STK push. 'card' = Jenga PGW
     // hosted checkout redirect (Visa/Mastercard/Amex/UnionPay).
     channel:         { type: String, enum: ['mpesa', 'card'], default: 'mpesa' },
     phoneNumber:     { type: String },
@@ -21,9 +21,7 @@ const jengaPaymentSchema = new mongoose.Schema(
     resultCode:      { type: String },
     resultDesc:      { type: String },
     // Set only once, when the callback's reference/amount/status have been
-    // validated (see reconcilePayment in jenga.controller.js). Account-based
-    // settlement has no separate status-query API — the callback is
-    // authoritative once validated.
+    // validated (see reconcilePayment in jenga.controller.js).
     verifiedAt:      { type: Date },
     // Guards against a callback and a poll both trying to finalize the order.
     finalizedAt:     { type: Date },
