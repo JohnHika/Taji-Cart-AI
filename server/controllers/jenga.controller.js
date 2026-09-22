@@ -592,10 +592,11 @@ export const initiateJengaCardPayment = async (request, response) => {
           customerFirstName: firstName || 'Customer',
           customerLastName: lastName || 'Customer',
           customerEmail,
-          // Jenga's PGW requires an international Kenyan number. The profile
-          // may contain 07…, 01…, 254…, or +254…; normalize every accepted
-          // form before submitting the hosted checkout form.
-          customerPhone: `+${normalizedCustomerPhone}`,
+          // PGW's browser widget expects the documented 2547…/2541… MSISDN
+          // value (without a leading '+'). It renders the country dial-code
+          // itself; passing an E.164 '+' value leaves its phone control
+          // invalid and blocks the M-Pesa charge lookup.
+          customerPhone: normalizedCustomerPhone,
           customerAddress,
           customerPostalCodeZip,
           countryCode: JENGA_PGW_DEFAULT_COUNTRY_CODE,
