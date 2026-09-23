@@ -1247,7 +1247,7 @@ const SalesCounter = () => {
                     />
                   </label>
                   <label className="text-sm font-medium">
-                    Text forwarded
+                    Text forwarded amount
                     <input
                       type="number"
                       min={0}
@@ -1261,6 +1261,9 @@ const SalesCounter = () => {
                       placeholder="0.00"
                       className="mt-1 w-full rounded-xl border border-brown-200 bg-white px-3 py-2.5 text-sm transition-colors focus:border-plum-400 focus:outline-none focus:ring-2 focus:ring-plum-100 dark:border-dm-border dark:bg-dm-card-2 dark:focus:ring-plum-900/30"
                     />
+                    <span className="mt-1 block text-xs text-brown-500 dark:text-white/50">
+                      Enter the amount here; paste the forwarded confirmation message below.
+                    </span>
                   </label>
                 </div>
                 <div className={`rounded-xl border px-3 py-2.5 text-sm ${
@@ -1354,7 +1357,7 @@ const SalesCounter = () => {
 
             {/* Text Forwarded: paste the confirmation SMS text (e.g. relayed
                 by the admin from their own phone) + cashier approval */}
-            {hasForwardedTextPayment && (
+            {(hasForwardedTextPayment || paymentMethod === 'split') && (
               <div className="pt-2">
                 <div className="flex items-center justify-between">
                   <label className="text-sm font-bold text-charcoal dark:text-white">Forwarded confirmation message</label>
@@ -1368,6 +1371,11 @@ const SalesCounter = () => {
                     </button>
                   )}
                 </div>
+                {paymentMethod === 'split' && (
+                  <p className="mt-1 text-xs text-brown-500 dark:text-white/50">
+                    Paste the full message as received. It is required when the Text Forwarded amount is included in this split.
+                  </p>
+                )}
                 <textarea
                   value={forwardedText}
                   onChange={(e) => {
