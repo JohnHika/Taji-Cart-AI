@@ -226,17 +226,17 @@ const UploadProduct = () => {
     e.preventDefault();
     
     // Validate form data
-    if (data.category.length === 0) {
+    if (!isEditMode && data.category.length === 0) {
       successAlert("Please select at least one category", "error");
       return;
     }
-    
-    if (data.subCategory.length === 0) {
+
+    if (!isEditMode && data.subCategory.length === 0) {
       successAlert("Please select at least one subcategory", "error");
       return;
     }
-    
-    if (data.image.length === 0) {
+
+    if (!isEditMode && data.image.length === 0) {
       successAlert("Please upload at least one image", "error");
       return;
     }
