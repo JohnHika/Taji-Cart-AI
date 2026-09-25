@@ -36,6 +36,13 @@ const AddToCartButton = ({ data, product: productProp, cartData, selectedVariant
     const selectedVariantKey = buildVariantKey(selectedVariant)
     const hasValidPrice = Number.isFinite(Number(product?.price))
 
+    // Stock known for this line (guest lines carry a snapshot; logged-in
+    // lines read it off the populated product) — null means "unknown", not
+    // "unlimited", so the "+" button only ever caps when a real number is known.
+    const knownStock = cartItemDetails?.productId?.stock ?? product?.stock
+    const stockLimit = Number.isFinite(Number(knownStock)) ? Math.max(0, Math.floor(Number(knownStock))) : null
+    const atStockLimit = stockLimit !== null && qty >= stockLimit
+
     const isMatchingCartItem = (item) => {
         if (item.productId?._id !== product?._id) {
             return false
@@ -90,7 +97,11 @@ const AddToCartButton = ({ data, product: productProp, cartData, selectedVariant
                         price: product.price,
                         image: product.image || [],
                         unit: product.unit || 'piece',
-                        discount: product.discount || 0
+                        discount: product.discount || 0,
+                        // Kept so the guest cart can price wholesale lines like
+                        // the server does and cap quantities at real stock.
+                        wholesalePrice: product.wholesalePrice,
+                        stock: product.stock
                     },
                     quantity: 1
                 }
@@ -172,6 +183,11 @@ const AddToCartButton = ({ data, product: productProp, cartData, selectedVariant
         e.stopPropagation()
 
         if (quantityActionLockRef.current || updateLoading) {
+            return
+        }
+
+        if (atStockLimit) {
+            toast.error(`Only ${stockLimit} in stock`)
             return
         }
 
@@ -320,9 +336,10 @@ const AddToCartButton = ({ data, product: productProp, cartData, selectedVariant
 
                         <button
                             onClick={increaseQty}
-                            disabled={updateLoading}
+                            disabled={updateLoading || atStockLimit}
                             aria-label="Increase quantity"
-                            className='customer-touch-target bg-plum-700 hover:bg-plum-600 active:bg-plum-800 text-white flex-1 w-full p-1.5 sm:p-2 text-xs sm:text-sm touch-manipulation transition-all'
+                            title={atStockLimit ? `Only ${stockLimit} in stock` : undefined}
+                            className='customer-touch-target bg-plum-700 hover:bg-plum-600 active:bg-plum-800 text-white flex-1 w-full p-1.5 sm:p-2 text-xs sm:text-sm touch-manipulation transition-all disabled:opacity-50 disabled:cursor-not-allowed'
                         >
                             {updateLoading ? <Loading /> : <FaPlus size={10} />}
                         </button>
