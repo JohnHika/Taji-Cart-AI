@@ -233,16 +233,17 @@ const UserProfile = () => {
     }
   };
 
-  // Update form data when user data changes
+  // Sync the form from the user record when the profile fields actually change
+  // (not on every new user object from a token refresh), and never while an
+  // edit is in progress so unsaved input isn't discarded.
   useEffect(() => {
-    if (user) {
-      setFormData({
-        name: user.name || '',
-        email: user.email || '',
-        mobile: user.mobile || ''
-      });
-    }
-  }, [user]);
+    if (!user?._id || isEditing) return;
+    setFormData({
+      name: user.name || '',
+      email: user.email || '',
+      mobile: user.mobile || ''
+    });
+  }, [user?._id, user?.name, user?.email, user?.mobile, isEditing]);
 
   const passwordStrength = getPasswordStrength(passwordData.newPassword);
 

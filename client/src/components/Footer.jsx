@@ -43,14 +43,18 @@ const FooterBanner = () => {
   const [isAnimating, setIsAnimating] = useState(false);
 
   useEffect(() => {
+    let swapTimer;
     const timer = setInterval(() => {
       setIsAnimating(true);
-      setTimeout(() => {
+      swapTimer = setTimeout(() => {
         setCurrent((prev) => (prev + 1) % bannerSlides.length);
         setIsAnimating(false);
       }, 400);
     }, 5000);
-    return () => clearInterval(timer);
+    return () => {
+      clearInterval(timer);
+      clearTimeout(swapTimer);
+    };
   }, [bannerSlides.length]);
 
   const slide = bannerSlides[current];

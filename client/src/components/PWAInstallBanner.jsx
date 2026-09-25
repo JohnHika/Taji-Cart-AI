@@ -25,8 +25,9 @@ export default function PWAInstallBanner({ context = 'footer' }) {
       e.preventDefault();
       setDeferredPrompt(e);
     };
+    const handleAppInstalled = () => setAlreadyInstalled(true);
     window.addEventListener('beforeinstallprompt', handler);
-    window.addEventListener('appinstalled', () => setAlreadyInstalled(true));
+    window.addEventListener('appinstalled', handleAppInstalled);
 
     if (window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone) {
       setAlreadyInstalled(true);
@@ -34,6 +35,7 @@ export default function PWAInstallBanner({ context = 'footer' }) {
 
     return () => {
       window.removeEventListener('beforeinstallprompt', handler);
+      window.removeEventListener('appinstalled', handleAppInstalled);
     };
   }, []);
 
