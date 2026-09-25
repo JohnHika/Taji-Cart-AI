@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import InfiniteScroll from 'react-infinite-scroll-component'
 import { useLocation } from 'react-router-dom'
 import noDataImage from '../assets/nothing here yet.webp'
@@ -20,7 +20,14 @@ const SearchPage = () => {
   const searchParams = new URLSearchParams(location.search)
   const searchText = searchParams.get('q') || ''
 
-  const fetchData = async() => {
+  // Incremented per request so a slow response for an older query/page can't
+  // overwrite the results of a newer one.
+  const latestRequestIdRef = useRef(0)
+
+  const fetchData = async(pageToLoad) => {
+    const requestId = ++latestRequestIdRef.current
+    const isStale = () => requestId !== latestRequestIdRef.current
+
     try {
       if (!searchText) {
         // If no search text, don't make the API call
@@ -34,14 +41,16 @@ const SearchPage = () => {
           ...SummaryApi.searchProduct,
           data : {
             search : searchText,
-            page : page,
+            page : pageToLoad,
           }
       })
+
+      if (isStale()) return
 
       const { data : responseData } = response
 
       if(responseData.success){
-          if(responseData.page == 1){
+          if(pageToLoad === 1){
             setData(responseData.data)
           }else{
             setData((preve)=>{
@@ -55,32 +64,36 @@ const SearchPage = () => {
           console.log('Search results:', responseData)
       }
     } catch (error) {
+        if (isStale()) return
         console.error('Search error:', error)
         AxiosToastError(error)
     }finally{
-      setLoading(false)
+      if (!isStale()) setLoading(false)
     }
   }
 
   useEffect(()=>{
-    // Reset page when search term changes
+    // Reset page, results and paging info when the search term changes, then
+    // load page 1 explicitly (the `page` state is still stale in this render).
     setPage(1)
-    // Reset data when search term changes
+    setTotalPage(1)
     setData([])
-    fetchData()
+    fetchData(1)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   },[searchText])
 
   // Only fetch more when page changes, but not on searchText change
   useEffect(() => {
     if (page > 1) {
-      fetchData()
+      fetchData(page)
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page])
 
   console.log("Current page:", page, "Search term:", searchText)
 
   const handleFetchMore = ()=>{
-    if(totalPage > page){
+    if(!loading && totalPage > page){
       setPage(preve => preve + 1)
     }
   }

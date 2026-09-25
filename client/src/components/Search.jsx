@@ -5,8 +5,11 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { TypeAnimation } from 'react-type-animation';
 import useMobile from '../hooks/useMobile';
 
-/** Navigate on keystroke with a tiny delay to batch ultra-fast typing; feels instant */
-const SEARCH_DEBOUNCE_MS = 48;
+/**
+ * Wait for a pause in typing before navigating. Must be longer than a normal
+ * keystroke gap, otherwise every key press triggers its own search request.
+ */
+const SEARCH_DEBOUNCE_MS = 300;
 
 const Search = () => {
   const navigate = useNavigate();

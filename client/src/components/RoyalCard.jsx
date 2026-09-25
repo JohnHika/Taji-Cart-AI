@@ -6,6 +6,7 @@ import { FaCrown, FaGift, FaInfoCircle, FaPercent, FaSpinner, FaTruck, FaUserPlu
 import QRCode from 'react-qr-code';
 import { useSelector } from 'react-redux';
 import { Link } from 'react-router-dom';
+import { useGlobalContext } from '../provider/GlobalProvider';
 import Axios from '../utils/Axios';
 import { getRoyalCardMotion } from '../utils/royalCardMotion';
 
@@ -15,6 +16,9 @@ import { getRoyalCardMotion } from '../utils/royalCardMotion';
  */
 const RoyalCard = () => {
   const user = useSelector(state => state.user);
+  const userId = user?._id;
+  // GlobalProvider already loads the signed-in user's loyalty card
+  const { royalCardData } = useGlobalContext();
   const reduceMotion = useReducedMotion();
   const cardMotion = getRoyalCardMotion(reduceMotion);
   const [cardData, setCardData] = useState(null);
@@ -42,15 +46,32 @@ const RoyalCard = () => {
     );
   }, [user]);
 
-  // Fetch card data on mount
+  // Load card data once per signed-in user. Keyed on the id (not the user
+  // object, which is replaced on every token refresh / refocus) and reuses the
+  // card GlobalProvider already fetched, only requesting it when that's absent
+  // (still loading, no access, or failed).
   useEffect(() => {
-    if (user?._id) {
-      fetchUserCardData();
-      fetchTierThresholds();
-    } else {
+    if (!userId) {
       setIsLoading(false);
+      return;
     }
-  }, [user]);
+    if (royalCardData) {
+      setCardData(royalCardData);
+      setHasAccess(true);
+      setFetchError(null);
+      setIsLoading(false);
+      return;
+    }
+    fetchUserCardData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userId, royalCardData]);
+
+  useEffect(() => {
+    if (userId) {
+      fetchTierThresholds();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userId, isAdmin]);
 
   const fetchUserCardData = async () => {
     try {

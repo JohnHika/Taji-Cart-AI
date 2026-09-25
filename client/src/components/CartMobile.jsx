@@ -1,27 +1,20 @@
 import React, { useEffect } from 'react';
 import { FaCaretRight } from "react-icons/fa";
 import { FaCartShopping } from 'react-icons/fa6';
-import { useDispatch, useSelector } from 'react-redux';
+import { useSelector } from 'react-redux';
 import { Link, useLocation } from 'react-router-dom';
 import { useGlobalContext } from '../provider/GlobalProvider';
 import { DisplayPriceInShillings } from '../utils/DisplayPriceInShillings';
-import { fetchCartItems } from '../store/cartProduct';
 import { shouldRenderMobileCartSummary } from '../utils/mobileShell';
 
 const CartMobileLink = () => {
     const { totalPrice, totalQty } = useGlobalContext();
     const user = useSelector(state => state.user);
     const cart = useSelector(state => state.cartItem?.cart || []);
-    const dispatch = useDispatch();
     const location = useLocation();
-    
-    // Fetch cart when component mounts if user is logged in
-    useEffect(() => {
-        if (user?._id) {
-            console.log("Fetching cart for logged in user");
-            dispatch(fetchCartItems());
-        }
-    }, [user?._id, dispatch]);
+
+    // No cart fetch here: the cart is already loaded into Redux at app level
+    // (GlobalProvider / App), and this link remounts on every storefront visit.
     
     // Debug cart count
     useEffect(() => {

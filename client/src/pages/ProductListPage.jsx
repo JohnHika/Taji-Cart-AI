@@ -86,6 +86,9 @@ const ProductListPage = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const allSubCategory = useSelector((state) => state.product.allSubCategory);
+  // Effects key off the count, not the array: storing an empty API result
+  // creates a new [] each time, which would otherwise refetch forever.
+  const subCategoryCount = allSubCategory?.length || 0;
   const navigationState = location.state || EMPTY_NAVIGATION_STATE;
 
   const [{ categoryId, subcategoryId }, setResolvedIds] = useState(() =>
@@ -115,10 +118,10 @@ const ProductListPage = () => {
       }
     };
 
-    if (!allSubCategory || allSubCategory.length === 0) {
+    if (subCategoryCount === 0) {
       fetchSubCategories();
     }
-  }, [allSubCategory, dispatch]);
+  }, [subCategoryCount, dispatch]);
 
   useEffect(() => {
     const fetchProducts = async () => {
