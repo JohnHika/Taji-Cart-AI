@@ -10,6 +10,8 @@ import { formatDistanceKm, getFootDeliveryEligibility, NAIROBI_CBD_RADIUS_KM } f
  * Mobile-first bottom sheet that auto-detects the user's location, drops a pin
  * on a large map, checks Nairobi CBD eligibility for foot delivery, and requires
  * free-text delivery instructions so the rider knows exactly where to go.
+ * Pages that collect the rider's directions themselves pass
+ * askInstructions={false} so the customer isn't asked for them twice.
  */
 const DeliveryLocationModal = ({
   isOpen,
@@ -18,6 +20,7 @@ const DeliveryLocationModal = ({
   initialLocation = null,
   initialInstructions = '',
   mode = 'foot',
+  askInstructions = true,
 }) => {
   const [position, setPosition] = useState(initialLocation);
   const [instructions, setInstructions] = useState(initialInstructions || '');
@@ -106,14 +109,14 @@ const DeliveryLocationModal = ({
     }
 
     const trimmed = instructions.trim();
-    if (!trimmed) {
+    if (askInstructions && !trimmed) {
       toast.error('Please enter exact delivery instructions (building, floor, landmark).');
       return;
     }
 
     onSave({
       ...position,
-      deliveryInstructions: trimmed,
+      ...(askInstructions ? { deliveryInstructions: trimmed } : {}),
     });
     onClose();
   };
@@ -123,7 +126,7 @@ const DeliveryLocationModal = ({
   const canSave =
     position &&
     (mode !== 'foot' || eligibility.eligible) &&
-    instructions.trim().length > 0 &&
+    (!askInstructions || instructions.trim().length > 0) &&
     !detecting;
 
   return (
@@ -141,7 +144,7 @@ const DeliveryLocationModal = ({
               Confirm delivery location
             </h2>
             <p className="text-xs text-brown-500 dark:text-white/50 mt-1 leading-snug">
-              Drag the pin or search to adjust. Add exact directions so the rider can find you.
+              Drag the pin or search to adjust.{askInstructions ? ' Add exact directions so the rider can find you.' : ''}
             </p>
           </div>
           <button
@@ -211,6 +214,7 @@ const DeliveryLocationModal = ({
           </div>
 
           {/* Instructions */}
+          {askInstructions && (
           <div className="px-4 pb-4">
             <label className="block text-xs font-bold uppercase tracking-wide text-brown-500 dark:text-white/50 mb-2">
               Exact delivery instructions *
@@ -226,6 +230,7 @@ const DeliveryLocationModal = ({
               Required so the rider knows exactly where to stop.
             </p>
           </div>
+          )}
         </div>
 
         {/* Sticky action bar */}

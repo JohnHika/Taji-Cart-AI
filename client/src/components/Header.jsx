@@ -78,6 +78,9 @@ const Header = () => {
   useEffect(() => {
     setMobileMenuOpen(false);
     setOpenUserMenu(false);
+    // The cart drawer's Checkout button navigates away — don't leave the
+    // drawer open on top of the checkout page.
+    setOpenCartSection(false);
   }, [location.pathname]);
 
   return (

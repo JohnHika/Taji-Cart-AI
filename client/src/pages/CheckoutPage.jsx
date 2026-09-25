@@ -1,20 +1,16 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
-import { FaCrown, FaStore, FaTrash } from 'react-icons/fa';
-import { FaXmark } from 'react-icons/fa6';
+import { FaCrown, FaMapMarkerAlt, FaStore, FaTrash } from 'react-icons/fa';
 import { useDispatch, useSelector } from 'react-redux';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import SummaryApi from '../common/SummaryApi';
-import { buildApiUrl } from '../common/apiBaseUrl';
 import { nawiriBrand } from '../config/brand';
 import ActiveRewards from '../components/ActiveRewards'; // Import the ActiveRewards component
 import AddAddress from '../components/AddAddress';
 import CheckoutRoyalCard from '../components/CheckoutRoyalCard'; // Premium Royal Card for Order Summary
 import CommunityCampaignProgress from '../components/CommunityCampaignProgress'; // Import the CommunityCampaignProgress component
 import DeliveryLocationModal from '../components/DeliveryLocationModal';
-import FulfillmentModal from '../components/FulfillmentModal';
 import JengaCardPayment from '../components/JengaCardPayment';
-import { useTheme } from '../context/ThemeContext';
 import useCriteriaGate from '../hooks/useCriteriaGate';
 import { useGlobalContext } from '../provider/GlobalProvider';
 import { clearCartItems } from '../store/cartProduct';
@@ -23,26 +19,32 @@ import AxiosToastError from '../utils/AxiosToastError';
 import { getStoredAccessToken } from '../utils/authStorage';
 import { DEFAULT_DELIVERY_CHARGE, formatDistanceKm, getFootDeliveryEligibility, isWithinCbdRadius, NAIROBI_CBD_RADIUS_KM, SACCO_TERMINAL_DROPOFF_CHARGE } from '../utils/cbdDelivery';
 import { DisplayPriceInShillings } from '../utils/DisplayPriceInShillings';
-import { Link } from 'react-router-dom';
 
-const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) => {
-  const { notDiscountTotalPrice, totalPrice, totalQty, fetchCartItem, fetchOrder, fetchAddress, royalCardData, royalDiscount } = useGlobalContext();
-  const { darkMode } = useTheme();
+// Pickup locations (in a real app, these would likely come from an API)
+const pickupLocations = [
+  { name: 'Main Store', address: nawiriBrand.location }
+];
+
+// Every address is saved with the map pin the customer dropped in the Add
+// Address form — that pin is the delivery location. Older addresses may have
+// been saved without one (lat/lng null).
+const getAddressPin = (address) => {
+  const { lat, lng } = address?.coordinates || {};
+  if (lat === null || lat === undefined || lng === null || lng === undefined) return null;
+  const pin = { lat: Number(lat), lng: Number(lng) };
+  return Number.isFinite(pin.lat) && Number.isFinite(pin.lng) ? pin : null;
+};
+
+const CheckoutPage = ({ embedded = false }) => {
+  const { notDiscountTotalPrice, totalPrice, totalQty, fetchCartItem, fetchOrder, fetchAddress, royalDiscount } = useGlobalContext();
   const location = useLocation();
   const [openAddress, setOpenAddress] = useState(false);
-  const [showFulfillmentModal, setShowFulfillmentModal] = useState(false);
-  
-  // Debug: Log location state
-  useEffect(() => {
-    console.log('CheckoutPage loaded, location.state:', location.state);
-  }, [location.state]);
-  
-  // Get fulfillment method from location state if available
-  const [fulfillmentMethod, setFulfillmentMethod] = useState(() => {
-    const method = location.state?.fulfillmentMethod || location.state?.fulfillment_type || 'delivery';
-    console.log('Fulfillment method:', method, 'from state:', location.state);
-    return method;
-  });
+
+  // Fulfillment method, pickup and SACCO details can be pre-set by whoever
+  // navigates here (location.state); otherwise the customer picks them below.
+  const [fulfillmentMethod, setFulfillmentMethod] = useState(
+    location.state?.fulfillmentMethod || location.state?.fulfillment_type || 'delivery'
+  );
   const [pickupLocation, setPickupLocation] = useState(
     location.state?.pickupLocation || location.state?.pickup_location || ''
   );
@@ -56,17 +58,19 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
     location.state?.saccoDestinationTown || location.state?.sacco_destination_town || ''
   );
   const [deliveryMode, setDeliveryMode] = useState(location.state?.delivery_mode || 'standard');
-  const [customerLocation, setCustomerLocation] = useState(location.state?.customerLocation || null);
   const [deliveryInstructions, setDeliveryInstructions] = useState(location.state?.deliveryInstructions || '');
   const [showLocationModal, setShowLocationModal] = useState(false);
-  const [locationLoading, setLocationLoading] = useState(false);
   const [deliveryZones, setDeliveryZones] = useState([]);
   const [deliveryZonesLoading, setDeliveryZonesLoading] = useState(false);
   const [deliveryZoneId, setDeliveryZoneId] = useState(location.state?.deliveryZoneId || '');
-  
+
   const addressList = useSelector(state => state.addresses.addressList);
-  const [selectAddress, setSelectAddress] = useState(null); // Changed from 0 to null to ensure validation
-  const [addressError, setAddressError] = useState(false); // State to track address selection error
+  // Selected by _id, not list position — the list is re-fetched (and
+  // re-ordered) whenever an address is added or deleted.
+  const [selectedAddressId, setSelectedAddressId] = useState(null);
+  // Set only when the customer moves the pin for this order; otherwise the
+  // selected address's own saved pin is used.
+  const [pinOverride, setPinOverride] = useState(null);
   const cartItemsList = useSelector(state => state.cartItem.cart);
   const cartLoading = useSelector(state => state.cartItem.loading);
   const navigate = useNavigate();
@@ -76,66 +80,118 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
 
   const [usePoints, setUsePoints] = useState(false);
   const [availablePoints, setAvailablePoints] = useState(0);
-  const [pointsValue, setPointsValue] = useState(0);
-  const [loyaltyLoading, setLoyaltyLoading] = useState(false);
 
   // Community reward state
   const [selectedReward, setSelectedReward] = useState(null);
   const [communityDiscount, setCommunityDiscount] = useState(0);
 
-  // Declared before isPaymentEnabled — that check reads footDeliveryEligibility
-  // for foot-delivery customers, and as a `const` it would otherwise throw a
-  // temporal-dead-zone ReferenceError (crashing this page) for exactly the
-  // customers who select foot delivery, pick an address, and share location.
+  const selectedAddress = useMemo(
+    () => addressList.find((address) => address?._id === selectedAddressId && address.status) || null,
+    [addressList, selectedAddressId]
+  );
+  const addressPin = useMemo(() => getAddressPin(selectedAddress), [selectedAddress]);
+  const customerLocation = pinOverride || addressPin;
+
   const footDeliveryEligibility = useMemo(
     () => getFootDeliveryEligibility(customerLocation),
     [customerLocation]
   );
 
+  // Foot delivery only accepts addresses pinned inside Nairobi CBD. Bike
+  // (zone-fare) and standard delivery can use any active address — the bike
+  // rider covers named zones rather than a GPS radius.
+  const eligibleAddresses = useMemo(
+    () => addressList.filter((address) => (
+      address?.status && (deliveryMode !== 'foot' || isWithinCbdRadius(getAddressPin(address)))
+    )),
+    [addressList, deliveryMode]
+  );
+
+  // Rider directions start from the ones saved with the address. They're
+  // only replaced on an address change if the customer hasn't edited them.
+  const prefilledInstructionsRef = useRef(deliveryInstructions);
+  const chooseAddress = useCallback((addressId) => {
+    setSelectedAddressId(addressId);
+    setPinOverride(null);
+    const next = addressList.find((address) => address?._id === addressId)?.deliveryInstructions || '';
+    // Captured before the ref moves on — the updater below runs later.
+    const previousPrefill = prefilledInstructionsRef.current;
+    prefilledInstructionsRef.current = next;
+    setDeliveryInstructions((current) => (
+      current.trim() === previousPrefill.trim() ? next : current
+    ));
+  }, [addressList]);
+
+  // If the selected address stops being valid (switched to foot delivery
+  // outside the CBD, or deleted), clear it.
+  useEffect(() => {
+    if (selectedAddressId && !eligibleAddresses.some((address) => address._id === selectedAddressId)) {
+      setSelectedAddressId(null);
+      setPinOverride(null);
+    }
+  }, [eligibleAddresses, selectedAddressId]);
+
+  // Choose the address for the customer when there's nothing to decide: the
+  // one they just added from this page, or their only eligible address.
+  const addressIdsBeforeAddRef = useRef(null);
+  useEffect(() => {
+    if (fulfillmentMethod !== 'delivery') return;
+
+    if (addressIdsBeforeAddRef.current) {
+      const added = eligibleAddresses.find((address) => !addressIdsBeforeAddRef.current.has(address._id));
+      if (added) {
+        addressIdsBeforeAddRef.current = null;
+        chooseAddress(added._id);
+        return;
+      }
+    }
+
+    if (!selectedAddressId && eligibleAddresses.length === 1) {
+      chooseAddress(eligibleAddresses[0]._id);
+    }
+  }, [chooseAddress, eligibleAddresses, fulfillmentMethod, selectedAddressId]);
+
+  const openAddAddress = () => {
+    addressIdsBeforeAddRef.current = new Set(addressList.map((address) => address?._id));
+    setOpenAddress(true);
+  };
+
   // Check if payments should be enabled
-  // For delivery: need a selected address
+  // For delivery: need a selected address with a location (or a zone for bike)
   // For pickup: need a pickup location
-  const isPaymentEnabled =
+  const isPaymentEnabled = Boolean(
     (fulfillmentMethod === 'delivery'
-      && selectAddress !== null
-      && addressList[selectAddress]
-      && addressList[selectAddress].status
-      && (deliveryMode === 'bike' || customerLocation)
-      && (deliveryMode !== 'foot' || footDeliveryEligibility.eligible)
-      && (deliveryMode !== 'bike' || deliveryZoneId)) ||
+      && selectedAddress
+      && (deliveryMode === 'bike' ? deliveryZoneId : customerLocation)
+      && (deliveryMode !== 'foot' || footDeliveryEligibility.eligible)) ||
     (fulfillmentMethod === 'pickup' && pickupLocation) ||
-    (fulfillmentMethod === 'sacco_pickup' && saccoOperatorId && saccoDestinationTown);
+    (fulfillmentMethod === 'sacco_pickup' && saccoOperatorId && saccoDestinationTown)
+  );
 
   // The specific reason payment is blocked — shown next to the disabled Cash
-  // and M-Pesa options. A blanket "Select address first" was misleading once
-  // an address IS selected but location/zone/eligibility is still missing.
+  // and M-Pesa options.
   const paymentBlockedReason = (() => {
     if (isPaymentEnabled) return '';
     if (fulfillmentMethod === 'pickup') return 'Select pickup location';
     if (fulfillmentMethod === 'sacco_pickup') return 'Select operator and destination';
-    if (selectAddress === null || !addressList[selectAddress] || !addressList[selectAddress].status) {
-      return 'Select address first';
-    }
-    if (deliveryMode === 'bike' && !deliveryZoneId) return 'Select delivery zone';
-    if (deliveryMode !== 'bike' && !customerLocation) return 'Share your location';
-    if (deliveryMode === 'foot' && !footDeliveryEligibility.eligible) return 'Outside delivery zone';
+    if (!selectedAddress) return 'Select delivery address';
+    if (deliveryMode === 'bike') return 'Select delivery zone';
+    if (!customerLocation) return 'Set delivery location';
+    if (deliveryMode === 'foot') return 'Outside CBD foot-delivery area';
     return 'Complete delivery details';
   })();
 
-  // For foot delivery, only allow addresses whose saved coordinates are within Nairobi CBD.
-  // Bike (zone-fare) and standard delivery can use any active address —
-  // the bike rider covers named zones rather than a GPS radius.
-  const eligibleAddressIndexes = useMemo(() => {
-    if (deliveryMode !== 'foot') {
-      return addressList.map((_, i) => i).filter(i => addressList[i]?.status);
+  // One hint above the address list saying what's still missing.
+  const deliveryHint = (() => {
+    if (fulfillmentMethod !== 'delivery' || isPaymentEnabled || eligibleAddresses.length === 0) return '';
+    if (!selectedAddress) return 'Choose the address we should deliver to.';
+    if (deliveryMode === 'bike') return 'Pick your delivery zone above to see the fare and continue.';
+    if (!customerLocation) return 'This address was saved without a map pin. Set the delivery location below so the rider can find you.';
+    if (deliveryMode === 'foot') {
+      return `This location is outside the Nairobi CBD foot-delivery area (${NAIROBI_CBD_RADIUS_KM}km). Choose another address or switch to Standard or Bike delivery.`;
     }
-    return addressList
-      .map((_, i) => i)
-      .filter(i => {
-        const addr = addressList[i];
-        return addr?.status && isWithinCbdRadius(addr.coordinates);
-      });
-  }, [addressList, deliveryMode]);
+    return '';
+  })();
 
   // Fetch delivery zones once bike mode is selected (cached across re-selection).
   useEffect(() => {
@@ -208,16 +264,9 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
     [saccoOperators, saccoOperatorId]
   );
 
-  // If the currently selected address is not eligible for the chosen delivery mode, clear it.
-  useEffect(() => {
-    if (selectAddress !== null && !eligibleAddressIndexes.includes(selectAddress)) {
-      setSelectAddress(null);
-      setAddressError(true);
-    }
-  }, [eligibleAddressIndexes, selectAddress]);
   const checkoutLockRef = useRef(false);
   const [checkoutAction, setCheckoutAction] = useState('');
-  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState('jenga-checkout'); // 'cash' | 'jenga' (direct STK) | 'jenga-checkout' (hosted M-Pesa)
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState('jenga-checkout'); // 'cash' | 'jenga-checkout' (hosted M-Pesa)
 
   // SACCO/coach terminal drop-off (outside Nairobi) has no Cash option —
   // its trust/risk profile is different from a rider we control delivering
@@ -238,53 +287,35 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
       ? SACCO_TERMINAL_DROPOFF_CHARGE
       : 0;
 
+  // Fetch loyalty points once per signed-in user. The KES value is derived
+  // from the current totals below, so changing delivery options doesn't
+  // re-fetch the loyalty card.
   useEffect(() => {
-    // Clear address error when address is selected
-    if (selectAddress !== null) {
-      setAddressError(false);
+    if (!user?._id || !getStoredAccessToken()) {
+      return;
     }
-  }, [selectAddress]);
 
-  // Fetch loyalty points on component mount
-  useEffect(() => {
     const fetchLoyaltyData = async () => {
-      // Only attempt to fetch loyalty data if user is logged in
-      if (!user || !user._id) {
-        console.log("User not logged in, skipping loyalty card fetch");
-        return;
-      }
-
       try {
-        setLoyaltyLoading(true);
-        const token = getStoredAccessToken();
-        
-        if (!token) {
-          console.log("No authentication token found, skipping loyalty card fetch");
-          return;
-        }
-
         const response = await Axios({
           url: `/api/users/${user._id}/loyalty-card`,
           method: 'GET'
         });
-        
+
         if (response.data.success && response.data.data) {
-          const points = response.data.data.points || 0;
-          setAvailablePoints(points);
-          // Each point is worth KES 1; cap at subtotal + delivery charge
-          setPointsValue(Math.min(points, totalPrice + deliveryCharge));
-          console.log("Successfully fetched loyalty data:", response.data.data);
+          setAvailablePoints(response.data.data.points || 0);
         }
       } catch (error) {
         console.error("Error fetching loyalty data:", error.response?.data || error.message);
         // Don't show an error to the user - loyalty points are optional
-      } finally {
-        setLoyaltyLoading(false);
       }
     };
-    
+
     fetchLoyaltyData();
-  }, [user, user._id, totalPrice, deliveryCharge]);
+  }, [user?._id]);
+
+  // Each point is worth KES 1; cap at subtotal + delivery charge
+  const pointsValue = Math.min(availablePoints, totalPrice + deliveryCharge);
 
   // Handle selecting community reward
   const handleSelectReward = (reward) => {
@@ -313,8 +344,8 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
     : totalPrice;
 
   // Calculate final price after applying points, community discount and delivery charge
-  const finalPrice = usePoints 
-    ? Math.max(0, priceAfterCommunityDiscount + deliveryCharge - pointsValue) 
+  const finalPrice = usePoints
+    ? Math.max(0, priceAfterCommunityDiscount + deliveryCharge - pointsValue)
     : priceAfterCommunityDiscount + deliveryCharge;
   const isCheckoutBusy = checkoutAction !== '';
   const hasCheckoutAmount = useMemo(() => {
@@ -325,7 +356,7 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
   const cartFingerprint = cartItemsList
     .map((item) => `${item?._id || item?.productId?._id}:${item?.quantity || 0}`)
     .join('|');
-  const checkoutScope = `${user?._id || 'guest'}:${fulfillmentMethod}:${selectAddress ?? 'pickup'}:${pickupLocation}:${cartFingerprint}:${finalPrice}`;
+  const checkoutScope = `${user?._id || 'guest'}:${fulfillmentMethod}:${selectedAddressId ?? 'pickup'}:${pickupLocation}:${cartFingerprint}:${finalPrice}`;
   const checkoutRedirectedRef = useRef(false);
 
   const runCheckoutAction = async (actionName, callback) => {
@@ -344,42 +375,14 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
     }
   };
 
-  // Pickup locations (in a real app, these would likely come from an API)
-  const pickupLocations = [
-    { name: 'Main Store', address: nawiriBrand.location }
-  ];
-
-  // Validate address is selected before payment
+  // Validate fulfillment details before placing a cash order
   const validateAddress = () => {
     if (fulfillmentMethod === 'delivery') {
       if (!isPaymentEnabled) {
-        setAddressError(true);
-        toast.error('Please select a delivery address and share your location before proceeding');
-        return false;
-      }
-
-      if (deliveryMode === 'bike' && !deliveryZoneId) {
-        toast.error('Please select your delivery zone.');
-        return false;
-      }
-
-      if (deliveryMode !== 'bike' && !customerLocation) {
-        toast.error('Delivery requires your live location within Nairobi CBD.');
-        setShowLocationModal(true);
-        return false;
-      }
-
-      if (deliveryMode !== 'bike' && !deliveryInstructions.trim()) {
-        toast.error('Please enter exact delivery instructions so the rider can find you.');
-        setShowLocationModal(true);
-        return false;
-      }
-
-      if (deliveryMode === 'foot' && !footDeliveryEligibility.eligible) {
-        toast.error(
-          `Foot delivery is only available within Nairobi CBD (${NAIROBI_CBD_RADIUS_KM}km radius).`
-        );
-        setShowLocationModal(true);
+        toast.error(deliveryHint || `${paymentBlockedReason} to continue.`);
+        if (selectedAddress && deliveryMode !== 'bike' && !customerLocation) {
+          setShowLocationModal(true);
+        }
         return false;
       }
     } else if (fulfillmentMethod === 'pickup' && !pickupLocation) {
@@ -390,10 +393,6 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
       return false;
     }
     return true;
-  };
-
-  const captureCustomerLocation = () => {
-    setShowLocationModal(true);
   };
 
   const handleCashOnDelivery = async() => {
@@ -410,7 +409,7 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
           ...SummaryApi.CashOnDeliveryOrder,
           data : {
             list_items : cartItemsList,
-            addressId : fulfillmentMethod === 'delivery' ? addressList[selectAddress]._id : null,
+            addressId : fulfillmentMethod === 'delivery' ? selectedAddress._id : null,
             subTotalAmt : totalPrice,
             deliveryCharge: deliveryCharge,
             totalAmt : finalPrice,
@@ -445,10 +444,6 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
               fetchOrder();
             }
 
-            if (isCutView && onClose) {
-              onClose();
-            }
-
             navigate('/success', {
               state: {
                 text: "Order",
@@ -462,33 +457,8 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
     });
   }
 
-  const handleJengaPaymentSuccess = () => {
-    dispatch(clearCartItems());
-
-    if (fetchCartItem) {
-      fetchCartItem();
-    }
-
-    if (fetchOrder) {
-      fetchOrder();
-    }
-
-    if (isCutView && onClose) {
-      onClose();
-    }
-
-    navigate('/success', { state: { text: 'Order' } });
-  };
-
   const handleJengaPaymentError = (message) => {
     toast.error(message || 'Payment failed. Please try again.');
-  };
-
-  // Handle fulfillment method selection
-  const handleFulfillmentSelect = (data) => {
-    setFulfillmentMethod(data.fulfillment_type);
-    setPickupLocation(data.pickup_location);
-    setPickupInstructions(data.pickup_instructions);
   };
 
   useEffect(() => {
@@ -509,19 +479,6 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
     });
   }, [cartLoading, hasCheckoutAmount, navigate]);
 
-  // Pre-checkout handler to show fulfillment modal first
-  const handlePreCheckout = (paymentMethod) => {
-    setShowFulfillmentModal(true);
-  };
-
-  // Check if there are active addresses available
-  const hasActiveAddresses = useMemo(() => {
-    if (fulfillmentMethod === 'pickup') {
-      return addressList.some(address => address.status);
-    }
-    return eligibleAddressIndexes.length > 0;
-  }, [addressList, eligibleAddressIndexes, fulfillmentMethod]);
-
   const handleDeleteAddress = async (addressId) => {
     if (!addressId || !window.confirm('Delete this address permanently?')) return;
     try {
@@ -540,408 +497,6 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
     }
   };
 
-  // Render cut view or full page based on prop
-  if (isCutView) {
-    return (
-      <>
-        <div className="fixed inset-0 bg-plum-900/50 z-50 flex justify-end backdrop-blur-[2px]">
-          <div className="bg-ivory dark:bg-dm-surface w-full max-w-md h-full overflow-y-auto transition-colors duration-200 border-l border-brown-100 dark:border-dm-border">
-          {/* Cut View Header */}
-          <div className="sticky top-0 z-20 bg-white dark:bg-dm-card p-4 flex justify-between items-center border-b border-brown-100 dark:border-dm-border shadow-sm transition-colors duration-200">
-            <h2 className="font-semibold text-lg dark:text-white">Checkout</h2>
-            <button 
-              onClick={onClose}
-              className="p-2 rounded-full hover:bg-plum-50 dark:hover:bg-plum-900/30 transition-colors duration-200"
-            >
-              <FaXmark className="text-brown-500 dark:text-white/55" />
-            </button>
-          </div>
-
-          {/* Cut View Content - scrollable */}
-          <div className="p-4 overflow-y-auto">
-            {/* Address Section */}
-            <div className="mb-6">
-              <h3 className='text-lg font-semibold dark:text-white mb-2'>Choose your address</h3>
-              {!hasActiveAddresses && (
-                <div className="bg-yellow-100 border border-yellow-400 text-yellow-700 dark:bg-yellow-800/30 dark:border-yellow-700 dark:text-yellow-200 px-4 py-2 rounded mb-4">
-                  Please add a delivery address to proceed with payment.
-                </div>
-              )}
-              {addressError && (
-                <div className="bg-red-100 border border-red-400 text-red-700 dark:bg-red-900/30 dark:border-red-700 dark:text-red-200 px-4 py-2 rounded mb-4">
-                  Please select a delivery address before proceeding with payment.
-                </div>
-              )}
-              {!isPaymentEnabled && hasActiveAddresses && !addressError && (
-                <div className="bg-plum-50 dark:bg-plum-900/30 border border-plum-200 dark:border-plum-700 text-plum-800 dark:text-plum-200 px-4 py-2 rounded-card mb-4 text-sm">
-                  {selectAddress === null || !addressList[selectAddress]?.status
-                    ? (deliveryMode === 'foot'
-                        ? `Select an address within Nairobi CBD (${NAIROBI_CBD_RADIUS_KM}km radius) for foot delivery.`
-                        : deliveryMode === 'bike'
-                          ? 'Select an address and your delivery zone to enable payment options.'
-                          : 'Select an address to enable payment options.')
-                    : deliveryMode === 'bike' && !deliveryZoneId
-                      ? 'Address selected — now pick your delivery zone above to enable payment options.'
-                      : deliveryMode === 'foot' && !footDeliveryEligibility.eligible
-                        ? `This address is outside the Nairobi CBD foot-delivery radius (${NAIROBI_CBD_RADIUS_KM}km). Choose another address or switch delivery type.`
-                        : 'Address selected — now tap "Use My Current Location" above to share your delivery location and enable payment.'}
-                </div>
-              )}
-              <div className='bg-white dark:bg-dm-card p-2 grid gap-4 rounded shadow transition-colors duration-200'>
-                {hasActiveAddresses ? (
-                  addressList.map((address, index) => {
-                    // Only render addresses with status = true and eligible for the selected mode
-                    if (!eligibleAddressIndexes.includes(index)) return null;
-                    
-                    return (
-                      <label 
-                        key={`address-${address._id || index}`}
-                        htmlFor={`address-cut-${index}`}
-                        className="cursor-pointer"
-                      >
-                        <div className={`border rounded-card p-3 flex gap-3 transition-colors duration-200 
-                          ${selectAddress === index 
-                            ? 'bg-plum-50 border-plum-600 border-2 dark:bg-plum-900/40 dark:border-plum-400' 
-                            : 'border-brown-100 dark:border-dm-border hover:bg-plum-50/50 dark:hover:bg-plum-900/20'}`}>
-                          <div>
-                            <input 
-                              id={`address-cut-${index}`} 
-                              type='radio' 
-                              value={index} 
-                              checked={selectAddress === index}
-                              onChange={(e) => setSelectAddress(parseInt(e.target.value))} 
-                              name='address-cut' 
-                              className="accent-plum-600 dark:accent-plum-400"
-                            />
-                          </div>
-                          <div className="dark:text-white/85">
-                            <p>{address.address_line}</p>
-                            <p>{address.city}</p>
-                            <p>{address.state}</p>
-                            <p>{address.country} - {address.pincode}</p>
-                            <p>{address.mobile}</p>
-                          </div>
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                              handleDeleteAddress(address._id);
-                            }}
-                            className="ml-auto self-start text-red-600 hover:text-red-700 dark:text-red-400 p-1"
-                            title="Delete address"
-                          >
-                            <FaTrash size={14} />
-                          </button>
-                        </div>
-                      </label>
-                    )
-                  })
-                ) : (
-                  <div className="p-4 text-center text-brown-400 dark:text-white/45">
-                    {deliveryMode === 'foot'
-                      ? `No addresses within Nairobi CBD (${NAIROBI_CBD_RADIUS_KM}km radius). Add a CBD address or switch to Standard Delivery.`
-                      : 'No delivery addresses found. Please add an address to continue.'}
-                  </div>
-                )}
-                <div 
-                  onClick={() => setOpenAddress(true)} 
-                  className="h-16 bg-plum-50/50 dark:bg-plum-900/20 border-2 border-dashed border-plum-200 dark:border-plum-700 flex justify-center items-center cursor-pointer hover:bg-plum-100/80 dark:hover:bg-plum-900/35 transition-colors duration-200 text-plum-800 dark:text-white/85 text-sm font-medium"
-                >
-                  Add address
-                </div>
-              </div>
-
-              <div className="mt-4 p-3 bg-white dark:bg-dm-card rounded shadow border border-brown-100 dark:border-dm-border">
-              <p className="text-sm font-semibold dark:text-white mb-2">Delivery Type</p>
-              <div className="grid grid-cols-3 gap-2 text-xs">
-                <button
-                  type="button"
-                  onClick={() => { setDeliveryMode('standard'); }}
-                  className={`px-2 py-2 rounded ${deliveryMode === 'standard' ? 'bg-plum-700 text-white' : 'bg-plum-100 dark:bg-plum-900/30 dark:text-white/80'}`}
-                >
-                  Standard
-                </button>
-                <button
-                  type="button"
-                  onClick={() => { setDeliveryMode('foot'); }}
-                  className={`px-2 py-2 rounded ${deliveryMode === 'foot' ? 'bg-plum-700 text-white' : 'bg-plum-100 dark:bg-plum-900/30 dark:text-white/80'}`}
-                >
-                  Foot (CBD)
-                </button>
-                <button
-                  type="button"
-                  onClick={() => { setDeliveryMode('bike'); }}
-                  className={`px-2 py-2 rounded ${deliveryMode === 'bike' ? 'bg-plum-700 text-white' : 'bg-plum-100 dark:bg-plum-900/30 dark:text-white/80'}`}
-                >
-                  Bike (Zone)
-                </button>
-              </div>
-
-              {fulfillmentMethod === 'delivery' && deliveryMode === 'bike' && (
-                <div className="mt-2 space-y-1">
-                  <select
-                    value={deliveryZoneId}
-                    onChange={(e) => setDeliveryZoneId(e.target.value)}
-                    className="w-full text-xs px-2 py-2 rounded border border-brown-200 dark:border-dm-border bg-ivory dark:bg-dm-surface text-charcoal dark:text-white/80"
-                    disabled={deliveryZonesLoading}
-                  >
-                    <option value=''>{deliveryZonesLoading ? 'Loading zones...' : 'Select your zone'}</option>
-                    {zonesByCorridor.map(([corridor, zones]) => (
-                      <optgroup key={corridor} label={corridor}>
-                        {zones.map((zone) => (
-                          <option key={zone._id} value={zone._id}>
-                            {zone.name} — KES {zone.fare.toLocaleString()}
-                          </option>
-                        ))}
-                      </optgroup>
-                    ))}
-                  </select>
-                  <p className="text-[11px] text-brown-500 dark:text-white/55">
-                    {selectedDeliveryZone
-                      ? `Fare for ${selectedDeliveryZone.name}: KES ${selectedDeliveryZone.fare.toLocaleString()}`
-                      : 'Pick the zone closest to your delivery address.'}
-                  </p>
-                </div>
-              )}
-
-              {fulfillmentMethod === 'delivery' && deliveryMode !== 'bike' && (
-                <div className="mt-2 space-y-1">
-                  <button
-                    type="button"
-                    onClick={captureCustomerLocation}
-                    disabled={locationLoading}
-                    className="w-full text-xs px-2 py-2 rounded bg-gold-500 text-charcoal font-semibold disabled:opacity-60"
-                  >
-                    {locationLoading ? 'Checking location...' : 'Use My Current Location'}
-                  </button>
-                  <p className="text-[11px] text-brown-500 dark:text-white/55">
-                    {customerLocation
-                      ? (deliveryMode === 'foot'
-                          ? `Distance: ${formatDistanceKm(footDeliveryEligibility.distanceKm)} (${deliveryMode === 'foot' ? (footDeliveryEligibility.eligible ? 'eligible' : 'outside zone') : 'standard delivery'})`
-                          : `Location captured (${formatDistanceKm(footDeliveryEligibility.distanceKm)} from CBD)`)
-                      : 'Location required for delivery. Tap to share your current location.'}
-                  </p>
-                </div>
-              )}
-              </div>
-            </div>
-
-            {/* Summary Section */}
-            <div className='bg-white dark:bg-dm-card p-4 rounded shadow mb-4 transition-colors duration-200'>
-              <h3 className='font-semibold mb-4 dark:text-white'>Order Summary</h3>
-              
-              {/* Premium Royal Membership Card */}
-              <div className="mb-4">
-                <CheckoutRoyalCard compact={false} showTeaser={true} />
-              </div>
-              
-              {/* Community Rewards */}
-              <div className="mb-4">
-                <ActiveRewards 
-                  displayMode="compact" 
-                  onSelectReward={handleSelectReward}
-                  selectedRewardId={selectedReward?._id}
-                />
-              </div>
-              
-              {/* Community Perks */}
-              <div className="mb-4">
-                <CommunityCampaignProgress displayMode="slim" />
-              </div>
-              
-              <div className='space-y-2'>
-                <div className='flex gap-4 justify-between ml-1 dark:text-white/85'>
-                  <p>Original price total</p>
-                  <p className='flex items-center gap-2'>
-                    <span className='line-through text-brown-300 dark:text-white/35'>{DisplayPriceInShillings(notDiscountTotalPrice)}</span>
-                  </p>
-                </div>
-                
-                {/* Product discounts line */}
-                <div className='flex gap-4 justify-between ml-1 text-gold-600 dark:text-gold-400'>
-                  <p>Product discounts</p>
-                  <p>Applied</p>
-                </div>
-                
-                {/* Royal card discount line */}
-                {royalDiscount > 0 && (
-                  <div className='flex gap-4 justify-between ml-1 text-amber-800 dark:text-amber-300'>
-                    <p className='flex items-center'>
-                      <FaCrown className="mr-1" /> Royal Card discount
-                    </p>
-                    <p>-{royalDiscount}%</p>
-                  </div>
-                )}
-                
-                {/* Community reward discount line */}
-                {selectedReward && selectedReward.type === 'discount' && (
-                  <div className='flex gap-4 justify-between ml-1 text-gold-600 dark:text-gold-400'>
-                    <p className='flex items-center'>
-                      Community reward discount
-                    </p>
-                    <p>-{communityDiscount}%</p>
-                  </div>
-                )}
-                
-                {/* Community reward free shipping line */}
-                {selectedReward && selectedReward.type === 'shipping' && (
-                  <div className='flex gap-4 justify-between ml-1 text-plum-700 dark:text-plum-300'>
-                    <p className='flex items-center'>
-                      Community free shipping
-                    </p>
-                    <p>Applied</p>
-                  </div>
-                )}
-                
-                <div className='flex gap-4 justify-between ml-1 dark:text-white/85'>
-                  <p>Subtotal</p>
-                  <p className='font-medium'>{DisplayPriceInShillings(priceAfterCommunityDiscount)}</p>
-                </div>
-                
-                <div className='flex gap-4 justify-between ml-1 dark:text-white/85'>
-                  <p>Quantity total</p>
-                  <p className='flex items-center gap-2'>{totalQty} item{totalQty !== 1 ? 's' : ''}</p>
-                </div>
-                
-                <div className='flex gap-4 justify-between ml-1 dark:text-white/85'>
-                  <p>Delivery Charge</p>
-                  <p className='flex items-center gap-2'>{DisplayPriceInShillings(deliveryCharge)}</p>
-                </div>
-              </div>
-            </div>
-
-            {/* Loyalty Points Section */}
-            {availablePoints > 0 && (
-              <div className="mb-4 p-4 bg-white dark:bg-dm-card rounded-lg shadow transition-colors duration-200">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h3 className="font-medium dark:text-white">Royal Loyalty Points</h3>
-                    <p className="text-sm text-brown-500 dark:text-white/55">You have {availablePoints} points (worth up to KES {availablePoints})</p>
-                  </div>
-                  <div className="flex items-center dark:text-white/85">
-                    <input
-                      type="checkbox"
-                      id="usePoints-cut"
-                      checked={usePoints}
-                      onChange={() => setUsePoints(!usePoints)}
-                      className="mr-2 accent-plum-600 dark:accent-plum-400"
-                    />
-                    <label htmlFor="usePoints-cut">Use my points</label>
-                  </div>
-                </div>
-                
-                {usePoints && (
-                  <div className="mt-2 text-green-600 dark:text-green-400 font-medium">
-                    Points discount: KES {pointsValue.toLocaleString()}
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Final Price Display */}
-            <div className="mb-6 p-4 bg-white dark:bg-dm-card rounded-lg shadow transition-colors duration-200">
-              <div className="flex justify-between items-center dark:text-white/85">
-                <span className="font-medium">Subtotal:</span>
-                <span>KES {priceAfterCommunityDiscount.toLocaleString()}</span>
-              </div>
-              
-              {usePoints && (
-                <div className="flex justify-between items-center text-green-600 dark:text-green-400">
-                  <span>Points Discount:</span>
-                  <span>- KES {pointsValue.toLocaleString()}</span>
-                </div>
-              )}
-              
-              <div className="flex justify-between items-center mt-2 pt-2 border-t dark:border-dm-border font-bold dark:text-white">
-                <span>Total:</span>
-                <span>KES {finalPrice.toLocaleString()}</span>
-              </div>
-            </div>
-
-            {/* Payment Methods */}
-            <div className='space-y-4'>
-              <div className="flex gap-2">
-                {fulfillmentMethod !== 'sacco_pickup' && (
-                  <button
-                    type="button"
-                    onClick={() => setSelectedPaymentMethod('cash')}
-                    className={`flex-1 py-2 px-3 rounded text-sm font-semibold border-2 transition-colors ${
-                      selectedPaymentMethod === 'cash'
-                        ? 'border-plum-600 text-plum-700 bg-plum-50 dark:border-plum-500 dark:text-plum-200 dark:bg-plum-900/20'
-                        : 'border-brown-200 text-brown-400 dark:border-dm-border dark:text-white/40'
-                    }`}
-                  >
-                    Cash on Delivery
-                  </button>
-                )}
-                <button
-                  type="button"
-                  onClick={() => setSelectedPaymentMethod('jenga-checkout')}
-                  className={`flex-1 py-2 px-3 rounded text-sm font-semibold border-2 transition-colors ${
-                    selectedPaymentMethod === 'jenga-checkout'
-                      ? 'border-plum-600 text-plum-700 bg-plum-50 dark:border-plum-500 dark:text-plum-200 dark:bg-plum-900/20'
-                      : 'border-brown-200 text-brown-400 dark:border-dm-border dark:text-white/40'
-                  }`}
-                >
-                  M-Pesa
-                </button>
-              </div>
-
-              {selectedPaymentMethod === 'cash' && fulfillmentMethod !== 'sacco_pickup' && (
-                <button
-                  className={`w-full py-2 px-4 border-2 font-semibold transition-colors duration-200 rounded ${
-                    isPaymentEnabled && !isCheckoutBusy
-                      ? 'border-plum-600 text-plum-700 hover:bg-plum-50 hover:text-plum-900 dark:border-plum-500 dark:text-plum-200 dark:hover:bg-plum-900/40 dark:hover:text-white'
-                      : 'border-brown-200 text-brown-300 dark:border-dm-border dark:text-white/30 cursor-not-allowed'
-                  }`}
-                  onClick={handleCashOnDelivery}
-                  disabled={!isPaymentEnabled || isCheckoutBusy}
-                >
-                  {checkoutAction === 'cash'
-                    ? 'Placing order...'
-                    : `${fulfillmentMethod === 'sacco_pickup' ? 'Place Order — Pay at SACCO terminal' : `Cash on ${fulfillmentMethod === 'delivery' ? 'Delivery' : 'Pickup'}`}${!isPaymentEnabled ? ' (' + paymentBlockedReason + ')' : ''}`}
-                </button>
-              )}
-
-              {selectedPaymentMethod === 'jenga-checkout' && isPaymentEnabled && (
-                <JengaCardPayment
-                  cartItems={cartItemsList}
-                  totalAmount={finalPrice}
-                  addressId={fulfillmentMethod === 'delivery' ? addressList[selectAddress]?._id : null}
-                  communityRewardId={selectedReward ? selectedReward._id : null}
-                  communityDiscountAmount={selectedReward && selectedReward.type === 'discount' ? communityDiscount : 0}
-                  fulfillment_type={fulfillmentMethod}
-                  pickup_location={pickupLocation}
-                  pickup_instructions={pickupInstructions}
-                  saccoOperatorId={fulfillmentMethod === 'sacco_pickup' ? saccoOperatorId : undefined}
-                  saccoDestinationTown={fulfillmentMethod === 'sacco_pickup' ? saccoDestinationTown : undefined}
-                  deliveryCharge={deliveryCharge}
-                  deliveryInstructions={deliveryInstructions}
-                  deliveryMode={deliveryMode}
-                  deliveryZoneId={deliveryZoneId}
-                  customerLocation={customerLocation}
-                  onError={handleJengaPaymentError}
-                />
-              )}
-
-              {selectedPaymentMethod === 'jenga-checkout' && !isPaymentEnabled && (
-                <div className="flex items-center justify-between w-full py-2 px-3 rounded border-2 border-brown-200 text-brown-400 dark:border-dm-border dark:text-white/30 font-semibold text-sm">
-                  <span>M-Pesa</span>
-                  <span className="text-xs font-normal opacity-60">
-                    {paymentBlockedReason}
-                  </span>
-                </div>
-              )}
-            </div>
-          </div>
-          </div>
-        </div>
-        {gateModal}
-      </>
-    );
-  }
-
   // Update UI based on fulfillment method
   const fulfillmentToggle = (
     <div className="mb-4 grid grid-cols-3 rounded-card overflow-hidden border border-brown-100 dark:border-dm-border text-xs sm:text-sm font-semibold">
@@ -954,7 +509,11 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
       </button>
       <button
         type="button"
-        onClick={() => { setFulfillmentMethod('pickup'); setPickupLocation(''); }}
+        onClick={() => {
+          setFulfillmentMethod('pickup');
+          // With a single store there's nothing to choose — select it.
+          setPickupLocation(pickupLocations.length === 1 ? pickupLocations[0].name : '');
+        }}
         className={`py-2.5 transition-colors ${fulfillmentMethod === 'pickup' ? 'bg-plum-700 text-white' : 'bg-white dark:bg-dm-card text-charcoal dark:text-white/70 hover:bg-plum-50 dark:hover:bg-plum-900/20'}`}
       >
         🏪 Pickup
@@ -969,67 +528,127 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
     </div>
   );
 
+  const deliveryModeOptions = [
+    { value: 'standard', title: 'Standard Delivery', description: 'Our rider brings it to your address.' },
+    { value: 'foot', title: 'Delivery by Foot', description: `Only within Nairobi CBD (${NAIROBI_CBD_RADIUS_KM}km radius).` },
+    { value: 'bike', title: 'Bike Delivery', description: 'Flat fare by zone, wider Nairobi coverage.' },
+  ];
+
+  const locationSummary = (() => {
+    if (!customerLocation) return 'No map pin saved for this address yet.';
+    const source = pinOverride ? 'Using the pin you set' : 'Using the map pin saved with this address';
+    const distance = `${formatDistanceKm(footDeliveryEligibility.distanceKm)} from CBD centre`;
+    if (deliveryMode === 'foot') {
+      return `${source} · ${distance} (${footDeliveryEligibility.eligible ? 'eligible for foot delivery' : 'outside the foot-delivery area'})`;
+    }
+    return `${source} · ${distance}`;
+  })();
+
   const renderAddressOrPickupSection = () => {
     if (fulfillmentMethod === 'delivery') {
       return (
         <>
           {/* Fulfillment method toggle */}
           {fulfillmentToggle}
+
+          {/* Delivery type first — foot delivery narrows which addresses qualify */}
+          <div className='bg-white dark:bg-dm-card p-4 rounded-card border border-brown-100 dark:border-dm-border mb-4 transition-colors duration-200'>
+            <p className='text-sm font-semibold text-charcoal dark:text-white mb-3'>Delivery Type</p>
+
+            <div className='grid sm:grid-cols-3 gap-3'>
+              {deliveryModeOptions.map((option) => (
+                <label
+                  key={option.value}
+                  className={`cursor-pointer rounded-card border-2 p-3 transition-all ${
+                    deliveryMode === option.value
+                      ? 'border-plum-600 bg-plum-50 dark:border-plum-400 dark:bg-plum-900/20'
+                      : 'border-brown-100 dark:border-dm-border'
+                  }`}
+                >
+                  <input
+                    type='radio'
+                    name='delivery_mode'
+                    value={option.value}
+                    checked={deliveryMode === option.value}
+                    onChange={() => setDeliveryMode(option.value)}
+                    className='hidden'
+                  />
+                  <p className='font-semibold text-charcoal dark:text-white'>{option.title}</p>
+                  <p className='text-xs text-brown-500 dark:text-white/50 mt-1'>{option.description}</p>
+                </label>
+              ))}
+            </div>
+
+            {/* Bike delivery: zone picker instead of GPS/CBD-radius eligibility */}
+            {deliveryMode === 'bike' && (
+              <div className='mt-3 space-y-2'>
+                <label className='block text-sm font-semibold text-charcoal dark:text-white'>Select your zone</label>
+                <select
+                  value={deliveryZoneId}
+                  onChange={(e) => setDeliveryZoneId(e.target.value)}
+                  disabled={deliveryZonesLoading}
+                  className='w-full text-sm border border-brown-200 dark:border-dm-border rounded-card px-3 py-2 bg-ivory dark:bg-dm-surface text-charcoal dark:text-white/80 focus:outline-none focus:border-plum-500 dark:focus:border-plum-400'
+                >
+                  <option value=''>{deliveryZonesLoading ? 'Loading zones...' : 'Select your zone'}</option>
+                  {zonesByCorridor.map(([corridor, zones]) => (
+                    <optgroup key={corridor} label={corridor}>
+                      {zones.map((zone) => (
+                        <option key={zone._id} value={zone._id}>
+                          {zone.name} — KES {zone.fare.toLocaleString()}
+                        </option>
+                      ))}
+                    </optgroup>
+                  ))}
+                </select>
+                <p className='text-xs text-brown-500 dark:text-white/50'>
+                  {selectedDeliveryZone
+                    ? `Fare for ${selectedDeliveryZone.name}: KES ${selectedDeliveryZone.fare.toLocaleString()}`
+                    : 'Pick the zone closest to your delivery address — the rider bills a flat fare per zone.'}
+                </p>
+              </div>
+            )}
+          </div>
+
           <h3 className='text-lg font-semibold text-charcoal dark:text-white mb-3'>Delivery Address</h3>
-          {!hasActiveAddresses && (
-            <div className="bg-gold-100 dark:bg-gold-600/10 border border-gold-300 dark:border-gold-600/30 text-gold-700 dark:text-gold-300 px-4 py-2 rounded-card mb-4 text-sm">
-              Please add a delivery address to proceed with payment.
-            </div>
-          )}
-          {addressError && (
-            <div className="bg-blush-100 dark:bg-blush-500/10 border border-blush-300 dark:border-blush-500/30 text-blush-600 dark:text-blush-300 px-4 py-2 rounded-card mb-4 text-sm">
-              Please select a delivery address before proceeding with payment.
-            </div>
-          )}
-          {!isPaymentEnabled && hasActiveAddresses && !addressError && (
+          {deliveryHint && (
             <div className="bg-plum-50 dark:bg-plum-900/20 border border-plum-200 dark:border-plum-700/40 text-plum-700 dark:text-plum-300 px-4 py-2 rounded-card mb-4 text-sm">
-              {selectAddress === null || !addressList[selectAddress]?.status
-                ? (deliveryMode === 'foot'
-                    ? `Select an address within Nairobi CBD (${NAIROBI_CBD_RADIUS_KM}km radius) for foot delivery.`
-                    : deliveryMode === 'bike'
-                      ? 'Select an address and your delivery zone to enable payment options.'
-                      : 'Select an address to enable payment options.')
-                : deliveryMode === 'bike' && !deliveryZoneId
-                  ? 'Address selected — now pick your delivery zone above to enable payment options.'
-                  : deliveryMode === 'foot' && !footDeliveryEligibility.eligible
-                    ? `This address is outside the Nairobi CBD foot-delivery radius (${NAIROBI_CBD_RADIUS_KM}km). Choose another address or switch delivery type.`
-                    : 'Address selected — now tap "Use My Current Location" above to share your delivery location and enable payment.'}
+              {deliveryHint}
             </div>
           )}
           <div className='grid gap-3 mb-4'>
-            {hasActiveAddresses ? (
-              addressList.map((address, index) => {
-                if (!eligibleAddressIndexes.includes(index)) return null;
+            {eligibleAddresses.length > 0 ? (
+              eligibleAddresses.map((address) => {
+                const isSelected = address._id === selectedAddressId;
+                const hasPin = Boolean(getAddressPin(address));
                 return (
                   <label
-                    key={`address-${address._id || index}`}
-                    htmlFor={`address${index}`}
+                    key={address._id}
+                    htmlFor={`address-${address._id}`}
                     className="cursor-pointer"
                   >
                     <div className={`border-2 rounded-card p-4 flex gap-3 transition-all duration-200 ${
-                      selectAddress === index
+                      isSelected
                         ? 'border-plum-700 bg-plum-50 dark:border-plum-400 dark:bg-plum-900/20'
                         : 'border-brown-100 dark:border-dm-border bg-white dark:bg-dm-card hover:border-plum-200 dark:hover:border-plum-700/40'
                     }`}>
                       <input
-                        id={`address${index}`}
+                        id={`address-${address._id}`}
                         type='radio'
-                        value={index}
-                        checked={selectAddress === index}
-                        onChange={(e) => setSelectAddress(parseInt(e.target.value))}
+                        value={address._id}
+                        checked={isSelected}
+                        onChange={() => chooseAddress(address._id)}
                         name='address'
                         className="accent-plum-700 mt-1 flex-shrink-0"
                       />
-                      <div className="text-sm text-charcoal dark:text-white/80 leading-relaxed">
+                      <div className="text-sm text-charcoal dark:text-white/80 leading-relaxed min-w-0">
                         <p className="font-medium">{address.address_line}</p>
                         <p className="text-brown-400 dark:text-white/50">{address.city}, {address.state}</p>
                         <p className="text-brown-400 dark:text-white/50">{address.country} - {address.pincode}</p>
                         <p className="text-brown-400 dark:text-white/50 text-xs mt-0.5">{address.mobile}</p>
+                        <p className={`text-xs mt-1 flex items-center gap-1 ${hasPin ? 'text-plum-600 dark:text-plum-300' : 'text-brown-400 dark:text-white/40'}`}>
+                          <FaMapMarkerAlt size={10} />
+                          {hasPin ? 'Map pin saved' : 'No map pin'}
+                        </p>
                       </div>
                       <button
                         type="button"
@@ -1049,126 +668,60 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
               })
             ) : (
               <div className="p-6 text-center text-brown-400 dark:text-white/40 text-sm bg-white dark:bg-dm-card rounded-card border border-brown-100 dark:border-dm-border">
-                {deliveryMode === 'foot'
-                  ? `No addresses within Nairobi CBD (${NAIROBI_CBD_RADIUS_KM}km radius). Add a CBD address or switch to Standard Delivery.`
-                  : 'No delivery addresses found. Please add an address to continue.'}
+                {deliveryMode === 'foot' && addressList.some((address) => address?.status)
+                  ? `None of your addresses is inside Nairobi CBD (${NAIROBI_CBD_RADIUS_KM}km radius). Add a CBD address or switch to Standard or Bike delivery.`
+                  : 'No delivery addresses yet. Add one to continue.'}
               </div>
             )}
             <div
-              onClick={() => setOpenAddress(true)}
+              onClick={openAddAddress}
               className='h-14 bg-blush-50 dark:bg-dm-card border-2 border-dashed border-blush-200 dark:border-dm-border rounded-card flex justify-center items-center cursor-pointer hover:bg-blush-100 dark:hover:bg-dm-card-2 hover:border-plum-300 dark:hover:border-plum-600 transition-all duration-200 text-sm font-medium text-plum-700 dark:text-plum-200 gap-2'
             >
               + Add new address
             </div>
           </div>
 
-          <div className='bg-white dark:bg-dm-card p-4 rounded-card border border-brown-100 dark:border-dm-border mb-4 transition-colors duration-200'>
-          <p className='text-sm font-semibold text-charcoal dark:text-white mb-3'>Delivery Type</p>
+          {selectedAddress && (
+            <div className='bg-white dark:bg-dm-card p-4 rounded-card border border-brown-100 dark:border-dm-border mb-4 transition-colors duration-200 space-y-3'>
+              {/* The address's saved pin is the delivery location; the modal
+                  only adjusts it, or supplies one for pin-less addresses. */}
+              {deliveryMode !== 'bike' && (
+                <div className='flex flex-wrap items-center justify-between gap-2'>
+                  <p className={`text-xs min-w-0 flex-1 ${
+                    customerLocation && (deliveryMode !== 'foot' || footDeliveryEligibility.eligible)
+                      ? 'text-brown-500 dark:text-white/55'
+                      : 'text-blush-600 dark:text-blush-300'
+                  }`}>
+                    {locationSummary}
+                  </p>
+                  <button
+                    type='button'
+                    onClick={() => setShowLocationModal(true)}
+                    className={`px-3 py-2 rounded-pill text-xs font-semibold transition-colors ${
+                      customerLocation
+                        ? 'border border-plum-300 text-plum-700 hover:bg-plum-50 dark:border-plum-600 dark:text-plum-200 dark:hover:bg-plum-900/30'
+                        : 'bg-plum-700 text-white hover:bg-plum-600'
+                    }`}
+                  >
+                    {customerLocation ? 'Adjust pin' : 'Set delivery location'}
+                  </button>
+                </div>
+              )}
 
-          <div className='grid sm:grid-cols-3 gap-3'>
-            <label className={`cursor-pointer rounded-card border-2 p-3 transition-all ${
-              deliveryMode === 'standard'
-                ? 'border-plum-600 bg-plum-50 dark:border-plum-400 dark:bg-plum-900/20'
-                : 'border-brown-100 dark:border-dm-border'
-            }`}>
-              <input
-                type='radio'
-                name='delivery_mode'
-                value='standard'
-                checked={deliveryMode === 'standard'}
-                onChange={() => setDeliveryMode('standard')}
-                className='hidden'
-              />
-              <p className='font-semibold text-charcoal dark:text-white'>Standard Delivery</p>
-              <p className='text-xs text-brown-500 dark:text-white/50 mt-1'>Available within Nairobi CBD ({NAIROBI_CBD_RADIUS_KM}km radius).</p>
-            </label>
-
-            <label className={`cursor-pointer rounded-card border-2 p-3 transition-all ${
-              deliveryMode === 'foot'
-                ? 'border-plum-600 bg-plum-50 dark:border-plum-400 dark:bg-plum-900/20'
-                : 'border-brown-100 dark:border-dm-border'
-            }`}>
-              <input
-                type='radio'
-                name='delivery_mode'
-                value='foot'
-                checked={deliveryMode === 'foot'}
-                onChange={() => setDeliveryMode('foot')}
-                className='hidden'
-              />
-              <p className='font-semibold text-charcoal dark:text-white'>Delivery by Foot</p>
-              <p className='text-xs text-brown-500 dark:text-white/50 mt-1'>Only within Nairobi CBD ({NAIROBI_CBD_RADIUS_KM}km radius).</p>
-            </label>
-
-            <label className={`cursor-pointer rounded-card border-2 p-3 transition-all ${
-              deliveryMode === 'bike'
-                ? 'border-plum-600 bg-plum-50 dark:border-plum-400 dark:bg-plum-900/20'
-                : 'border-brown-100 dark:border-dm-border'
-            }`}>
-              <input
-                type='radio'
-                name='delivery_mode'
-                value='bike'
-                checked={deliveryMode === 'bike'}
-                onChange={() => setDeliveryMode('bike')}
-                className='hidden'
-              />
-              <p className='font-semibold text-charcoal dark:text-white'>Bike Delivery</p>
-              <p className='text-xs text-brown-500 dark:text-white/50 mt-1'>Flat fare by zone, wider Nairobi coverage.</p>
-            </label>
-          </div>
-
-          {/* Bike delivery: zone picker instead of GPS/CBD-radius eligibility */}
-          {fulfillmentMethod === 'delivery' && deliveryMode === 'bike' && (
-            <div className='mt-3 space-y-2'>
-              <label className='block text-sm font-semibold text-charcoal dark:text-white'>Select your zone</label>
-              <select
-                value={deliveryZoneId}
-                onChange={(e) => setDeliveryZoneId(e.target.value)}
-                disabled={deliveryZonesLoading}
-                className='w-full text-sm border border-brown-200 dark:border-dm-border rounded-card px-3 py-2 bg-ivory dark:bg-dm-surface text-charcoal dark:text-white/80 focus:outline-none focus:border-plum-500 dark:focus:border-plum-400'
-              >
-                <option value=''>{deliveryZonesLoading ? 'Loading zones...' : 'Select your zone'}</option>
-                {zonesByCorridor.map(([corridor, zones]) => (
-                  <optgroup key={corridor} label={corridor}>
-                    {zones.map((zone) => (
-                      <option key={zone._id} value={zone._id}>
-                        {zone.name} — KES {zone.fare.toLocaleString()}
-                      </option>
-                    ))}
-                  </optgroup>
-                ))}
-              </select>
-              <p className='text-xs text-brown-500 dark:text-white/50'>
-                {selectedDeliveryZone
-                  ? `Fare for ${selectedDeliveryZone.name}: KES ${selectedDeliveryZone.fare.toLocaleString()}`
-                  : 'Pick the zone closest to your delivery address — the rider bills a flat fare per zone.'}
-              </p>
+              <div>
+                <label className="block text-sm font-semibold text-charcoal dark:text-white mb-2">
+                  Directions for the rider <span className="font-normal text-brown-400 dark:text-white/40">(optional)</span>
+                </label>
+                <textarea
+                  value={deliveryInstructions}
+                  onChange={(e) => setDeliveryInstructions(e.target.value)}
+                  placeholder="Gate, floor, door number, nearby landmark..."
+                  rows={2}
+                  className="w-full text-sm border border-brown-200 dark:border-dm-border rounded-card px-3 py-2 bg-ivory dark:bg-dm-surface text-charcoal dark:text-white/80 placeholder-brown-300 dark:placeholder-white/30 focus:outline-none focus:border-plum-500 dark:focus:border-plum-400 resize-none"
+                />
+              </div>
             </div>
           )}
-
-          {/* Location capture required for standard/foot delivery */}
-          {fulfillmentMethod === 'delivery' && deliveryMode !== 'bike' && (
-            <div className='mt-3 space-y-2'>
-              <button
-                type='button'
-                onClick={captureCustomerLocation}
-                className='px-3 py-2 rounded-pill text-sm font-semibold bg-plum-700 text-white hover:bg-plum-600 transition-colors disabled:opacity-60 disabled:cursor-not-allowed'
-                disabled={locationLoading}
-              >
-                {locationLoading ? 'Checking location...' : 'Use My Current Location'}
-              </button>
-
-              <p className='text-xs text-brown-500 dark:text-white/50'>
-                {customerLocation
-                  ? (deliveryMode === 'foot'
-                      ? `Distance to CBD center: ${formatDistanceKm(footDeliveryEligibility.distanceKm)} (${footDeliveryEligibility.eligible ? 'eligible' : 'outside allowed zone'})`
-                      : `Location captured (${formatDistanceKm(footDeliveryEligibility.distanceKm)} from CBD).`)
-                  : 'Location required for delivery. Tap to share your current location.'}
-              </p>
-            </div>
-          )}
-          </div>
         </>
       );
     } else if (fulfillmentMethod === 'pickup') {
@@ -1311,7 +864,6 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
     return null;
   }
 
-  // Full page render (original implementation)
   return (
     <>
       <section className={sectionShell}>
@@ -1324,26 +876,26 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
         <div className={`w-full self-start rounded-card border border-brown-100 bg-white px-3 py-4 sm:px-4 shadow transition-colors duration-200 dark:border-dm-border dark:bg-dm-card lg:max-w-sm xl:max-w-md ${summarySticky}`}>
           {/**summary**/}
           <h3 className='text-lg font-semibold text-charcoal dark:text-white px-1 mb-3'>Order Summary</h3>
-          
+
           {/* Premium Royal Membership Card */}
           <div className="mb-4">
             <CheckoutRoyalCard compact={false} showTeaser={true} />
           </div>
-          
+
           {/* Community Rewards */}
           <div className="mx-4 mb-4">
-            <ActiveRewards 
-              displayMode="compact" 
+            <ActiveRewards
+              displayMode="compact"
               onSelectReward={handleSelectReward}
               selectedRewardId={selectedReward?._id}
             />
           </div>
-          
+
           {/* Community Perks */}
           <div className="mt-2">
             <CommunityCampaignProgress displayMode="slim" />
           </div>
-          
+
           <div className='bg-white dark:bg-dm-card-2 p-4 rounded-card border border-brown-100 dark:border-dm-border mt-3 transition-colors duration-200'>
             <h3 className='font-semibold text-charcoal dark:text-white mb-3 text-sm uppercase tracking-wide'>Bill Details</h3>
             <div className='flex gap-4 justify-between ml-1 dark:text-white/85'>
@@ -1352,13 +904,13 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
                 <span className='line-through text-brown-300 dark:text-white/35'>{DisplayPriceInShillings(notDiscountTotalPrice)}</span>
               </p>
             </div>
-            
+
             {/* Product discounts line */}
             <div className='flex gap-4 justify-between ml-1 text-green-600 dark:text-green-400'>
               <p>Product discounts</p>
               <p>Applied</p>
             </div>
-            
+
             {/* Royal card discount line */}
             {royalDiscount > 0 && (
               <div className='flex gap-4 justify-between ml-1 text-amber-800 dark:text-amber-300'>
@@ -1368,7 +920,7 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
                 <p>-{royalDiscount}%</p>
               </div>
             )}
-            
+
             {/* Community reward discount line */}
             {selectedReward && selectedReward.type === 'discount' && (
               <div className='flex gap-4 justify-between ml-1 text-green-600 dark:text-green-400'>
@@ -1378,7 +930,7 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
                 <p>-{communityDiscount}%</p>
               </div>
             )}
-            
+
             {/* Community reward free shipping line */}
             {selectedReward && selectedReward.type === 'shipping' && (
               <div className='flex gap-4 justify-between ml-1 text-plum-700 dark:text-plum-300'>
@@ -1388,17 +940,17 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
                 <p>Applied</p>
               </div>
             )}
-            
+
             <div className='flex gap-4 justify-between ml-1 dark:text-white/85'>
               <p>Subtotal</p>
               <p className='font-medium'>{DisplayPriceInShillings(priceAfterCommunityDiscount)}</p>
             </div>
-            
+
             <div className='flex gap-4 justify-between ml-1 dark:text-white/85'>
               <p>Quantity total</p>
               <p className='flex items-center gap-2'>{totalQty} item{totalQty !== 1 ? 's' : ''}</p>
             </div>
-            
+
             <div className='flex gap-4 justify-between ml-1 dark:text-white/85'>
               <p>Delivery Charge</p>
               <p className='flex items-center gap-2'>{DisplayPriceInShillings(deliveryCharge)}</p>
@@ -1436,7 +988,7 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
                   <label htmlFor="usePoints">Use my points</label>
                 </div>
               </div>
-              
+
               {usePoints && (
                 <div className="mt-2 text-green-600 dark:text-green-400 font-medium">
                   Points discount: KES {pointsValue.toLocaleString()}
@@ -1498,7 +1050,7 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
               <JengaCardPayment
                 cartItems={cartItemsList}
                 totalAmount={finalPrice}
-                addressId={fulfillmentMethod === 'delivery' ? addressList[selectAddress]?._id : null}
+                addressId={fulfillmentMethod === 'delivery' ? selectedAddress?._id : null}
                 communityRewardId={selectedReward ? selectedReward._id : null}
                 communityDiscountAmount={selectedReward && selectedReward.type === 'discount' ? communityDiscount : 0}
                 fulfillment_type={fulfillmentMethod}
@@ -1528,7 +1080,7 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
             {!user?._id && (
             <div className="mt-6 pt-6 border-t border-brown-200 dark:border-brown-700">
               <p className="text-center text-sm text-brown-500 dark:text-brown-400 mb-3">
-                Don't want to create an account?
+                Don&apos;t want to create an account?
               </p>
               <Link
                 to="/guest-checkout"
@@ -1542,25 +1094,16 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
         </div>
         </div>
 
-        {/* Fulfillment Method Modal */}
-        <FulfillmentModal 
-          isOpen={showFulfillmentModal}
-          onClose={() => setShowFulfillmentModal(false)}
-          onSelect={handleFulfillmentSelect}
-          pickupLocations={pickupLocations}
-        />
-
-        {/* Delivery location capture modal */}
+        {/* Delivery location — adjusts the selected address's pin (or sets
+            one for an address saved without a pin). Rider directions are
+            collected on this page, so the modal doesn't ask for them again. */}
         <DeliveryLocationModal
           isOpen={showLocationModal}
           initialLocation={customerLocation}
-          initialInstructions={deliveryInstructions}
           mode={deliveryMode}
+          askInstructions={false}
           onClose={() => setShowLocationModal(false)}
-          onSave={(loc) => {
-            setCustomerLocation({ lat: loc.lat, lng: loc.lng });
-            setDeliveryInstructions(loc.deliveryInstructions || '');
-          }}
+          onSave={(loc) => setPinOverride({ lat: loc.lat, lng: loc.lng })}
         />
 
         {/* Address Modal */}
@@ -1574,12 +1117,5 @@ const CheckoutPage = ({ isCutView = false, onClose = null, embedded = false }) =
     </>
   )
 }
-
-// Create a CheckoutCutView component that wraps CheckoutPage in cut view mode
-export const CheckoutCutView = ({ isOpen, onClose }) => {
-  if (!isOpen) return null;
-  
-  return <CheckoutPage isCutView={true} onClose={onClose} />;
-};
 
 export default CheckoutPage;
