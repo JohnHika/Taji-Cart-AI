@@ -1,20 +1,23 @@
-import React, { useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { FaSearch, FaBox, FaEnvelope } from 'react-icons/fa';
 import Axios from '../utils/Axios';
 import SummaryApi from '../common/SummaryApi';
 import toast from 'react-hot-toast';
 
 function GuestOrderTracking() {
-  const [orderId, setOrderId] = useState('');
-  const [email, setEmail] = useState('');
+  const [searchParams] = useSearchParams();
+  // Prefilled from a link like /order/track-guest?orderId=...&email=... —
+  // the guest checkout success screen and order-confirmation email both link
+  // here so a guest doesn't have to retype what's already known.
+  const [orderId, setOrderId] = useState(() => (searchParams.get('orderId') || '').toUpperCase());
+  const [email, setEmail] = useState(() => searchParams.get('email') || '');
   const [loading, setLoading] = useState(false);
   const [orderData, setOrderData] = useState(null);
   const [hasSearched, setHasSearched] = useState(false);
 
-  const handleTrackOrder = async (e) => {
-    e.preventDefault();
-
-    if (!orderId || !email) {
+  const runTrackOrder = useCallback(async (orderIdValue, emailValue) => {
+    if (!orderIdValue || !emailValue) {
       toast.error('Please enter both Order ID and Email');
       return;
     }
@@ -25,7 +28,7 @@ function GuestOrderTracking() {
     try {
       const response = await Axios({
         ...SummaryApi.trackGuestOrder,
-        params: { orderId, email }
+        params: { orderId: orderIdValue, email: emailValue }
       });
 
       if (response.data.success) {
@@ -39,7 +42,25 @@ function GuestOrderTracking() {
     } finally {
       setLoading(false);
     }
+  }, []);
+
+  const handleTrackOrder = (e) => {
+    e.preventDefault();
+    runTrackOrder(orderId, email);
   };
+
+  // Auto-submit once, on arrival, when both query params are present —
+  // matches the values already in state at first render (see useState above).
+  useEffect(() => {
+    const paramOrderId = (searchParams.get('orderId') || '').toUpperCase();
+    const paramEmail = searchParams.get('email') || '';
+    if (paramOrderId && paramEmail) {
+      runTrackOrder(paramOrderId, paramEmail);
+    }
+    // Intentionally run once on mount only — this is a one-time deep-link
+    // action, not a live sync with the URL's query string.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const getStatusColor = (status) => {
     const colors = {

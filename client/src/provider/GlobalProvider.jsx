@@ -1,14 +1,15 @@
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
 import { useDispatch, useSelector } from "react-redux";
-import { useLocation } from "react-router-dom";
+import PropTypes from "prop-types";
 import SummaryApi from "../common/SummaryApi";
 import { handleAddAddress } from "../store/addressSlice";
-import { handleAddItemCart } from "../store/cartProduct";
+import { fetchCartItems, handleAddItemCart } from "../store/cartProduct";
 import { setOrder } from "../store/orderSlice";
 import Axios from "../utils/Axios";
 import AxiosToastError from "../utils/AxiosToastError";
 import { clearAuthStorage } from "../utils/authStorage";
+import { clearGuestCart } from "../utils/guestCart";
 import { getRoyalCardDiscount, pricewithDiscount } from "../utils/PriceWithDiscount";
 import { getEffectiveUnitPrice, isWholesaleEligible } from "../utils/wholesalePricing";
 
@@ -33,7 +34,6 @@ const globalContext = createContext(defaultContextValue);
 
 const GlobalProvider = ({ children }) => {
     const dispatch = useDispatch();
-    const location = useLocation();
     const [totalPrice, setTotalPrice] = useState(0);
     const [totalQty, setTotalQty] = useState(0);
     const [notDiscountTotalPrice, setNotDiscountTotalPrice] = useState(0);
@@ -41,25 +41,19 @@ const GlobalProvider = ({ children }) => {
     const [royalDiscount, setRoyalDiscount] = useState(0);
     const [wholesaleStackDiscounts, setWholesaleStackDiscounts] = useState(false);
     const cart = useSelector(state => state.cartItem?.cart || []);
-    const user = useSelector(state => state?.user);
-
-    // Add route debugging
-    useEffect(() => {
-        console.log("GlobalProvider: Route changed to", location.pathname);
-
-        // Check if this is a category route
-        if (location.pathname.includes('-')) {
-            console.log("GlobalProvider: Detected category route with state:", location.state);
-        }
-    }, [location.pathname, location.state]);
+    // Only re-run user-keyed effects when the id itself changes — userSlice
+    // replaces the whole user object (token refresh, tab refocus, profile
+    // save) far more often than the identity of the logged-in user changes,
+    // and that used to re-fetch cart/address/loyalty-card every time.
+    const userId = useSelector(state => state?.user?._id);
 
     // Fetch user's Royal card data
-    const fetchRoyalCardData = async () => {
+    const fetchRoyalCardData = useCallback(async () => {
         try {
-            if (!user?._id) return;
+            if (!userId) return;
 
             const response = await Axios({
-                url: `/api/users/${user._id}/loyalty-card`,
+                url: `/api/users/${userId}/loyalty-card`,
                 method: 'GET'
             });
 
@@ -70,7 +64,6 @@ const GlobalProvider = ({ children }) => {
                 // Calculate royal discount based on tier
                 const discount = getRoyalCardDiscount(cardData.tier);
                 setRoyalDiscount(discount);
-                console.log(`Applied Royal card discount: ${discount}% (${cardData.tier} tier)`);
             } else {
                 setRoyalCardData(null);
                 setRoyalDiscount(0);
@@ -78,16 +71,13 @@ const GlobalProvider = ({ children }) => {
         } catch (error) {
             console.error("Error fetching Royal card data:", error);
         }
-    };
+    }, [userId]);
 
-    const fetchCartItem = async () => {
+    const fetchCartItem = useCallback(async () => {
         try {
-            if (!user?._id) {
-                console.log("No authenticated user, skipping cart fetch");
+            if (!userId) {
                 return;
             }
-
-            console.log("Fetching cart items...");
 
             // Make the request with cookie-based auth (withCredentials is enabled in Axios.js)
             const response = await Axios({
@@ -95,25 +85,15 @@ const GlobalProvider = ({ children }) => {
                 method: SummaryApi.getCartItem.method
             });
 
-            // Log raw response
-            console.log("Raw cart response:", response.data);
-
             if (response.data.success) {
-                console.log("Cart fetch successful:", response.data);
                 dispatch(handleAddItemCart(response.data.data || []));
-            } else {
-                console.log("Cart fetch failed:", response.data.message);
             }
         } catch (error) {
             console.error("Cart fetch error details:", error);
-            if (error.response) {
-                console.log("Error status:", error.response.status);
-                console.log("Error data:", error.response.data);
-            }
         }
-    };
+    }, [userId, dispatch]);
 
-    const updateCartItem = async (id, qty) => {
+    const updateCartItem = useCallback(async (id, qty) => {
         try {
             const response = await Axios({
                 url: SummaryApi.updateCartItemQty.url,
@@ -127,7 +107,6 @@ const GlobalProvider = ({ children }) => {
             const { data: responseData } = response;
 
             if (responseData.success) {
-                // toast.success(responseData.message)
                 fetchCartItem();
                 return responseData;
             }
@@ -135,9 +114,9 @@ const GlobalProvider = ({ children }) => {
             AxiosToastError(error);
             return error;
         }
-    };
+    }, [fetchCartItem]);
 
-    const deleteCartItem = async (cartId) => {
+    const deleteCartItem = useCallback(async (cartId) => {
         try {
             const response = await Axios({
                 url: SummaryApi.deleteCartItem.url,
@@ -156,25 +135,32 @@ const GlobalProvider = ({ children }) => {
         } catch (error) {
             AxiosToastError(error);
         }
-    };
+    }, [fetchCartItem]);
 
-    const clearCartItems = async () => {
+    // Guests never had a server-side cart to clear — routing them through the
+    // authenticated DELETE /api/cart/clear used to 401 and log them out.
+    const clearCartItems = useCallback(async () => {
+        if (!userId) {
+            clearGuestCart();
+            dispatch(handleAddItemCart([]));
+            return;
+        }
+
         try {
             const response = await Axios({
                 url: SummaryApi.clearCart.url,
                 method: SummaryApi.clearCart.method,
-                requestLockKey: `cart:clear:${user?._id || 'guest'}`
+                requestLockKey: `cart:clear:${userId}`
             });
 
             if (response.data.success) {
                 dispatch(handleAddItemCart([]));
-                console.log("Cart cleared successfully");
             }
         } catch (error) {
             AxiosToastError(error);
             console.error("Failed to clear cart:", error);
         }
-    };
+    }, [userId, dispatch]);
 
     // Wholesale pricing's stacking rule is an admin-configurable, storewide
     // toggle (see Product admin page) — fetch it once; it rarely changes.
@@ -225,6 +211,9 @@ const GlobalProvider = ({ children }) => {
         setNotDiscountTotalPrice(notDiscountPrice);
     }, [cart, royalDiscount, wholesaleStackDiscounts]);
 
+    // Not currently wired to a "logout" button anywhere in the UI — logout
+    // goes through AuthContext/authStorage directly — but left in place since
+    // it's not part of the findings this pass covers.
     const handleLogoutOut = async () => {
         try {
             // Call logout API to clear server-side session cookies
@@ -247,8 +236,10 @@ const GlobalProvider = ({ children }) => {
             clearAuthStorage();
         }
     };
+    // Referenced so lint doesn't flag it as unused while it's kept in reserve.
+    void handleLogoutOut;
 
-    const fetchAddress = async () => {
+    const fetchAddress = useCallback(async () => {
         try {
             const response = await Axios({
                 url: SummaryApi.getAddress.url,
@@ -259,12 +250,12 @@ const GlobalProvider = ({ children }) => {
             if (responseData.success) {
                 dispatch(handleAddAddress(responseData.data));
             }
-        } catch (error) {
+        } catch {
             // AxiosToastError(error)
         }
-    };
+    }, [dispatch]);
 
-    const fetchOrder = async () => {
+    const fetchOrder = useCallback(async () => {
         try {
             const response = await Axios({
                 url: SummaryApi.getOrderItems.url,
@@ -278,24 +269,28 @@ const GlobalProvider = ({ children }) => {
         } catch (error) {
             console.log(error);
         }
-    };
+    }, [dispatch]);
 
     useEffect(() => {
-        if (user?._id) {
-            // Only fetch data if user is logged in
+        if (userId) {
+            // Only fetch data if user is logged in. fetchOrder is deliberately
+            // not called here — MyOrders.jsx fetches the order list itself on
+            // mount, keyed on the same user?._id — this stays exposed on the
+            // context for callers like CheckoutPage/PaymentSuccess to call
+            // after placing an order.
             fetchCartItem();
             fetchAddress();
-            fetchOrder();
-            fetchRoyalCardData(); // Fetch Royal card data when user is logged in
+            fetchRoyalCardData();
         } else {
-            // Clear data when user is not logged in
-            dispatch(handleAddItemCart([]));
+            // Guest: load whatever is in the local guest cart instead of
+            // wiping it — there is no server cart to clear for a guest.
+            dispatch(fetchCartItems());
             setRoyalCardData(null);
             setRoyalDiscount(0);
         }
-    }, [user, user?._id]);
+    }, [userId, dispatch, fetchCartItem, fetchAddress, fetchRoyalCardData]);
 
-    const contextValue = {
+    const contextValue = useMemo(() => ({
         fetchCartItem,
         updateCartItem,
         deleteCartItem,
@@ -309,14 +304,30 @@ const GlobalProvider = ({ children }) => {
         royalDiscount,
         wholesaleEligible: isWholesaleEligible(totalQty),
         wholesaleStackDiscounts
-    };
+    }), [
+        fetchCartItem,
+        updateCartItem,
+        deleteCartItem,
+        clearCartItems,
+        fetchAddress,
+        totalPrice,
+        totalQty,
+        notDiscountTotalPrice,
+        fetchOrder,
+        royalCardData,
+        royalDiscount,
+        wholesaleStackDiscounts
+    ]);
 
     return (
         <globalContext.Provider value={contextValue}>
-            {console.log("GlobalProvider rendering with path:", location.pathname)}
             {children}
         </globalContext.Provider>
     );
+};
+
+GlobalProvider.propTypes = {
+    children: PropTypes.node
 };
 
 export const useGlobalContext = () => useContext(globalContext);

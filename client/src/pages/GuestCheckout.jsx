@@ -15,6 +15,9 @@ import JengaPayment from '../components/JengaPayment';
 import { DEFAULT_DELIVERY_CHARGE, formatDistanceKm, getFootDeliveryEligibility, NAIROBI_CBD_RADIUS_KM } from '../utils/cbdDelivery';
 import DeliveryLocationModal from '../components/DeliveryLocationModal';
 import { DisplayPriceInShillings } from '../utils/DisplayPriceInShillings';
+import { useGlobalContext } from '../provider/GlobalProvider';
+import { pricewithDiscount } from '../utils/PriceWithDiscount';
+import { getEffectiveUnitPrice } from '../utils/wholesalePricing';
 
 const PICKUP_LOCATIONS = [
   { name: 'Main Store', address: nawiriBrand.location },
@@ -24,12 +27,18 @@ function GuestCheckout() {
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const cart = useSelector(state => state.cartItem?.cart || []);
+  const { totalPrice, wholesaleEligible, wholesaleStackDiscounts } = useGlobalContext();
   const [submitting, setSubmitting] = useState(false);
   const submitLockRef = useRef(false);
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState('cash'); // 'cash' | 'jenga'
   const [orderSuccess, setOrderSuccess] = useState(null);
   const [orderPaymentLabel, setOrderPaymentLabel] = useState('Cash on Delivery');
   const [locationLoading, setLocationLoading] = useState(false);
+  // While an M-Pesa prompt is pending/stale, lock the rest of the form so it
+  // can't be edited in a way that unmounts JengaPayment mid-poll (which used
+  // to silently stop polling), and so a guest can't switch to Cash and place
+  // a second order for the same items.
+  const [paymentPending, setPaymentPending] = useState(false);
 
   const [formData, setFormData] = useState({
     guestEmail: '',
@@ -43,7 +52,6 @@ function GuestCheckout() {
     delivery_mode: 'standard',
     pickup_location: '',
     customerLocation: null,
-    deliveryInstructions: '',
     deliveryZoneId: '',
   });
 
@@ -91,15 +99,17 @@ function GuestCheckout() {
     return Array.from(groups.entries()).sort(([a], [b]) => a.localeCompare(b));
   }, [deliveryZones]);
 
-  const total = useMemo(() => cart.reduce((sum, item) => {
-    const price = item.productId?.price || item.price || 0;
-    return sum + price * (item.quantity || 1);
-  }, 0), [cart]);
+  // Same pricing chain the logged-in cart uses (product discount, then
+  // wholesale once the cart qualifies) — guests have no Royal card discount.
+  // totalPrice comes from GlobalProvider, which already runs this over the
+  // cart regardless of login state, so it stays in sync with DisplayCartItem.
+  const total = totalPrice;
 
   const totalQty = useMemo(() => cart.reduce((sum, item) => sum + (item.quantity || 1), 0), [cart]);
 
   // Delivery needs address form; pickup does not
   const isDelivery = formData.fulfillment_type === 'delivery';
+  const isFootDelivery = formData.delivery_mode === 'foot';
   // Display only — the server always recomputes this from the authoritative
   // zone fare or the flat default, never trusting a client-supplied amount.
   const deliveryCharge = isDelivery
@@ -107,7 +117,14 @@ function GuestCheckout() {
     : 0;
   const orderTotal = total + deliveryCharge;
 
-  // Delivery needs address form + location; pickup does not
+  // The page already collects a street/building address; the location modal
+  // asks for the pin only (askInstructions={false}) so the rider directions
+  // sent to the server are just that address text, not a second free-text field.
+  const deliveryInstructionsForRider = formData.address;
+
+  // Delivery needs address form + location; pickup does not. CBD eligibility
+  // only gates foot delivery — Standard delivery covers a wider area, same as
+  // the server (guestCheckoutController only checks CBD when deliveryMode === 'foot').
   const isReadyToOrder = useMemo(() => {
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.guestEmail)) return false;
     if (!formData.guestPhone || formData.guestPhone.length < 10) return false;
@@ -117,13 +134,36 @@ function GuestCheckout() {
         if (!formData.deliveryZoneId) return false;
       } else {
         if (!formData.customerLocation) return false;
-        if (!footDeliveryEligibility.eligible) return false;
+        if (isFootDelivery && !footDeliveryEligibility.eligible) return false;
       }
     } else {
       if (!formData.pickup_location) return false;
     }
     return true;
-  }, [formData, isDelivery, isBikeDelivery, footDeliveryEligibility]);
+  }, [formData, isDelivery, isBikeDelivery, isFootDelivery, footDeliveryEligibility]);
+
+  // The specific reason payment is blocked — shown next to the disabled Cash
+  // and M-Pesa options instead of a blank hint.
+  const blockedReason = useMemo(() => {
+    if (isReadyToOrder) return '';
+    if (!formData.guestEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.guestEmail)) return 'Enter a valid email';
+    if (!formData.guestPhone || formData.guestPhone.length < 10) return 'Enter a valid phone number';
+    if (isDelivery) {
+      if (!formData.firstName || !formData.lastName) return 'Enter your name';
+      if (!formData.address) return 'Enter your delivery address';
+      if (!formData.city) return 'Enter your city';
+      if (isBikeDelivery) {
+        if (!formData.deliveryZoneId) return 'Select delivery zone';
+      } else if (!formData.customerLocation) {
+        return 'Set delivery location';
+      } else if (isFootDelivery && !footDeliveryEligibility.eligible) {
+        return 'Outside CBD foot-delivery area';
+      }
+    } else if (!formData.pickup_location) {
+      return 'Select pickup location';
+    }
+    return '';
+  }, [formData, isDelivery, isBikeDelivery, isFootDelivery, footDeliveryEligibility, isReadyToOrder]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -136,7 +176,6 @@ function GuestCheckout() {
     setFormData(prev => ({
       ...prev,
       customerLocation: { lat: loc.lat, lng: loc.lng },
-      deliveryInstructions: loc.deliveryInstructions || '',
     }));
   };
 
@@ -158,10 +197,13 @@ function GuestCheckout() {
   const handleGuestPaymentSuccess = (statusData) => {
     clearGuestCart();
     dispatch(fetchCartItems());
+    setPaymentPending(false);
     setOrderPaymentLabel('M-Pesa');
     setOrderSuccess({
       orderId: statusData?.orderId,
-      total,
+      // Prefer the server-confirmed amount once the status endpoint returns
+      // one; fall back to the client estimate for now.
+      total: typeof statusData?.amount === 'number' ? statusData.amount : orderTotal,
       email: formData.guestEmail,
     });
     toast.success('Payment confirmed! Your order is placed.');
@@ -190,7 +232,7 @@ function GuestCheckout() {
           deliveryCharge: deliveryCharge,
           totalAmt: orderTotal,
           customerLocation: formData.customerLocation,
-          deliveryInstructions: formData.deliveryInstructions,
+          deliveryInstructions: deliveryInstructionsForRider,
           pickup_location: formData.pickup_location,
         },
       });
@@ -201,7 +243,9 @@ function GuestCheckout() {
         setOrderPaymentLabel('Cash on Delivery');
         setOrderSuccess({
           orderId: response.data.data.orderId,
-          total,
+          // The server recomputes totalAmt from live prices/delivery charge —
+          // trust that over the client estimate for what's actually owed.
+          total: typeof response.data.data.totalAmt === 'number' ? response.data.data.totalAmt : orderTotal,
           email: formData.guestEmail,
         });
         toast.success(response.data.message || 'Order placed successfully!');
@@ -233,7 +277,7 @@ function GuestCheckout() {
             </div>
             <div className="flex justify-between">
               <span className="text-brown-500 dark:text-white/60">Total</span>
-              <span className="font-bold text-gold-600">{DisplayPriceInShillings(orderSuccess.total + deliveryCharge)}</span>
+              <span className="font-bold text-gold-600">{DisplayPriceInShillings(orderSuccess.total)}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-brown-500 dark:text-white/60">Payment</span>
@@ -242,7 +286,7 @@ function GuestCheckout() {
           </div>
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
             <Link
-              to={`/track-order?orderId=${orderSuccess.orderId}&email=${encodeURIComponent(orderSuccess.email)}`}
+              to={`/order/track-guest?orderId=${encodeURIComponent(orderSuccess.orderId)}&email=${encodeURIComponent(orderSuccess.email)}`}
               className="px-6 py-3 rounded-card bg-plum-700 text-white font-semibold hover:bg-plum-600 transition-colors"
             >
               Track My Order
@@ -297,6 +341,17 @@ function GuestCheckout() {
               <Link to="/login" className="text-plum-600 dark:text-plum-300 hover:underline font-medium">Have an account? Sign in</Link>
             </p>
           </div>
+
+          {paymentPending && (
+            <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 text-blue-800 dark:text-blue-300 text-sm rounded-card px-4 py-2.5">
+              An M-Pesa payment is in progress — contact details and delivery info are locked until it&apos;s resolved.
+            </div>
+          )}
+
+          {/* Locked while an M-Pesa prompt is pending/stale — editing these
+              fields could flip isReadyToOrder to false, which would unmount
+              JengaPayment mid-poll and silently stop tracking the payment. */}
+          <fieldset disabled={paymentPending} className="space-y-5 border-0 p-0 m-0 min-w-0">
 
           {/* Contact info */}
           <div className="bg-white dark:bg-dm-card rounded-card border border-brown-100 dark:border-dm-border p-4 transition-colors duration-200">
@@ -487,6 +542,7 @@ function GuestCheckout() {
               </>
             )}
           </div>
+          </fieldset>
         </div>
 
         {/* ── Right column: order summary + place order ─────────────────────── */}
@@ -499,18 +555,31 @@ function GuestCheckout() {
             <CheckoutRoyalCard showTeaser={true} />
           </div>
 
-          {/* Cart items */}
+          {/* Cart items — priced the same way as the cart drawer (product
+              discount, then wholesale once the cart qualifies) so this list
+              matches the Total below and what the server will charge. */}
           <div className="bg-white dark:bg-dm-card-2 rounded-card border border-brown-100 dark:border-dm-border p-4 mb-4 space-y-2 max-h-48 overflow-y-auto">
-            {cart.map((item, index) => (
-              <div key={index} className="flex justify-between text-sm">
-                <span className="text-brown-600 dark:text-white/70 truncate pr-2">
-                  {item.productId?.name || item.name} × {item.quantity}
-                </span>
-                <span className="text-charcoal dark:text-white font-medium whitespace-nowrap">
-                  {DisplayPriceInShillings((item.productId?.price || item.price || 0) * (item.quantity || 1))}
-                </span>
-              </div>
-            ))}
+            {cart.map((item, index) => {
+              const unitPrice = getEffectiveUnitPrice({
+                price: item?.productId?.price,
+                discount: item?.productId?.discount,
+                wholesalePrice: item?.productId?.wholesalePrice,
+                royalDiscount: 0, // guests have no Royal card
+                wholesaleEligible,
+                stackDiscounts: wholesaleStackDiscounts,
+                pricewithDiscountFn: pricewithDiscount,
+              });
+              return (
+                <div key={item?._id || index} className="flex justify-between text-sm">
+                  <span className="text-brown-600 dark:text-white/70 truncate pr-2">
+                    {item.productId?.name || item.name} × {item.quantity}
+                  </span>
+                  <span className="text-charcoal dark:text-white font-medium whitespace-nowrap">
+                    {DisplayPriceInShillings(unitPrice * (item.quantity || 1))}
+                  </span>
+                </div>
+              );
+            })}
           </div>
 
           {/* Bill details */}
@@ -536,6 +605,9 @@ function GuestCheckout() {
           <div className="mt-5 space-y-3">
             <p className="text-xs font-semibold uppercase tracking-widest text-brown-300 dark:text-white/30 mb-1">Payment Method</p>
 
+            {/* Locked once an M-Pesa payment is pending/stale so a guest can't
+                switch to Cash and place a second order for the same items. */}
+            <fieldset disabled={paymentPending} className="space-y-3 border-0 p-0 m-0 min-w-0">
             <div className="flex gap-2">
               <button
                 type="button"
@@ -576,15 +648,11 @@ function GuestCheckout() {
                   {submitting ? 'Placing order…' : `Cash on ${formData.fulfillment_type === 'delivery' ? 'Delivery' : 'Pickup'}`}
                 </span>
                 {!isReadyToOrder && !submitting && (
-                  <span className="text-xs font-normal opacity-60">
-                    {!formData.guestEmail || !formData.guestPhone ? 'Fill contact info' :
-                     isDelivery && (!formData.firstName || !formData.address) ? 'Fill delivery address' :
-                     isDelivery && isBikeDelivery && !formData.deliveryZoneId ? 'Select delivery zone' :
-                     !isDelivery && !formData.pickup_location ? 'Select pickup location' : ''}
-                  </span>
+                  <span className="text-xs font-normal opacity-60">{blockedReason}</span>
                 )}
               </button>
             )}
+            </fieldset>
 
             {selectedPaymentMethod === 'jenga' && (
               isReadyToOrder ? (
@@ -595,12 +663,15 @@ function GuestCheckout() {
                   fulfillment_type={formData.fulfillment_type}
                   pickup_location={formData.pickup_location}
                   deliveryCharge={deliveryCharge}
-                  deliveryInstructions={formData.deliveryInstructions}
+                  deliveryInstructions={deliveryInstructionsForRider}
                   deliveryMode={formData.delivery_mode}
                   deliveryZoneId={formData.deliveryZoneId}
                   customerLocation={formData.customerLocation}
                   payEndpoint={SummaryApi.jengaGuestPayment}
                   statusEndpoint={SummaryApi.checkJengaGuestStatus}
+                  defaultPhone={formData.guestPhone}
+                  isGuest
+                  onPendingChange={setPaymentPending}
                   extraData={{
                     guestEmail: formData.guestEmail.trim().toLowerCase(),
                     guestPhone: formData.guestPhone.trim(),
@@ -615,12 +686,7 @@ function GuestCheckout() {
                     <FaLock className="text-xs opacity-70" />
                     M-Pesa
                   </span>
-                  <span className="text-xs font-normal opacity-60">
-                    {!formData.guestEmail || !formData.guestPhone ? 'Fill contact info' :
-                     isDelivery && (!formData.firstName || !formData.address) ? 'Fill delivery address' :
-                     isDelivery && isBikeDelivery && !formData.deliveryZoneId ? 'Select delivery zone' :
-                     !isDelivery && !formData.pickup_location ? 'Select pickup location' : ''}
-                  </span>
+                  <span className="text-xs font-normal opacity-60">{blockedReason}</span>
                 </div>
               )
             )}
@@ -638,8 +704,8 @@ function GuestCheckout() {
       <DeliveryLocationModal
         isOpen={showLocationModal}
         initialLocation={formData.customerLocation}
-        initialInstructions={formData.deliveryInstructions || ''}
-        mode={formData.deliveryMode || 'standard'}
+        mode={formData.delivery_mode || 'standard'}
+        askInstructions={false}
         onClose={() => setShowLocationModal(false)}
         onSave={handleLocationModalSave}
       />

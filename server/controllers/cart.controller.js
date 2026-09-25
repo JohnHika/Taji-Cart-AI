@@ -44,13 +44,20 @@ const buildSelectedVariantKey = (selectedVariant) => {
     );
 };
 
+// A positive whole quantity, defaulting to 1 when absent or invalid.
+const normalizeRequestedQuantity = (quantity) => {
+    const parsed = Math.floor(Number(quantity))
+    return Number.isFinite(parsed) && parsed > 0 ? parsed : 1
+}
+
 export const addToCartItemController = async(request,response)=>{
     try {
         const  userId = request.userId
-        const { productId, sku, selectedVariant } = request.body
+        const { productId, sku, selectedVariant, quantity } = request.body
         const normalizedSku = normalizeText(sku)
         const normalizedSelectedVariant = normalizeSelectedVariant(selectedVariant)
         const selectedVariantKey = buildSelectedVariantKey(normalizedSelectedVariant)
+        const requestedQty = normalizeRequestedQuantity(quantity)
 
         if(!productId){
             return response.status(402).json({
@@ -63,11 +70,23 @@ export const addToCartItemController = async(request,response)=>{
         const customerVisibleProduct = await ProductModel.findOne({
             _id: productId,
             ...(await getCustomerProductFilter())
-        }).select('_id')
+        }).select('_id name stock')
 
         if (!customerVisibleProduct) {
             return response.status(404).json({
                 message: 'This product is not currently available to customers',
+                error: true,
+                success: false
+            })
+        }
+
+        // Cart lines never exceed stock — otherwise the order is only
+        // rejected at checkout with a surprise "insufficient stock".
+        const stock = Math.max(0, Number(customerVisibleProduct.stock) || 0)
+
+        if (stock <= 0) {
+            return response.status(400).json({
+                message: `${customerVisibleProduct.name} is out of stock`,
                 error: true,
                 success: false
             })
@@ -93,16 +112,32 @@ export const addToCartItemController = async(request,response)=>{
             })
         }
 
+        // Already in the cart (e.g. a guest cart being merged in after login):
+        // add to the existing line instead of rejecting it, capped at stock.
         if(checkItemCart){
-            return response.status(400).json({
-                message : "Item already in cart",
-                error : true,
-                success : false
+            const currentQty = Number(checkItemCart.quantity) || 0
+            const nextQty = Math.min(currentQty + requestedQty, stock)
+            const capped = currentQty + requestedQty > stock
+
+            if (nextQty !== currentQty) {
+                checkItemCart.quantity = nextQty
+                await checkItemCart.save()
+            }
+
+            return response.json({
+                data : checkItemCart,
+                message : capped
+                    ? `Only ${stock} of ${customerVisibleProduct.name} in stock — your cart has ${nextQty}`
+                    : "Cart quantity updated",
+                capped,
+                error : false,
+                success : true
             })
         }
 
+        const initialQty = Math.min(requestedQty, stock)
         const cartItem = new CartProductModel({
-            quantity : 1,
+            quantity : initialQty,
             userId : userId,
             productId : productId,
             sku : normalizedSku,
@@ -119,7 +154,10 @@ export const addToCartItemController = async(request,response)=>{
 
         return response.json({
             data : save,
-            message : "Item add successfully",
+            message : initialQty < requestedQty
+                ? `Only ${stock} of ${customerVisibleProduct.name} in stock — added ${initialQty}`
+                : "Item add successfully",
+            capped : initialQty < requestedQty,
             error : false,
             success : true
         })
@@ -169,25 +207,58 @@ export const updateCartItemQtyController = async(request,response)=>{
     try {
         const userId = request.userId 
         const { _id,qty } = request.body
+        const requestedQty = Math.floor(Number(qty))
 
-        if(!_id ||  !qty){
+        if(!_id || !Number.isFinite(requestedQty) || requestedQty < 1){
             return response.status(400).json({
                 message : "provide _id, qty"
             })
         }
 
-        const updateCartitem = await CartProductModel.updateOne({
+        const cartItem = await CartProductModel.findOne({ _id : _id, userId : userId })
+
+        if(!cartItem){
+            return response.status(404).json({
+                message : "Cart item not found",
+                error : true,
+                success : false
+            })
+        }
+
+        const product = await ProductModel.findById(cartItem.productId).select('name stock').lean()
+        const stock = Math.max(0, Number(product?.stock) || 0)
+        const productName = product?.name || 'This product'
+        const isDecrease = requestedQty < (Number(cartItem.quantity) || 0)
+
+        // Cap at stock so the shortfall surfaces here, not at checkout.
+        // Decreases always go through so an over-stock line can be brought
+        // back down even when the product has since sold out.
+        if (!isDecrease && stock <= 0) {
+            return response.status(400).json({
+                message : `${productName} is out of stock`,
+                error : true,
+                success : false
+            })
+        }
+
+        const nextQty = stock > 0 ? Math.min(requestedQty, stock) : requestedQty
+        const capped = nextQty < requestedQty
+
+        await CartProductModel.updateOne({
             _id : _id,
             userId : userId
         },{
-            quantity : qty
+            quantity : nextQty
         })
 
         return response.json({
-            message : "Update cart",
+            message : capped
+                ? `Only ${stock} of ${productName} in stock — quantity set to ${nextQty}`
+                : "Update cart",
+            capped,
             success : true,
-            error : false, 
-            data : updateCartitem
+            error : false,
+            data : { _id : cartItem._id, quantity : nextQty, stock }
         })
 
     } catch (error) {
