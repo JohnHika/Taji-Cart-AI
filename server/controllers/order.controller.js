@@ -111,7 +111,7 @@ const getValidatedCommunityReward = async ({ userId, communityRewardId, communit
   };
 };
 
-const buildValidatedOrderPricing = async ({
+export const buildValidatedOrderPricing = async ({
   items,
   userId = null,
   usePoints = false,
@@ -238,7 +238,7 @@ const buildValidatedOrderPricing = async ({
   };
 };
 
-const redeemLoyaltyPoints = async ({ loyaltyCard, pointsToRedeem, orderId }) => {
+export const redeemLoyaltyPoints = async ({ loyaltyCard, pointsToRedeem, orderId }) => {
   if (!loyaltyCard || pointsToRedeem <= 0) {
     return;
   }
@@ -265,7 +265,7 @@ const redeemLoyaltyPoints = async ({ loyaltyCard, pointsToRedeem, orderId }) => 
   }
 };
 
-const sendOrderLifecycleEmail = async ({
+export const sendOrderLifecycleEmail = async ({
     user,
     title,
     intro,
@@ -562,10 +562,27 @@ export async function CashOnDeliveryOrderController(request, response) {
             pointsUsed = 0,
             communityRewardId = null,
             communityDiscountAmount = 0,
+            checkoutAttemptId,
         } = request.body;
         const deliveryMode = getDeliveryModeFromPayload(request.body);
         const customerLocation = extractCoordinatesFromPayload(request.body);
         const customer = await UserModel.findById(userId).select('name email');
+
+        // The client sends one id per checkout attempt. A retry of the same
+        // attempt (e.g. after a request timeout) returns the order already
+        // placed instead of creating a second one and taking stock twice.
+        const attemptId = typeof checkoutAttemptId === 'string' ? checkoutAttemptId.trim().slice(0, 64) : '';
+        if (attemptId) {
+            const existingOrder = await OrderModel.find({ userId, checkoutAttemptId: attemptId });
+            if (existingOrder.length > 0) {
+                return response.json({
+                    message: "Order successfully",
+                    error: false,
+                    success: true,
+                    data: existingOrder
+                })
+            }
+        }
 
         // Validate inputs based on fulfillment type
         if (fulfillment_type === 'delivery' && !addressId) {
@@ -711,11 +728,13 @@ export async function CashOnDeliveryOrderController(request, response) {
         const payload = normalizedItems.map(el => ({
             userId: userId,
             orderId: sharedOrderId,
+            checkoutAttemptId: attemptId || undefined,
             productId: el.productId._id,
             product_details: {
                 name: el.productId.name,
                 image: el.productId.image
             },
+            quantity: el.quantity,
             paymentId: "",
             payment_status: fulfillment_type === 'sacco_pickup' ? "PAY AT SACCO TERMINAL" : "CASH ON DELIVERY",
             delivery_address: fulfillment_type === 'delivery' ? addressId : null,
@@ -835,28 +854,28 @@ export async function CashOnDeliveryOrderController(request, response) {
         await NotificationModel.create(orderNotification);
 
         if (customer) {
-            try {
-                await sendOrderLifecycleEmail({
-                    user: customer,
-                    title: fulfillment_type === 'pickup'
-                        ? 'Your pickup order is ready to track'
-                        : fulfillment_type === 'sacco_pickup'
-                            ? 'Your order is headed to your SACCO terminal'
-                            : 'Your order has been placed',
-                    intro: fulfillment_type === 'pickup'
-                        ? `Your order is confirmed for pickup at ${pickup_location}. Keep the verification code below ready when collecting it.`
-                        : fulfillment_type === 'sacco_pickup'
-                            ? `Our rider is taking your order to ${saccoOperatorDisplayName}'s Nairobi terminal for ${saccoDestinationTown} (KES ${SACCO_TERMINAL_DROPOFF_CHARGE} shop-to-terminal fee, already included in your total). They'll call you once they're at the terminal to confirm drop-off — ${saccoOperatorDisplayName} will then tell you their own separate fee to carry it onward, which you or your receiver pay directly to them.`
-                            : 'Thank you for shopping with Nawiri Hair Kenya. Your order is confirmed and our team is preparing it now.',
-                    orderId: payload[0].orderId,
-                    totalAmt,
-                    fulfillmentType: fulfillment_type || 'delivery',
-                    pickupLocation: pickup_location,
-                    verificationCode: pickupVerificationCode,
-                });
-            } catch (emailError) {
+            // Not awaited: a slow mail server must not hold the response past
+            // the client's timeout (which used to invite a duplicate retry).
+            sendOrderLifecycleEmail({
+                user: customer,
+                title: fulfillment_type === 'pickup'
+                    ? 'Your pickup order is ready to track'
+                    : fulfillment_type === 'sacco_pickup'
+                        ? 'Your order is headed to your SACCO terminal'
+                        : 'Your order has been placed',
+                intro: fulfillment_type === 'pickup'
+                    ? `Your order is confirmed for pickup at ${pickup_location}. Keep the verification code below ready when collecting it.`
+                    : fulfillment_type === 'sacco_pickup'
+                        ? `Our rider is taking your order to ${saccoOperatorDisplayName}'s Nairobi terminal for ${saccoDestinationTown} (KES ${SACCO_TERMINAL_DROPOFF_CHARGE} shop-to-terminal fee, already included in your total). They'll call you once they're at the terminal to confirm drop-off — ${saccoOperatorDisplayName} will then tell you their own separate fee to carry it onward, which you or your receiver pay directly to them.`
+                        : 'Thank you for shopping with Nawiri Hair Kenya. Your order is confirmed and our team is preparing it now.',
+                orderId: payload[0].orderId,
+                totalAmt,
+                fulfillmentType: fulfillment_type || 'delivery',
+                pickupLocation: pickup_location,
+                verificationCode: pickupVerificationCode,
+            }).catch((emailError) => {
                 console.error('Error sending order confirmation email:', emailError);
-            }
+            });
         }
 
         return response.json({
@@ -889,11 +908,16 @@ export async function trackGuestOrderController(request, response) {
             })
         }
 
-        // Find order by orderId and guestEmail
-        const order = await OrderModel.findOne({
-            orderId: orderId.toUpperCase(),
-            guestEmail: email.toLowerCase()
+        // Find order by orderId and guestEmail. Cash guest ids are upper-case
+        // (ORD-<time>-<ABC>) but M-Pesa ids carry a lower-case hex ObjectId,
+        // so match the id as typed as well as upper-cased. An order is one
+        // row per line item.
+        const trimmedOrderId = String(orderId).trim()
+        const orderLines = await OrderModel.find({
+            orderId: { $in: [trimmedOrderId, trimmedOrderId.toUpperCase()] },
+            guestEmail: String(email).trim().toLowerCase()
         }).populate('delivery_address')
+        const order = orderLines[0]
 
         if (!order) {
             return response.status(404).json({
@@ -912,7 +936,15 @@ export async function trackGuestOrderController(request, response) {
                 orderId: order.orderId,
                 status: order.status,
                 totalAmt: order.totalAmt,
-                items: order.product_details,
+                items: {
+                    name: orderLines.map((line) => line.product_details?.name).filter(Boolean).join(', '),
+                    image: order.product_details?.image || [],
+                },
+                lines: orderLines.map((line) => ({
+                    name: line.product_details?.name || 'Product',
+                    image: line.product_details?.image?.[0] || '',
+                    quantity: line.quantity || 1,
+                })),
                 shipping: order.guestShipping,
                 statusHistory: order.statusHistory,
                 estimatedDelivery: order.estimatedDeliveryTime,
@@ -1059,7 +1091,9 @@ export async function guestCheckoutController(request, response) {
         // Create the order
         const normalizedGuestEmail = guestEmail ? guestEmail.toLowerCase().trim() : ''
 
-        const generatedOrder = await OrderModel.create({
+        // One row per line item sharing the orderId, like every other order
+        // path, so staff see quantities and a cancellation can restore stock.
+        const guestOrderLines = await OrderModel.insertMany(normalizedItems.map((item) => ({
             orderId,
             isGuest: true,
             guestEmail: normalizedGuestEmail,
@@ -1078,10 +1112,12 @@ export async function guestCheckoutController(request, response) {
             sacco_operator_name: saccoOperator ? saccoOperator.name : manualSaccoOperator,
             sacco_destination_town: fulfillment_type === 'sacco_pickup' ? saccoDestinationTown : '',
             payment_status: fulfillment_type === 'sacco_pickup' ? 'PAY AT SACCO TERMINAL' : '',
+            productId: item.productId?._id,
             product_details: {
-                name: normalizedItems.map(item => item.productId?.name || item.name || 'Product').join(', '),
-                image: normalizedItems[0]?.productId?.image || []
+                name: item.productId?.name || item.name || 'Product',
+                image: item.productId?.image || []
             },
+            quantity: item.quantity,
             subTotalAmt,
             deliveryCharge,
             totalAmt,
@@ -1094,7 +1130,8 @@ export async function guestCheckoutController(request, response) {
             pickupVerificationCode,
             estimatedDeliveryTime: fulfillment_type === 'delivery' ? new Date(Date.now() + 3 * 24 * 60 * 60 * 1000) : undefined,
             estimatedPickupTime: fulfillment_type === 'pickup' ? new Date(Date.now() + 24 * 60 * 60 * 1000) : undefined
-        })
+        })))
+        const generatedOrder = guestOrderLines[0]
 
         // Atomically reserve (decrement) stock for every line, guarded so a
         // product can never be driven below zero. All-or-nothing: on any
@@ -1109,7 +1146,7 @@ export async function guestCheckoutController(request, response) {
         )
 
         if (!stockReserve.ok) {
-            await OrderModel.deleteOne({ orderId })
+            await OrderModel.deleteMany({ orderId })
             if (stockReserve.status === 404) {
                 return response.status(404).json({
                     success: false,
@@ -1332,7 +1369,7 @@ export const getOrderBySessionController = async (request, response) => {
 
 // Add to your existing order processing logic
 
-const updateLoyaltyPoints = async (userId, orderAmount, orderId) => {
+export const updateLoyaltyPoints = async (userId, orderAmount, orderId) => {
   try {
     // Check if userId is null or invalid
     if (!userId || userId === 'null' || userId === 'undefined') {

@@ -11,12 +11,8 @@ import {
   requireEnv,
 } from '../config/jenga.js';
 import axios from 'axios';
-import sendEmail from '../config/sendEmail.js';
-import { renderOrderNoticeEmail } from '../utils/emailTemplates.js';
-import { nawiriBrand } from '../utils/brand.js';
 import JengaPayment from '../models/jengaPayment.model.js';
 import OrderModel from '../models/order.model.js';
-import ProductModel from '../models/product.model.js';
 import CartProductModel from '../models/cartproduct.model.js';
 import UserModel from '../models/user.model.js';
 import AddressModel from '../models/address.model.js';
@@ -32,13 +28,15 @@ import {
   isBikeDeliveryMode,
   SACCO_TERMINAL_DROPOFF_CHARGE,
 } from '../utils/cbdDelivery.js';
-import { getEffectiveUnitPrice, getWholesalePricingSettings, isWholesaleEligible } from '../utils/wholesalePricing.js';
 import { reserveStockGuarded } from '../utils/stockGuard.js';
-
-// buildValidatedOrderPricing / pricewithDiscount live in order.controller.js but
-// aren't exported there — re-derive the pieces this controller needs directly
-// against ProductModel to keep this module self-contained.
-const roundMoney = (amount = 0) => Number(Number(amount || 0).toFixed(2));
+import LoyaltyCardModel from '../models/loyaltycard.model.js';
+import {
+  buildValidatedOrderPricing,
+  redeemLoyaltyPoints,
+  sendOrderLifecycleEmail,
+  updateLoyaltyPoints,
+} from './order.controller.js';
+import { markRewardAsUsed, processOrderContribution } from './communitycampaign.controller.js';
 
 // The request-level STK callback is protected by a URL token. Jenga's
 // account-level IPN uses HTTP Basic authentication instead; both are accepted
@@ -55,16 +53,6 @@ const buildJengaCallbackUrl = (baseUrl) => {
   }
   const separator = baseUrl.includes('?') ? '&' : '?';
   return `${baseUrl}${separator}token=${encodeURIComponent(secret)}`;
-};
-
-// Mirrors pricewithDiscount() in order.controller.js — this module doesn't
-// apply royal loyalty discounts (Jenga checkout runs before that lookup), so
-// the signature only takes price/discount.
-const pricewithDiscount = (price, dis = 0) => {
-  const basePrice = Number(price || 0);
-  const productDiscount = Math.max(0, Number(dis || 0));
-  const discountAmount = Math.round((basePrice * productDiscount) / 100);
-  return Math.max(0, basePrice - discountAmount);
 };
 
 // Jenga Payment Gateway wallet-STK uses the order reference in both the order
@@ -97,72 +85,6 @@ const claimOrderReference = async (length = ORDER_REFERENCE_LENGTH) => {
   const err = new Error('Could not generate a unique payment reference. Please try again.');
   err.statusCode = 500;
   throw err;
-};
-
-const priceItems = async (items) => {
-  const orderItems = Array.isArray(items) ? items : [];
-  if (orderItems.length === 0) {
-    const err = new Error('Your cart is empty. Add items before checking out.');
-    err.statusCode = 400;
-    throw err;
-  }
-
-  const productIds = [...new Set(
-    orderItems
-      .map((item) => item?.productId?._id || item?.productId)
-      .filter((id) => mongoose.Types.ObjectId.isValid(String(id)))
-      .map(String)
-  )];
-
-  const products = await ProductModel.find({ _id: { $in: productIds } })
-    .select('_id name image price discount wholesalePrice stock')
-    .lean();
-  const productsById = new Map(products.map((p) => [String(p._id), p]));
-
-  const totalQuantity = orderItems.reduce(
-    (sum, item) => sum + Math.max(0, Math.floor(Number(item?.quantity) || 0)),
-    0
-  );
-  const wholesaleEligible = isWholesaleEligible(totalQuantity);
-  const wholesaleSettings = await getWholesalePricingSettings();
-
-  let subTotalAmt = 0;
-  const normalizedItems = orderItems.map((item) => {
-    const productId = item?.productId?._id || item?.productId;
-    const product = productsById.get(String(productId));
-    if (!product) {
-      const err = new Error(`Product ${item?.name || 'in your cart'} not found`);
-      err.statusCode = 404;
-      throw err;
-    }
-
-    const quantity = Math.max(0, Math.floor(Number(item?.quantity) || 0));
-    if (!quantity) {
-      const err = new Error(`Invalid quantity for ${product.name}`);
-      err.statusCode = 400;
-      throw err;
-    }
-
-    if (Number(product.stock || 0) < quantity) {
-      const err = new Error(`Insufficient stock for ${product.name}. Available: ${product.stock}, Requested: ${quantity}`);
-      err.statusCode = 409;
-      throw err;
-    }
-
-    const unitPrice = getEffectiveUnitPrice({
-      price: product.price,
-      discount: product.discount,
-      wholesalePrice: product.wholesalePrice,
-      wholesaleEligible,
-      stackDiscounts: wholesaleSettings.stackDiscounts,
-      pricewithDiscountFn: pricewithDiscount,
-    });
-    subTotalAmt += unitPrice * quantity;
-
-    return { productId: product, quantity };
-  });
-
-  return { normalizedItems, subTotalAmt: roundMoney(subTotalAmt) };
 };
 
 /**
@@ -259,7 +181,6 @@ const buildPendingOrder = async (request, { orderReferenceLength = ORDER_REFEREN
     }
   }
 
-  const { normalizedItems, subTotalAmt } = await priceItems(list_items);
   // Never trust a client-supplied deliveryCharge — recompute from the
   // authoritative zone fare or the flat default, same as the other
   // order-creation paths in order.controller.js.
@@ -268,7 +189,27 @@ const buildPendingOrder = async (request, { orderReferenceLength = ORDER_REFEREN
     : fulfillment_type === 'sacco_pickup'
       ? SACCO_TERMINAL_DROPOFF_CHARGE
       : 0;
-  const totalAmt = roundMoney(subTotalAmt + deliveryCharge);
+
+  // Same server-side pricing as cash orders: product/wholesale discounts,
+  // the Royal card rate, a validated community reward and loyalty points —
+  // so the M-Pesa amount matches the total the checkout page shows. Points
+  // and the reward are only consumed once the payment is confirmed
+  // (finalizePaidOrder). Guests get product/wholesale pricing only.
+  const {
+    normalizedItems,
+    subTotalAmt,
+    totalAmt,
+    appliedPoints,
+    communityReward,
+  } = await buildValidatedOrderPricing({
+    items: list_items,
+    userId: isGuest ? null : userId,
+    usePoints: isGuest ? false : request.body.usePoints,
+    pointsUsed: isGuest ? 0 : request.body.pointsUsed,
+    communityRewardId: isGuest ? null : request.body.communityRewardId,
+    communityDiscountAmount: isGuest ? 0 : request.body.communityDiscountAmount,
+    deliveryCharge,
+  });
 
   if (!isValidAmount(totalAmt)) {
     const err = new Error('Order amount is invalid');
@@ -278,11 +219,16 @@ const buildPendingOrder = async (request, { orderReferenceLength = ORDER_REFEREN
 
   const orderReference = await claimOrderReference(orderReferenceLength);
   const sharedOrderId = `ORD-${new mongoose.Types.ObjectId()}`;
+  // Staff release pickup orders against this code (completePickupController
+  // rejects an empty one), same format as cash pickup orders.
+  const pickupVerificationCode = fulfillment_type === 'pickup'
+    ? crypto.randomBytes(3).toString('hex').toUpperCase()
+    : '';
 
   const orderRows = normalizedItems.map((item) => ({
     userId: isGuest ? undefined : userId,
     isGuest,
-    guestEmail: isGuest ? (guestEmail || '') : undefined,
+    guestEmail: isGuest ? String(guestEmail || '').trim().toLowerCase() : undefined,
     guestPhone: isGuest ? (guestPhone || '') : undefined,
     guestShipping: isGuest ? (guestShipping || {}) : undefined,
     orderId: sharedOrderId,
@@ -301,6 +247,7 @@ const buildPendingOrder = async (request, { orderReferenceLength = ORDER_REFEREN
     deliveryInstructions: request.body.deliveryInstructions || '',
     pickup_location: pickup_location || '',
     pickup_instructions: pickup_instructions || '',
+    pickupVerificationCode,
     sacco_operator: saccoOperator ? saccoOperator._id : undefined,
     sacco_operator_name: saccoOperator ? saccoOperator.name : '',
     sacco_destination_town: fulfillment_type === 'sacco_pickup' ? saccoDestinationTown : '',
@@ -309,7 +256,16 @@ const buildPendingOrder = async (request, { orderReferenceLength = ORDER_REFEREN
     totalAmt,
   }));
 
-  return { orderReference, sharedOrderId, totalAmt, fulfillment_type, normalizedItems, orderRows };
+  return {
+    orderReference,
+    sharedOrderId,
+    totalAmt,
+    fulfillment_type,
+    normalizedItems,
+    orderRows,
+    // Kept on the JengaPayment record and consumed by finalizePaidOrder.
+    redemption: { appliedPoints, communityRewardId: communityReward?._id },
+  };
 };
 
 // Jenga Payment Gateway's wallet-STK API documents MSISDN values in Kenyan
@@ -374,7 +330,7 @@ const performJengaStkInitiate = async (request, response, { isGuest = false } = 
       normalizedPhone,
     });
 
-    const { orderReference, sharedOrderId, totalAmt, orderRows } = await buildPendingOrder(request, { isGuest });
+    const { orderReference, sharedOrderId, totalAmt, orderRows, redemption } = await buildPendingOrder(request, { isGuest });
 
     await JengaPayment.create({
       orderReference,
@@ -386,6 +342,7 @@ const performJengaStkInitiate = async (request, response, { isGuest = false } = 
       currency: 'KES',
       status: 'pending',
       pendingOrder: orderRows,
+      ...redemption,
     });
 
     try {
@@ -574,7 +531,7 @@ export const initiateJengaCardPayment = async (request, response) => {
     const built = await buildPendingOrder(request, { orderReferenceLength: PGW_ORDER_REFERENCE_LENGTH });
     orderReference = built.orderReference;
     sharedOrderId = built.sharedOrderId;
-    const { totalAmt, fulfillment_type, normalizedItems, orderRows } = built;
+    const { totalAmt, fulfillment_type, normalizedItems, orderRows, redemption } = built;
 
     const user = await UserModel.findById(userId).select('name email mobile').lean();
     const [firstName, ...lastNameParts] = String(user?.name || 'Customer').trim().split(/\s+/);
@@ -606,6 +563,7 @@ export const initiateJengaCardPayment = async (request, response) => {
       currency: 'KES',
       status: 'pending',
       pendingOrder: orderRows,
+      ...redemption,
     });
 
     const merchantCode = requireEnv('JENGA_MERCHANT_CODE');
@@ -614,7 +572,9 @@ export const initiateJengaCardPayment = async (request, response) => {
     // customer. The card callback is instead safe because it only triggers a
     // server-side, RSA-signed transaction-status query before finalization.
     const callbackUrl = requireEnv('JENGA_CARD_CALLBACK_URL');
-    const token = await getAuthToken();
+    // The hosted page uses this token for its whole session — never hand it
+    // a cached one that could expire part-way through.
+    const token = await getAuthToken({ fresh: true });
     // No trailing zeros ("2800", not "2800.00"). Jenga's hosted page signs its
     // M-Pesa charge lookup over this exact string but sends
     // Number(orderAmount) in the request body, so a trailing ".00" makes the
@@ -698,123 +658,218 @@ const mapTxnDetailsToLocal = (txn) => {
   return 'pending';
 };
 
+// Short lock so a callback and a status poll don't both finalize one payment.
+// If finalization dies part-way the lock lapses and the next one retries.
+const FINALIZE_LOCK_MS = 2 * 60 * 1000;
+
+// Order rows to create for a paid payment: the checkout's pendingOrder or —
+// for an unpaid checkout voided before Jenga's confirmation arrived — the
+// rows archived by scripts/one-off/voidUnpaidJengaOrders.js, stripped of the
+// fulfilment state they had picked up.
+const getRowsToCreate = (payment) => {
+  if (Array.isArray(payment.pendingOrder) && payment.pendingOrder.length > 0) {
+    return payment.pendingOrder;
+  }
+  if (Array.isArray(payment.archivedOrders) && payment.archivedOrders.length > 0) {
+    return payment.archivedOrders.map(({
+      _id, __v, createdAt, updatedAt, status, statusHistory, dispatchInfo, deliveryPersonnel, ...row
+    }) => row);
+  }
+  return [];
+};
+
 /**
- * Finalizes a payment exactly once: creates the order as PAID and decrements
- * stock, guarded by an atomic findOneAndUpdate on finalizedAt so duplicate
- * callers (callback + poll, or repeated callbacks) can't double-finalize.
+ * Finalizes a paid payment: reserves stock, creates the PAID order, then runs
+ * the follow-ups (cart, loyalty, rewards, notification, email). finalizedAt is
+ * only set once the order exists, so if anything before that throws, the next
+ * Jenga callback or status poll retries it (reconcilePayment,
+ * getJengaPaymentStatus) — a paid customer is never left without an order.
  */
 const finalizePaidOrder = async (paymentDoc) => {
+  const now = new Date();
   const claimed = await JengaPayment.findOneAndUpdate(
-    { _id: paymentDoc._id, finalizedAt: { $exists: false } },
-    { $set: { finalizedAt: new Date() } },
+    {
+      _id: paymentDoc._id,
+      status: 'paid',
+      finalizedAt: { $exists: false },
+      $or: [
+        { finalizingAt: { $exists: false } },
+        { finalizingAt: { $lt: new Date(now.getTime() - FINALIZE_LOCK_MS) } },
+      ],
+    },
+    { $set: { finalizingAt: now } },
     { new: true }
   );
 
   if (!claimed) {
-    // Already finalized by a concurrent callback/poll — nothing more to do.
+    // Already finalized, or another callback/poll is finalizing it right now.
     return;
   }
 
-  // The order rows were held on the payment record until now (see
-  // buildPendingOrder). Payments started before that change already have
-  // PENDING rows in the orders collection instead — those are updated.
-  let orders = await OrderModel.find({ orderId: paymentDoc.orderId });
-  const createOrders = orders.length === 0 && Array.isArray(claimed.pendingOrder) && claimed.pendingOrder.length > 0;
-  const lines = createOrders ? claimed.pendingOrder : orders;
+  let orders;
+  let stockShortfall = Boolean(claimed.stockShortfall);
+  try {
+    // Payments started before orders were deferred already have PENDING
+    // rows in the orders collection — those are updated instead of created.
+    orders = await OrderModel.find({ orderId: claimed.orderId });
+    const rowsToCreate = orders.length === 0 ? getRowsToCreate(claimed) : [];
+    const lines = orders.length > 0 ? orders : rowsToCreate;
 
-  // Atomically reserve (decrement) stock for every line of the paid order,
-  // guarded so no product can ever be driven below zero by the finalization
-  // of this payment. Pre-validated at payment time, but a concurrent sale may
-  // have drained stock since — never let this decrement take stock negative.
-  const reserved = await reserveStockGuarded(
-    lines.map((line) => ({
-      id: line.productId,
-      quantity: line.quantity || 1,
-      label: (line.product_details?.name) || 'product',
-    }))
-  );
+    if (lines.length === 0) {
+      console.error(`[JENGA] Paid payment ${claimed.orderReference} has no order rows to create.`);
+      await NotificationModel.create({
+        type: 'low_stock',
+        title: 'Paid Payment Without Order',
+        message: `Payment ${claimed.orderReference} (KES ${claimed.amount}) was confirmed but has no order details. Needs manual resolution.`,
+        isRead: false,
+        forAdmin: true,
+      });
+    }
 
-  const paidFields = {
-    payment_status: 'PAID',
-    paymentId: paymentDoc.orderReference,
-    ...(reserved.ok ? {} : { stockShortfall: true }),
-  };
-  if (createOrders) {
-    orders = await OrderModel.insertMany(claimed.pendingOrder.map((row) => ({ ...row, ...paidFields })));
-  } else {
-    await OrderModel.updateMany({ orderId: paymentDoc.orderId }, { $set: paidFields });
-  }
+    if (!claimed.stockReservedAt && lines.length > 0) {
+      // Atomically reserve (decrement) stock for every line of the paid
+      // order, guarded so no product can ever be driven below zero.
+      // Pre-validated at payment time, but a concurrent sale may have
+      // drained stock since. Recorded on the payment so a retry of this
+      // function never takes the stock twice.
+      const reserved = await reserveStockGuarded(
+        lines.map((line) => ({
+          id: line.productId,
+          quantity: line.quantity || 1,
+          label: (line.product_details?.name) || 'product',
+        }))
+      );
+      stockShortfall = !reserved.ok;
+      await JengaPayment.updateOne(
+        { _id: claimed._id },
+        { $set: { stockReservedAt: new Date(), stockShortfall } }
+      );
 
-  if (!reserved.ok) {
-    // A verified, paid order we can no longer fully fulfill. Leave stock
-    // untouched and flag the order (stockShortfall) for manual attention
-    // instead of booking a phantom decrement that would drive a product
-    // below zero.
-    console.error(
-      `[JENGA] Paid order ${paymentDoc.orderId} could not reserve stock: ${
-        reserved.row?.label || reserved.reason || 'unknown'
-      } — holding for manual resolution.`
-    );
-    await NotificationModel.create({
-      type: 'low_stock',
-      title: 'Stock Shortfall on Paid Order',
-      message: `Paid order ${paymentDoc.orderId} could not be fully stocked (${reserved.product?.name || reserved.reason || ''} unavailable). Needs manual resolution.`,
-      isRead: false,
-      forAdmin: true,
-    });
-    return;
-  }
-
-  // Flag low-stock items once after the whole batch has been reserved.
-  await Promise.all(reserved.lowStock.map(async ({ product: updated }) => {
-    await NotificationModel.create({
-      type: 'low_stock',
-      title: 'Low Stock Alert',
-      message: `Product "${updated.name}" is running low (${updated.stock} remaining)`,
-      isRead: false,
-      forAdmin: true,
-    });
-  }));
-
-  if (paymentDoc.userId) {
-    await CartProductModel.deleteMany({ userId: paymentDoc.userId });
-    await UserModel.updateOne({ _id: paymentDoc.userId }, { shopping_cart: [] });
-
-    await NotificationModel.create({
-      type: 'order_placed',
-      title: 'Order Placed Successfully',
-      message: 'Your payment was received and your order is confirmed.',
-      isRead: false,
-      userId: paymentDoc.userId,
-    });
-  } else {
-    // Guest payment — no cart/notification to clean up server-side (the
-    // guest cart lives client-side), but they still need an email since
-    // they have no "My Orders" to check.
-    const guestEmail = orders[0]?.guestEmail;
-    if (guestEmail) {
-      try {
-        await sendEmail({
-          sendTo: guestEmail,
-          subject: `Order Confirmed! - ${nawiriBrand.shortName}`,
-          html: renderOrderNoticeEmail({
-            name: orders[0]?.guestShipping?.firstName || guestEmail.split('@')[0],
-            title: 'Order Confirmed!',
-            intro: 'Thank you for your order! Your M-Pesa payment was received and we\'re processing it now.',
-            orderId: paymentDoc.orderId,
-            total: `KES ${Number(paymentDoc.amount || 0).toLocaleString()}`,
-            fulfillmentType: orders[0]?.fulfillment_type === 'pickup' ? 'Store pickup' : 'Delivery',
-            pickupLocation: orders[0]?.pickup_location,
-            verificationCode: orders[0]?.pickupVerificationCode,
-            ctaLabel: 'Visit Nawiri Hair Kenya',
-            ctaUrl: nawiriBrand.websiteUrl,
-          }),
+      if (reserved.ok) {
+        // Flag low-stock items once after the whole batch has been reserved.
+        await Promise.all(reserved.lowStock.map(async ({ product: updated }) => {
+          await NotificationModel.create({
+            type: 'low_stock',
+            title: 'Low Stock Alert',
+            message: `Product "${updated.name}" is running low (${updated.stock} remaining)`,
+            isRead: false,
+            forAdmin: true,
+          });
+        }));
+      } else {
+        // A verified, paid order we can no longer fully fulfill. Leave stock
+        // untouched and flag the order (stockShortfall) for manual attention
+        // instead of booking a phantom decrement below zero.
+        console.error(
+          `[JENGA] Paid order ${claimed.orderId} could not reserve stock: ${
+            reserved.row?.label || reserved.reason || 'unknown'
+          } — holding for manual resolution.`
+        );
+        await NotificationModel.create({
+          type: 'low_stock',
+          title: 'Stock Shortfall on Paid Order',
+          message: `Paid order ${claimed.orderId} could not be fully stocked (${reserved.product?.name || reserved.reason || ''} unavailable). Needs manual resolution.`,
+          isRead: false,
+          forAdmin: true,
         });
-      } catch (emailError) {
-        console.error('Error sending guest order confirmation email:', emailError);
       }
     }
+
+    const paidFields = {
+      payment_status: 'PAID',
+      paymentId: claimed.orderReference,
+      ...(stockShortfall ? { stockShortfall: true } : {}),
+    };
+    if (orders.length === 0) {
+      orders = rowsToCreate.length > 0
+        ? await OrderModel.insertMany(rowsToCreate.map((row) => ({ ...row, ...paidFields })))
+        : [];
+    } else {
+      await OrderModel.updateMany({ orderId: claimed.orderId }, { $set: paidFields });
+    }
+
+    await JengaPayment.updateOne(
+      { _id: claimed._id },
+      { $set: { finalizedAt: new Date() }, $unset: { finalizingAt: 1 } }
+    );
+  } catch (error) {
+    await JengaPayment.updateOne({ _id: claimed._id }, { $unset: { finalizingAt: 1 } });
+    throw error;
   }
+
+  // The order exists now — nothing below may undo it, so each follow-up is
+  // isolated and only logged if it fails.
+  await runPaidOrderFollowUps(claimed, orders, { stockShortfall });
+};
+
+const runPaidOrderFollowUps = async (payment, orders, { stockShortfall }) => {
+  const first = orders[0] || {};
+  const safely = async (label, task) => {
+    try {
+      await task();
+    } catch (error) {
+      console.error(`[JENGA] ${label} failed for ${payment.orderId}:`, error);
+    }
+  };
+
+  let user = null;
+  if (payment.userId) {
+    await safely('cart clear', async () => {
+      await CartProductModel.deleteMany({ userId: payment.userId });
+      await UserModel.updateOne({ _id: payment.userId }, { shopping_cart: [] });
+    });
+
+    // Points and the community reward were priced into this payment at
+    // checkout; consume them now that it's confirmed. Then earn points and
+    // count the order toward campaigns, as cash orders do.
+    if (Number(payment.appliedPoints) > 0) {
+      await safely('points redemption', async () => {
+        const loyaltyCard = await LoyaltyCardModel.findOne({ userId: payment.userId });
+        await redeemLoyaltyPoints({ loyaltyCard, pointsToRedeem: payment.appliedPoints, orderId: payment.orderId });
+      });
+    }
+    if (payment.communityRewardId) {
+      await safely('reward redemption', () => markRewardAsUsed(payment.userId, payment.communityRewardId, payment.orderId));
+    }
+    await safely('loyalty points', () => updateLoyaltyPoints(payment.userId, payment.amount, payment.orderId));
+    await safely('campaign contribution', () => processOrderContribution(payment.userId, payment.amount, payment.orderId));
+
+    await safely('notification', () => NotificationModel.create({
+      type: 'order_placed',
+      title: stockShortfall ? 'Payment Received — Confirming Stock' : 'Order Placed Successfully',
+      message: stockShortfall
+        ? 'Your payment was received, but an item in your order just sold out. Our team will contact you shortly to arrange a replacement or refund.'
+        : first.fulfillment_type === 'pickup' && first.pickupVerificationCode
+          ? `Your payment was received and your order is confirmed. Your pickup verification code is ${first.pickupVerificationCode}.`
+          : 'Your payment was received and your order is confirmed.',
+      isRead: false,
+      userId: payment.userId,
+    }));
+
+    await safely('user lookup', async () => {
+      user = await UserModel.findById(payment.userId).select('name email').lean();
+    });
+  }
+
+  const email = user?.email || first.guestEmail;
+  if (!email) return;
+  // Not awaited — a slow mail server must not hold up the callback response.
+  sendOrderLifecycleEmail({
+    user: { email, name: user?.name || first.guestShipping?.firstName || email.split('@')[0] },
+    title: stockShortfall ? 'Payment received' : 'Order Confirmed!',
+    intro: stockShortfall
+      ? 'Your M-Pesa payment was received, but an item in your order just sold out. Our team will contact you shortly to arrange a replacement or refund.'
+      : first.fulfillment_type === 'pickup'
+        ? `Your M-Pesa payment was received and your order is confirmed for pickup at ${first.pickup_location || 'our store'}. Keep the verification code below ready when collecting it.`
+        : 'Your M-Pesa payment was received and your order is confirmed. Our team is preparing it now.',
+    orderId: payment.orderId,
+    totalAmt: payment.amount,
+    fulfillmentType: first.fulfillment_type || 'delivery',
+    pickupLocation: first.pickup_location,
+    verificationCode: first.pickupVerificationCode,
+  }).catch((emailError) => {
+    console.error('Error sending M-Pesa order confirmation email:', emailError);
+  });
 };
 
 // Only payments started before orders were deferred to finalizePaidOrder have
@@ -827,20 +882,21 @@ const markOrderUnpaid = async (paymentDoc, localStatus) => {
 };
 
 /**
- * Reconciles a pending payment against a normalized result from Jenga —
- * shared by both the wallet-STK callback (server/controllers/jenga.controller.js:
- * handleJengaCallback) and the card flow's status-query result
- * (handleJengaCardCallback). `normalized` is { localStatus, returnedRef,
- * returnedAmount, resultCode, resultDesc, raw } — callers are responsible
- * for mapping their channel-specific payload into that shape first, since
- * the STK callback and the Query Transaction Details response use entirely
- * different field names and status codes. Reference, amount, and status are
- * still validated strictly before anything is marked paid. Idempotent: a
- * second call once status !== 'pending' is a no-op.
+ * Reconciles a payment against a normalized result from Jenga — shared by
+ * the wallet-STK callback/IPN (handleJengaCallback) and the card flow's
+ * status-query result (handleJengaCardCallback). `normalized` is
+ * { localStatus, returnedRef, returnedAmount, resultCode, resultDesc, raw } —
+ * callers map their channel-specific payload into that shape first.
+ * Reference, amount, and status are validated strictly before anything is
+ * marked paid. Idempotent: repeated calls for a finalized payment are no-ops.
  */
 const reconcilePayment = async (paymentDoc, normalized) => {
-  if (paymentDoc.status !== 'pending') {
-    // Already resolved (paid/failed/cancelled/expired) — repeated calls are no-ops.
+  if (paymentDoc.status === 'paid') {
+    // Paid earlier but the order wasn't created (finalization failed
+    // part-way) — a repeated callback retries it.
+    if (!paymentDoc.finalizedAt) {
+      await finalizePaidOrder(paymentDoc);
+    }
     return paymentDoc;
   }
 
@@ -856,8 +912,12 @@ const reconcilePayment = async (paymentDoc, normalized) => {
       return paymentDoc;
     }
 
+    // A success can follow a failed/cancelled attempt under the same
+    // reference (the hosted page lets the customer retry M-Pesa), and a
+    // voided unpaid checkout can still be confirmed late — money taken must
+    // always produce an order.
     const updated = await JengaPayment.findOneAndUpdate(
-      { _id: paymentDoc._id, status: 'pending' },
+      { _id: paymentDoc._id, status: { $in: ['pending', 'failed', 'cancelled', 'expired'] } },
       {
         $set: {
           status: 'paid',
@@ -872,6 +932,11 @@ const reconcilePayment = async (paymentDoc, normalized) => {
       await finalizePaidOrder(updated);
     }
     return updated || paymentDoc;
+  }
+
+  if (paymentDoc.status !== 'pending') {
+    // Already resolved — a late failure never overrides it.
+    return paymentDoc;
   }
 
   if (['failed', 'cancelled', 'expired'].includes(localStatus)) {
@@ -890,12 +955,14 @@ const reconcilePayment = async (paymentDoc, normalized) => {
   return paymentDoc;
 };
 
-// A payment stuck in 'pending' past this window is reported to the client as
-// 'stale' — never auto-promoted to paid/failed — so the UI stops polling and
-// prompts the customer to contact support instead of waiting forever.
-// Kept just under the client's 2-minute poll timeout so the client sees a
-// specific 'stale' message before its own generic timeout fires.
+// A payment still 'pending' past this window is reported to the client as
+// 'stale' — never auto-promoted to paid/failed — so the UI can offer
+// "check again" instead of waiting forever. An STK prompt times out on the
+// phone within about a minute; Jenga's hosted checkout session lasts 15
+// minutes and the customer only returns afterwards, so card payments get
+// the full session plus a margin before they count as stale.
 const PENDING_STALE_AFTER_MS = 100 * 1000;
+const CARD_PENDING_STALE_AFTER_MS = 20 * 60 * 1000;
 
 /**
  * GET /api/jenga/status/:orderReference
@@ -929,15 +996,31 @@ export const getJengaPaymentStatus = async (request, response) => {
       }
     }
 
+    // Paid, but the order wasn't created (a previous finalization failed
+    // part-way) — polling retries it too.
+    if (doc.status === 'paid' && !doc.finalizedAt) {
+      try {
+        await finalizePaidOrder(doc);
+        doc = (await JengaPayment.findById(doc._id)) || doc;
+      } catch (finalizeErr) {
+        console.error('Jenga finalize retry error:', finalizeErr);
+      }
+    }
+
+    // Only report 'paid' once the order exists, so the client never lands
+    // on a success page with no order behind it.
+    const awaitingOrder = doc.status === 'paid' && !doc.finalizedAt;
+    const staleAfterMs = doc.channel === 'card' ? CARD_PENDING_STALE_AFTER_MS : PENDING_STALE_AFTER_MS;
     const isStale = doc.status === 'pending'
-      && (Date.now() - doc.createdAt.getTime()) > PENDING_STALE_AFTER_MS;
+      && (Date.now() - doc.createdAt.getTime()) > staleAfterMs;
 
     return response.json({
       success: true,
-      status: isStale ? 'stale' : doc.status,
+      status: awaitingOrder ? 'pending' : isStale ? 'stale' : doc.status,
       orderId: doc.orderId,
+      amount: doc.amount,
       resultDesc: isStale
-        ? 'No confirmation received yet. If you approved the payment, contact support with your order reference.'
+        ? 'No confirmation received yet. If you approved the payment, it can take a few minutes to show — check again shortly, or contact support with your order reference.'
         : doc.resultDesc,
     });
   } catch (err) {
@@ -1022,20 +1105,39 @@ export const handleJengaCallback = async (request, response) => {
  * card flow has no second delivery mechanism the way STK's callback does).
  * No-op if the payment isn't 'pending' or isn't a card payment.
  */
+// Jenga answers 401 "Not Authorized to access the API" while the merchant
+// isn't subscribed to Query Transaction Details. Confirmation then relies on
+// the IPN alone, so stop re-querying on every status poll for a while.
+const TXN_QUERY_BACKOFF_MS = 10 * 60 * 1000;
+let txnQueryUnavailableUntil = 0;
+
 const queryAndReconcileCardPayment = async (doc) => {
   if (!doc || doc.channel !== 'card' || doc.status !== 'pending') {
     return doc;
   }
+  if (Date.now() < txnQueryUnavailableUntil) {
+    return doc;
+  }
 
   const token = await getAuthToken();
-  const txnResponse = await axios.get(getTransactionDetailsUrl(doc.orderReference), {
-    headers: {
-      Authorization: `Bearer ${token}`,
-      Signature: signReference(doc.orderReference),
-      'Content-Type': 'application/json',
-    },
-    timeout: 15000,
-  });
+  let txnResponse;
+  try {
+    txnResponse = await axios.get(getTransactionDetailsUrl(doc.orderReference), {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        Signature: signReference(doc.orderReference),
+        'Content-Type': 'application/json',
+      },
+      timeout: 15000,
+    });
+  } catch (error) {
+    if (error?.response?.status === 401) {
+      txnQueryUnavailableUntil = Date.now() + TXN_QUERY_BACKOFF_MS;
+      console.warn('[JENGA] Transaction status query not authorized for this merchant — relying on the IPN; retrying the query in 10 minutes.');
+      return doc;
+    }
+    throw error;
+  }
 
   const txn = txnResponse.data?.data;
   return reconcilePayment(doc, {

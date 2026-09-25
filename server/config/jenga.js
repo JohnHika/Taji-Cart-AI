@@ -122,11 +122,36 @@ const getPrivateKey = () => {
   throw err;
 };
 
+// Merchant tokens last 15 minutes. Server-side calls (STK push, status
+// queries) reuse one until shortly before it expires instead of
+// authenticating on every request.
+let cachedToken = null;
+const TOKEN_REUSE_MARGIN_MS = 60 * 1000;
+
+const readTokenExpiry = (data, token) => {
+  const fromResponse = Date.parse(data?.expiresIn);
+  if (Number.isFinite(fromResponse)) return fromResponse;
+  try {
+    const { exp } = JSON.parse(Buffer.from(String(token).split('.')[1], 'base64url').toString());
+    if (Number.isFinite(exp)) return exp * 1000;
+  } catch {
+    // Not a JWT — fall back below.
+  }
+  return Date.now() + 10 * 60 * 1000;
+};
+
 /**
  * Fetch a short-lived OAuth access token from Jenga/Finserve.
  * Requires JENGA_MERCHANT_CODE, JENGA_CONSUMER_SECRET, JENGA_API_KEY in env.
+ * Pass { fresh: true } when the token is handed to Jenga's hosted checkout
+ * page, which uses it for the whole 15-minute session — a cached token could
+ * expire part-way through.
  */
-const getAuthToken = async () => {
+const getAuthToken = async ({ fresh = false } = {}) => {
+  if (!fresh && cachedToken && cachedToken.expiresAt - TOKEN_REUSE_MARGIN_MS > Date.now()) {
+    return cachedToken.token;
+  }
+
   const merchantCode = requireEnv('JENGA_MERCHANT_CODE');
   const consumerSecret = requireEnv('JENGA_CONSUMER_SECRET');
   const apiKey = requireEnv('JENGA_API_KEY');
@@ -149,6 +174,7 @@ const getAuthToken = async () => {
     err.statusCode = 502;
     throw err;
   }
+  cachedToken = { token, expiresAt: readTokenExpiry(response.data, token) };
   return token;
 };
 

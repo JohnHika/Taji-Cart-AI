@@ -24,8 +24,19 @@ const jengaPaymentSchema = new mongoose.Schema(
     // Set only once, when the callback's reference/amount/status have been
     // validated (see reconcilePayment in jenga.controller.js).
     verifiedAt:      { type: Date },
-    // Guards against a callback and a poll both trying to finalize the order.
+    // Set once the paid order exists. finalizingAt is a short lock so a
+    // callback and a poll don't both finalize; if finalization fails part-way
+    // the lock lapses and the next callback/poll retries (finalizePaidOrder).
     finalizedAt:     { type: Date },
+    finalizingAt:    { type: Date },
+    // Stock for this payment has been decremented (so a retry doesn't take
+    // it twice); stockShortfall when it couldn't be reserved in full.
+    stockReservedAt: { type: Date },
+    stockShortfall:  { type: Boolean },
+    // Loyalty points and community reward priced into this checkout; redeemed
+    // only when the payment is confirmed.
+    appliedPoints:   { type: Number, default: 0 },
+    communityRewardId: { type: mongoose.Schema.ObjectId },
     rawCallback:     { type: Object },
     // Jenga's response when it rejected the STK initiation itself (no
     // callback will ever arrive for those) — kept for Jenga support.

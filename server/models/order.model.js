@@ -33,6 +33,13 @@ const orderSchema = new mongoose.Schema({
         type: String,
         default: ""
     },
+    // One id per customer checkout attempt (sent by the client) so a retried
+    // cash-order request returns the existing order instead of a duplicate.
+    checkoutAttemptId: {
+        type: String,
+        index: true,
+        sparse: true
+    },
     // Set when a paid online order couldn't reserve stock for every line —
     // needs manual resolution (see finalizePaidOrder in jenga.controller.js).
     stockShortfall: {
