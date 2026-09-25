@@ -456,6 +456,7 @@ const performJengaStkInitiate = async (request, response, { isGuest = false } = 
       if (jengaResponse.data?.status !== true) {
         const err = new Error(jengaResponse.data?.message || 'Could not start the M-Pesa payment. Please try again.');
         err.statusCode = 502;
+        err.jengaResponse = jengaResponse.data;
         throw err;
       }
 
@@ -466,14 +467,31 @@ const performJengaStkInitiate = async (request, response, { isGuest = false } = 
       });
     } catch (jengaError) {
       // The STK push was never actually sent — don't leave behind a PENDING
-      // order/payment that can never resolve (no callback will ever arrive
-      // for a request Jenga never processed).
+      // order that can never resolve (no callback will ever arrive for a
+      // request Jenga never processed). Keep the payment record, marked
+      // failed with Jenga's own code and message: Jenga support asks for the
+      // reference, error code and timestamp of a failed request.
+      const jengaData = jengaError.jengaResponse || jengaError?.response?.data;
       await OrderModel.deleteMany({ orderId: sharedOrderId });
-      await JengaPayment.deleteOne({ orderReference });
+      await JengaPayment.updateOne(
+        { orderReference },
+        {
+          $set: {
+            status: 'failed',
+            resultCode: String(jengaData?.code ?? ''),
+            resultDesc: jengaData?.message || jengaError.message,
+            initResponse: jengaData ?? null,
+          },
+        }
+      );
+      jengaError.orderReference = orderReference;
       throw jengaError;
     }
   } catch (error) {
-    console.error('Jenga initiate error:', error?.response?.data || error.message);
+    console.error(
+      `Jenga initiate error${error.orderReference ? ` (ref ${error.orderReference})` : ''}:`,
+      error.jengaResponse || error?.response?.data || error.message
+    );
     const message =
       error?.response?.data?.message ||
       error?.message ||
@@ -504,8 +522,11 @@ export const initiateGuestJengaPayment = (request, response) =>
 const JENGA_PGW_PRODUCT_TYPE = 'Product';
 // Jenga's checkout reference expresses this duration with the `mins` suffix
 // (for example, `15mins`). Use the same documented format rather than a bare
-// number that the hosted form could reject.
-const JENGA_PGW_PAYMENT_TIME_LIMIT = '30mins';
+// number that the hosted form could reject. The hosted page authorizes every
+// call it makes (including the M-Pesa charge lookup) with the merchant token
+// we pass it, and that token expires 15 minutes after it is issued — keep the
+// checkout window inside the token's lifetime, with a margin.
+const JENGA_PGW_PAYMENT_TIME_LIMIT = '10mins';
 const JENGA_PGW_DEFAULT_COUNTRY_CODE = 'KE';
 const JENGA_PGW_DEFAULT_POSTAL_CODE = '00100';
 
@@ -572,7 +593,13 @@ export const initiateJengaCardPayment = async (request, response) => {
     // server-side, RSA-signed transaction-status query before finalization.
     const callbackUrl = requireEnv('JENGA_CARD_CALLBACK_URL');
     const token = await getAuthToken();
-    const orderAmount = totalAmt.toFixed(2);
+    // No trailing zeros ("2800", not "2800.00"). Jenga's hosted page signs its
+    // M-Pesa charge lookup over this exact string but sends
+    // Number(orderAmount) in the request body, so a trailing ".00" makes the
+    // signed text and the body disagree. M-Pesa only takes whole shillings, so
+    // String() of the rounded total is always the exact amount.
+    const orderAmount = String(totalAmt);
+    console.log(`[JENGA PGW] checkout started ref=${orderReference} amount=${orderAmount} KES timeLimit=${JENGA_PGW_PAYMENT_TIME_LIMIT}`);
 
     return response.status(200).json({
       success: true,

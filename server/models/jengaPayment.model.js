@@ -27,6 +27,9 @@ const jengaPaymentSchema = new mongoose.Schema(
     // Guards against a callback and a poll both trying to finalize the order.
     finalizedAt:     { type: Date },
     rawCallback:     { type: Object },
+    // Jenga's response when it rejected the STK initiation itself (no
+    // callback will ever arrive for those) — kept for Jenga support.
+    initResponse:    { type: Object },
   },
   { timestamps: true }
 );
