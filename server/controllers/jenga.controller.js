@@ -310,7 +310,7 @@ const buildPendingOrder = async (request, { orderReferenceLength = ORDER_REFEREN
 
   await OrderModel.insertMany(orderPayload);
 
-  return { orderReference, sharedOrderId, totalAmt, fulfillment_type };
+  return { orderReference, sharedOrderId, totalAmt, fulfillment_type, normalizedItems };
 };
 
 // Jenga Payment Gateway's wallet-STK API documents MSISDN values in Kenyan
@@ -522,13 +522,36 @@ export const initiateGuestJengaPayment = (request, response) =>
 const JENGA_PGW_PRODUCT_TYPE = 'Product';
 // Jenga's checkout reference expresses this duration with the `mins` suffix
 // (for example, `15mins`). Use the same documented format rather than a bare
-// number that the hosted form could reject. The hosted page authorizes every
-// call it makes (including the M-Pesa charge lookup) with the merchant token
-// we pass it, and that token expires 15 minutes after it is issued — keep the
-// checkout window inside the token's lifetime, with a margin.
-const JENGA_PGW_PAYMENT_TIME_LIMIT = '10mins';
+// number that the hosted form could reject. The hosted page itself ends every
+// session 15 minutes after it loads (its countdown is fixed, not driven by this
+// field), which is also the lifetime of the merchant token we pass it — so
+// match that rather than let Jenga's order window differ from what the
+// customer sees.
+const JENGA_PGW_PAYMENT_TIME_LIMIT = '15mins';
 const JENGA_PGW_DEFAULT_COUNTRY_CODE = 'KE';
 const JENGA_PGW_DEFAULT_POSTAL_CODE = '00100';
+const JENGA_PGW_DESCRIPTION_ITEMS_SHOWN = 2;
+
+// Shown to the customer as the "Service Description" on Jenga's hosted page
+// and kept by Jenga as the order description, e.g.
+// "Nawiri Hair - 2 x Deep Twist Crochet, 1 x Gogo Curls and 3 more items".
+// Product names are reduced to the character set the page accepts in its
+// other free-text fields (letters, digits, spaces and , . - _); anything else
+// becomes a space so colour codes like "OT33/3O" don't run together.
+const buildPgwProductDescription = (items) => {
+  const clean = (text) => String(text || '')
+    .replace(/[^a-zA-Z0-9\s,.\-_]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, 40)
+    .trim();
+  const listed = items
+    .slice(0, JENGA_PGW_DESCRIPTION_ITEMS_SHOWN)
+    .map(({ productId, quantity }) => `${quantity} x ${clean(productId?.name) || 'item'}`);
+  const remaining = items.length - listed.length;
+  const more = remaining > 0 ? ` and ${remaining} more item${remaining === 1 ? '' : 's'}` : '';
+  return `Nawiri Hair - ${listed.join(', ')}${more}`;
+};
 
 /**
  * POST /api/jenga/checkout/pay
@@ -552,15 +575,14 @@ export const initiateJengaCardPayment = async (request, response) => {
     const built = await buildPendingOrder(request, { orderReferenceLength: PGW_ORDER_REFERENCE_LENGTH });
     orderReference = built.orderReference;
     sharedOrderId = built.sharedOrderId;
-    const { totalAmt, fulfillment_type } = built;
+    const { totalAmt, fulfillment_type, normalizedItems } = built;
 
     const user = await UserModel.findById(userId).select('name email mobile').lean();
     const [firstName, ...lastNameParts] = String(user?.name || 'Customer').trim().split(/\s+/);
     const lastName = lastNameParts.join(' ') || firstName;
     const customerEmail = String(user?.email || '').trim();
-    const normalizedCustomerPhone = normalizeKenyanPhone(user?.mobile);
-    if (!customerEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(customerEmail) || !normalizedCustomerPhone) {
-      const err = new Error('Add a valid email address and Kenyan mobile number to your profile before paying with M-Pesa.');
+    if (!customerEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(customerEmail)) {
+      const err = new Error('Add a valid email address to your profile before paying with M-Pesa.');
       err.statusCode = 400;
       throw err;
     }
@@ -614,16 +636,15 @@ export const initiateJengaCardPayment = async (request, response) => {
           orderAmount,
           orderReference,
           productType: JENGA_PGW_PRODUCT_TYPE,
-          productDescription: `Nawiri Hair order ${sharedOrderId}`,
+          productDescription: buildPgwProductDescription(normalizedItems),
           paymentTimeLimit: JENGA_PGW_PAYMENT_TIME_LIMIT,
           customerFirstName: firstName || 'Customer',
           customerLastName: lastName || 'Customer',
           customerEmail,
-          // The live PGW widget parses this field with libphonenumber before
-          // it loads Mobile-MPESA charges. Its runtime requires an E.164
-          // Kenyan value (+254…), even though the checkout-reference sample
-          // omits the plus sign.
-          customerPhone: `+${normalizedCustomerPhone}`,
+          // Left blank so the customer types their own contact number on
+          // Jenga's page (it is required there). The M-Pesa number that gets
+          // charged is entered separately in the page's M-Pesa form.
+          customerPhone: '',
           customerAddress,
           customerPostalCodeZip,
           countryCode: JENGA_PGW_DEFAULT_COUNTRY_CODE,
