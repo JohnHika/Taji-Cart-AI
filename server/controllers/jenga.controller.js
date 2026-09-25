@@ -167,13 +167,15 @@ const priceItems = async (items) => {
 
 /**
  * Shared by both the STK (M-Pesa) and Jenga PGW (card) payment paths:
- * validates fulfillment/delivery inputs, prices the cart, and creates the
- * local PENDING order rows before any request reaches Jenga. Throws an
- * Error with .statusCode (and optionally .code, matching the SACCO/delivery
- * zone error codes the client already handles) on any validation failure —
- * callers are expected to catch and translate that into the JSON response.
- * Does not touch JengaPayment — each channel creates its own record with
- * its own channel-specific fields (e.g. phoneNumber semantics differ).
+ * validates fulfillment/delivery inputs, prices the cart, and builds the
+ * order rows for this checkout. The rows are NOT saved to the orders
+ * collection here — callers keep them on the JengaPayment record
+ * (pendingOrder) and finalizePaidOrder creates the real orders only once
+ * Jenga confirms payment, so an abandoned or failed checkout never shows up
+ * in My Orders, the dispatch queue or reports. Throws an Error with
+ * .statusCode (and optionally .code, matching the SACCO/delivery zone error
+ * codes the client already handles) on any validation failure — callers are
+ * expected to catch and translate that into the JSON response.
  */
 const buildPendingOrder = async (request, { orderReferenceLength = ORDER_REFERENCE_LENGTH, isGuest = false } = {}) => {
   const userId = request.userId;
@@ -277,8 +279,7 @@ const buildPendingOrder = async (request, { orderReferenceLength = ORDER_REFEREN
   const orderReference = await claimOrderReference(orderReferenceLength);
   const sharedOrderId = `ORD-${new mongoose.Types.ObjectId()}`;
 
-  // Create the local pending order BEFORE contacting Jenga.
-  const orderPayload = normalizedItems.map((item) => ({
+  const orderRows = normalizedItems.map((item) => ({
     userId: isGuest ? undefined : userId,
     isGuest,
     guestEmail: isGuest ? (guestEmail || '') : undefined,
@@ -308,9 +309,7 @@ const buildPendingOrder = async (request, { orderReferenceLength = ORDER_REFEREN
     totalAmt,
   }));
 
-  await OrderModel.insertMany(orderPayload);
-
-  return { orderReference, sharedOrderId, totalAmt, fulfillment_type, normalizedItems };
+  return { orderReference, sharedOrderId, totalAmt, fulfillment_type, normalizedItems, orderRows };
 };
 
 // Jenga Payment Gateway's wallet-STK API documents MSISDN values in Kenyan
@@ -375,7 +374,7 @@ const performJengaStkInitiate = async (request, response, { isGuest = false } = 
       normalizedPhone,
     });
 
-    const { orderReference, sharedOrderId, totalAmt } = await buildPendingOrder(request, { isGuest });
+    const { orderReference, sharedOrderId, totalAmt, orderRows } = await buildPendingOrder(request, { isGuest });
 
     await JengaPayment.create({
       orderReference,
@@ -386,6 +385,7 @@ const performJengaStkInitiate = async (request, response, { isGuest = false } = 
       amount: totalAmt,
       currency: 'KES',
       status: 'pending',
+      pendingOrder: orderRows,
     });
 
     try {
@@ -466,13 +466,12 @@ const performJengaStkInitiate = async (request, response, { isGuest = false } = 
         data: { orderReference, orderId: sharedOrderId, status: 'pending', jenga: jengaResponse.data },
       });
     } catch (jengaError) {
-      // The STK push was never actually sent — don't leave behind a PENDING
-      // order that can never resolve (no callback will ever arrive for a
-      // request Jenga never processed). Keep the payment record, marked
-      // failed with Jenga's own code and message: Jenga support asks for the
-      // reference, error code and timestamp of a failed request.
+      // The STK push was never actually sent, so no callback will ever
+      // arrive. Mark the payment record failed with Jenga's own code and
+      // message (no order was created — that only happens once paid): Jenga
+      // support asks for the reference, error code and timestamp of a
+      // failed request.
       const jengaData = jengaError.jengaResponse || jengaError?.response?.data;
-      await OrderModel.deleteMany({ orderId: sharedOrderId });
       await JengaPayment.updateOne(
         { orderReference },
         {
@@ -575,7 +574,7 @@ export const initiateJengaCardPayment = async (request, response) => {
     const built = await buildPendingOrder(request, { orderReferenceLength: PGW_ORDER_REFERENCE_LENGTH });
     orderReference = built.orderReference;
     sharedOrderId = built.sharedOrderId;
-    const { totalAmt, fulfillment_type, normalizedItems } = built;
+    const { totalAmt, fulfillment_type, normalizedItems, orderRows } = built;
 
     const user = await UserModel.findById(userId).select('name email mobile').lean();
     const [firstName, ...lastNameParts] = String(user?.name || 'Customer').trim().split(/\s+/);
@@ -606,6 +605,7 @@ export const initiateJengaCardPayment = async (request, response) => {
       amount: totalAmt,
       currency: 'KES',
       status: 'pending',
+      pendingOrder: orderRows,
     });
 
     const merchantCode = requireEnv('JENGA_MERCHANT_CODE');
@@ -662,8 +662,7 @@ export const initiateJengaCardPayment = async (request, response) => {
   } catch (error) {
     // Nothing was ever sent to Jenga (the browser form POST is what starts
     // the checkout, not this call) — but if we got as far as creating the
-    // pending order/payment before failing, don't leave it behind.
-    if (sharedOrderId) await OrderModel.deleteMany({ orderId: sharedOrderId });
+    // payment record before failing, don't leave it behind.
     if (orderReference) await JengaPayment.deleteOne({ orderReference });
 
     console.error('Jenga card initiate error:', error?.response?.data || error.message);
@@ -700,9 +699,9 @@ const mapTxnDetailsToLocal = (txn) => {
 };
 
 /**
- * Finalizes a payment exactly once: marks the order PAID and decrements stock,
- * guarded by an atomic findOneAndUpdate on finalizedAt so duplicate callers
- * (callback + poll, or repeated callbacks) can't double-finalize.
+ * Finalizes a payment exactly once: creates the order as PAID and decrements
+ * stock, guarded by an atomic findOneAndUpdate on finalizedAt so duplicate
+ * callers (callback + poll, or repeated callbacks) can't double-finalize.
  */
 const finalizePaidOrder = async (paymentDoc) => {
   const claimed = await JengaPayment.findOneAndUpdate(
@@ -716,32 +715,45 @@ const finalizePaidOrder = async (paymentDoc) => {
     return;
   }
 
-  const orders = await OrderModel.find({ orderId: paymentDoc.orderId });
+  // The order rows were held on the payment record until now (see
+  // buildPendingOrder). Payments started before that change already have
+  // PENDING rows in the orders collection instead — those are updated.
+  let orders = await OrderModel.find({ orderId: paymentDoc.orderId });
+  const createOrders = orders.length === 0 && Array.isArray(claimed.pendingOrder) && claimed.pendingOrder.length > 0;
+  const lines = createOrders ? claimed.pendingOrder : orders;
 
   // Atomically reserve (decrement) stock for every line of the paid order,
   // guarded so no product can ever be driven below zero by the finalization
   // of this payment. Pre-validated at payment time, but a concurrent sale may
   // have drained stock since — never let this decrement take stock negative.
   const reserved = await reserveStockGuarded(
-    orders.map((order) => ({
-      id: order.productId,
-      quantity: order.quantity || 1,
-      label: (order.product_details?.name) || 'product',
+    lines.map((line) => ({
+      id: line.productId,
+      quantity: line.quantity || 1,
+      label: (line.product_details?.name) || 'product',
     }))
   );
 
+  const paidFields = {
+    payment_status: 'PAID',
+    paymentId: paymentDoc.orderReference,
+    ...(reserved.ok ? {} : { stockShortfall: true }),
+  };
+  if (createOrders) {
+    orders = await OrderModel.insertMany(claimed.pendingOrder.map((row) => ({ ...row, ...paidFields })));
+  } else {
+    await OrderModel.updateMany({ orderId: paymentDoc.orderId }, { $set: paidFields });
+  }
+
   if (!reserved.ok) {
     // A verified, paid order we can no longer fully fulfill. Leave stock
-    // untouched and flag the order for manual attention instead of booking a
-    // phantom decrement that would drive a product below zero.
+    // untouched and flag the order (stockShortfall) for manual attention
+    // instead of booking a phantom decrement that would drive a product
+    // below zero.
     console.error(
       `[JENGA] Paid order ${paymentDoc.orderId} could not reserve stock: ${
         reserved.row?.label || reserved.reason || 'unknown'
       } — holding for manual resolution.`
-    );
-    await OrderModel.updateMany(
-      { orderId: paymentDoc.orderId },
-      { $set: { payment_status: 'PAID', paymentId: paymentDoc.orderReference, stockShortfall: true } }
     );
     await NotificationModel.create({
       type: 'low_stock',
@@ -763,11 +775,6 @@ const finalizePaidOrder = async (paymentDoc) => {
       forAdmin: true,
     });
   }));
-
-  await OrderModel.updateMany(
-    { orderId: paymentDoc.orderId },
-    { $set: { payment_status: 'PAID', paymentId: paymentDoc.orderReference } }
-  );
 
   if (paymentDoc.userId) {
     await CartProductModel.deleteMany({ userId: paymentDoc.userId });
@@ -810,6 +817,8 @@ const finalizePaidOrder = async (paymentDoc) => {
   }
 };
 
+// Only payments started before orders were deferred to finalizePaidOrder have
+// order rows to mark; for newer ones this matches nothing.
 const markOrderUnpaid = async (paymentDoc, localStatus) => {
   await OrderModel.updateMany(
     { orderId: paymentDoc.orderId },

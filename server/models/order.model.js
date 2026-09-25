@@ -33,6 +33,12 @@ const orderSchema = new mongoose.Schema({
         type: String,
         default: ""
     },
+    // Set when a paid online order couldn't reserve stock for every line —
+    // needs manual resolution (see finalizePaidOrder in jenga.controller.js).
+    stockShortfall: {
+        type: Boolean,
+        default: false
+    },
     // How this order was placed. 'whatsapp' means staff transcribed it from a
     // WhatsApp conversation on the customer's behalf (see guestCheckoutController).
     source: {

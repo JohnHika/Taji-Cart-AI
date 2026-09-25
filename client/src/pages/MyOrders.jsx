@@ -72,6 +72,28 @@ const statusColors = {
   default: 'bg-brown-50 text-charcoal border-brown-100'
 }
 
+// /api/order/order-list returns one entry per orderId with its line items in
+// `items` and the payment state in `payment_status`. Online (Jenga) orders only
+// exist once paid; cash and SACCO orders are settled on hand-over.
+const describePayment = (order) => {
+  const status = String(order.payment_status || '').toUpperCase()
+  if (status === 'PAID') return { method: 'M-Pesa', label: 'Paid', paid: true }
+  if (status === 'CASH ON DELIVERY') {
+    return order.fulfillment_type === 'pickup'
+      ? { method: 'Cash on pickup', label: 'Pay at pickup', paid: false }
+      : { method: 'Cash on delivery', label: 'Pay on delivery', paid: false }
+  }
+  if (status === 'PAY AT SACCO TERMINAL') return { method: 'Pay at SACCO terminal', label: 'Pay at terminal', paid: false }
+  if (status === 'PENDING') return { method: 'M-Pesa', label: 'Awaiting payment', paid: false }
+  return { method: '—', label: order.payment_status || '—', paid: false }
+}
+
+const formatAddress = (address) => (
+  address
+    ? [address.address_line, address.city, address.state].filter(Boolean).join(', ')
+    : ''
+)
+
 const OrderStatusBadge = ({ status }) => {
   const statusClass = statusColors[status?.toLowerCase()] || statusColors.default
   return (
@@ -204,7 +226,7 @@ const MyOrders = () => {
                     <OrderStatusBadge status={order?.status} />
                     {order.status !== 'delivered' && order.status !== 'cancelled' && (
                       <Link
-                        to={`/order-tracking/${order._id}`}
+                        to={`/order-tracking/${order.orderId || order._id}`}
                         className="inline-flex items-center gap-2 px-3 py-1.5 sm:px-4 sm:py-2 bg-plum-700 hover:bg-plum-600 text-white rounded-pill text-xs sm:text-sm transition-colors font-medium"
                         aria-label={`Track order ${order.orderId || order._id}`}
                       >
@@ -216,35 +238,29 @@ const MyOrders = () => {
 
                 {/* Order content */}
                 <div className="p-4">
-                  {/* Product information — always row on mobile (image + text side by side) */}
-                  <div className="flex gap-3 mb-4 pb-4 border-b border-brown-100 dark:border-dm-border">
-                    <div className="shrink-0">
-                      {order.product_details?.image?.[0] ? (
-                        <img
-                          src={order.product_details.image[0]}
-                          className="w-16 h-16 sm:w-20 sm:h-20 object-cover rounded-lg border border-brown-100 dark:border-dm-border"
-                          alt={order.product_details?.name || 'Product'}
-                        />
-                      ) : (
-                        <div className="w-16 h-16 sm:w-20 sm:h-20 flex items-center justify-center rounded-lg border border-brown-100 dark:border-dm-border bg-brown-50 dark:bg-dm-card-2 text-brown-300 dark:text-white/30">
-                          <FaBox size={20} />
+                  {/* Line items — image + name + quantity, one row per product */}
+                  <div className="mb-4 pb-4 border-b border-brown-100 dark:border-dm-border space-y-3">
+                    {(order.items || []).map((item, itemIndex) => (
+                      <div key={`${order.orderId}-${item.productId || itemIndex}`} className="flex gap-3 items-center">
+                        <div className="shrink-0">
+                          {item.product_details?.image?.[0] ? (
+                            <img
+                              src={item.product_details.image[0]}
+                              className="w-16 h-16 sm:w-20 sm:h-20 object-cover rounded-lg border border-brown-100 dark:border-dm-border"
+                              alt={item.product_details?.name || 'Product'}
+                            />
+                          ) : (
+                            <div className="w-16 h-16 sm:w-20 sm:h-20 flex items-center justify-center rounded-lg border border-brown-100 dark:border-dm-border bg-brown-50 dark:bg-dm-card-2 text-brown-300 dark:text-white/30">
+                              <FaBox size={20} />
+                            </div>
+                          )}
                         </div>
-                      )}
-                    </div>
-                    <div className="flex-grow min-w-0">
-                      <h3 className="font-medium text-sm sm:text-base text-charcoal dark:text-white mb-1 line-clamp-2">{order.product_details?.name || 'Product unavailable'}</h3>
-                      <p className="text-xs text-brown-600 dark:text-white/55 mb-1 line-clamp-2 hidden sm:block">
-                        {order.product_details?.description
-                          ? order.product_details.description.substring(0, 100) + '...'
-                          : 'No description available'}
-                      </p>
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="text-xs text-brown-600 dark:text-white/50">Qty: <span className="text-charcoal dark:text-white/80 font-medium">{order.quantity || 1}</span></span>
-                        <span className="text-sm font-semibold text-charcoal dark:text-white">
-                          KSh {order.product_details?.price?.toLocaleString() || 'N/A'}
-                        </span>
+                        <div className="flex-grow min-w-0">
+                          <h3 className="font-medium text-sm sm:text-base text-charcoal dark:text-white mb-1 line-clamp-2">{item.product_details?.name || 'Product'}</h3>
+                          <span className="text-xs text-brown-600 dark:text-white/50">Qty: <span className="text-charcoal dark:text-white/80 font-medium">{item.quantity || 1}</span></span>
+                        </div>
                       </div>
-                    </div>
+                    ))}
                   </div>
 
                   {/* Order details and payment info */}
@@ -257,18 +273,24 @@ const MyOrders = () => {
                       <div className="text-brown-600 dark:text-white/55 space-y-1">
                         <div className="flex justify-between">
                           <span>Method:</span>
-                          <span className="text-charcoal dark:text-white/80">{order.paymentMethod || 'N/A'}</span>
+                          <span className="text-charcoal dark:text-white/80">{describePayment(order).method}</span>
                         </div>
                         <div className="flex justify-between">
                           <span>Status:</span>
-                          <span className={`${order.isPaid ? 'text-brown-700 dark:text-brown-300' : 'text-gold-600 dark:text-gold-400'}`}>
-                            {order.isPaid ? 'Paid' : 'Pending'}
+                          <span className={`${describePayment(order).paid ? 'text-green-700 dark:text-green-400' : 'text-gold-600 dark:text-gold-400'}`}>
+                            {describePayment(order).label}
                           </span>
                         </div>
+                        {Number(order.deliveryCharge) > 0 && (
+                          <div className="flex justify-between">
+                            <span>Delivery:</span>
+                            <span className="text-charcoal dark:text-white/80">KSh {Number(order.deliveryCharge).toLocaleString()}</span>
+                          </div>
+                        )}
                         <div className="flex justify-between">
                           <span>Total Amount:</span>
                           <span className="text-charcoal dark:text-white/90 font-medium">
-                            KSh {order.totalAmount?.toLocaleString() || 'N/A'}
+                            {order.totalAmt != null ? `KSh ${Number(order.totalAmt).toLocaleString()}` : '—'}
                           </span>
                         </div>
                       </div>
@@ -313,9 +335,9 @@ const MyOrders = () => {
                           <span className="capitalize text-charcoal dark:text-white/80">{order.status || 'Processing'}</span>
                         </div>
                         
-                        {order.fulfillment_type === 'delivery' && order.deliveryAddress && (
+                        {order.fulfillment_type === 'delivery' && formatAddress(order.delivery_address) && (
                           <div className="text-charcoal dark:text-white/80 mt-1 leading-snug">
-                            {order.deliveryAddress}
+                            {formatAddress(order.delivery_address)}
                           </div>
                         )}
                         

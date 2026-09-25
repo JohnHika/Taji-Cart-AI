@@ -1229,8 +1229,14 @@ export async function getOrderDetailsController(request, response) {
                     fulfillment_type: { $first: '$fulfillment_type' },
                     pickup_location: { $first: '$pickup_location' },
                     pickup_instructions: { $first: '$pickup_instructions' },
+                    pickupVerificationCode: { $first: '$pickupVerificationCode' },
+                    delivery_mode: { $first: '$delivery_mode' },
+                    delivery_zone_name: { $first: '$delivery_zone_name' },
+                    sacco_operator_name: { $first: '$sacco_operator_name' },
+                    sacco_destination_town: { $first: '$sacco_destination_town' },
                     status: { $first: '$status' },
                     subTotalAmt: { $first: '$subTotalAmt' },
+                    deliveryCharge: { $first: '$deliveryCharge' },
                     totalAmt: { $first: '$totalAmt' },
                     deliveryPersonnel: { $first: '$deliveryPersonnel' },
                     estimatedDeliveryTime: { $first: '$estimatedDeliveryTime' },
@@ -1241,6 +1247,7 @@ export async function getOrderDetailsController(request, response) {
                         $push: {
                             productId: '$productId',
                             product_details: '$product_details',
+                            quantity: '$quantity',
                         }
                     }
                 }

@@ -30,6 +30,14 @@ const jengaPaymentSchema = new mongoose.Schema(
     // Jenga's response when it rejected the STK initiation itself (no
     // callback will ever arrive for those) — kept for Jenga support.
     initResponse:    { type: Object },
+    // The order rows for this checkout. Orders are only created from these
+    // once Jenga confirms payment (finalizePaidOrder in jenga.controller.js),
+    // so abandoned checkouts never appear as orders.
+    pendingOrder:    { type: Array, default: undefined },
+    // Order rows removed from the orders collection because the checkout was
+    // never paid (see scripts/one-off/voidUnpaidJengaOrders.js) — kept so a
+    // late-confirmed payment could still be restored.
+    archivedOrders:  { type: Array, default: undefined },
   },
   { timestamps: true }
 );
