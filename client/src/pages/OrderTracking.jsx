@@ -98,12 +98,14 @@ const OrderTracking = () => {
           newSocket.disconnect();
           return; // Do not toast or retry; user simply won't get live updates
         }
-        toast.error('Connection error. Attempting to reconnect...');
-        // If not already retrying
+        // Socket.io already retries on its own (reconnection/reconnectionAttempts
+        // configured above via `reconnect_attempt`/`reconnect`/`reconnect_failed`
+        // below) — scheduling our own manual reconnect() here on top of that
+        // used to read `reconnectAttempts` from a stale closure that was
+        // always 0, so every failed attempt queued another manual connect()
+        // call forever, compounding with socket.io's own retries.
         if (reconnectAttempts === 0) {
-          setTimeout(() => {
-            if (socketRef.current) socketRef.current.connect();
-          }, 3000);
+          toast.error('Connection error. Attempting to reconnect...');
         }
       });
       
@@ -265,6 +267,21 @@ const OrderTracking = () => {
     }
   }, [orderId]);
 
+  // Polling fallback: refreshes order data every 30s so the page stays
+  // current even if the socket is mid-reconnect or missed an event, without
+  // relying on it entirely. Stops once the order reaches a terminal state.
+  useEffect(() => {
+    const terminalStatuses = ['delivered', 'cancelled', 'picked_up'];
+    if (!orderId || terminalStatuses.includes(order?.status)) return undefined;
+
+    const intervalId = setInterval(() => {
+      fetchOrderDetails();
+    }, 30000);
+
+    return () => clearInterval(intervalId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [orderId, order?.status]);
+
   // ── MapLibre initialisation (once, after mount) ─────────────────────────
   useEffect(() => {
     if (!mapContainerRef.current || mapRef.current) return;
@@ -415,17 +432,23 @@ const OrderTracking = () => {
   
   // Render function for status steps
   const renderStatusSteps = () => {
+    const isPickupOrder = ['pickup', 'sacco_pickup'].includes(order?.fulfillment_type);
     const statuses = [
       { key: 'pending', label: 'Order Received', icon: <FaBox /> },
       { key: 'processing', label: 'Preparing Order', icon: <FaBox /> },
+      { key: 'shipped', label: 'Shipped', icon: <FaTruck /> },
+      { key: 'dispatched', label: 'Dispatched', icon: <FaTruck /> },
       { key: 'driver_assigned', label: 'Driver Assigned', icon: <FaTruck /> },
       { key: 'out_for_delivery', label: 'Out for Delivery', icon: <FaTruck /> },
       { key: 'nearby', label: 'Driver Nearby', icon: <FaMapMarkerAlt /> },
-      { key: 'delivered', label: 'Delivered', icon: <FaCheckCircle /> }
+      { key: 'delivered', label: isPickupOrder ? 'Picked Up' : 'Delivered', icon: <FaCheckCircle /> }
     ];
-    
+
+    // A store-pickup order finishes at "picked_up" rather than "delivered" —
+    // treat it as the same terminal step so the timeline still completes.
+    const effectiveStatus = order?.status === 'picked_up' ? 'delivered' : (order?.status || 'pending');
     // Find the index of the current status
-    const currentStatusIndex = statuses.findIndex(s => s.key === (order?.status || 'pending'));
+    const currentStatusIndex = statuses.findIndex(s => s.key === effectiveStatus);
     
     return (
       <div className="flex flex-col md:flex-row justify-between mb-8 px-4">
@@ -458,8 +481,9 @@ const OrderTracking = () => {
   
   // Add delivery progress calculation
   const calculateProgress = () => {
-    const statuses = ['pending', 'processing', 'driver_assigned', 'out_for_delivery', 'nearby', 'delivered'];
-    const currentIndex = statuses.indexOf(order?.status || 'pending');
+    const statuses = ['pending', 'processing', 'shipped', 'dispatched', 'driver_assigned', 'out_for_delivery', 'nearby', 'delivered'];
+    const effectiveStatus = order?.status === 'picked_up' ? 'delivered' : (order?.status || 'pending');
+    const currentIndex = statuses.indexOf(effectiveStatus);
     return Math.max(5, Math.min(100, ((currentIndex + 1) / statuses.length) * 100));
   };
   
