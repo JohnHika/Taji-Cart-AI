@@ -314,9 +314,6 @@ const CheckoutPage = ({ embedded = false }) => {
     fetchLoyaltyData();
   }, [user?._id]);
 
-  // Each point is worth KES 1; cap at subtotal + delivery charge
-  const pointsValue = Math.min(availablePoints, totalPrice + deliveryCharge);
-
   // Handle selecting community reward
   const handleSelectReward = (reward) => {
     if (selectedReward && selectedReward._id === reward._id) {
@@ -338,10 +335,15 @@ const CheckoutPage = ({ embedded = false }) => {
     }
   };
 
-  // Calculate price after community discount
+  // Calculate price after community discount (rounded like the server's
+  // buildValidatedOrderPricing, so the total shown is the total charged)
   const priceAfterCommunityDiscount = selectedReward && selectedReward.type === 'discount'
-    ? totalPrice * (1 - communityDiscount / 100)
+    ? Number((totalPrice * (1 - communityDiscount / 100)).toFixed(2))
     : totalPrice;
+
+  // Each point is worth KES 1. Like the server, points can cover the items
+  // but not the delivery charge.
+  const pointsValue = Math.min(availablePoints, priceAfterCommunityDiscount);
 
   // Calculate final price after applying points, community discount and delivery charge
   const finalPrice = usePoints
@@ -358,6 +360,20 @@ const CheckoutPage = ({ embedded = false }) => {
     .join('|');
   const checkoutScope = `${user?._id || 'guest'}:${fulfillmentMethod}:${selectedAddressId ?? 'pickup'}:${pickupLocation}:${cartFingerprint}:${finalPrice}`;
   const checkoutRedirectedRef = useRef(false);
+
+  // One id per checkout attempt, sent with a cash order so a retried request
+  // (e.g. after a timeout) gets back the order already placed instead of a
+  // duplicate. Any change to the cart or delivery details starts a new one.
+  const checkoutAttemptRef = useRef({ scope: '', id: '' });
+  const getCheckoutAttemptId = () => {
+    if (checkoutAttemptRef.current.scope !== checkoutScope) {
+      checkoutAttemptRef.current = {
+        scope: checkoutScope,
+        id: window.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+      };
+    }
+    return checkoutAttemptRef.current.id;
+  };
 
   const runCheckoutAction = async (actionName, callback) => {
     if (checkoutLockRef.current) {
@@ -425,7 +441,8 @@ const CheckoutPage = ({ embedded = false }) => {
             pickup_location: pickupLocation,
             pickup_instructions: pickupInstructions,
             saccoOperatorId: fulfillmentMethod === 'sacco_pickup' ? saccoOperatorId : undefined,
-            saccoDestinationTown: fulfillmentMethod === 'sacco_pickup' ? saccoDestinationTown : undefined
+            saccoDestinationTown: fulfillmentMethod === 'sacco_pickup' ? saccoDestinationTown : undefined,
+            checkoutAttemptId: getCheckoutAttemptId()
           },
           requestLockKey: `checkout:cash:${checkoutScope}`
         });
@@ -1053,6 +1070,8 @@ const CheckoutPage = ({ embedded = false }) => {
                 addressId={fulfillmentMethod === 'delivery' ? selectedAddress?._id : null}
                 communityRewardId={selectedReward ? selectedReward._id : null}
                 communityDiscountAmount={selectedReward && selectedReward.type === 'discount' ? communityDiscount : 0}
+                usePoints={usePoints}
+                pointsUsed={usePoints ? pointsValue : 0}
                 fulfillment_type={fulfillmentMethod}
                 pickup_location={pickupLocation}
                 pickup_instructions={pickupInstructions}

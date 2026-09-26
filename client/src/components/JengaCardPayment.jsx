@@ -30,6 +30,8 @@ const JengaCardPayment = ({
   onError,
   communityRewardId,
   communityDiscountAmount,
+  usePoints = false,
+  pointsUsed = 0,
   fulfillment_type = 'delivery',
   pickup_location = '',
   pickup_instructions = '',
@@ -57,6 +59,10 @@ const JengaCardPayment = ({
           addressId,
           communityRewardId,
           communityDiscountAmount,
+          // The server prices points in (and redeems them once paid), so the
+          // M-Pesa amount matches the total shown on the checkout page.
+          usePoints,
+          pointsUsed,
           fulfillment_type,
           pickup_location,
           pickup_instructions,

@@ -6,6 +6,20 @@ import SummaryApi from '../common/SummaryApi';
 import Axios from '../utils/Axios';
 import { DisplayPriceInShillings } from '../utils/DisplayPriceInShillings';
 
+// The order list reports payment_status: 'PAID' for M-Pesa (online orders
+// only exist once paid), or how a cash/SACCO order will be settled.
+const describePayment = (order) => {
+  const status = String(order?.payment_status || '').toUpperCase();
+  if (status === 'PAID') return { method: 'M-Pesa', label: 'Paid', paid: true };
+  if (status === 'CASH ON DELIVERY') {
+    return order?.fulfillment_type === 'pickup'
+      ? { method: 'Cash on pickup', label: 'Pay at pickup', paid: false }
+      : { method: 'Cash on delivery', label: 'Pay on delivery', paid: false };
+  }
+  if (status === 'PAY AT SACCO TERMINAL') return { method: 'Pay at SACCO terminal', label: 'Pay at terminal', paid: false };
+  return { method: 'Cash', label: order?.payment_status || 'Pending', paid: false };
+};
+
 function Success() {
   const location = useLocation();
   const navigate = useNavigate();
@@ -138,22 +152,18 @@ function Success() {
               <tr>
                 <th>Item</th>
                 <th>Qty</th>
-                <th>Price</th>
-                <th>Total</th>
               </tr>
             </thead>
             <tbody>
               ${orderDetails.items && orderDetails.items.length > 0 ? 
                 orderDetails.items.map(item => `
                   <tr>
-                    <td>${item.productId ? item.productId.name : 'Product'}</td>
+                    <td>${item.product_details?.name || 'Product'}</td>
                     <td>${item.quantity || 1}</td>
-                    <td>${DisplayPriceInShillings(item.productId ? item.productId.price : 0).replace('KES', '')}</td>
-                    <td>${DisplayPriceInShillings(item.productId ? item.productId.price * (item.quantity || 1) : 0).replace('KES', '')}</td>
                   </tr>
                 `).join('') : 
                 `<tr>
-                  <td colspan="4">Order details will be available in your order history</td>
+                  <td colspan="2">Order details will be available in your order history</td>
                 </tr>`
               }
             </tbody>
@@ -193,8 +203,8 @@ function Success() {
             <span>${DisplayPriceInShillings(orderDetails.totalAmt || 0).replace('KES', '')}</span>
           </div>
           <div style="margin-top: 10px;">
-            <div>Payment Method: ${orderDetails.paymentMethod || 'Online Payment'}</div>
-            <div>Payment Status: ${orderDetails.payment_status || 'Paid'}</div>
+            <div>Payment Method: ${describePayment(orderDetails).method}</div>
+            <div>Payment Status: ${describePayment(orderDetails).label}</div>
           </div>
         </div>
         
@@ -212,189 +222,59 @@ function Success() {
   };
 
   useEffect(() => {
+    // Look the order up in the customer's own order list. The page is
+    // reached with state identifying the order (cash: receipt ids; M-Pesa:
+    // orderId from the payment status). Nothing is ever made up here — if
+    // the order can't be loaded the page says so and points to My Orders.
     const fetchOrderDetails = async () => {
       try {
         setLoading(true);
         setError(null);
-        
-        console.log("Attempting to fetch order details with location state:", location.state);
-        let orderFetched = false;
-        
-        // Method 1: Get all orders for user and find the appropriate one
-        try {
-          console.log("Fetching all orders using SummaryApi.getOrderItems");
-          
-          const response = await Axios({
-            ...SummaryApi.getOrderItems,
-            url: SummaryApi.getOrderItems.url, // Using the exact URL from SummaryApi
-          });
-          
-          if (response.data.success && response.data.data && response.data.data.length > 0) {
-            console.log("Success! Got orders list");
-            
-            // Find the specific order by receipt ID, orderId, or session ID if available
-            let targetOrder = null;
-            
-            if (location.state && location.state.receipt) {
-              const receiptId = Array.isArray(location.state.receipt) 
-                ? location.state.receipt[0] 
-                : location.state.receipt;
-                
-              console.log("Looking for order with receipt ID:", receiptId);
-              targetOrder = response.data.data.find(order => 
-                order.orderId === receiptId || 
-                order.invoice_receipt === receiptId ||
-                order._id === receiptId
-              );
-            }
-            
-            // If no specific order found, use the most recent one
-            if (!targetOrder) {
-              // Sort orders by date (newest first) and take the first one
-              const sortedOrders = [...response.data.data].sort(
-                (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
-              );
-              console.log("Using most recent order");
-              targetOrder = sortedOrders[0];
-            }
-            
-            // Enrich the order with payment method and other info from location state
-            if (targetOrder && location.state) {
-              targetOrder = {
-                ...targetOrder,
-                paymentMethod: location.state.paymentMethod || targetOrder.paymentMethod || determinePaymentMethod(location),
-                fulfillment_type: location.state.fulfillmentMethod || targetOrder.fulfillment_type || 'delivery',
-                pickup_location: location.state.pickupLocation || targetOrder.pickup_location || '',
-                pickupInstructions: location.state.pickupInstructions || targetOrder.pickupInstructions || '',
-                // Include any other fields from location state
-                ...location.state
-              };
-            }
-            
-            setOrderDetails(targetOrder);
-            orderFetched = true;
-            
-            // Cache for future reference
-            localStorage.setItem('lastOrder', JSON.stringify(targetOrder));
-          }
-        } catch (e) {
-          console.log("Order fetching failed:", e);
+
+        const response = await Axios({ ...SummaryApi.getOrderItems });
+        const orders = response.data?.success ? (response.data.data || []) : [];
+
+        const receipt = location.state?.receipt;
+        const wantedIds = [
+          location.state?.orderId,
+          ...(Array.isArray(receipt) ? receipt : [receipt]),
+        ].filter(Boolean);
+
+        let targetOrder = wantedIds.length > 0
+          ? orders.find((order) => wantedIds.some((id) => (
+            order.orderId === id || order.invoice_receipt === id || order._id === id
+          )))
+          : null;
+
+        // Opened without a specific order (e.g. a page refresh): show the
+        // customer's most recent order.
+        if (!targetOrder && wantedIds.length === 0 && orders.length > 0) {
+          targetOrder = [...orders].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))[0];
         }
-        
-        // Method 2: Check localStorage as fallback
-        if (!orderFetched) {
-          try {
-            const lastOrder = localStorage.getItem('lastOrder');
-            if (lastOrder) {
-              console.log("Found order in localStorage");
-              const parsedOrder = JSON.parse(lastOrder);
-              
-              // Enrich with any available location state
-              if (location.state) {
-                const enrichedOrder = {
-                  ...parsedOrder,
-                  paymentMethod: location.state.paymentMethod || parsedOrder.paymentMethod || determinePaymentMethod(location),
-                  fulfillment_type: location.state.fulfillmentMethod || parsedOrder.fulfillment_type || 'delivery',
-                  pickup_location: location.state.pickupLocation || parsedOrder.pickup_location || '',
-                  ...location.state
-                };
-                setOrderDetails(enrichedOrder);
-              } else {
-                setOrderDetails(parsedOrder);
-              }
-              
-              orderFetched = true;
-            }
-          } catch (e) {
-            console.log("localStorage retrieval failed:", e);
-          }
+
+        if (targetOrder) {
+          setOrderDetails(targetOrder);
+        } else {
+          setError("We couldn't load this order's details yet. It will appear in My Orders.");
         }
-        
-        // Method 3: Create placeholder order if everything fails
-        if (!orderFetched && user) {
-          console.log("Creating placeholder order from available data");
-          
-          // Extract information from location state and URL parameters
-          const urlParams = new URLSearchParams(window.location.search);
-          const orderId = urlParams.get('orderId') || location.state?.orderId || location.state?.receipt || 
-                         'ORD-' + Math.random().toString(36).substring(2, 10).toUpperCase();
-          
-          // Determine payment method from available information
-          const paymentMethod = location.state?.paymentMethod || determinePaymentMethod(location);
-          
-          // Determine fulfillment type
-          const fulfillmentMethod = location.state?.fulfillmentMethod || 'delivery';
-          const pickupLocation = location.state?.pickupLocation || '';
-          
-          // Get price information
-          const totalPrice = location.state?.totalPrice || location.state?.amount || 0;
-          
-          // Create comprehensive placeholder order with all required fields
-          const placeholderOrder = {
-            _id: orderId,
-            orderId: orderId,
-            userId: user._id,
-            userName: user.name,
-            userEmail: user.email,
-            fulfillment_type: fulfillmentMethod,
-            pickup_location: pickupLocation,
-            pickupVerificationCode: fulfillmentMethod === 'pickup' ? 
-                                   Math.random().toString(36).substring(2, 8).toUpperCase() : '',
-            createdAt: new Date().toISOString(),
-            payment_status: 'Paid',
-            paymentMethod: paymentMethod,
-            totalAmt: totalPrice,
-            subTotalAmt: totalPrice,
-            // Add royalty data if available
-            royalDiscount: location.state?.royalDiscount || 0,
-            royalCardTier: location.state?.royalCardTier || null,
-            pointsUsed: location.state?.pointsUsed || 0,
-            // Add community/campaign data if available
-            communityDiscountAmount: location.state?.communityDiscountAmount || 0,
-            // Default status
-            status: 'pending',
-            // Add placeholder for items if not available
-            items: location.state?.items || [],
-            // Include any other fields from location state
-            ...location.state
-          };
-          
-          console.log("Created placeholder order:", placeholderOrder);
-          setOrderDetails(placeholderOrder);
-          orderFetched = true;
-          
-          // Store for future reference
-          localStorage.setItem('lastOrder', JSON.stringify(placeholderOrder));
-        }
-        
-        if (!orderFetched) {
-          console.log("All order retrieval methods failed");
-          setError("Order details not available");
-        }
-        
       } catch (error) {
         console.error("Error in order fetch process:", error);
-        setError("Error connecting to server");
+        setError("We couldn't load this order's details right now. It will appear in My Orders.");
       } finally {
         setLoading(false);
       }
     };
-    
-    fetchOrderDetails();
-  }, [location, user]);
 
-  // Helper function to determine payment method from context
-  const determinePaymentMethod = (location) => {
-    if (location.search?.includes('session_id')) {
-      return 'Card Payment';
-    } else if (location.state?.mpesa) {
-      return 'M-Pesa';
-    } else if (location.state?.cash || location.pathname.includes('cash')) {
-      return 'Cash on Delivery';
-    } else {
-      return 'Online Payment';
+    // Stale "last order" snapshots were cached here previously and could
+    // show on a shared device — drop them.
+    try { localStorage.removeItem('lastOrder'); } catch { /* storage unavailable */ }
+
+    if (user?._id) {
+      fetchOrderDetails();
     }
-  };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.key, user?._id]);
+
 
   // Format date with more readable format
   const formatDate = (dateString) => {
@@ -456,10 +336,12 @@ function Success() {
             )}
           </div>
           <h1 className='text-2xl font-bold text-charcoal dark:text-white mb-2'>
-            Payment Successful!
+            {orderDetails && !describePayment(orderDetails).paid ? 'Order Placed!' : 'Payment Successful!'}
           </h1>
           <p className='text-brown-500 dark:text-white/55 text-center'>
-            Thank you for your order! Your payment has been processed successfully.
+            {orderDetails && !describePayment(orderDetails).paid
+              ? `Thank you for your order! ${describePayment(orderDetails).label}.`
+              : 'Thank you for your order! Your payment has been received.'}
           </p>
         </div>
 
@@ -498,14 +380,14 @@ function Success() {
               {/* Payment Method Section */}
               <div className='mb-4 p-3 bg-blush-50 dark:bg-dm-card-2 rounded-lg'>
                 <div className='flex items-center'>
-                  {getPaymentIcon(orderDetails.paymentMethod)}
+                  {getPaymentIcon(describePayment(orderDetails).method)}
                   <div className='ml-2'>
                     <p className='font-medium text-charcoal dark:text-white'>
-                      {orderDetails.paymentMethod || 'Online Payment'}
+                      {describePayment(orderDetails).method}
                     </p>
                     <p className='text-sm text-brown-400 dark:text-white/45'>
                       Status: <span className='text-green-600 dark:text-green-400 font-medium'>
-                        {orderDetails.payment_status || 'Paid'}
+                        {describePayment(orderDetails).label}
                       </span>
                     </p>
                   </div>
@@ -578,25 +460,22 @@ function Success() {
                       {orderDetails.items.map((item, index) => (
                         <div key={index} className='flex justify-between p-3 border-b dark:border-dm-border last:border-b-0'>
                           <div className='flex items-center'>
-                            {item.productId && item.productId.image && (
-                              <img 
-                                src={Array.isArray(item.productId.image) ? item.productId.image[0] : item.productId.image} 
-                                alt={item.productId.name}
-                                className='w-10 h-10 object-cover rounded mr-3' 
+                            {item.product_details?.image?.[0] && (
+                              <img
+                                src={item.product_details.image[0]}
+                                alt={item.product_details.name || 'Product'}
+                                className='w-10 h-10 object-cover rounded mr-3'
                               />
                             )}
                             <div>
                               <p className='font-medium text-charcoal dark:text-white'>
-                                {item.productId ? item.productId.name : 'Product'}
+                                {item.product_details?.name || 'Product'}
                               </p>
                               <p className='text-sm text-brown-400 dark:text-white/45'>
                                 Qty: {item.quantity || 1}
                               </p>
                             </div>
                           </div>
-                          <p className='font-medium text-charcoal dark:text-white'>
-                            {DisplayPriceInShillings(item.productId ? item.productId.price * (item.quantity || 1) : 0)}
-                          </p>
                         </div>
                       ))}
                     </>
@@ -687,10 +566,10 @@ function Success() {
                 <div className='mt-3 text-sm text-brown-400 dark:text-white/45'>
                   <p>Order Date: {formatDate(orderDetails.createdAt)}</p>
                   <p className='flex items-center'>
-                    Payment Method: {getPaymentIcon(orderDetails.paymentMethod)}
-                    <span className='ml-1'>{orderDetails.paymentMethod || 'Online Payment'}</span>
+                    Payment Method: {getPaymentIcon(describePayment(orderDetails).method)}
+                    <span className='ml-1'>{describePayment(orderDetails).method}</span>
                   </p>
-                  <p>Payment Status: <span className='text-green-600 dark:text-green-400'>{orderDetails.payment_status || 'Paid'}</span></p>
+                  <p>Payment Status: <span className='text-green-600 dark:text-green-400'>{describePayment(orderDetails).label}</span></p>
                 </div>
                 
                 {/* Tracking info */}
