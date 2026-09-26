@@ -7,6 +7,7 @@ import {
   handleJengaCallback,
   initiateJengaCardPayment,
   handleJengaCardCallback,
+  initiateDeliveryCollection,
 } from '../controllers/jenga.controller.js';
 
 const jengaRouter = Router();
@@ -19,6 +20,9 @@ jengaRouter.post('/card/pay', auth, initiateJengaCardPayment);
 // retained for any in-flight clients, but the app uses this payment-method-
 // neutral route because Jenga presents the active M-Pesa option on its page.
 jengaRouter.post('/checkout/pay', auth, initiateJengaCardPayment);
+// A rider (or staff) collecting M-Pesa for a Pay on Delivery order at the
+// door; the controller checks the requester is the assigned rider or staff.
+jengaRouter.post('/collect', auth, initiateDeliveryCollection);
 
 // Public — no account required. getJengaPaymentStatus's ownership check
 // (doc.userId && ...) already no-ops when doc.userId is unset, which is

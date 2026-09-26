@@ -2,26 +2,7 @@ import { useRef, useState } from 'react';
 import toast from 'react-hot-toast';
 import SummaryApi from '../common/SummaryApi';
 import Axios from '../utils/Axios';
-
-// Jenga PGW's hosted checkout form must be a real browser form submission
-// (not fetch/XHR). It navigates to Jenga, which displays Nawiri Hair's active
-// payment methods; the M-Pesa approval is handled there, not in this app.
-const submitHiddenForm = (checkoutUrl, fields) => {
-  const form = document.createElement('form');
-  form.method = 'POST';
-  form.action = checkoutUrl;
-
-  Object.entries(fields).forEach(([name, value]) => {
-    const input = document.createElement('input');
-    input.type = 'hidden';
-    input.name = name;
-    input.value = value ?? '';
-    form.appendChild(input);
-  });
-
-  document.body.appendChild(form);
-  form.submit();
-};
+import { submitJengaHostedCheckout } from '../utils/jengaHostedCheckout';
 
 const JengaCardPayment = ({
   cartItems,
@@ -80,7 +61,7 @@ const JengaCardPayment = ({
       if (response.data.success) {
         const { checkoutUrl, fields } = response.data.data;
         toast.success('Redirecting you to secure M-Pesa checkout...');
-        submitHiddenForm(checkoutUrl, fields);
+        submitJengaHostedCheckout(checkoutUrl, fields);
         // Intentionally leave isBusy true — the page is about to navigate away.
       } else {
         setIsBusy(false);

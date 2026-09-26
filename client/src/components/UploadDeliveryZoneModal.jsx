@@ -9,7 +9,8 @@ const UploadDeliveryZoneModal = ({ close, fetchData }) => {
     const [data, setData] = useState({
         name: "",
         corridor: "",
-        fare: ""
+        fare: "",
+        inNairobiCounty: false
     })
     const [loading, setLoading] = useState(false)
 
@@ -40,7 +41,8 @@ const UploadDeliveryZoneModal = ({ close, fetchData }) => {
                 data: {
                     name: data.name.trim(),
                     corridor: data.corridor.trim(),
-                    fare: Number(data.fare)
+                    fare: Number(data.fare),
+                    inNairobiCounty: data.inNairobiCounty
                 }
             })
             const { data: responseData } = response
@@ -104,6 +106,30 @@ const UploadDeliveryZoneModal = ({ close, fetchData }) => {
                             className='bg-plum-50 dark:bg-dm-card-2 p-2 border border-plum-100 dark:border-dm-border focus-within:border-plum-500 dark:focus-within:border-plum-400 outline-none rounded text-charcoal dark:text-white transition-colors duration-200'
                         />
                     </div>
+
+                    <label className='flex items-start gap-2 text-charcoal dark:text-white transition-colors duration-200'>
+
+                        <input
+
+                            type='checkbox'
+
+                            checked={!!data.inNairobiCounty}
+
+                            onChange={(e) => setData((preve) => ({ ...preve, inNairobiCounty: e.target.checked }))}
+
+                            className='mt-1 accent-plum-600 dark:accent-plum-400'
+
+                        />
+
+                        <span>
+
+                            Inside Nairobi County
+
+                            <span className='block text-xs text-brown-500 dark:text-white/50'>Customers in this zone can choose Pay on Delivery.</span>
+
+                        </span>
+
+                    </label>
 
                     <button
                         disabled={!isValid || loading}

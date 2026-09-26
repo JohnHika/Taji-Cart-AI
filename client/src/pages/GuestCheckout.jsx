@@ -16,6 +16,7 @@ import { DEFAULT_DELIVERY_CHARGE, formatDistanceKm, getFootDeliveryEligibility, 
 import DeliveryLocationModal from '../components/DeliveryLocationModal';
 import { DisplayPriceInShillings } from '../utils/DisplayPriceInShillings';
 import { useGlobalContext } from '../provider/GlobalProvider';
+import { getPayOnDeliveryEligibility } from '../utils/nairobiCounty';
 import { pricewithDiscount } from '../utils/PriceWithDiscount';
 import { getEffectiveUnitPrice } from '../utils/wholesalePricing';
 
@@ -32,7 +33,7 @@ function GuestCheckout() {
   const submitLockRef = useRef(false);
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState('cash'); // 'cash' | 'jenga'
   const [orderSuccess, setOrderSuccess] = useState(null);
-  const [orderPaymentLabel, setOrderPaymentLabel] = useState('Cash on Delivery');
+  const [orderPaymentLabel, setOrderPaymentLabel] = useState('Pay on Delivery');
   const [locationLoading, setLocationLoading] = useState(false);
   // While an M-Pesa prompt is pending/stale, lock the rest of the form so it
   // can't be edited in a way that unmounts JengaPayment mid-poll (which used
@@ -165,6 +166,23 @@ function GuestCheckout() {
     return '';
   }, [formData, isDelivery, isBikeDelivery, isFootDelivery, footDeliveryEligibility, isReadyToOrder]);
 
+  // Pay on Delivery is only offered inside Nairobi County, where our own
+  // rider collects the M-Pesa payment at the door; the server checks the same
+  // rule. Judged once the details are complete.
+  const payOnDeliveryEligibility = getPayOnDeliveryEligibility({
+    fulfillmentType: formData.fulfillment_type,
+    customerLocation: formData.customerLocation,
+    deliveryZone: isDelivery && isBikeDelivery ? selectedDeliveryZone : null,
+  });
+  const payOnDeliveryBlocked = isDelivery && isReadyToOrder && !payOnDeliveryEligibility.allowed;
+  const payLaterLabel = isDelivery ? 'Pay on Delivery' : 'Pay at Pickup';
+
+  useEffect(() => {
+    if (payOnDeliveryBlocked && selectedPaymentMethod === 'cash') {
+      setSelectedPaymentMethod('jenga');
+    }
+  }, [payOnDeliveryBlocked, selectedPaymentMethod]);
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
@@ -240,7 +258,7 @@ function GuestCheckout() {
       if (response.data?.success) {
         clearGuestCart();
         dispatch(fetchCartItems());
-        setOrderPaymentLabel('Cash on Delivery');
+        setOrderPaymentLabel(payLaterLabel);
         setOrderSuccess({
           orderId: response.data.data.orderId,
           // The server recomputes totalAmt from live prices/delivery charge —
@@ -612,13 +630,14 @@ function GuestCheckout() {
               <button
                 type="button"
                 onClick={() => setSelectedPaymentMethod('cash')}
-                className={`flex-1 py-2 px-3 rounded-card text-sm font-semibold border-2 transition-colors ${
+                disabled={payOnDeliveryBlocked}
+                className={`flex-1 py-2 px-3 rounded-card text-sm font-semibold border-2 transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
                   selectedPaymentMethod === 'cash'
                     ? 'border-plum-600 text-plum-700 bg-plum-50 dark:border-plum-500 dark:text-plum-200 dark:bg-plum-900/20'
                     : 'border-brown-100 dark:border-dm-border text-brown-300 dark:text-white/40'
                 }`}
               >
-                Cash
+                {payLaterLabel}
               </button>
               <button
                 type="button"
@@ -629,9 +648,23 @@ function GuestCheckout() {
                     : 'border-brown-100 dark:border-dm-border text-brown-300 dark:text-white/40'
                 }`}
               >
-                M-Pesa
+                Pay now
               </button>
             </div>
+
+            {payOnDeliveryBlocked && (
+              <p className="text-xs text-brown-500 dark:text-white/50">
+                Pay on Delivery is only available for deliveries within Nairobi County. Pay now with M-Pesa to complete this order.
+              </p>
+            )}
+
+            {selectedPaymentMethod === 'cash' && (
+              <p className="text-xs text-brown-500 dark:text-white/50">
+                {isDelivery
+                  ? 'Pay by M-Pesa when your order arrives. Our rider will send the payment request to your phone.'
+                  : 'Pay by M-Pesa at the counter when you collect your order.'}
+              </p>
+            )}
 
             {selectedPaymentMethod === 'cash' && (
               <button
@@ -645,7 +678,7 @@ function GuestCheckout() {
               >
                 <span className="flex items-center gap-2">
                   <FaLock className="text-xs opacity-70" />
-                  {submitting ? 'Placing order…' : `Cash on ${formData.fulfillment_type === 'delivery' ? 'Delivery' : 'Pickup'}`}
+                  {submitting ? 'Placing order…' : `Place order · ${payLaterLabel}`}
                 </span>
                 {!isReadyToOrder && !submitting && (
                   <span className="text-xs font-normal opacity-60">{blockedReason}</span>

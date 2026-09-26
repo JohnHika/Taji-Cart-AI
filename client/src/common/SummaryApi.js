@@ -257,6 +257,11 @@ const SummaryApi = {
         url: `${baseURL}/api/jenga/checkout/pay`,
         method: 'post'
     },
+    // A rider collecting M-Pesa for a Pay on Delivery order at the door.
+    jengaDeliveryCollection: {
+        url: `${baseURL}/api/jenga/collect`,
+        method: 'post'
+    },
     jengaGuestPayment: {
         url: `${baseURL}/api/jenga/guest/pay`,
         method: 'post'

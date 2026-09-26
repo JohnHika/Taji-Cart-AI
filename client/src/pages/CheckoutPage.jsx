@@ -19,6 +19,7 @@ import AxiosToastError from '../utils/AxiosToastError';
 import { getStoredAccessToken } from '../utils/authStorage';
 import { DEFAULT_DELIVERY_CHARGE, formatDistanceKm, getFootDeliveryEligibility, isWithinCbdRadius, NAIROBI_CBD_RADIUS_KM, SACCO_TERMINAL_DROPOFF_CHARGE } from '../utils/cbdDelivery';
 import { DisplayPriceInShillings } from '../utils/DisplayPriceInShillings';
+import { getPayOnDeliveryEligibility } from '../utils/nairobiCounty';
 
 // Pickup locations (in a real app, these would likely come from an API)
 const pickupLocations = [
@@ -278,6 +279,24 @@ const CheckoutPage = ({ embedded = false }) => {
       setSelectedPaymentMethod('jenga-checkout');
     }
   }, [fulfillmentMethod, selectedPaymentMethod]);
+
+  // Pay on Delivery is only offered inside Nairobi County, where our own
+  // rider collects the M-Pesa payment at the door. Judged once the delivery
+  // details are complete (until then the usual "select address" hints apply);
+  // the server checks the same rule.
+  const payOnDeliveryEligibility = getPayOnDeliveryEligibility({
+    fulfillmentType: fulfillmentMethod,
+    customerLocation,
+    deliveryZone: fulfillmentMethod === 'delivery' && deliveryMode === 'bike' ? selectedDeliveryZone : null,
+  });
+  const payOnDeliveryBlocked = fulfillmentMethod === 'delivery' && isPaymentEnabled && !payOnDeliveryEligibility.allowed;
+  const payLaterLabel = fulfillmentMethod === 'pickup' ? 'Pay at Pickup' : 'Pay on Delivery';
+
+  useEffect(() => {
+    if (payOnDeliveryBlocked && selectedPaymentMethod === 'cash') {
+      setSelectedPaymentMethod('jenga-checkout');
+    }
+  }, [payOnDeliveryBlocked, selectedPaymentMethod]);
 
   // Display only — the server always recomputes this from the authoritative
   // zone fare or the flat default, never trusting a client-supplied amount.
@@ -1022,13 +1041,14 @@ const CheckoutPage = ({ embedded = false }) => {
                 <button
                   type="button"
                   onClick={() => setSelectedPaymentMethod('cash')}
-                  className={`flex-1 py-2 px-3 rounded-card text-sm font-semibold border-2 transition-colors ${
+                  disabled={payOnDeliveryBlocked}
+                  className={`flex-1 py-2 px-3 rounded-card text-sm font-semibold border-2 transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
                     selectedPaymentMethod === 'cash'
                       ? 'border-plum-600 text-plum-700 bg-plum-50 dark:border-plum-500 dark:text-plum-200 dark:bg-plum-900/20'
                       : 'border-brown-100 dark:border-dm-border text-brown-300 dark:text-white/40'
                   }`}
                 >
-                  Cash
+                  {payLaterLabel}
                 </button>
               )}
               <button
@@ -1040,9 +1060,23 @@ const CheckoutPage = ({ embedded = false }) => {
                     : 'border-brown-100 dark:border-dm-border text-brown-300 dark:text-white/40'
                 }`}
               >
-                M-Pesa
+                Pay now
               </button>
             </div>
+
+            {payOnDeliveryBlocked && (
+              <p className="text-xs text-brown-500 dark:text-white/50">
+                Pay on Delivery is only available for deliveries within Nairobi County. Pay now with M-Pesa to complete this order.
+              </p>
+            )}
+
+            {selectedPaymentMethod === 'cash' && fulfillmentMethod !== 'sacco_pickup' && (
+              <p className="text-xs text-brown-500 dark:text-white/50">
+                {fulfillmentMethod === 'pickup'
+                  ? 'Pay by M-Pesa at the counter when you collect your order.'
+                  : 'Pay by M-Pesa when your order arrives. Our rider will send the payment request to your phone.'}
+              </p>
+            )}
 
             {selectedPaymentMethod === 'cash' && fulfillmentMethod !== 'sacco_pickup' && (
               <button
@@ -1054,7 +1088,7 @@ const CheckoutPage = ({ embedded = false }) => {
                 onClick={handleCashOnDelivery}
                 disabled={!isPaymentEnabled || isCheckoutBusy}
               >
-                <span>{checkoutAction === 'cash' ? 'Placing order...' : `${fulfillmentMethod === 'sacco_pickup' ? 'Place Order —' : 'Cash on'} ${fulfillmentMethod === 'delivery' ? 'Delivery' : fulfillmentMethod === 'pickup' ? 'Pickup' : 'Pay at SACCO terminal'}`}</span>
+                <span>{checkoutAction === 'cash' ? 'Placing order...' : `Place order · ${payLaterLabel}`}</span>
                 {!isPaymentEnabled && (
                   <span className="text-xs font-normal opacity-60">
                     {paymentBlockedReason}

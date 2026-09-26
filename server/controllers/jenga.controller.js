@@ -19,6 +19,8 @@ import AddressModel from '../models/address.model.js';
 import NotificationModel from '../models/notification.model.js';
 import DeliveryZoneModel from '../models/deliveryzone.model.js';
 import SaccoOperatorModel from '../models/saccooperator.model.js';
+import DeliveryPersonnelModel from '../models/deliverypersonnel.model.js';
+import { nawiriBrand } from '../utils/brand.js';
 import { normalizeKenyanPhone, isValidAmount, amountCovers } from '../utils/jengaValidation.js';
 import {
   DEFAULT_DELIVERY_CHARGE,
@@ -509,6 +511,65 @@ const buildPgwProductDescription = (items) => {
   return `Nawiri Hair - ${listed.join(', ')}${more}`;
 };
 
+// The signed form fields for Jenga PGW's hosted Web Checkout Form. The client
+// builds a hidden form from them and submits it, which takes the browser to
+// Jenga's page.
+const buildPgwCheckoutFields = async ({
+  orderReference,
+  amount,
+  productDescription,
+  firstName,
+  lastName,
+  customerEmail,
+  customerAddress,
+  customerPostalCodeZip,
+}) => {
+  const merchantCode = requireEnv('JENGA_MERCHANT_CODE');
+  // The checkout fields are browser-visible while the form is submitted.
+  // Do not append a private callback token here: it would be exposed to the
+  // customer. The card callback is instead safe because it only triggers a
+  // server-side, RSA-signed transaction-status query before finalization.
+  const callbackUrl = requireEnv('JENGA_CARD_CALLBACK_URL');
+  // The hosted page uses this token for its whole session — never hand it
+  // a cached one that could expire part-way through.
+  const token = await getAuthToken({ fresh: true });
+  // No trailing zeros ("2800", not "2800.00"). Jenga's hosted page signs its
+  // M-Pesa charge lookup over this exact string but sends
+  // Number(orderAmount) in the request body, so a trailing ".00" makes the
+  // signed text and the body disagree. M-Pesa only takes whole shillings, so
+  // String() of the rounded total is always the exact amount.
+  const orderAmount = String(amount);
+
+  return {
+    token,
+    merchantCode,
+    currency: 'KES',
+    orderAmount,
+    orderReference,
+    productType: JENGA_PGW_PRODUCT_TYPE,
+    productDescription,
+    paymentTimeLimit: JENGA_PGW_PAYMENT_TIME_LIMIT,
+    customerFirstName: firstName || 'Customer',
+    customerLastName: lastName || 'Customer',
+    customerEmail,
+    // Left blank so the customer types their own contact number on
+    // Jenga's page (it is required there). The M-Pesa number that gets
+    // charged is entered separately in the page's M-Pesa form.
+    customerPhone: '',
+    customerAddress: customerAddress || 'Nairobi',
+    customerPostalCodeZip: customerPostalCodeZip || JENGA_PGW_DEFAULT_POSTAL_CODE,
+    countryCode: JENGA_PGW_DEFAULT_COUNTRY_CODE,
+    callbackUrl,
+    signature: signPgwCheckoutRequest({
+      merchantCode,
+      orderReference,
+      currency: 'KES',
+      orderAmount,
+      callbackUrl,
+    }),
+  };
+};
+
 /**
  * POST /api/jenga/checkout/pay
  * Authenticated. Creates the same kind of PENDING order as the M-Pesa path,
@@ -566,22 +627,17 @@ export const initiateJengaCardPayment = async (request, response) => {
       ...redemption,
     });
 
-    const merchantCode = requireEnv('JENGA_MERCHANT_CODE');
-    // The checkout fields are browser-visible while the form is submitted.
-    // Do not append a private callback token here: it would be exposed to the
-    // customer. The card callback is instead safe because it only triggers a
-    // server-side, RSA-signed transaction-status query before finalization.
-    const callbackUrl = requireEnv('JENGA_CARD_CALLBACK_URL');
-    // The hosted page uses this token for its whole session — never hand it
-    // a cached one that could expire part-way through.
-    const token = await getAuthToken({ fresh: true });
-    // No trailing zeros ("2800", not "2800.00"). Jenga's hosted page signs its
-    // M-Pesa charge lookup over this exact string but sends
-    // Number(orderAmount) in the request body, so a trailing ".00" makes the
-    // signed text and the body disagree. M-Pesa only takes whole shillings, so
-    // String() of the rounded total is always the exact amount.
-    const orderAmount = String(totalAmt);
-    console.log(`[JENGA PGW] checkout started ref=${orderReference} amount=${orderAmount} KES timeLimit=${JENGA_PGW_PAYMENT_TIME_LIMIT}`);
+    const fields = await buildPgwCheckoutFields({
+      orderReference,
+      amount: totalAmt,
+      productDescription: buildPgwProductDescription(normalizedItems),
+      firstName,
+      lastName,
+      customerEmail,
+      customerAddress,
+      customerPostalCodeZip,
+    });
+    console.log(`[JENGA PGW] checkout started ref=${orderReference} amount=${fields.orderAmount} KES timeLimit=${JENGA_PGW_PAYMENT_TIME_LIMIT}`);
 
     return response.status(200).json({
       success: true,
@@ -589,34 +645,7 @@ export const initiateJengaCardPayment = async (request, response) => {
         orderReference,
         orderId: sharedOrderId,
         checkoutUrl: JENGA_PGW_CHECKOUT_URL,
-        fields: {
-          token,
-          merchantCode,
-          currency: 'KES',
-          orderAmount,
-          orderReference,
-          productType: JENGA_PGW_PRODUCT_TYPE,
-          productDescription: buildPgwProductDescription(normalizedItems),
-          paymentTimeLimit: JENGA_PGW_PAYMENT_TIME_LIMIT,
-          customerFirstName: firstName || 'Customer',
-          customerLastName: lastName || 'Customer',
-          customerEmail,
-          // Left blank so the customer types their own contact number on
-          // Jenga's page (it is required there). The M-Pesa number that gets
-          // charged is entered separately in the page's M-Pesa form.
-          customerPhone: '',
-          customerAddress,
-          customerPostalCodeZip,
-          countryCode: JENGA_PGW_DEFAULT_COUNTRY_CODE,
-          callbackUrl,
-          signature: signPgwCheckoutRequest({
-            merchantCode,
-            orderReference,
-            currency: 'KES',
-            orderAmount,
-            callbackUrl,
-          }),
-        },
+        fields,
       },
     });
   } catch (error) {
@@ -631,6 +660,112 @@ export const initiateJengaCardPayment = async (request, response) => {
       error?.message ||
       'Failed to start card payment';
     return response.status(error.statusCode || 500).json({ success: false, error: true, message, code: error.code });
+  }
+};
+
+const isEmailAddress = (value) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value || '').trim());
+
+/**
+ * POST /api/jenga/collect  { orderId }
+ * Authenticated — the rider delivering the order, or staff. Collects payment
+ * for an unpaid Pay on Delivery order at the door: returns the fields for
+ * Jenga's hosted checkout for the order total, which opens on the rider's
+ * phone; the rider enters the customer's M-Pesa number and the customer
+ * approves the prompt on theirs. Jenga's IPN then marks the order paid
+ * (finalizeDeliveryCollection).
+ */
+export const initiateDeliveryCollection = async (request, response) => {
+  let orderReference;
+  try {
+    if (!JENGA_PGW_CHECKOUT_URL) {
+      const err = new Error('M-Pesa collection is not configured yet.');
+      err.statusCode = 503;
+      throw err;
+    }
+
+    const orderId = String(request.body?.orderId || '').trim();
+    if (!orderId) {
+      return response.status(400).json({ success: false, message: 'orderId is required' });
+    }
+
+    const rows = await OrderModel.find({ orderId }).populate('userId', 'name email mobile').lean();
+    if (rows.length === 0) {
+      return response.status(404).json({ success: false, message: 'Order not found' });
+    }
+    const first = rows[0];
+    if (rows.some((row) => String(row.payment_status || '').toUpperCase() === 'PAID')) {
+      return response.status(409).json({ success: false, message: 'This order is already paid.' });
+    }
+    if (!rows.every((row) => row.payment_status === 'CASH ON DELIVERY')) {
+      return response.status(400).json({ success: false, message: 'Only Pay on Delivery orders can be collected here.' });
+    }
+    if (first.status === 'cancelled') {
+      return response.status(400).json({ success: false, message: 'This order was cancelled.' });
+    }
+
+    // Only the rider assigned to the order, or staff, may collect for it.
+    const requester = await UserModel.findById(request.userId).select('role isAdmin isStaff').lean();
+    const isStaff = Boolean(requester)
+      && (['admin', 'staff'].includes(requester.role) || requester.isAdmin === true || requester.isStaff === true);
+    if (!isStaff) {
+      const riderProfile = await DeliveryPersonnelModel.findOne({ userId: request.userId }).select('_id').lean();
+      const riderIds = [String(request.userId), riderProfile ? String(riderProfile._id) : ''].filter(Boolean);
+      if (!first.deliveryPersonnel || !riderIds.includes(String(first.deliveryPersonnel))) {
+        return response.status(403).json({ success: false, message: 'Only the rider delivering this order can collect its payment.' });
+      }
+    }
+
+    // M-Pesa only takes whole shillings.
+    const amount = Math.round(Number(first.totalAmt));
+    if (!isValidAmount(amount)) {
+      return response.status(400).json({ success: false, message: 'This order has no valid total to collect.' });
+    }
+
+    const customer = first.userId || {};
+    const customerName = customer.name
+      || [first.guestShipping?.firstName, first.guestShipping?.lastName].filter(Boolean).join(' ')
+      || 'Customer';
+    const [firstName, ...lastNameParts] = String(customerName).trim().split(/\s+/);
+    // Jenga's page needs an email; the shop's inbox stands in when the
+    // customer never gave one.
+    const customerEmail = [customer.email, first.guestEmail, nawiriBrand.supportEmail].find(isEmailAddress).trim();
+
+    orderReference = await claimOrderReference(PGW_ORDER_REFERENCE_LENGTH);
+    await JengaPayment.create({
+      orderReference,
+      orderId,
+      userId: customer._id,
+      requestedBy: request.userId,
+      purpose: 'delivery_collection',
+      channel: 'card',
+      phoneNumber: String(customer.mobile || first.guestPhone || ''),
+      amount,
+      currency: 'KES',
+      status: 'pending',
+    });
+
+    const fields = await buildPgwCheckoutFields({
+      orderReference,
+      amount,
+      productDescription: buildPgwProductDescription(
+        rows.map((row) => ({ productId: { name: row.product_details?.name }, quantity: row.quantity }))
+      ),
+      firstName,
+      lastName: lastNameParts.join(' ') || firstName,
+      customerEmail,
+    });
+    console.log(`[JENGA PGW] delivery collection started ref=${orderReference} order=${orderId} amount=${amount} KES`);
+
+    return response.status(200).json({
+      success: true,
+      data: { orderReference, orderId, checkoutUrl: JENGA_PGW_CHECKOUT_URL, fields },
+    });
+  } catch (error) {
+    if (orderReference) await JengaPayment.deleteOne({ orderReference });
+
+    console.error('Jenga delivery collection error:', error?.response?.data || error.message);
+    const message = error?.response?.data?.message || error?.message || 'Failed to start M-Pesa collection';
+    return response.status(error.statusCode || 500).json({ success: false, error: true, message });
   }
 };
 
@@ -873,9 +1008,82 @@ const runPaidOrderFollowUps = async (payment, orders, { stockShortfall }) => {
   });
 };
 
+/**
+ * Confirms a rider's collection for a Pay on Delivery order: marks the order
+ * paid and tells the customer. Stock, loyalty points and the cart were all
+ * settled when the order was placed, so nothing else runs. Safe to repeat.
+ */
+const finalizeDeliveryCollection = async (paymentDoc) => {
+  await OrderModel.updateMany(
+    { orderId: paymentDoc.orderId, payment_status: 'CASH ON DELIVERY' },
+    { $set: { payment_status: 'PAID', paymentId: paymentDoc.orderReference } }
+  );
+  const claimed = await JengaPayment.findOneAndUpdate(
+    { _id: paymentDoc._id, finalizedAt: { $exists: false } },
+    { $set: { finalizedAt: new Date() } },
+    { new: true }
+  );
+  if (!claimed) return; // another callback or poll already finished it
+
+  const rows = await OrderModel.find({ orderId: claimed.orderId }).select('paymentId guestEmail guestShipping totalAmt fulfillment_type').lean();
+  if (!rows.some((row) => row.paymentId === claimed.orderReference)) {
+    // Paid twice (e.g. two collection attempts both approved) — the order
+    // already carries another payment. Needs a refund decision by staff.
+    console.error(`[JENGA] Collection ${claimed.orderReference} paid for order ${claimed.orderId}, which was already paid.`);
+    await NotificationModel.create({
+      type: 'payment_received',
+      title: 'Order Paid Twice',
+      message: `M-Pesa collection ${claimed.orderReference} (KES ${claimed.amount}) was paid for order ${claimed.orderId}, which was already paid. Check and refund if needed.`,
+      isRead: false,
+      forAdmin: true,
+    });
+    return;
+  }
+
+  let user = null;
+  if (claimed.userId) {
+    try {
+      await NotificationModel.create({
+        type: 'payment_received',
+        title: 'Payment Received',
+        message: `We received your M-Pesa payment of KES ${claimed.amount} for order ${claimed.orderId}. Thank you!`,
+        isRead: false,
+        userId: claimed.userId,
+      });
+      user = await UserModel.findById(claimed.userId).select('name email').lean();
+    } catch (error) {
+      console.error(`[JENGA] Collection notification failed for ${claimed.orderId}:`, error);
+    }
+  }
+
+  const first = rows[0] || {};
+  const email = user?.email || first.guestEmail;
+  if (!email) return;
+  sendOrderLifecycleEmail({
+    user: { email, name: user?.name || first.guestShipping?.firstName || email.split('@')[0] },
+    title: 'Payment received',
+    intro: 'We received your M-Pesa payment for this order. Thank you for shopping with Nawiri Hair.',
+    orderId: claimed.orderId,
+    totalAmt: first.totalAmt ?? claimed.amount,
+    fulfillmentType: first.fulfillment_type || 'delivery',
+  }).catch((emailError) => {
+    console.error('Error sending collection receipt email:', emailError);
+  });
+};
+
+// A confirmed payment either creates its checkout's order, or — for a rider's
+// collection — marks an existing Pay on Delivery order paid.
+const finalizePayment = (paymentDoc) => (
+  paymentDoc.purpose === 'delivery_collection'
+    ? finalizeDeliveryCollection(paymentDoc)
+    : finalizePaidOrder(paymentDoc)
+);
+
 // Only payments started before orders were deferred to finalizePaidOrder have
-// order rows to mark; for newer ones this matches nothing.
+// order rows to mark; for newer ones this matches nothing. A failed rider
+// collection leaves its Pay on Delivery order as it was, so it can be retried.
 const markOrderUnpaid = async (paymentDoc, localStatus) => {
+  if (paymentDoc.purpose === 'delivery_collection') return;
   await OrderModel.updateMany(
     { orderId: paymentDoc.orderId },
     { $set: { payment_status: localStatus.toUpperCase() } }
@@ -896,7 +1104,7 @@ const reconcilePayment = async (paymentDoc, normalized) => {
     // Paid earlier but the order wasn't created (finalization failed
     // part-way) — a repeated callback retries it.
     if (!paymentDoc.finalizedAt) {
-      await finalizePaidOrder(paymentDoc);
+      await finalizePayment(paymentDoc);
     }
     return paymentDoc;
   }
@@ -940,7 +1148,7 @@ const reconcilePayment = async (paymentDoc, normalized) => {
     );
 
     if (updated) {
-      await finalizePaidOrder(updated);
+      await finalizePayment(updated);
     }
     return updated || paymentDoc;
   }
@@ -997,7 +1205,10 @@ export const getJengaPaymentStatus = async (request, response) => {
       return response.json({ success: true, status: 'unknown' });
     }
 
-    if (doc.userId && String(doc.userId) !== String(request.userId)) {
+    // The customer's own payment, or a collection the rider started for them.
+    const isOwner = !doc.userId || String(doc.userId) === String(request.userId);
+    const isCollector = doc.requestedBy && String(doc.requestedBy) === String(request.userId);
+    if (!isOwner && !isCollector) {
       return response.status(403).json({ success: false, message: 'Access denied' });
     }
 
@@ -1016,7 +1227,7 @@ export const getJengaPaymentStatus = async (request, response) => {
     // part-way) — polling retries it too.
     if (doc.status === 'paid' && !doc.finalizedAt) {
       try {
-        await finalizePaidOrder(doc);
+        await finalizePayment(doc);
         doc = (await JengaPayment.findById(doc._id)) || doc;
       } catch (finalizeErr) {
         console.error('Jenga finalize retry error:', finalizeErr);
@@ -1179,10 +1390,15 @@ const queryAndReconcileCardPayment = async (doc) => {
  */
 export const handleJengaCardCallback = async (request, response) => {
   const frontendBase = (process.env.FRONTEND_URL || '').replace(/\/$/, '');
+  let doc = null;
   const redirectTo = (status, orderReference) => {
-    const url = `${frontendBase}/order/card-result?status=${encodeURIComponent(status)}${
-      orderReference ? `&orderReference=${encodeURIComponent(orderReference)}` : ''
-    }`;
+    // A rider's collection goes back to the rider's deliveries, not to the
+    // customer's order result page.
+    const url = doc?.purpose === 'delivery_collection'
+      ? `${frontendBase}/delivery/active?collection=${encodeURIComponent(status)}&orderId=${encodeURIComponent(doc.orderId)}`
+      : `${frontendBase}/order/card-result?status=${encodeURIComponent(status)}${
+        orderReference ? `&orderReference=${encodeURIComponent(orderReference)}` : ''
+      }`;
     return response.redirect(302, url);
   };
 
@@ -1193,7 +1409,7 @@ export const handleJengaCardCallback = async (request, response) => {
       return redirectTo('error');
     }
 
-    const doc = await JengaPayment.findOne({ orderReference });
+    doc = await JengaPayment.findOne({ orderReference });
     if (!doc) {
       console.error(`Jenga card callback for unknown orderReference: ${orderReference}`);
       return redirectTo('error');

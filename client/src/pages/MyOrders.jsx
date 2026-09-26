@@ -7,6 +7,7 @@ import NoData from '../components/NoData'
 import { setOrder } from '../store/orderSlice'
 import Axios from '../utils/Axios'
 import AxiosToastError from '../utils/AxiosToastError'
+import { describePayment } from '../utils/paymentStatus'
 import { hasStoredAccessToken } from '../utils/authStorage'
 
 const RateDriver = ({ orderId, ratedValue, onRated }) => {
@@ -72,21 +73,6 @@ const statusColors = {
   default: 'bg-brown-50 text-charcoal border-brown-100'
 }
 
-// /api/order/order-list returns one entry per orderId with its line items in
-// `items` and the payment state in `payment_status`. Online (Jenga) orders only
-// exist once paid; cash and SACCO orders are settled on hand-over.
-const describePayment = (order) => {
-  const status = String(order.payment_status || '').toUpperCase()
-  if (status === 'PAID') return { method: 'M-Pesa', label: 'Paid', paid: true }
-  if (status === 'CASH ON DELIVERY') {
-    return order.fulfillment_type === 'pickup'
-      ? { method: 'Cash on pickup', label: 'Pay at pickup', paid: false }
-      : { method: 'Cash on delivery', label: 'Pay on delivery', paid: false }
-  }
-  if (status === 'PAY AT SACCO TERMINAL') return { method: 'Pay at SACCO terminal', label: 'Pay at terminal', paid: false }
-  if (status === 'PENDING') return { method: 'M-Pesa', label: 'Awaiting payment', paid: false }
-  return { method: '—', label: order.payment_status || '—', paid: false }
-}
 
 const formatAddress = (address) => (
   address

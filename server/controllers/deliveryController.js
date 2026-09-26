@@ -863,6 +863,8 @@ export const getActiveOrders = async (req, res) => {
             coordinates: order.delivery_address?.coordinates || null,
             deliveryNotes: order.delivery_address?.deliveryInstructions || '',
             total: order.totalAmt,
+            // 'CASH ON DELIVERY' until the rider collects it, then 'PAID'.
+            paymentStatus: order.payment_status || '',
             ...formatDeliveryModeForDriver(order),
             createdAt: order.createdAt,
             currentLocation: order.currentLocation || null,

@@ -31,6 +31,7 @@ import { getOrderIdentifierQuery } from "../utils/orderIdentifier.js";
 import { hasLoyaltyAccess } from "../utils/loyaltySettings.js";
 import { getEffectiveUnitPrice, getWholesalePricingSettings, isWholesaleEligible } from "../utils/wholesalePricing.js";
 import { reserveStockGuarded } from '../utils/stockGuard.js';
+import { getPayOnDeliveryEligibility, PAY_ON_DELIVERY_NAIROBI_ONLY_MESSAGE } from '../utils/nairobiCounty.js';
 
 // Add this helper function to better log objects
 const inspectObject = (obj) => util.inspect(obj, {depth: 3, colors: true});
@@ -693,6 +694,24 @@ export async function CashOnDeliveryOrderController(request, response) {
             deliveryZone = zoneResult.zone;
         }
 
+        // Pay on Delivery is only offered inside Nairobi County (a rider we
+        // control collects the payment there). Checked here, not only in the
+        // checkout UI, so the endpoint can't be called directly to get around it.
+        const payOnDelivery = getPayOnDeliveryEligibility({
+            fulfillmentType: fulfillment_type,
+            customerLocation,
+            deliveryZone,
+        });
+        if (!payOnDelivery.allowed) {
+            return response.status(400).json({
+                message: PAY_ON_DELIVERY_NAIROBI_ONLY_MESSAGE,
+                error: true,
+                success: false,
+                code: 'PAY_ON_DELIVERY_NAIROBI_ONLY',
+                reason: payOnDelivery.reason,
+            });
+        }
+
         const deliveryCharge = resolveDeliveryCharge({ fulfillmentType: fulfillment_type, deliveryZone });
 
         const {
@@ -1071,6 +1090,27 @@ export async function guestCheckoutController(request, response) {
             deliveryZone = zoneResult.zone;
         }
 
+        // Web guest orders are Pay on Delivery / Pay at Pickup, so the same
+        // Nairobi County rule applies. WhatsApp-form orders settle payment
+        // in the chat and are left alone.
+        const isWebGuestOrder = source !== 'whatsapp';
+        if (isWebGuestOrder && fulfillment_type !== 'sacco_pickup') {
+            const payOnDelivery = getPayOnDeliveryEligibility({
+                fulfillmentType: fulfillment_type,
+                customerLocation,
+                deliveryZone,
+            });
+            if (!payOnDelivery.allowed) {
+                return response.status(400).json({
+                    message: PAY_ON_DELIVERY_NAIROBI_ONLY_MESSAGE,
+                    error: true,
+                    success: false,
+                    code: 'PAY_ON_DELIVERY_NAIROBI_ONLY',
+                    reason: payOnDelivery.reason,
+                });
+            }
+        }
+
         const deliveryCharge = resolveDeliveryCharge({ fulfillmentType: fulfillment_type, deliveryZone });
 
         const {
@@ -1111,7 +1151,11 @@ export async function guestCheckoutController(request, response) {
             sacco_operator: saccoOperator ? saccoOperator._id : undefined,
             sacco_operator_name: saccoOperator ? saccoOperator.name : manualSaccoOperator,
             sacco_destination_town: fulfillment_type === 'sacco_pickup' ? saccoDestinationTown : '',
-            payment_status: fulfillment_type === 'sacco_pickup' ? 'PAY AT SACCO TERMINAL' : '',
+            // Web guest orders are Pay on Delivery / Pay at Pickup: unpaid
+            // until collected. WhatsApp-form orders keep the empty status.
+            payment_status: fulfillment_type === 'sacco_pickup'
+                ? 'PAY AT SACCO TERMINAL'
+                : isWebGuestOrder ? 'CASH ON DELIVERY' : '',
             productId: item.productId?._id,
             product_details: {
                 name: item.productId?.name || item.name || 'Product',

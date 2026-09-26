@@ -29,6 +29,7 @@ import useCriteriaGate from '../../hooks/useCriteriaGate';
 import useMobile from '../../hooks/useMobile';
 import Axios from '../../utils/Axios';
 import { getOrderActionHint } from '../../utils/orderManagementPresentation';
+import { describePayment } from '../../utils/paymentStatus';
 
 // Simple date formatter function as fallback if date-fns is not available
 const formatDate = (dateString) => {
@@ -364,7 +365,7 @@ const OrderDetailModal = ({ order, onClose, onStatusChange, onDispatchStateSync 
                 <p>
                   <span className="text-brown-500 dark:text-white/55">Payment Method:</span>{" "}
                   <span className="font-medium dark:text-white">
-                    {order.paymentMethod || (isOrderPaid(order) ? 'Online Payment' : 'Cash on Delivery')}
+                    {order.paymentMethod || describePayment(order).method}
                   </span>
                 </p>
                 <p>
@@ -374,7 +375,7 @@ const OrderDetailModal = ({ order, onClose, onStatusChange, onDispatchStateSync 
                     ? 'text-brown-700 dark:text-brown-300'
                     : 'text-gold-600 dark:text-gold-400'
                   }`}>
-                    {(order.paymentStatus || order.payment_status || 'pending').toUpperCase()}
+                    {describePayment(order).label}
                   </span>
                 </p>
                 {order.paymentDetails && order.paymentDetails.transactionId && (
@@ -1574,7 +1575,7 @@ const AllOrdersAdmin = () => {
                       <td className="px-4 py-3 whitespace-nowrap">
                         {renderStatusBadge(order.status)}
                         <div className="text-xs text-brown-400 dark:text-white/40 mt-1">
-                          {(order.payment_status || order.paymentStatus || 'pending').toUpperCase()}
+                          {describePayment(order).method} · {describePayment(order).label}
                         </div>
                       </td>
                       
@@ -1676,7 +1677,7 @@ const AllOrdersAdmin = () => {
                         <span className={`mr-2 inline-block h-2.5 w-2.5 rounded-full ${
                           isOrderPaid(order) ? 'bg-brown-600' : 'bg-gold-400'
                         }`}></span>
-                        {(order.payment_status || order.paymentStatus || 'pending').toUpperCase()}
+                        {describePayment(order).method} · {describePayment(order).label}
                       </div>
                       <div className="text-xs text-brown-400 dark:text-white/40 truncate" title={order.customer?.email || order.userId?.email || 'No email'}>
                         {order.customer?.email || order.userId?.email || 'No email'}

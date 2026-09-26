@@ -5,20 +5,8 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import SummaryApi from '../common/SummaryApi';
 import Axios from '../utils/Axios';
 import { DisplayPriceInShillings } from '../utils/DisplayPriceInShillings';
+import { describePayment } from '../utils/paymentStatus';
 
-// The order list reports payment_status: 'PAID' for M-Pesa (online orders
-// only exist once paid), or how a cash/SACCO order will be settled.
-const describePayment = (order) => {
-  const status = String(order?.payment_status || '').toUpperCase();
-  if (status === 'PAID') return { method: 'M-Pesa', label: 'Paid', paid: true };
-  if (status === 'CASH ON DELIVERY') {
-    return order?.fulfillment_type === 'pickup'
-      ? { method: 'Cash on pickup', label: 'Pay at pickup', paid: false }
-      : { method: 'Cash on delivery', label: 'Pay on delivery', paid: false };
-  }
-  if (status === 'PAY AT SACCO TERMINAL') return { method: 'Pay at SACCO terminal', label: 'Pay at terminal', paid: false };
-  return { method: 'Cash', label: order?.payment_status || 'Pending', paid: false };
-};
 
 function Success() {
   const location = useLocation();
@@ -298,7 +286,7 @@ function Success() {
       return <FaMobileAlt className="text-green-600 dark:text-green-400" />;
     } else if (methodLower.includes('card') || methodLower.includes('stripe')) {
       return <FaCreditCard className="text-plum-600 dark:text-plum-300" />;
-    } else if (methodLower.includes('cash')) {
+    } else if (methodLower.includes('cash') || methodLower.startsWith('pay ')) {
       return <FaMoneyBillWave className="text-green-600 dark:text-green-400" />;
     }
     return <FaCreditCard />;
@@ -340,7 +328,7 @@ function Success() {
           </h1>
           <p className='text-brown-500 dark:text-white/55 text-center'>
             {orderDetails && !describePayment(orderDetails).paid
-              ? `Thank you for your order! ${describePayment(orderDetails).label}.`
+              ? `Thank you for your order! ${describePayment(orderDetails).hint}`
               : 'Thank you for your order! Your payment has been received.'}
           </p>
         </div>

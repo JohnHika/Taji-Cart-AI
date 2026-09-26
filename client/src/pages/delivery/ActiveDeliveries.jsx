@@ -1,11 +1,14 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
-import { FaCalendarCheck, FaMapMarkerAlt, FaMotorcycle, FaRedo, FaSpinner, FaTruck, FaUser, FaWalking } from 'react-icons/fa';
+import { FaCalendarCheck, FaMapMarkerAlt, FaMobileAlt, FaMotorcycle, FaRedo, FaSpinner, FaTruck, FaUser, FaWalking } from 'react-icons/fa';
+import { useSearchParams } from 'react-router-dom';
 import io from 'socket.io-client';
 import { socketBaseUrl } from '../../common/apiBaseUrl';
 import useCriteriaGate from '../../hooks/useCriteriaGate';
+import useDeliveryCollection from '../../hooks/useDeliveryCollection';
 import Axios from '../../utils/Axios';
 import AxiosToastError from '../../utils/AxiosToastError';
+import { describePayment, isAwaitingCollection } from '../../utils/paymentStatus';
 
 const ActiveDeliveries = () => {
   const [activeOrders, setActiveOrders] = useState([]);
@@ -18,6 +21,9 @@ const ActiveDeliveries = () => {
   const [updatingOrderIds, setUpdatingOrderIds] = useState(() => new Set());
   const socketRef = useRef(null);
   const { ensureCriteria, gateModal } = useCriteriaGate();
+  const { collect, collectingOrderId } = useDeliveryCollection();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const collectionPollRef = useRef(null);
 
   const fetchDeliveries = useCallback(async ({ showLoader = true, silent = false } = {}) => {
     try {
@@ -135,6 +141,36 @@ const ActiveDeliveries = () => {
     };
   }, []);
 
+  // Back from Jenga's page after collecting a Pay on Delivery payment. Jenga
+  // confirms it a few seconds later, so keep refreshing for up to two
+  // minutes until the order shows as paid.
+  useEffect(() => {
+    const result = searchParams.get('collection');
+    if (!result) return;
+    const orderId = searchParams.get('orderId') || '';
+    setSearchParams({}, { replace: true });
+
+    if (result === 'paid') {
+      toast.success(`Payment received for order #${orderId}`);
+      fetchDeliveries({ showLoader: false, silent: true });
+      return;
+    }
+    if (result !== 'pending') {
+      toast.error(`The M-Pesa payment for order #${orderId} was not completed. You can try again.`);
+      return;
+    }
+    toast(`Waiting for M-Pesa to confirm order #${orderId}…`);
+    let refreshes = 0;
+    clearInterval(collectionPollRef.current);
+    collectionPollRef.current = setInterval(() => {
+      refreshes += 1;
+      fetchDeliveries({ showLoader: false, silent: true });
+      if (refreshes >= 24) clearInterval(collectionPollRef.current);
+    }, 5000);
+  }, [searchParams, setSearchParams, fetchDeliveries]);
+
+  useEffect(() => () => clearInterval(collectionPollRef.current), []);
+
   useEffect(() => {
     fetchDeliveries();
 
@@ -239,6 +275,12 @@ const ActiveDeliveries = () => {
     }
 
     if (!(await ensureCriteria('delivery_progress'))) {
+      return;
+    }
+
+    const order = activeOrders.find((entry) => entry._id === orderId);
+    if (newStatus === 'delivered' && isAwaitingCollection(order)
+      && !window.confirm('This customer has not paid yet. Collect the M-Pesa payment first — mark as delivered anyway?')) {
       return;
     }
 
@@ -400,7 +442,12 @@ const ActiveDeliveries = () => {
                   </div>
 
                   <div className="flex items-center justify-between border-t border-brown-100 dark:border-dm-border pt-3">
-                    <span className="text-base font-bold text-charcoal dark:text-white">KSh {Number(order.total || 0).toFixed(2)}</span>
+                    <div className="min-w-0">
+                      <span className="text-base font-bold text-charcoal dark:text-white">KSh {Number(order.total || 0).toFixed(2)}</span>
+                      <p className={`text-xs font-semibold ${describePayment(order).paid ? 'text-green-700 dark:text-green-400' : 'text-gold-600 dark:text-gold-300'}`}>
+                        {describePayment(order).method} · {describePayment(order).label}
+                      </p>
+                    </div>
                     <a
                       href={
                         order.coordinates?.lat && order.coordinates?.lng
@@ -415,6 +462,18 @@ const ActiveDeliveries = () => {
                       Maps
                     </a>
                   </div>
+
+                  {isAwaitingCollection(order) && (
+                    <button
+                      type="button"
+                      onClick={() => collect(order.orderId)}
+                      disabled={Boolean(collectingOrderId)}
+                      className="w-full px-4 py-2.5 rounded-lg font-semibold transition-colors flex items-center justify-center gap-2 border-2 border-green-600 text-green-700 hover:bg-green-50 dark:border-green-500 dark:text-green-300 dark:hover:bg-green-900/20 disabled:opacity-60 disabled:cursor-not-allowed"
+                    >
+                      {collectingOrderId === order.orderId ? <FaSpinner size={14} className="animate-spin" /> : <FaMobileAlt size={14} />}
+                      {collectingOrderId === order.orderId ? 'Opening M-Pesa…' : 'Collect M-Pesa payment'}
+                    </button>
+                  )}
 
                   {actionMeta && (
                     <button

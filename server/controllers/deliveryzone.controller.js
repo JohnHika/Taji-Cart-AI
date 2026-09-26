@@ -2,7 +2,7 @@ import DeliveryZoneModel from "../models/deliveryzone.model.js";
 
 export const addDeliveryZoneController = async (request, response) => {
     try {
-        const { name, corridor, fare } = request.body
+        const { name, corridor, fare, inNairobiCounty } = request.body
 
         if (!name || !corridor || fare === undefined || fare === null) {
             return response.status(400).json({
@@ -15,7 +15,8 @@ export const addDeliveryZoneController = async (request, response) => {
         const addZone = new DeliveryZoneModel({
             name,
             corridor,
-            fare
+            fare,
+            inNairobiCounty: inNairobiCounty === true
         })
 
         const saveZone = await addZone.save()
@@ -74,7 +75,7 @@ export const getDeliveryZonesController = async (request, response) => {
 
 export const updateDeliveryZoneController = async (request, response) => {
     try {
-        const { _id, name, corridor, fare, isActive } = request.body
+        const { _id, name, corridor, fare, isActive, inNairobiCounty } = request.body
 
         if (!_id) {
             return response.status(400).json({
@@ -90,7 +91,8 @@ export const updateDeliveryZoneController = async (request, response) => {
             ...(name !== undefined && { name }),
             ...(corridor !== undefined && { corridor }),
             ...(fare !== undefined && { fare }),
-            ...(isActive !== undefined && { isActive })
+            ...(isActive !== undefined && { isActive }),
+            ...(typeof inNairobiCounty === 'boolean' && { inNairobiCounty })
         })
 
         return response.json({

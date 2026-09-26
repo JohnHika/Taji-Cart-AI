@@ -1,7 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { FaSpinner, FaCheckCircle, FaMapMarkerAlt, FaCalendarAlt, FaStar } from 'react-icons/fa';
+import { FaSpinner, FaCheckCircle, FaMapMarkerAlt, FaCalendarAlt, FaMobileAlt, FaStar } from 'react-icons/fa';
+import useDeliveryCollection from '../../hooks/useDeliveryCollection';
 import Axios from '../../utils/Axios';
 import AxiosToastError from '../../utils/AxiosToastError';
+import { describePayment, isAwaitingCollection } from '../../utils/paymentStatus';
 import toast from 'react-hot-toast';
 
 const RateCustomer = ({ order, onRated }) => {
@@ -52,6 +54,7 @@ const RateCustomer = ({ order, onRated }) => {
 
 const CompletedDeliveries = () => {
   const [completedOrders, setCompletedOrders] = useState([]);
+  const { collect, collectingOrderId } = useDeliveryCollection();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [page, setPage] = useState(1);
@@ -185,8 +188,23 @@ const CompletedDeliveries = () => {
                     <div className="text-left sm:text-right">
                       <h4 className="text-sm font-medium text-brown-400 dark:text-white/40 mb-1">Amount</h4>
                       <p className="text-charcoal dark:text-white/70 font-medium">KSh {order.total != null ? Number(order.total).toFixed(2) : '0.00'}</p>
+                      <p className={`text-xs font-semibold ${describePayment(order).paid ? 'text-green-700 dark:text-green-400' : 'text-gold-600 dark:text-gold-300'}`}>
+                        {describePayment(order).method} · {describePayment(order).label}
+                      </p>
                     </div>
                   </div>
+
+                  {isAwaitingCollection(order) && (
+                    <button
+                      type="button"
+                      onClick={() => collect(order.orderId)}
+                      disabled={Boolean(collectingOrderId)}
+                      className="mb-4 w-full px-4 py-2.5 rounded-lg font-semibold transition-colors flex items-center justify-center gap-2 border-2 border-green-600 text-green-700 hover:bg-green-50 dark:border-green-500 dark:text-green-300 dark:hover:bg-green-900/20 disabled:opacity-60 disabled:cursor-not-allowed"
+                    >
+                      {collectingOrderId === order.orderId ? <FaSpinner size={14} className="animate-spin" /> : <FaMobileAlt size={14} />}
+                      {collectingOrderId === order.orderId ? 'Opening M-Pesa…' : 'Collect M-Pesa payment'}
+                    </button>
+                  )}
                   
                   <div className="mb-4">
                     <h4 className="text-sm font-medium text-brown-400 dark:text-white/40 mb-1">Delivered To</h4>

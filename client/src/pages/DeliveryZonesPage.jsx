@@ -138,6 +138,9 @@ const DeliveryZonesPage = () => {
                                             {!zone.isActive && (
                                                 <p className="text-xs text-red-500 dark:text-red-400 mt-1">Inactive</p>
                                             )}
+                                            <p className={`text-xs mt-1 ${zone.inNairobiCounty ? 'text-green-700 dark:text-green-400' : 'text-brown-400 dark:text-white/40'}`}>
+                                                {zone.inNairobiCounty ? 'Nairobi County · Pay on Delivery' : 'Outside Nairobi · Pay now only'}
+                                            </p>
                                         </div>
 
                                         <div className="flex border-t border-brown-100 dark:border-dm-border transition-colors duration-200">

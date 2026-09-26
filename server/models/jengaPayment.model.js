@@ -11,6 +11,12 @@ const jengaPaymentSchema = new mongoose.Schema(
     // legacy storage value for Jenga PGW hosted checkout, whose active methods
     // can include M-Pesa as well as card networks.
     channel:         { type: String, enum: ['mpesa', 'card'], default: 'mpesa' },
+    // 'checkout' pays for a new order (created once paid). 'delivery_collection'
+    // is a rider collecting payment for an existing Pay on Delivery order at
+    // the door — confirming it only marks that order paid
+    // (finalizeDeliveryCollection in jenga.controller.js).
+    purpose:         { type: String, enum: ['checkout', 'delivery_collection'], default: 'checkout' },
+    requestedBy:     { type: mongoose.Schema.ObjectId, ref: 'User' },
     phoneNumber:     { type: String },
     amount:          { type: Number },
     currency:        { type: String, default: 'KES' },
