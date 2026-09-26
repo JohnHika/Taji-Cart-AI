@@ -243,17 +243,22 @@ const Dashboard = () => {
       
       {/* Stats Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4 mb-4 sm:mb-8">
+        {/* This used to show the store-wide count of unclaimed dispatched
+            orders ("Pending — Ready to start"), left over from the removed
+            driver self-claim feature — staff assign drivers now, so that
+            number was never actionable here. Shows this driver's own active
+            order count instead. */}
         <div className="bg-plum-50 dark:bg-plum-900/20 rounded-lg shadow-sm border border-plum-100 dark:border-plum-800 p-3 sm:p-5">
           <div className="flex items-start justify-between">
             <div>
-              <p className="text-xs sm:text-sm font-medium text-plum-800 dark:text-plum-200">Pending</p>
-              <p className="text-2xl sm:text-3xl font-bold text-plum-900 dark:text-plum-100">{dashboardData?.pendingDeliveries || 0}</p>
+              <p className="text-xs sm:text-sm font-medium text-plum-800 dark:text-plum-200">Active</p>
+              <p className="text-2xl sm:text-3xl font-bold text-plum-900 dark:text-plum-100">{dashboardData?.activeDeliveries || 0}</p>
             </div>
             <div className="bg-plum-100 dark:bg-plum-800 p-2 sm:p-3 rounded-full shrink-0">
               <FaMotorcycle className="text-plum-600 dark:text-plum-200 w-4 h-4 sm:w-5 sm:h-5" />
             </div>
           </div>
-          <p className="hidden sm:block text-xs text-plum-700 dark:text-plum-200 mt-3">Ready to start</p>
+          <p className="hidden sm:block text-xs text-plum-700 dark:text-plum-200 mt-3">Currently out for delivery</p>
         </div>
 
         <div className="bg-green-50 dark:bg-green-900/20 rounded-lg shadow-sm border border-green-100 dark:border-green-800 p-3 sm:p-5">

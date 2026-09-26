@@ -24,6 +24,7 @@ import {
     getPendingOrders,
     manuallyAssignDriver,
     toggleDriverStatusForStaff,
+    unassignOrder,
     updateDriverPresence,
     updateDriverLocation,
     updateOrderStatus,
@@ -97,6 +98,10 @@ deliveryRouter.get('/completed-deliveries/export', auth, adminOrStaff, requireSt
 
 // Manual assignment of a specific driver by admin/staff
 deliveryRouter.post('/assign-driver', auth, adminOrStaff, requireStaffPermission('delivery.assign_driver'), manuallyAssignDriver);
+
+// Clear a stuck assignment (deliveryPersonnel set but the order moved back
+// out of the active pipeline by hand) and return the order to dispatch.
+deliveryRouter.post('/unassign', auth, adminOrStaff, requireStaffPermission('delivery.assign_driver'), unassignOrder);
 
 // Toggle driver active status by admin/staff
 deliveryRouter.post('/toggle-driver-status', auth, adminOrStaff, requireStaffPermission('delivery.manage_drivers'), toggleDriverStatusForStaff);

@@ -224,7 +224,7 @@ const MyOrders = () => {
                   </div>
                   <div className="flex flex-wrap items-center gap-2 sm:gap-3">
                     <OrderStatusBadge status={order?.status} />
-                    {order.status !== 'delivered' && order.status !== 'cancelled' && (
+                    {order.status !== 'delivered' && order.status !== 'cancelled' && order.status !== 'picked_up' && (
                       <Link
                         to={`/order-tracking/${order.orderId || order._id}`}
                         className="inline-flex items-center gap-2 px-3 py-1.5 sm:px-4 sm:py-2 bg-plum-700 hover:bg-plum-600 text-white rounded-pill text-xs sm:text-sm transition-colors font-medium"

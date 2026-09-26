@@ -37,6 +37,52 @@ const formatDate = (dateString) => {
   return date.toLocaleString();
 };
 
+// Online/Jenga orders carry payment_status: 'PAID' (uppercase) — the badge
+// and label checks below used to compare against the lowercase 'paid' and
+// never matched, so a paid order was mislabeled as Cash on Delivery.
+const isOrderPaid = (order) =>
+  String(order?.paymentStatus || order?.payment_status || '').toLowerCase() === 'paid';
+
+// Status options staff can hand-pick, scoped to what that fulfillment type
+// can actually reach by hand — mirrors the server's per-fulfillment-type
+// transition allow-list (server/utils/orderStatusTransitions.js) so the
+// dropdown never offers a change the API will just reject with a 409.
+const getStatusOptionsFor = (order) => {
+  const isPickup = order?.fulfillment_type === 'pickup' || order?.deliveryMethod === 'store-pickup';
+  const isSaccoPickup = order?.fulfillment_type === 'sacco_pickup';
+
+  if (isSaccoPickup) {
+    return [
+      { value: 'pending', label: 'Pending' },
+      { value: 'processing', label: 'Processing' },
+      { value: 'shipped', label: 'Shipped (handed to coach)' },
+      { value: 'ready_for_pickup', label: 'Ready for pickup' },
+      { value: 'cancelled', label: 'Cancelled' }
+    ];
+  }
+
+  if (isPickup) {
+    return [
+      { value: 'pending', label: 'Pending' },
+      { value: 'processing', label: 'Processing' },
+      { value: 'ready_for_pickup', label: 'Ready for pickup' },
+      { value: 'cancelled', label: 'Cancelled' }
+    ];
+  }
+
+  return [
+    { value: 'pending', label: 'Pending' },
+    { value: 'processing', label: 'Processing' },
+    { value: 'shipped', label: 'Shipped' },
+    { value: 'dispatched', label: 'Dispatched' },
+    { value: 'driver_assigned', label: 'Driver Assigned' },
+    { value: 'out_for_delivery', label: 'Out For Delivery' },
+    { value: 'nearby', label: 'Nearby' },
+    { value: 'delivered', label: 'Delivered' },
+    { value: 'cancelled', label: 'Cancelled' }
+  ];
+};
+
 const OrderDetailModal = ({ order, onClose, onStatusChange, onDispatchStateSync }) => {
   const [availableDrivers, setAvailableDrivers] = useState([]);
   const [selectedDriver, setSelectedDriver] = useState('');
@@ -199,21 +245,19 @@ const OrderDetailModal = ({ order, onClose, onStatusChange, onDispatchStateSync 
               </div>
             </div>
             
-            {order.status !== 'delivered' && order.status !== 'cancelled' && order.status !== 'POS' && (
+            {!['delivered', 'cancelled', 'picked_up', 'POS'].includes(order.status) && (
               <select
                 className="w-full sm:w-auto border border-brown-200 dark:border-dm-border p-2 rounded-lg bg-white dark:bg-dm-card text-charcoal dark:text-white text-sm disabled:opacity-60"
                 value={order.status}
                 onChange={handleStatusChange}
                 disabled={changingStatus}
               >
-                <option value="pending">Pending</option>
-                <option value="processing">Processing</option>
-                <option value="shipped">Shipped</option>
-                <option value="driver_assigned">Driver Assigned</option>
-                <option value="out_for_delivery">Out For Delivery</option>
-                <option value="nearby">Nearby</option>
-                <option value="delivered">Delivered</option>
-                <option value="cancelled">Cancelled</option>
+                {/* Options are scoped to this order's fulfillment type — a
+                    pickup order should never be offered "Delivered", and a
+                    delivery order needs dispatched/driver_assigned/etc. */}
+                {getStatusOptionsFor(order).map((option) => (
+                  <option key={option.value} value={option.value}>{option.label}</option>
+                ))}
               </select>
             )}
           </div>
@@ -320,14 +364,14 @@ const OrderDetailModal = ({ order, onClose, onStatusChange, onDispatchStateSync 
                 <p>
                   <span className="text-brown-500 dark:text-white/55">Payment Method:</span>{" "}
                   <span className="font-medium dark:text-white">
-                    {order.paymentMethod || (order.payment_status === 'paid' ? 'Online Payment' : 'Cash on Delivery')}
+                    {order.paymentMethod || (isOrderPaid(order) ? 'Online Payment' : 'Cash on Delivery')}
                   </span>
                 </p>
                 <p>
                   <span className="text-brown-500 dark:text-white/55">Payment Status:</span>{" "}
                   <span className={`font-medium ${
-                    order.paymentStatus === 'paid' || order.payment_status === 'paid' 
-                    ? 'text-brown-700 dark:text-brown-300' 
+                    isOrderPaid(order)
+                    ? 'text-brown-700 dark:text-brown-300'
                     : 'text-gold-600 dark:text-gold-400'
                   }`}>
                     {(order.paymentStatus || order.payment_status || 'pending').toUpperCase()}
@@ -348,7 +392,7 @@ const OrderDetailModal = ({ order, onClose, onStatusChange, onDispatchStateSync 
                         : formatDate(order.paymentDetails.paymentDate)}
                     </span>
                   </p>
-                ) : order.paymentStatus === 'paid' || order.payment_status === 'paid' ? (
+                ) : isOrderPaid(order) ? (
                   <p>
                     <span className="text-brown-500 dark:text-white/55">Payment Date:</span>{" "}
                     <span className="font-medium dark:text-white">
@@ -1630,7 +1674,7 @@ const AllOrdersAdmin = () => {
                       <div className="text-[11px] font-semibold uppercase tracking-wide text-brown-500 dark:text-white/45">Payment</div>
                       <div className="mt-1 flex items-center text-sm font-medium text-charcoal dark:text-white">
                         <span className={`mr-2 inline-block h-2.5 w-2.5 rounded-full ${
-                          order.payment_status === 'paid' || order.paymentStatus === 'paid' ? 'bg-brown-600' : 'bg-gold-400'
+                          isOrderPaid(order) ? 'bg-brown-600' : 'bg-gold-400'
                         }`}></span>
                         {(order.payment_status || order.paymentStatus || 'pending').toUpperCase()}
                       </div>

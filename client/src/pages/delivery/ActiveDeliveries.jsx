@@ -12,6 +12,10 @@ const ActiveDeliveries = () => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
+  // Order ids with a status-update request in flight — guards the action
+  // button against a double-tap sending two "delivered" updates (the second
+  // would try to release the driver's capacity slot a second time).
+  const [updatingOrderIds, setUpdatingOrderIds] = useState(() => new Set());
   const socketRef = useRef(null);
   const { ensureCriteria, gateModal } = useCriteriaGate();
 
@@ -230,6 +234,10 @@ const ActiveDeliveries = () => {
   };
 
   const handleStatusUpdate = async (orderId, newStatus) => {
+    if (updatingOrderIds.has(orderId)) {
+      return;
+    }
+
     if (!(await ensureCriteria('delivery_progress'))) {
       return;
     }
@@ -238,6 +246,8 @@ const ActiveDeliveries = () => {
     if (riderCallConfirmed && !window.confirm('Confirm that you have called the customer and told them you are nearby.')) {
       return;
     }
+
+    setUpdatingOrderIds(prev => new Set(prev).add(orderId));
 
     try {
       const response = await Axios({
@@ -249,17 +259,17 @@ const ActiveDeliveries = () => {
           riderCallConfirmed
         }
       });
-      
+
       if (response.data.success) {
         toast.success(`Order status updated to ${getStatusLabel(newStatus)}`);
-        
+
         // Update local state to reflect the change
-        setActiveOrders(prev => 
-          prev.map(order => 
+        setActiveOrders(prev =>
+          prev.map(order =>
             order._id === orderId ? {...order, status: newStatus} : order
           )
         );
-        
+
         // If the order is delivered, remove it from the active list
         if (newStatus === 'delivered') {
           setActiveOrders(prev => prev.filter(order => order._id !== orderId));
@@ -270,6 +280,12 @@ const ActiveDeliveries = () => {
     } catch (error) {
       console.error('Error updating order status:', error);
       AxiosToastError(error);
+    } finally {
+      setUpdatingOrderIds(prev => {
+        const next = new Set(prev);
+        next.delete(orderId);
+        return next;
+      });
     }
   };
   
@@ -403,9 +419,10 @@ const ActiveDeliveries = () => {
                   {actionMeta && (
                     <button
                       onClick={() => handleStatusUpdate(order._id, nextStatus)}
-                      className={`w-full px-4 py-2.5 rounded-lg font-semibold transition-colors flex items-center justify-center gap-2 ${actionMeta.className}`}
+                      disabled={updatingOrderIds.has(order._id)}
+                      className={`w-full px-4 py-2.5 rounded-lg font-semibold transition-colors flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed ${actionMeta.className}`}
                     >
-                      <ActionIcon size={14} />
+                      {updatingOrderIds.has(order._id) ? <FaSpinner size={14} className="animate-spin" /> : <ActionIcon size={14} />}
                       {actionMeta.label}
                     </button>
                   )}

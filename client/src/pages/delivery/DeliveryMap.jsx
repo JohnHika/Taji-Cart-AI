@@ -8,6 +8,19 @@ import Axios from '../../utils/Axios';
 import AxiosToastError from '../../utils/AxiosToastError';
 import { getCurrentWeather, getForecast } from '../../utils/WeatherService';
 
+// Haversine distance in meters — used to throttle GPS-triggered location
+// posts to "moved at least this far" rather than "every fix the browser gives us".
+const getDistanceMeters = (a, b) => {
+  const R = 6371000;
+  const toRad = (deg) => (deg * Math.PI) / 180;
+  const dLat = toRad(b.lat - a.lat);
+  const dLng = toRad(b.lng - a.lng);
+  const sinLat = Math.sin(dLat / 2);
+  const sinLng = Math.sin(dLng / 2);
+  const h = sinLat * sinLat + Math.cos(toRad(a.lat)) * Math.cos(toRad(b.lat)) * sinLng * sinLng;
+  return 2 * R * Math.asin(Math.min(1, Math.sqrt(h)));
+};
+
 const DeliveryMap = () => {
   const [activeDeliveries, setActiveDeliveries] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -32,6 +45,8 @@ const DeliveryMap = () => {
   const waypointMarkersRef = useRef([]); // numbered stop markers
   const weatherModeRef = useRef(false);  // mirrors weatherMode state for click handler
   const fetchLocWeatherRef = useRef(null); // mirrors fetchLocationWeather fn for closure
+  const selectedDeliveryRef = useRef(null); // mirrors selectedDelivery for the watchPosition closure below (set once, never re-created)
+  const lastServerLocationRef = useRef({ time: 0, lat: null, lng: null }); // throttles GPS-triggered server posts
   const [showOrderDetails, setShowOrderDetails] = useState(false);
   const [selectedOrderDetails, setSelectedOrderDetails] = useState(null);
   const [loadingOrderDetails, setLoadingOrderDetails] = useState(false);
@@ -88,6 +103,12 @@ const DeliveryMap = () => {
     },
   };
 
+  // Keeps the watchPosition closure below (set up once, on mount) reading a
+  // fresh selection instead of whatever it was when the watch was created.
+  useEffect(() => {
+    selectedDeliveryRef.current = selectedDelivery;
+  }, [selectedDelivery]);
+
   useEffect(() => {
     // Use watchPosition for continuous location updates instead of a one-shot getCurrentPosition
     if (navigator.geolocation) {
@@ -102,7 +123,20 @@ const DeliveryMap = () => {
           };
           setCurrentLocation(location);
           setMapCenter([location.lat, location.lng]);
-          updateLocationOnServer(location);
+
+          // A GPS watch can fire multiple times per second — posting every
+          // fix (with a success toast each time) floods the server and the
+          // driver's screen. Send at most once every 15s, or sooner if the
+          // driver has actually moved a meaningful distance (25m).
+          const now = Date.now();
+          const last = lastServerLocationRef.current;
+          const movedMeters = last.lat != null
+            ? getDistanceMeters(last, location)
+            : Infinity;
+          if (now - last.time >= 15000 || movedMeters >= 25) {
+            lastServerLocationRef.current = { time: now, lat: location.lat, lng: location.lng };
+            updateLocationOnServer(location, { silent: true });
+          }
         },
         error => {
           console.error('Error watching location:', error);
@@ -113,36 +147,38 @@ const DeliveryMap = () => {
     } else {
       toast.error('Geolocation is not supported by your browser');
     }
-    
-    const fetchActiveDeliveries = async () => {
+
+    // `isBackgroundRefresh` skips the loading spinner: the 60s poll below
+    // must not swap the live map out for a full-page spinner every minute.
+    const fetchActiveDeliveries = async (isBackgroundRefresh = false) => {
       try {
-        setLoading(true);
+        if (!isBackgroundRefresh) setLoading(true);
         setError(null);
-        
+
         const response = await Axios({
           url: '/api/delivery/active-orders',
           method: 'GET'
         });
-        
+
         if (response.data.success) {
           setActiveDeliveries(response.data.data || []);
         } else {
           setError(response.data.message || 'Failed to fetch active deliveries');
-          toast.error(response.data.message || 'Failed to fetch active deliveries');
+          if (!isBackgroundRefresh) toast.error(response.data.message || 'Failed to fetch active deliveries');
         }
       } catch (error) {
         console.error('Error fetching active deliveries:', error);
         setError('Failed to load active deliveries. Please try again later.');
-        AxiosToastError(error);
+        if (!isBackgroundRefresh) AxiosToastError(error);
       } finally {
-        setLoading(false);
+        if (!isBackgroundRefresh) setLoading(false);
       }
     };
-    
+
     fetchActiveDeliveries();
 
-    // Set up polling to refresh data every 60 seconds
-    const intervalId = setInterval(fetchActiveDeliveries, 60000);
+    // Set up silent polling to refresh data every 60 seconds
+    const intervalId = setInterval(() => fetchActiveDeliveries(true), 60000);
 
     return () => {
       clearInterval(intervalId);
@@ -160,7 +196,7 @@ const DeliveryMap = () => {
       const encodedAddress = encodeURIComponent(address);
       const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodedAddress}`);
       const data = await response.json();
-      
+
       if (data && data.length > 0) {
         return {
           lat: parseFloat(data[0].lat),
@@ -173,7 +209,7 @@ const DeliveryMap = () => {
       return null;
     }
   };
-  
+
   useEffect(() => {
     // Get coordinates for delivery addresses when active deliveries change
     const enrichDeliveriesWithCoordinates = async () => {
@@ -184,7 +220,13 @@ const DeliveryMap = () => {
       
       for (let i = 0; i < updatedDeliveries.length; i++) {
         if (!updatedDeliveries[i].coordinates) {
-          const coordinates = await getCoordinatesFromAddress(updatedDeliveries[i].deliveryAddress);
+          // deliveryAddress is a structured object ({ street, city, ...,
+          // fullAddress }), not a plain string — geocoding the object itself
+          // just sends "[object Object]" to Nominatim.
+          const addressText = updatedDeliveries[i].deliveryAddress?.fullAddress
+            || updatedDeliveries[i].deliveryAddress?.street
+            || '';
+          const coordinates = addressText ? await getCoordinatesFromAddress(addressText) : null;
           if (coordinates) {
             updatedDeliveries[i] = {
               ...updatedDeliveries[i],
@@ -203,16 +245,18 @@ const DeliveryMap = () => {
     enrichDeliveriesWithCoordinates();
   }, [activeDeliveries]);
   
-  const updateLocationOnServer = async (location = null) => {
+  // `silent` is used by the background GPS watch (throttled, fires often) —
+  // the explicit "update my location" button below still gets its toast.
+  const updateLocationOnServer = async (location = null, { silent = false } = {}) => {
     try {
       const locationToUpdate = location || currentLocation;
       if (!locationToUpdate) {
-        toast.error('Location data not available');
+        if (!silent) toast.error('Location data not available');
         return;
       }
-      
+
       setUpdatingLocation(true);
-      
+
       const response = await Axios({
         url: '/api/delivery/update-location',
         method: 'POST',
@@ -222,18 +266,21 @@ const DeliveryMap = () => {
           ...(locationToUpdate.accuracy != null && { accuracy: locationToUpdate.accuracy }),
           ...(locationToUpdate.speed != null && { speed: locationToUpdate.speed }),
           ...(locationToUpdate.heading != null && { heading: locationToUpdate.heading }),
-          orderId: selectedDelivery?._id,
+          // Read from the ref, not the closed-over state — the GPS watch
+          // effect above only runs once (on mount), so a plain state read
+          // here would always see the delivery selected at that moment (none).
+          orderId: selectedDeliveryRef.current?._id,
         }
       });
-      
+
       if (response.data.success) {
-        toast.success('Location updated successfully');
-      } else {
+        if (!silent) toast.success('Location updated successfully');
+      } else if (!silent) {
         toast.error(response.data.message || 'Failed to update location');
       }
     } catch (error) {
       console.error('Error updating location:', error);
-      AxiosToastError(error);
+      if (!silent) AxiosToastError(error);
     } finally {
       setUpdatingLocation(false);
     }

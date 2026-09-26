@@ -1593,6 +1593,24 @@ export async function getAllOrdersAdmin(request, response) {
   }
 }
 
+// Shared lifecycle helpers (multi-line-safe status transitions, driver
+// capacity release, stock restore, delivered-once commission booking). Kept
+// as a local import right above the function that uses it — the top of this
+// file is owned by another concurrent change and must not be touched here.
+import {
+  completeDelivery,
+  releaseDriverSlot,
+  restoreStockForLines,
+  transitionOrderLines
+} from '../utils/orderLifecycle.js';
+import {
+  ACTIVE_DELIVERY_STATUSES,
+  getDispatchBlockReason,
+  isStatusTransitionAllowed,
+  resolveFulfillmentType
+} from '../utils/orderStatusTransitions.js';
+import { emitOrderStatusUpdated } from '../socket/socket.js';
+
 /**
  * Update order status (admin, or staff granted order.update_status)
  */
@@ -1600,17 +1618,17 @@ export async function updateOrderStatus(request, response) {
   try {
     const { id } = request.params;
     const { status, riderCallConfirmed } = request.body;
-    
+
     // Validate status
     const validStatuses = ['pending', 'processing', 'shipped', 'dispatched', 'driver_assigned', 'out_for_delivery', 'nearby', 'delivered', 'ready_for_pickup', 'picked_up', 'cancelled'];
-    
+
     if (!validStatuses.includes(status)) {
       return response.status(400).json({
         message: "Invalid status value",
         success: false
       });
     }
-    
+
     const orderQuery = getOrderIdentifierQuery(id);
 
     if (!orderQuery) {
@@ -1621,15 +1639,25 @@ export async function updateOrderStatus(request, response) {
     }
 
     const order = await OrderModel.findOne(orderQuery);
-    
+
     if (!order) {
       return response.status(404).json({
         message: "Order not found",
         success: false
       });
     }
-    
+
     const previousStatus = order.status;
+
+    // A per-fulfillment-type allow-list keeps staff from jumping an order
+    // into a state its lifecycle can't reach by hand (e.g. delivered ->
+    // pending, cancelled -> dispatched, or marking a pickup order delivered).
+    if (previousStatus !== status && !isStatusTransitionAllowed(order, status)) {
+      return response.status(409).json({
+        message: `Cannot change a ${resolveFulfillmentType(order)} order from "${previousStatus}" to "${status}"`,
+        success: false
+      });
+    }
 
     if (status === 'nearby' && !order.riderCallConfirmedAt && riderCallConfirmed !== true) {
       return response.status(400).json({
@@ -1638,82 +1666,113 @@ export async function updateOrderStatus(request, response) {
       });
     }
 
-    // Restore stock for ALL line-item docs in this order when cancelling
-    if (status === 'cancelled' && previousStatus !== 'cancelled') {
-      try {
-        const allDocs = await OrderModel.find(
-          { orderId: order.orderId },
-          { productId: 1 }
-        ).lean();
-        await Promise.all(
-          allDocs
-            .filter(doc => doc.productId)
-            .map(doc =>
-              ProductModel.findByIdAndUpdate(doc.productId, { $inc: { stock: 1 } })
-            )
-        );
-      } catch (stockError) {
-        console.error('Error restoring stock on cancellation:', stockError);
+    // Dispatching by hand must obey the same eligibility as the dispatch
+    // board: paid (or COD/staff order), and no unresolved stock shortfall.
+    if (status === 'dispatched') {
+      const blockReason = getDispatchBlockReason(order);
+      if (blockReason) {
+        return response.status(409).json({ message: blockReason, success: false });
       }
     }
-    
-    // Propagate status change to ALL line-item docs sharing the same orderId
-    const updateFields = { status };
-    if (status === 'delivered') {
-      updateFields.deliveredAt = new Date();
-    }
-    if (status === 'nearby' && !order.riderCallConfirmedAt) {
-      updateFields.riderCallConfirmedAt = new Date();
-      updateFields.riderCallConfirmedBy = request.userId;
-    }
 
-    await OrderModel.updateMany(
-      { orderId: order.orderId },
-      {
-        $set: updateFields,
-        $push: {
-          statusHistory: {
-            status,
-            timestamp: new Date(),
-            updatedBy: request.userId
+    let updatedOrder;
+    let statusActuallyChanged;
+
+    if (status === 'delivered') {
+      // Shared with the driver's own "mark delivered" endpoint so driver
+      // capacity release and commission booking only ever happen once,
+      // however the order reached this state.
+      const { changed, anchor } = await completeDelivery({
+        orderId: order.orderId,
+        fromStatuses: [previousStatus],
+        updatedBy: request.userId
+      });
+      statusActuallyChanged = changed;
+      updatedOrder = changed ? anchor : await OrderModel.findById(order._id);
+    } else {
+      const updateFields = { status };
+      if (status === 'dispatched') {
+        updateFields.dispatchInfo = { dispatchedAt: new Date(), dispatchedBy: request.userId };
+      }
+      if (status === 'nearby' && !order.riderCallConfirmedAt) {
+        updateFields.riderCallConfirmedAt = new Date();
+        updateFields.riderCallConfirmedBy = request.userId;
+      }
+
+      const { changed, anchor } = await transitionOrderLines({
+        orderId: order.orderId,
+        fromStatuses: [previousStatus],
+        update: {
+          $set: updateFields,
+          $push: {
+            statusHistory: {
+              status,
+              timestamp: new Date(),
+              updatedBy: request.userId
+            }
           }
         }
-      }
-    );
+      });
+      statusActuallyChanged = changed;
+      updatedOrder = changed ? anchor : await OrderModel.findById(order._id);
 
-    // An admin completion must release the same driver capacity as a driver
-    // completion; otherwise a driver can remain permanently at capacity.
-    if (status === 'delivered' && previousStatus !== 'delivered' && order.deliveryPersonnel) {
-      const driver = await DeliveryPersonnelModel.findById(order.deliveryPersonnel);
-      const wasActive = Boolean(driver?.activeOrders?.some((activeOrderId) => activeOrderId?.toString() === order._id.toString()));
-      if (driver && wasActive) {
-        driver.activeOrders = driver.activeOrders.filter((activeOrderId) => activeOrderId?.toString() !== order._id.toString());
-        driver.activeOrdersCount = Math.max(0, (driver.activeOrdersCount || 0) - 1);
-        driver.isAvailable = driver.isActive !== false && driver.isOnline === true && driver.activeOrdersCount < 5;
-        driver.lastActive = new Date();
-        await driver.save();
+      if (changed && status === 'cancelled') {
+        // Restore stock only for the lines THIS call cancelled, once, and
+        // never for a line whose stock was never reserved (stockShortfall).
+        try {
+          const cancelledLines = await OrderModel.find(
+            { orderId: order.orderId },
+            { productId: 1, quantity: 1, stockShortfall: 1 }
+          ).lean();
+          await restoreStockForLines(cancelledLines);
+        } catch (stockError) {
+          console.error('Error restoring stock on cancellation:', stockError);
+        }
+
+        // Cancelling an order that was already out with a rider must free
+        // their capacity immediately, not just on delivery. Release using
+        // every line's _id — the driver's activeOrders entry was recorded
+        // against whichever line was the anchor at assignment time, which
+        // isn't necessarily this line.
+        if (order.deliveryPersonnel && ACTIVE_DELIVERY_STATUSES.includes(previousStatus)) {
+          try {
+            const lineIds = (await OrderModel.find({ orderId: order.orderId }).select('_id')).map((line) => line._id);
+            await releaseDriverSlot(order.deliveryPersonnel, lineIds);
+          } catch (releaseError) {
+            console.error('Error releasing driver slot on cancellation:', releaseError);
+          }
+        }
+      } else if (changed && order.deliveryPersonnel && ACTIVE_DELIVERY_STATUSES.includes(previousStatus)
+        && !ACTIVE_DELIVERY_STATUSES.includes(status)) {
+        // Moved an assigned delivery back out of the active pipeline (e.g.
+        // driver_assigned -> dispatched) without cancelling: free the rider's
+        // slot and clear the stale assignment so the order can be reassigned
+        // instead of tripping "already claimed" forever.
+        try {
+          const lineIds = (await OrderModel.find({ orderId: order.orderId }).select('_id')).map((line) => line._id);
+          await releaseDriverSlot(order.deliveryPersonnel, lineIds);
+          await OrderModel.updateMany(
+            { orderId: order.orderId },
+            { $unset: { deliveryPersonnel: '', estimatedDeliveryTime: '' } }
+          );
+          updatedOrder = await OrderModel.findById(order._id);
+        } catch (releaseError) {
+          console.error('Error releasing driver slot on status rollback:', releaseError);
+        }
       }
     }
 
-    // Driver performance update (once, not per line item)
-    if (status === 'delivered' && order.deliveryPersonnel) {
-      try {
-        await updateDriverPerformanceOnDelivery(
-          { ...order.toObject(), deliveredAt: updateFields.deliveredAt },
-          order.deliveryPersonnel
-        );
-      } catch (performanceError) {
-        console.error("Error updating driver performance:", performanceError);
-      }
+    if (!statusActuallyChanged) {
+      return response.status(409).json({
+        message: `Order status could not be changed from "${previousStatus}" — it may have already been updated`,
+        success: false
+      });
     }
 
-    // Re-fetch updated doc for response
-    const updatedOrder = await OrderModel.findById(order._id);
-    
     // Create notification for the user
     try {
       let notificationMessage;
-      
+
       switch (status) {
         case 'processing':
           notificationMessage = "Your order is now being processed";
@@ -1733,7 +1792,7 @@ export async function updateOrderStatus(request, response) {
         default:
           notificationMessage = `Your order status has been updated to ${status}`;
       }
-      
+
       await NotificationModel.create({
         type: 'order_update',
         title: 'Order Status Update',
@@ -1760,7 +1819,10 @@ export async function updateOrderStatus(request, response) {
         console.error('Error sending rider-call delivery notice:', deliveryNoticeError);
       }
     }
-    
+
+    // Push the change to any customer/staff/driver socket watching this order.
+    emitOrderStatusUpdated(updatedOrder || order);
+
     return response.json({
       message: "Order status updated successfully",
       success: true,
@@ -2076,8 +2138,11 @@ export async function verifyPickupCode(request, response) {
             });
         }
         
-        // If no orderId, try to find by verification code directly
-        let query = {};
+        // If no orderId, try to find by verification code directly.
+        // Never match a cancelled line — a reused/stale code must not verify
+        // an order that was called off. Picked-up lines are still matched so
+        // the "already picked up" branch below can give a friendly response.
+        let query = { status: { $ne: 'cancelled' } };
         if (orderId) {
             console.log(`Looking up by orderId: ${orderId}`);
             // When orderId is provided, we'll retrieve the order first then verify the code
@@ -2304,22 +2369,29 @@ export const verifyPickupController = async (req, res) => {
         success: false
       });
     }
-    
+
+    // A checkout can contain multiple line-item docs sharing the same
+    // orderId — collect every line's product for the verification screen.
+    // (order.products was never a real field on this schema, so this always
+    // threw before the sibling lines were fetched.)
+    const lines = await OrderModel.find({ orderId: order.orderId })
+      .select('productId product_details quantity')
+      .lean();
+
     // Return order details for verification
     return res.status(200).json({
       success: true,
       data: {
         orderId: order._id,
-        orderNumber: order.orderNumber,
+        orderNumber: order.orderId,
         customerName: order.userId?.name || 'Unknown Customer',
         customerEmail: order.userId?.email,
         customerPhone: order.userId?.mobile,
         totalAmount: order.totalAmt,
-        items: order.products.map(p => ({
-          productId: p.productId,
-          productName: p.name,
-          quantity: p.quantity,
-          price: p.price
+        items: lines.map(line => ({
+          productId: line.productId,
+          productName: line.product_details?.name || 'Unknown Product',
+          quantity: line.quantity
         })),
         pickupCode: order.pickupCode,
         status: order.status
@@ -2417,45 +2489,64 @@ export const completePickupController = async (req, res) => {
       });
     }
     
-    // Update order status - use the correct enum value 'picked_up'
-    order.status = 'picked_up';
-    order.updatedAt = new Date();
-    
-    // Add verification record
-    if (!order.pickupVerification) {
-      order.pickupVerification = {};
-    }
-    
-    order.pickupVerification = {
+    const verifiedAt = new Date();
+    const pickupVerification = {
       verifiedBy: staffUser.name || staffUser.email || staffUserId,
       verifiedById: staffUserId,
-      verifiedAt: new Date()
+      verifiedAt
     };
-    
-    await order.save();
+
+    // A checkout can contain multiple line-item docs sharing the same
+    // orderId — complete every line, not just the one this query happened to
+    // match, so siblings don't linger as "pending pickup" forever.
+    const { modifiedCount } = await OrderModel.updateMany(
+      { orderId: order.orderId, status: { $nin: ['picked_up', 'cancelled'] } },
+      {
+        $set: { status: 'picked_up', pickupVerification },
+        $push: {
+          statusHistory: {
+            status: 'picked_up',
+            timestamp: verifiedAt,
+            updatedBy: staffUserId,
+            note: `Pickup verified by ${staffUser.name || staffUser.email || 'staff'}`
+          }
+        }
+      }
+    );
+
+    if (modifiedCount === 0) {
+      return res.status(409).json({
+        message: "This order was already picked up or cancelled",
+        success: false
+      });
+    }
+
     console.log(`Order ${orderId} successfully marked as picked up by ${staffUser.name || staffUserId}`);
-    
+
+    const lines = await OrderModel.find({ orderId: order.orderId })
+      .select('productId product_details quantity')
+      .lean();
+
     // Return success with updated order details
     return res.status(200).json({
       success: true,
       message: "Order pickup completed successfully",
       data: {
         orderId: order._id,
-        orderNumber: order.orderId || order.orderNumber,
+        orderNumber: order.orderId,
         customerName: order.userId?.name || 'Unknown Customer',
         customerEmail: order.userId?.email,
         customerPhone: order.userId?.mobile,
-        totalAmount: order.totalAmt || order.totalAmount,
-        items: (order.items || order.products || []).map(p => ({
-          productId: p.productId?._id || p.productId,
-          productName: p.name || p.product_details?.name || 'Unknown Product',
-          quantity: p.quantity,
-          price: p.price
+        totalAmount: order.totalAmt,
+        items: lines.map(line => ({
+          productId: line.productId,
+          productName: line.product_details?.name || 'Unknown Product',
+          quantity: line.quantity
         })),
         pickupCode: order.pickupVerificationCode || order.pickupCode,
-        status: order.status,
+        status: 'picked_up',
         verifiedBy: staffUser.name || staffUser.email,
-        verifiedAt: new Date()
+        verifiedAt
       }
     });
     
@@ -2473,10 +2564,12 @@ export const completePickupController = async (req, res) => {
  */
 export const getPendingPickupsController = async (req, res) => {
   try {
-    // Find all orders with store pickup that haven't been picked up yet
+    // Find all orders with store pickup that haven't been picked up yet.
+    // Includes 'pending' so a brand-new pickup order shows up immediately
+    // instead of only after it's been moved to processing.
     const pendingPickups = await OrderModel.find({
       fulfillment_type: 'pickup',
-      status: { $in: ['processing', 'ready_for_pickup'] }
+      status: { $in: ['pending', 'processing', 'ready_for_pickup'] }
     }).populate('userId', 'name email mobile').sort({ createdAt: -1 });
     
     // Format response data

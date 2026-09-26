@@ -24,15 +24,26 @@ const formatDeliveryModeForDriver = (order) => {
 import { buildRiderCallMessage, notifyCustomerRiderWillCall } from '../utils/deliveryRiderCall.js';
 import { notifyCustomerOrderDispatched } from '../utils/orderDispatchNotify.js';
 import { getOrderIdentifierQuery } from '../utils/orderIdentifier.js';
+import {
+  DELIVERY_DRIVER_CAPACITY,
+  completeDelivery,
+  isDriverPresenceFresh,
+  releaseDriverSlot,
+  transitionOrderLines
+} from '../utils/orderLifecycle.js';
+import {
+  DELIVERY_FULFILLMENT_FILTER,
+  DISPATCH_ELIGIBLE_FILTER,
+  getDispatchBlockReason
+} from '../utils/orderStatusTransitions.js';
 
-const DELIVERY_DRIVER_CAPACITY = 3;
-const DISPATCH_CONFLICT_STATUSES = ['dispatched', 'driver_assigned', 'out_for_delivery', 'nearby', 'delivered', 'cancelled'];
-const DELIVERY_ORDER_FILTER = {
-  $or: [
-    { fulfillment_type: 'delivery' },
-    { deliveryMethod: 'delivery' }
-  ]
-};
+// Lines that are already mid-delivery-lifecycle, terminal, or handed off to a
+// store-pickup flow — a dispatch action must never touch these.
+const DISPATCH_CONFLICT_STATUSES = ['dispatched', 'driver_assigned', 'out_for_delivery', 'nearby', 'delivered', 'cancelled', 'ready_for_pickup', 'picked_up'];
+// Delivery orders only — fulfillment_type is authoritative; deliveryMethod's
+// schema default ('delivery') would otherwise also match pickup/sacco_pickup
+// orders that never explicitly set it.
+const DELIVERY_ORDER_FILTER = DELIVERY_FULFILLMENT_FILTER;
 
 const buildDeliveryQuery = (criteria = {}) => {
   const query = { ...criteria };
@@ -450,7 +461,13 @@ const findAssignmentFailure = async (orderId) => {
 };
 
 const updateDriverAssignmentState = async (driverId, orderId) => {
-  const updatedDriver = await DeliveryPersonnelModel.findByIdAndUpdate(
+  // findByIdAndUpdate(id, ...) wraps whatever it's given as `{ _id: id }` —
+  // passing a filter object as the "id" silently nests it under _id instead
+  // of applying it, so the capacity/availability guards below never actually
+  // ran. findOneAndUpdate with the filter spelled out keeps the capacity
+  // check atomic: two concurrent assignments can't both push a driver over
+  // DELIVERY_DRIVER_CAPACITY.
+  const updatedDriver = await DeliveryPersonnelModel.findOneAndUpdate(
     {
       _id: driverId,
       isActive: { $ne: false },
@@ -591,12 +608,17 @@ const assignOrderToDriver = async ({
   }
 
   // A checkout can contain multiple line-item documents. Keep all lines in the
-  // same lifecycle state so staff, drivers, and customers see one coherent order.
+  // same lifecycle state so staff, drivers, and customers see one coherent
+  // order. Deliberately does NOT require status: 'dispatched' here — a
+  // sibling line that fell out of sync with the anchor (e.g. dispatched only
+  // partially before this fix) must still pick up the driver, or it lingers
+  // in Pending Dispatch and can be handed to a second driver.
+  // isUnassignedDeliveryOrderFilter still guards against overwriting a line
+  // that was already assigned to someone else.
   await Order.updateMany(
     {
       orderId: order.orderId,
       _id: { $ne: order._id },
-      status: 'dispatched',
       $and: [DELIVERY_ORDER_FILTER, isUnassignedDeliveryOrderFilter]
     },
     {
@@ -711,8 +733,10 @@ const collapseOrderLines = (orders = []) => {
       grouped.set(key, plain);
       continue;
     }
-    existing.totalAmt = Number(existing.totalAmt || 0) + Number(plain.totalAmt || 0);
-    existing.subTotalAmt = Number(existing.subTotalAmt || 0) + Number(plain.subTotalAmt || 0);
+    // totalAmt/subTotalAmt/deliveryCharge are the whole order's figures,
+    // duplicated onto every line-item doc — take them once (from the first
+    // line seen above), never sum across lines, or the collapsed total ends
+    // up N times the real amount to collect.
     existing.items.push(...formatDeliveryItems(plain));
     if (!existing.deliveredAt && plain.deliveredAt) existing.deliveredAt = plain.deliveredAt;
   }
@@ -728,7 +752,14 @@ export const getDeliveryStats = async (req, res) => {
     // of which ID was stored when the order was assigned.
     const personnelFilter = await getDriverPersonnelFilter(driverId);
     const driverProfile = await getDriverProfileForUser(driverId, { createIfMissing: true });
-    
+
+    // The driver app polls this endpoint while active — treat it as a
+    // heartbeat so staff views can tell a genuinely online driver from one
+    // whose app died without going offline (see isDriverPresenceFresh).
+    if (driverProfile?.isOnline === true) {
+      await DeliveryPersonnelModel.updateOne({ _id: driverProfile._id }, { $set: { lastActive: new Date() } });
+    }
+
     // Get counts for different order statuses
     const todayStart = new Date();
     todayStart.setHours(0, 0, 0, 0);
@@ -1201,82 +1232,84 @@ export const updateOrderStatus = async (req, res) => {
         message: `Cannot change ${order.status} directly to ${status}`
       });
     }
-    
-    const changedAt = new Date();
-    const updateFields = { status };
-    if (status === 'delivered') updateFields.deliveredAt = changedAt;
-    if (status === 'nearby' && !order.riderCallConfirmedAt) {
-      updateFields.riderCallConfirmedAt = changedAt;
-      updateFields.riderCallConfirmedBy = driverId;
-    }
 
-    await OrderModel.updateMany(
-      { orderId: order.orderId, deliveryPersonnel: personnelFilter },
-      {
-        $set: updateFields,
-        $push: {
-          statusHistory: {
-            status,
-            timestamp: changedAt,
-            updatedBy: driverId,
-            note: `Updated by assigned driver`
+    const changedAt = new Date();
+    let updatedOrder;
+
+    if (status === 'delivered') {
+      // Shared with the admin/staff status endpoint so driver capacity
+      // release and commission booking only ever happen once, and always use
+      // the real delivery charge, however the order reached "delivered".
+      const { changed, anchor } = await completeDelivery({
+        orderId: order.orderId,
+        fromStatuses: [order.status],
+        filter: { deliveryPersonnel: personnelFilter },
+        updatedBy: driverId,
+        note: 'Updated by assigned driver'
+      });
+      if (!changed) {
+        return res.status(409).json({ success: false, message: 'This order was already updated' });
+      }
+      updatedOrder = anchor;
+    } else {
+      const updateFields = { status };
+      if (status === 'nearby' && !order.riderCallConfirmedAt) {
+        updateFields.riderCallConfirmedAt = changedAt;
+        updateFields.riderCallConfirmedBy = driverId;
+      }
+
+      // Guarded by the driver's current known status so a repeated/racing
+      // call can't push the same transition through twice.
+      const { changed, anchor } = await transitionOrderLines({
+        orderId: order.orderId,
+        fromStatuses: [order.status],
+        filter: { deliveryPersonnel: personnelFilter },
+        update: {
+          $set: updateFields,
+          $push: {
+            statusHistory: {
+              status,
+              timestamp: changedAt,
+              updatedBy: driverId,
+              note: `Updated by assigned driver`
+            }
           }
         }
+      });
+      if (!changed) {
+        return res.status(409).json({ success: false, message: 'This order was already updated' });
       }
-    );
+      updatedOrder = anchor;
 
-    order.status = status;
-    if (status === 'delivered') order.deliveredAt = changedAt;
-    if (updateFields.riderCallConfirmedAt) {
-      order.riderCallConfirmedAt = updateFields.riderCallConfirmedAt;
-      order.riderCallConfirmedBy = driverId;
-    }
+      if (status === 'nearby') {
+        const customer = order.userId
+          ? await User.findById(order.userId).select('name email mobile phone')
+          : null;
+        const message = buildRiderCallMessage(order.orderId || order._id?.toString());
 
-    if (status === 'nearby') {
-      const customer = order.userId
-        ? await User.findById(order.userId).select('name email mobile phone')
-        : null;
-      const message = buildRiderCallMessage(order.orderId || order._id?.toString());
+        await createNotificationIfPossible({
+          type: 'order_update',
+          title: 'Your rider is nearby',
+          message,
+          isRead: false,
+          userId: order.userId
+        }, 'rider-call notification');
 
-      await createNotificationIfPossible({
-        type: 'order_update',
-        title: 'Your rider is nearby',
-        message,
-        isRead: false,
-        userId: order.userId
-      }, 'rider-call notification');
-
-      const deliveryNotice = await notifyCustomerRiderWillCall({ order, customer });
-      if (deliveryNotice.results.some((result) => result.status === 'rejected')) {
-        console.error('One or more rider-call delivery notices could not be sent');
+        const deliveryNotice = await notifyCustomerRiderWillCall({ order, customer });
+        if (deliveryNotice.results.some((result) => result.status === 'rejected')) {
+          console.error('One or more rider-call delivery notices could not be sent');
+        }
       }
     }
-    
-    if (status === 'delivered') {
-      // Release driver capacity now that this delivery is complete
-      const driverProfile = await DeliveryPersonnelModel.findOne({ userId: driverId });
 
-      if (driverProfile) {
-        driverProfile.activeOrders = (driverProfile.activeOrders || []).filter(
-          (activeOrderId) => activeOrderId?.toString() !== orderId.toString()
-        );
-        driverProfile.activeOrdersCount = Math.max(0, (driverProfile.activeOrdersCount || 0) - 1);
-        driverProfile.isAvailable = driverProfile.isActive !== false
-          && driverProfile.isOnline === true
-          && driverProfile.activeOrdersCount < DELIVERY_DRIVER_CAPACITY;
-        driverProfile.lastActive = new Date();
-        await driverProfile.save();
-      }
-    }
-    
     // Send real-time update via socket
     // This will emit to both the customer and any staff watching this order
-    emitOrderStatusUpdated(order);
-    
+    emitOrderStatusUpdated(updatedOrder);
+
     return res.json({
         success: true,
         message: `Order status updated to ${status}`,
-        data: order
+        data: updatedOrder
     });
   } catch (error) {
     console.error('Error updating order status:', error);
@@ -1324,12 +1357,15 @@ export const updateDriverLocation = async (req, res) => {
       ...(heading != null && { heading }),
     };
 
-    // Update driver location; create a delivery profile for legacy accounts that lack one
+    // Update driver location; create a delivery profile for legacy accounts that lack one.
+    // A GPS ping is a strong heartbeat — bump lastActive so staff views don't
+    // show a driver as stale while their app is actively reporting position.
     const driverProfile = await DeliveryPersonnelModel.findOneAndUpdate(
       { userId: driverId },
       {
         $set: {
-          currentLocation: locationPayload
+          currentLocation: locationPayload,
+          lastActive: new Date()
         },
         $setOnInsert: insertOnlyFields
       },
@@ -1358,14 +1394,17 @@ export const updateDriverLocation = async (req, res) => {
         );
         order.currentLocation = locationPayload;
 
-        // Emit real-time location update — guard against socket not yet initialised
+        // Emit real-time location update — guard against socket not yet initialised.
+        // The caller sends one line's Mongo _id (orderId, above), but the
+        // customer's tracking page joins the room keyed by the shared,
+        // human-readable orderId string — emit to both so it actually arrives.
         try {
           const io = getIO();
-          io.to(`order_${orderId}`).emit('locationUpdated', {
-            orderId,
-            location: { lat: latitude, lng: longitude },
-            timestamp: new Date()
-          });
+          const emitPayload = { orderId: order.orderId, location: { lat: latitude, lng: longitude }, timestamp: new Date() };
+          io.to(`order_${order.orderId}`).emit('locationUpdated', emitPayload);
+          if (String(orderId) !== String(order.orderId)) {
+            io.to(`order_${orderId}`).emit('locationUpdated', emitPayload);
+          }
         } catch (socketErr) {
           console.warn('Socket unavailable for location update:', socketErr.message);
         }
@@ -1675,34 +1714,35 @@ export const dispatchOrder = async (req, res) => {
     
     const dispatchedAt = new Date();
     const dispatchNote = notes || `Dispatched by ${staff.name || staff.email}`;
+    const dispatchUpdate = {
+      $set: {
+        status: 'dispatched',
+        dispatchInfo: {
+          dispatchedAt,
+          dispatchedBy: staffId,
+          dispatchNotes: dispatchNote
+        }
+      },
+      $push: {
+        statusHistory: {
+          status: 'dispatched',
+          timestamp: dispatchedAt,
+          updatedBy: staffId,
+          note: dispatchNote
+        }
+      }
+    };
 
+    // Eligibility beyond "not already mid-lifecycle": must actually be a
+    // delivery order, paid (or a staff/COD order that's allowed to go out
+    // unpaid), and not flagged for a stock shortfall that needs resolving first.
     const order = await Order.findOneAndUpdate(
       {
         ...orderQuery,
-        $or: [
-          { fulfillment_type: 'delivery' },
-          { deliveryMethod: 'delivery' }
-        ],
+        ...DISPATCH_ELIGIBLE_FILTER,
         status: { $nin: DISPATCH_CONFLICT_STATUSES }
       },
-      {
-        $set: {
-          status: 'dispatched',
-          dispatchInfo: {
-            dispatchedAt,
-            dispatchedBy: staffId,
-            dispatchNotes: dispatchNote
-          }
-        },
-        $push: {
-          statusHistory: {
-            status: 'dispatched',
-            timestamp: dispatchedAt,
-            updatedBy: staffId,
-            note: dispatchNote
-          }
-        }
-      },
+      dispatchUpdate,
       {
         new: true,
         runValidators: true
@@ -1710,7 +1750,7 @@ export const dispatchOrder = async (req, res) => {
     );
 
     if (!order) {
-      const existingOrder = await Order.findOne(orderQuery).select('status fulfillment_type deliveryMethod');
+      const existingOrder = await Order.findOne(orderQuery).select('status fulfillment_type deliveryMethod payment_status stockShortfall');
 
       if (!existingOrder) {
         return res.status(404).json({
@@ -1719,10 +1759,11 @@ export const dispatchOrder = async (req, res) => {
         });
       }
 
-      if (existingOrder.fulfillment_type !== 'delivery' && existingOrder.deliveryMethod !== 'delivery') {
+      const blockReason = getDispatchBlockReason(existingOrder);
+      if (blockReason) {
         return res.status(400).json({
           success: false,
-          message: 'This order is not for delivery'
+          message: blockReason
         });
       }
 
@@ -1739,7 +1780,22 @@ export const dispatchOrder = async (req, res) => {
         message: 'This order is no longer eligible for dispatch'
       });
     }
-    
+
+    // A checkout can contain multiple line-item documents sharing one
+    // orderId — dispatch every other eligible line too, or the ones left
+    // behind stay stuck in Pending Dispatch and can be handed to a second
+    // driver later. A sibling with its own stockShortfall stays behind on
+    // purpose, pending manual resolution.
+    await Order.updateMany(
+      {
+        orderId: order.orderId,
+        _id: { $ne: order._id },
+        ...DISPATCH_ELIGIBLE_FILTER,
+        status: { $nin: DISPATCH_CONFLICT_STATUSES }
+      },
+      dispatchUpdate
+    );
+
     await createNotificationIfPossible({
       type: 'order_update',
       title: 'Order Dispatched',
@@ -1873,7 +1929,10 @@ export const getAvailableDrivers = async (req, res) => {
         _id: driver._id,
         name: driver.name || userDetails.name || 'Unknown Driver',
         profileImage: driver.profileImage || userDetails.profilePic,
-        isOnline: driver.isOnline === true,
+        // A driver whose app has gone silent for 15+ minutes shows as
+        // offline here even if isOnline was never explicitly toggled off —
+        // otherwise staff can assign an order to a rider who isn't actually reachable.
+        isOnline: isDriverPresenceFresh(driver),
         isAvailable: driver.isAvailable,
         verificationStatus: driver.verificationStatus || 'pending',
         activeOrdersCount: activeOrders || driver.activeOrdersCount || 0,
@@ -2019,6 +2078,98 @@ export const manuallyAssignDriver = async (req, res) => {
     return res.status(500).json({
       success: false,
       message: 'Failed to assign delivery driver',
+      error: error.message
+    });
+  }
+};
+
+// Frees a stuck order: an order moved back out of the active delivery
+// pipeline by hand (rather than through updateOrderStatus) can be left with
+// deliveryPersonnel still set, which then trips the "already claimed" guard
+// on every future assignment attempt and never releases the rider's slot.
+// Staff/admin use this to manually clear that state and return the order to
+// the dispatch queue.
+export const unassignOrder = async (req, res) => {
+  try {
+    const { orderId, notes } = req.body;
+    const staffId = req.userId;
+
+    if (!orderId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Order ID is required'
+      });
+    }
+
+    const orderQuery = getOrderIdentifierQuery(orderId);
+    if (!orderQuery) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid order ID'
+      });
+    }
+
+    const order = await Order.findOne(orderQuery).select('_id orderId deliveryPersonnel status');
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        message: 'Order not found'
+      });
+    }
+
+    if (!order.deliveryPersonnel) {
+      return res.status(400).json({
+        success: false,
+        message: 'This order has no driver assigned to unassign'
+      });
+    }
+
+    const staff = await User.findById(staffId).select('name email');
+    const note = notes || `Unassigned by ${staff?.name || staff?.email || 'staff'}`;
+    const driverId = order.deliveryPersonnel;
+
+    await Order.updateMany(
+      { orderId: order.orderId },
+      {
+        $set: { status: 'dispatched' },
+        $unset: { deliveryPersonnel: '', estimatedDeliveryTime: '' },
+        $push: {
+          statusHistory: {
+            status: 'dispatched',
+            timestamp: new Date(),
+            updatedBy: staffId,
+            note
+          }
+        }
+      }
+    );
+
+    try {
+      // Release using every line's _id — the driver's activeOrders entry was
+      // recorded against whichever line was the anchor at assignment time,
+      // which isn't necessarily the line this orderId/_id query resolved to.
+      const lineIds = (await Order.find({ orderId: order.orderId }).select('_id')).map((line) => line._id);
+      await releaseDriverSlot(driverId, lineIds);
+    } catch (releaseError) {
+      console.error('Error releasing driver slot on manual unassign:', releaseError);
+    }
+
+    const updatedOrder = await Order.findOne(orderQuery);
+    emitOrderStatusUpdated(updatedOrder);
+
+    return res.status(200).json({
+      success: true,
+      message: 'Order unassigned and returned to the dispatch queue',
+      data: {
+        orderId: updatedOrder._id,
+        status: updatedOrder.status
+      }
+    });
+  } catch (error) {
+    console.error('Error unassigning order:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to unassign order',
       error: error.message
     });
   }
@@ -2202,11 +2353,14 @@ export const getPendingOrders = async (req, res) => {
     const sortConfig = {};
     sortConfig[sort] = direction === 'desc' ? -1 : 1;
     
-    // Find all orders that are pending/processing and haven't been dispatched
-    // Only include delivery orders
-    const pendingOrders = await Order.find(buildDeliveryQuery({
-      status: { $in: ['pending', 'processing'] }
-    }))
+    // Find all orders that are pending/processing/shipped and haven't been
+    // dispatched yet. Restricted to delivery orders that are actually
+    // eligible to go out (paid or staff/COD, not flagged for a stock
+    // shortfall) — pickup/SACCO, unpaid, and shortfall orders never belong here.
+    const pendingOrders = await Order.find({
+      status: { $in: ['pending', 'processing', 'shipped'] },
+      ...DISPATCH_ELIGIBLE_FILTER
+    })
     .populate('userId', 'name email phone mobile')
     .populate('delivery_address')
     .sort(sortConfig)

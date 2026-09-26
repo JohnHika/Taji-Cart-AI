@@ -44,10 +44,19 @@ const isPrivateNetworkOrigin = (origin) => {
 };
 
 const hasOrderAccess = async (user, roles, orderId) => {
-    if (!orderId || !/^[0-9a-fA-F]{24}$/.test(String(orderId)) || !user?._id) return false;
-    if (roles.includes('admin') || roles.includes('staff')) return Boolean(await OrderModel.exists({ _id: orderId }));
+    const rawId = String(orderId || '').trim();
+    if (!rawId || !user?._id) return false;
 
-    const order = await OrderModel.findById(orderId).select('userId deliveryPersonnel');
+    // The tracking page joins its room using whatever identifier is in the
+    // URL, which is the human-readable orderId ("ORD-...") most of the time
+    // and the raw Mongo _id only for older links — accept both instead of
+    // rejecting every non-hex-24 id outright (which silently blocked every
+    // ORD- room join).
+    const orderQuery = /^[0-9a-fA-F]{24}$/.test(rawId) ? { _id: rawId } : { orderId: rawId };
+
+    if (roles.includes('admin') || roles.includes('staff')) return Boolean(await OrderModel.exists(orderQuery));
+
+    const order = await OrderModel.findOne(orderQuery).select('userId deliveryPersonnel');
     if (!order) return false;
     if (order.userId?.toString() === user._id.toString()) return true;
 
@@ -268,17 +277,30 @@ export const emitNewDeliveryAssigned = (orderData, personnelId) => {
 
 export const emitOrderStatusUpdated = (orderData) => {
     if (!io) return;
-    
+
     console.log('Emitting order status updated event');
-    
-    // Emit to the order's room
-    io.to(`order_${orderData._id}`).emit('status_updated', {
-        orderId: orderData._id,
+
+    const payload = {
+        orderId: orderData.orderId || orderData._id,
         status: orderData.status,
         currentLocation: orderData.currentLocation,
+        estimatedDelivery: orderData.estimatedDeliveryTime,
+        statusHistory: orderData.statusHistory,
         timestamp: new Date()
-    });
-    
+    };
+
+    // Emit to the order's room. Clients join by whichever identifier was in
+    // their URL — the human-readable orderId ("ORD-...") most of the time,
+    // occasionally the raw Mongo _id for older links — so emit to both room
+    // keys rather than only the one this caller happens to have handy.
+    const roomKeys = new Set([orderData.orderId, orderData._id?.toString()].filter(Boolean));
+    for (const key of roomKeys) {
+        // 'statusUpdated' is what the customer-facing tracking page listens
+        // for; 'status_updated' is kept alongside it for any other consumer.
+        io.to(`order_${key}`).emit('statusUpdated', payload);
+        io.to(`order_${key}`).emit('status_updated', payload);
+    }
+
     // Emit to customer's room
     if (orderData.userId) {
         io.to(`user_${orderData.userId}`).emit('order_status_updated', orderData);
