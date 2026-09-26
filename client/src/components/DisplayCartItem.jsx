@@ -2,23 +2,28 @@ import React, { useState } from 'react'
 import toast from 'react-hot-toast'
 import { FaArrowRight, FaCaretRight, FaCrown, FaTrash } from "react-icons/fa"
 import { IoClose } from 'react-icons/io5'
-import { useSelector } from 'react-redux'
+import { useDispatch, useSelector } from 'react-redux'
 import { Link, useNavigate } from 'react-router-dom'
 import imageEmpty from '../assets/empty_cart.webp'
 import { useGlobalContext } from '../provider/GlobalProvider'
+import { fetchCartItems } from '../store/cartProduct'
 import { DisplayPriceInShillings } from '../utils/DisplayPriceInShillings'
+import { removeFromGuestCart } from '../utils/guestCart'
 import { pricewithDiscount } from '../utils/PriceWithDiscount'
 import { getEffectiveUnitPrice } from '../utils/wholesalePricing'
 import AddToCartButton from './AddToCartButton'
+import Loading from './Loading'
 
 const DisplayCartItem = ({ close, variant = 'drawer' }) => {
     const isEmbedded = variant === 'embedded'
-    const { notDiscountTotalPrice, totalPrice, totalQty, royalCardData, royalDiscount, wholesaleEligible, wholesaleStackDiscounts, clearCartItems } = useGlobalContext()
+    const { notDiscountTotalPrice, totalPrice, totalQty, royalCardData, royalDiscount, wholesaleEligible, wholesaleStackDiscounts, clearCartItems, deleteCartItem } = useGlobalContext()
     const cartItem = useSelector(state => state.cartItem.cart)
     const cartLoading = useSelector(state => state.cartItem.loading)
     const user = useSelector(state => state.user)
+    const dispatch = useDispatch()
     const navigate = useNavigate()
     const [showClearConfirm, setShowClearConfirm] = useState(false)
+    const [removingIds, setRemovingIds] = useState([])
 
     // Delivery / pickup / SACCO is chosen on the checkout page itself, so go
     // straight there rather than asking the same question in a modal first.
@@ -36,6 +41,27 @@ const DisplayCartItem = ({ close, variant = 'drawer' }) => {
         } catch (error) {
             toast.error("Failed to clear cart")
             console.error("Clear cart error:", error)
+        }
+    }
+
+    // Removes one line whatever its quantity (the "−" button only removes a
+    // line once it is down to 1). Guest lines live in localStorage; signed-in
+    // lines go through the server, whose reply the context toasts.
+    const handleRemoveItem = async (item) => {
+        const lineId = item?._id
+        if (!lineId || removingIds.includes(lineId)) return
+
+        setRemovingIds(ids => [...ids, lineId])
+        try {
+            if (user?._id) {
+                await deleteCartItem(lineId)
+            } else {
+                removeFromGuestCart(lineId)
+                dispatch(fetchCartItems())
+                toast.success("Item removed from cart")
+            }
+        } finally {
+            setRemovingIds(ids => ids.filter(id => id !== lineId))
         }
     }
 
@@ -79,7 +105,7 @@ const DisplayCartItem = ({ close, variant = 'drawer' }) => {
                                     </div>
                                 )}
                                 
-                                <div className='bg-white dark:bg-dm-card rounded-lg p-4 grid gap-5 overflow-auto transition-colors duration-200 flex-1 min-h-0 pb-4 border border-brown-100/80 dark:border-dm-border'>
+                                <div className='bg-white dark:bg-dm-card rounded-lg p-4 grid content-start gap-5 overflow-auto transition-colors duration-200 flex-1 min-h-0 pb-4 border border-brown-100/80 dark:border-dm-border'>
                                     {
                                         cartItem?.length > 0 && (
                                             cartItem.map((item,index)=>{
@@ -154,8 +180,20 @@ const DisplayCartItem = ({ close, variant = 'drawer' }) => {
                                                                 </div>
                                                             )}
                                                             
-                                                            <div className="mt-2 max-w-[120px]">
-                                                                <AddToCartButton product={item.productId} id={item?.id} cartData={item} />
+                                                            <div className="mt-2 flex items-center justify-between gap-2">
+                                                                <div className="w-[120px]">
+                                                                    <AddToCartButton product={item.productId} id={item?.id} cartData={item} sku={item?.sku} selectedVariant={item?.selectedVariant} />
+                                                                </div>
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => handleRemoveItem(item)}
+                                                                    disabled={removingIds.includes(item?._id)}
+                                                                    aria-label={`Remove ${item?.productId?.name || 'item'} from cart`}
+                                                                    className="customer-touch-target gap-1.5 rounded-lg px-2 text-xs font-medium text-red-600 transition-colors hover:bg-red-50 disabled:opacity-60 dark:text-red-400 dark:hover:bg-red-950/30"
+                                                                >
+                                                                    {removingIds.includes(item?._id) ? <Loading /> : <FaTrash size={12} />}
+                                                                    <span>Remove</span>
+                                                                </button>
                                                             </div>
                                                         </div>
                                                     </div>

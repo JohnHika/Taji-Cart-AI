@@ -196,8 +196,8 @@ const AddToCartButton = ({ data, product: productProp, cartData, selectedVariant
             try {
                 quantityActionLockRef.current = true
                 setUpdateLoading(true)
-                const productId = cartItemDetails.productId._id
-                updateGuestCartQuantity(productId, qty + 1)
+                const lineId = cartItemDetails._id || cartItemDetails.productId._id
+                updateGuestCartQuantity(lineId, qty + 1)
                 dispatch(fetchCartItems())
                 toast.success("Quantity increased")
             } catch (error) {
@@ -247,14 +247,14 @@ const AddToCartButton = ({ data, product: productProp, cartData, selectedVariant
             try {
                 quantityActionLockRef.current = true
                 setUpdateLoading(true)
-                const productId = cartItemDetails.productId._id
+                const lineId = cartItemDetails._id || cartItemDetails.productId._id
 
                 if (qty === 1) {
-                    removeFromGuestCart(productId)
+                    removeFromGuestCart(lineId)
                     dispatch(fetchCartItems())
                     toast.success("Item removed from cart")
                 } else {
-                    updateGuestCartQuantity(productId, qty - 1)
+                    updateGuestCartQuantity(lineId, qty - 1)
                     dispatch(fetchCartItems())
                     toast.success("Quantity decreased")
                 }
