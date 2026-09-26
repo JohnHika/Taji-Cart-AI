@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react';
+import PropTypes from 'prop-types';
 import toast from 'react-hot-toast';
 import SummaryApi from '../common/SummaryApi';
 import Axios from '../utils/Axios';
@@ -23,6 +24,10 @@ const JengaCardPayment = ({
   deliveryMode = 'standard',
   deliveryZoneId = '',
   customerLocation = null,
+  // Guest checkout reuses this same hosted page: it points payEndpoint at the
+  // guest route and passes the guest form fields through extraData.
+  payEndpoint = SummaryApi.jengaCheckoutPayment,
+  extraData = {},
 }) => {
   const [isBusy, setIsBusy] = useState(false);
   const submitLockRef = useRef(false);
@@ -34,7 +39,7 @@ const JengaCardPayment = ({
 
     try {
       const response = await Axios({
-        ...SummaryApi.jengaCheckoutPayment,
+        ...payEndpoint,
         data: {
           list_items: cartItems,
           addressId,
@@ -54,6 +59,7 @@ const JengaCardPayment = ({
           delivery_mode: fulfillment_type === 'delivery' ? deliveryMode : 'standard',
           deliveryZoneId: fulfillment_type === 'delivery' && deliveryMode === 'bike' ? deliveryZoneId : undefined,
           customerLocation: fulfillment_type === 'delivery' ? customerLocation : undefined,
+          ...extraData,
         },
         requestLockKey: `payment:jenga-checkout:${totalAmount}:${addressId || pickup_location || 'pickup'}`,
       });
@@ -94,6 +100,29 @@ const JengaCardPayment = ({
       </button>
     </div>
   );
+};
+
+JengaCardPayment.propTypes = {
+  cartItems: PropTypes.array,
+  totalAmount: PropTypes.number.isRequired,
+  addressId: PropTypes.oneOfType([PropTypes.string, PropTypes.oneOf([null])]),
+  onError: PropTypes.func,
+  communityRewardId: PropTypes.string,
+  communityDiscountAmount: PropTypes.number,
+  usePoints: PropTypes.bool,
+  pointsUsed: PropTypes.number,
+  fulfillment_type: PropTypes.string,
+  pickup_location: PropTypes.string,
+  pickup_instructions: PropTypes.string,
+  saccoOperatorId: PropTypes.string,
+  saccoDestinationTown: PropTypes.string,
+  deliveryCharge: PropTypes.number,
+  deliveryInstructions: PropTypes.string,
+  deliveryMode: PropTypes.string,
+  deliveryZoneId: PropTypes.string,
+  customerLocation: PropTypes.object,
+  payEndpoint: PropTypes.object,
+  extraData: PropTypes.object,
 };
 
 export default JengaCardPayment;

@@ -570,15 +570,73 @@ const buildPgwCheckoutFields = async ({
   };
 };
 
+// Identity and contact details for the hosted page. Guests bring their own
+// from the checkout form; logged-in customers from their profile and saved
+// address.
+const resolvePgwCustomerDetails = async (request, { isGuest, userId, fulfillment_type }) => {
+  if (isGuest) {
+    const shipping = request.body.guestShipping || {};
+    const name = String(
+      shipping.name || shipping.recipientName ||
+      `${shipping.firstName || ''} ${shipping.lastName || ''}`.trim() ||
+      'Guest Customer'
+    ).trim();
+    const customerEmail = String(request.body.guestEmail || '').trim();
+    if (!isEmailAddress(customerEmail)) {
+      const err = new Error('Enter a valid email address before paying with M-Pesa.');
+      err.statusCode = 400;
+      throw err;
+    }
+    const [firstName, ...lastNameParts] = name.split(/\s+/);
+    return {
+      firstName,
+      lastName: lastNameParts.join(' ') || firstName,
+      customerEmail,
+      customerAddress: shipping.address || shipping.city || 'Nairobi',
+      customerPostalCodeZip: shipping.zipCode || JENGA_PGW_DEFAULT_POSTAL_CODE,
+      phoneNumber: String(request.body.guestPhone || ''),
+    };
+  }
+
+  const user = await UserModel.findById(userId).select('name email mobile').lean();
+  const [firstName, ...lastNameParts] = String(user?.name || 'Customer').trim().split(/\s+/);
+  const lastName = lastNameParts.join(' ') || firstName;
+  const customerEmail = String(user?.email || '').trim();
+  if (!isEmailAddress(customerEmail)) {
+    const err = new Error('Add a valid email address to your profile before paying with M-Pesa.');
+    err.statusCode = 400;
+    throw err;
+  }
+
+  let customerAddress = 'Nairobi';
+  let customerPostalCodeZip = JENGA_PGW_DEFAULT_POSTAL_CODE;
+  if (fulfillment_type === 'delivery' && request.body.addressId) {
+    const address = await AddressModel.findById(request.body.addressId).select('address_line city pincode').lean();
+    if (address) {
+      customerAddress = address.address_line || address.city || customerAddress;
+      customerPostalCodeZip = address.pincode || customerPostalCodeZip;
+    }
+  }
+  return {
+    firstName,
+    lastName,
+    customerEmail,
+    customerAddress,
+    customerPostalCodeZip,
+    phoneNumber: user?.mobile ? String(user.mobile) : '',
+  };
+};
+
 /**
- * POST /api/jenga/checkout/pay
- * Authenticated. Creates the same kind of PENDING order as the M-Pesa path,
- * then returns the fields for Jenga PGW's hosted Web Checkout Form. The
- * client builds a hidden form from these fields and submits it, which
- * navigates the browser to Jenga's hosted page. Jenga then presents the
- * merchant's active methods, including M-Pesa for Nawiri Hair.
+ * POST /api/jenga/checkout/pay and POST /api/jenga/guest/checkout/pay.
+ * Creates the same kind of PENDING order as the M-Pesa path (tagged isGuest
+ * for guests, see buildPendingOrder), then returns the fields for Jenga PGW's
+ * hosted Web Checkout Form. The client builds a hidden form from these fields
+ * and submits it, which navigates the browser to Jenga's hosted page. Jenga
+ * then presents the merchant's active methods, including M-Pesa for Nawiri
+ * Hair.
  */
-export const initiateJengaCardPayment = async (request, response) => {
+const performJengaPgwInitiate = async (request, response, { isGuest = false } = {}) => {
   let orderReference;
   let sharedOrderId;
   try {
@@ -588,38 +646,24 @@ export const initiateJengaCardPayment = async (request, response) => {
       throw err;
     }
 
-    const userId = request.userId;
-    const built = await buildPendingOrder(request, { orderReferenceLength: PGW_ORDER_REFERENCE_LENGTH });
+    const userId = isGuest ? undefined : request.userId;
+    const built = await buildPendingOrder(request, { orderReferenceLength: PGW_ORDER_REFERENCE_LENGTH, isGuest });
     orderReference = built.orderReference;
     sharedOrderId = built.sharedOrderId;
-    const { totalAmt, fulfillment_type, normalizedItems, orderRows, redemption } = built;
+    const { totalAmt, normalizedItems, orderRows, redemption } = built;
 
-    const user = await UserModel.findById(userId).select('name email mobile').lean();
-    const [firstName, ...lastNameParts] = String(user?.name || 'Customer').trim().split(/\s+/);
-    const lastName = lastNameParts.join(' ') || firstName;
-    const customerEmail = String(user?.email || '').trim();
-    if (!customerEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(customerEmail)) {
-      const err = new Error('Add a valid email address to your profile before paying with M-Pesa.');
-      err.statusCode = 400;
-      throw err;
-    }
-
-    let customerAddress = 'Nairobi';
-    let customerPostalCodeZip = JENGA_PGW_DEFAULT_POSTAL_CODE;
-    if (fulfillment_type === 'delivery' && request.body.addressId) {
-      const address = await AddressModel.findById(request.body.addressId).select('address_line city pincode').lean();
-      if (address) {
-        customerAddress = address.address_line || address.city || customerAddress;
-        customerPostalCodeZip = address.pincode || customerPostalCodeZip;
-      }
-    }
+    const customer = await resolvePgwCustomerDetails(request, {
+      isGuest,
+      userId,
+      fulfillment_type: built.fulfillment_type,
+    });
 
     await JengaPayment.create({
       orderReference,
       orderId: sharedOrderId,
       userId,
       channel: 'card',
-      phoneNumber: user?.mobile ? String(user.mobile) : '',
+      phoneNumber: customer.phoneNumber,
       amount: totalAmt,
       currency: 'KES',
       status: 'pending',
@@ -631,13 +675,13 @@ export const initiateJengaCardPayment = async (request, response) => {
       orderReference,
       amount: totalAmt,
       productDescription: buildPgwProductDescription(normalizedItems),
-      firstName,
-      lastName,
-      customerEmail,
-      customerAddress,
-      customerPostalCodeZip,
+      firstName: customer.firstName,
+      lastName: customer.lastName,
+      customerEmail: customer.customerEmail,
+      customerAddress: customer.customerAddress,
+      customerPostalCodeZip: customer.customerPostalCodeZip,
     });
-    console.log(`[JENGA PGW] checkout started ref=${orderReference} amount=${fields.orderAmount} KES timeLimit=${JENGA_PGW_PAYMENT_TIME_LIMIT}`);
+    console.log(`[JENGA PGW] checkout started ref=${orderReference} amount=${fields.orderAmount} KES timeLimit=${JENGA_PGW_PAYMENT_TIME_LIMIT}${isGuest ? ' (guest)' : ''}`);
 
     return response.status(200).json({
       success: true,
@@ -662,6 +706,23 @@ export const initiateJengaCardPayment = async (request, response) => {
     return response.status(error.statusCode || 500).json({ success: false, error: true, message, code: error.code });
   }
 };
+
+/**
+ * POST /api/jenga/checkout/pay
+ * Authenticated.
+ */
+export const initiateJengaCardPayment = (request, response) =>
+  performJengaPgwInitiate(request, response, { isGuest: false });
+
+/**
+ * POST /api/jenga/guest/checkout/pay
+ * Public — the same hosted checkout for guests. Jenga's wallet-STK API
+ * (the previous /guest/pay rail) is not enabled for this merchant, so guests
+ * pay on this page like everyone else; their PENDING order carries
+ * guestEmail/guestPhone/guestShipping instead of a userId/addressId.
+ */
+export const initiateGuestJengaCardPayment = (request, response) =>
+  performJengaPgwInitiate(request, response, { isGuest: true });
 
 const isEmailAddress = (value) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value || '').trim());
 
@@ -1393,12 +1454,15 @@ export const handleJengaCardCallback = async (request, response) => {
   let doc = null;
   const redirectTo = (status, orderReference) => {
     // A rider's collection goes back to the rider's deliveries, not to the
-    // customer's order result page.
+    // customer's order result page. A guest checkout (no account) comes back
+    // with guest=1 so the result page polls the public guest status endpoint
+    // instead of the authenticated one. Only a hint — the status endpoints
+    // enforce their own access rules.
     const url = doc?.purpose === 'delivery_collection'
       ? `${frontendBase}/delivery/active?collection=${encodeURIComponent(status)}&orderId=${encodeURIComponent(doc.orderId)}`
       : `${frontendBase}/order/card-result?status=${encodeURIComponent(status)}${
         orderReference ? `&orderReference=${encodeURIComponent(orderReference)}` : ''
-      }`;
+      }${doc?.userId ? '' : '&guest=1'}`;
     return response.redirect(302, url);
   };
 

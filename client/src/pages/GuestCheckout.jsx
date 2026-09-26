@@ -11,7 +11,7 @@ import { fetchCartItems } from '../store/cartProduct';
 import { nawiriBrand } from '../config/brand';
 import CheckoutRoyalCard from '../components/CheckoutRoyalCard'; // Premium Royal Card teaser
 import GuestAccountPrompt from '../components/GuestAccountPrompt';
-import JengaPayment from '../components/JengaPayment';
+import JengaCardPayment from '../components/JengaCardPayment';
 import { DEFAULT_DELIVERY_CHARGE, formatDistanceKm, getFootDeliveryEligibility, NAIROBI_CBD_RADIUS_KM } from '../utils/cbdDelivery';
 import DeliveryLocationModal from '../components/DeliveryLocationModal';
 import { DisplayPriceInShillings } from '../utils/DisplayPriceInShillings';
@@ -35,11 +35,6 @@ function GuestCheckout() {
   const [orderSuccess, setOrderSuccess] = useState(null);
   const [orderPaymentLabel, setOrderPaymentLabel] = useState('Pay on Delivery');
   const [locationLoading, setLocationLoading] = useState(false);
-  // While an M-Pesa prompt is pending/stale, lock the rest of the form so it
-  // can't be edited in a way that unmounts JengaPayment mid-poll (which used
-  // to silently stop polling), and so a guest can't switch to Cash and place
-  // a second order for the same items.
-  const [paymentPending, setPaymentPending] = useState(false);
 
   const [formData, setFormData] = useState({
     guestEmail: '',
@@ -212,21 +207,6 @@ function GuestCheckout() {
     coordinates: formData.customerLocation,
   };
 
-  const handleGuestPaymentSuccess = (statusData) => {
-    clearGuestCart();
-    dispatch(fetchCartItems());
-    setPaymentPending(false);
-    setOrderPaymentLabel('M-Pesa');
-    setOrderSuccess({
-      orderId: statusData?.orderId,
-      // Prefer the server-confirmed amount once the status endpoint returns
-      // one; fall back to the client estimate for now.
-      total: typeof statusData?.amount === 'number' ? statusData.amount : orderTotal,
-      email: formData.guestEmail,
-    });
-    toast.success('Payment confirmed! Your order is placed.');
-  };
-
   const handleGuestPaymentError = (message) => {
     toast.error(message || 'Payment failed. Please try again.');
   };
@@ -360,16 +340,10 @@ function GuestCheckout() {
             </p>
           </div>
 
-          {paymentPending && (
-            <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 text-blue-800 dark:text-blue-300 text-sm rounded-card px-4 py-2.5">
-              An M-Pesa payment is in progress — contact details and delivery info are locked until it&apos;s resolved.
-            </div>
-          )}
-
-          {/* Locked while an M-Pesa prompt is pending/stale — editing these
-              fields could flip isReadyToOrder to false, which would unmount
-              JengaPayment mid-poll and silently stop tracking the payment. */}
-          <fieldset disabled={paymentPending} className="space-y-5 border-0 p-0 m-0 min-w-0">
+          {/* Pay now navigates the browser away to Jenga's hosted page, so
+              unlike the old in-page STK prompt there is no pending state to
+              lock the form against. */}
+          <div className="space-y-5 min-w-0">
 
           {/* Contact info */}
           <div className="bg-white dark:bg-dm-card rounded-card border border-brown-100 dark:border-dm-border p-4 transition-colors duration-200">
@@ -560,7 +534,7 @@ function GuestCheckout() {
               </>
             )}
           </div>
-          </fieldset>
+          </div>
         </div>
 
         {/* ── Right column: order summary + place order ─────────────────────── */}
@@ -623,9 +597,7 @@ function GuestCheckout() {
           <div className="mt-5 space-y-3">
             <p className="text-xs font-semibold uppercase tracking-widest text-brown-300 dark:text-white/30 mb-1">Payment Method</p>
 
-            {/* Locked once an M-Pesa payment is pending/stale so a guest can't
-                switch to Cash and place a second order for the same items. */}
-            <fieldset disabled={paymentPending} className="space-y-3 border-0 p-0 m-0 min-w-0">
+            <div className="space-y-3 min-w-0">
             <div className="flex gap-2">
               <button
                 type="button"
@@ -685,11 +657,11 @@ function GuestCheckout() {
                 )}
               </button>
             )}
-            </fieldset>
+            </div>
 
             {selectedPaymentMethod === 'jenga' && (
               isReadyToOrder ? (
-                <JengaPayment
+                <JengaCardPayment
                   cartItems={cart}
                   totalAmount={orderTotal}
                   addressId={null}
@@ -700,17 +672,12 @@ function GuestCheckout() {
                   deliveryMode={formData.delivery_mode}
                   deliveryZoneId={formData.deliveryZoneId}
                   customerLocation={formData.customerLocation}
-                  payEndpoint={SummaryApi.jengaGuestPayment}
-                  statusEndpoint={SummaryApi.checkJengaGuestStatus}
-                  defaultPhone={formData.guestPhone}
-                  isGuest
-                  onPendingChange={setPaymentPending}
+                  payEndpoint={SummaryApi.jengaGuestCheckoutPayment}
                   extraData={{
                     guestEmail: formData.guestEmail.trim().toLowerCase(),
                     guestPhone: formData.guestPhone.trim(),
                     guestShipping,
                   }}
-                  onSuccess={handleGuestPaymentSuccess}
                   onError={handleGuestPaymentError}
                 />
               ) : (

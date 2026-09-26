@@ -266,6 +266,11 @@ const SummaryApi = {
         url: `${baseURL}/api/jenga/guest/pay`,
         method: 'post'
     },
+    // Guests on the same Jenga hosted page as logged-in customers.
+    jengaGuestCheckoutPayment: {
+        url: `${baseURL}/api/jenga/guest/checkout/pay`,
+        method: 'post'
+    },
     checkJengaGuestStatus: {
         url: `${baseURL}/api/jenga/guest/status/:orderReference`,
         method: 'get'

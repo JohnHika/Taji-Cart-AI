@@ -6,6 +6,7 @@ import {
   getJengaPaymentStatus,
   handleJengaCallback,
   initiateJengaCardPayment,
+  initiateGuestJengaCardPayment,
   handleJengaCardCallback,
   initiateDeliveryCollection,
 } from '../controllers/jenga.controller.js';
@@ -28,6 +29,9 @@ jengaRouter.post('/collect', auth, initiateDeliveryCollection);
 // (doc.userId && ...) already no-ops when doc.userId is unset, which is
 // exactly the guest-order case, so it's safe to reuse unauthenticated here.
 jengaRouter.post('/guest/pay', initiateGuestJengaPayment);
+// Guests pay on the same Jenga hosted page as logged-in customers — the
+// wallet-STK rail behind /guest/pay is not enabled for this merchant.
+jengaRouter.post('/guest/checkout/pay', initiateGuestJengaCardPayment);
 jengaRouter.get('/guest/status/:orderReference', getJengaPaymentStatus);
 
 // Public — Jenga calls this; callback body alone never approves a payment,

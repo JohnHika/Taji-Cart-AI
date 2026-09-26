@@ -8,6 +8,21 @@
  * (Fourways) are treated as outside; staff can switch any zone on the
  * Delivery Zones admin page.
  *
+ * Border zones re-checked against published sources on 2026-09-26 (Nation,
+ * Wikipedia, county ward maps) — all current flags confirmed correct:
+ *   Githurai 44/45 — the zone name spans both banks of Thika Superhighway:
+ *     Githurai 44 is Nairobi (Roysambu/Kasarani side), 45 is Kiambu (Ruiru).
+ *     Kept OUTSIDE: pay-upfront is the safe call for a straddling zone.
+ *   Fourways (Junction) — Kiambu County, Kiambaa constituency, despite the
+ *     "Nairobi" in estate marketing. Correctly outside.
+ *   Kamulu — Nairobi City County, Ruai ward (Njiru sub-county). Neighbouring
+ *     Joska is Machakos. Correctly inside.
+ *   Uthiru — straddles the border, but the Uthiru/Ruthimitu ward is Dagoretti
+ *     South, Nairobi. Inside stands.
+ *   Upper Kabete — borderline (most directories place it in Westlands/
+ *     Kitisuru, Nairobi; a few say Kiambu). Inside stands; flip it in the
+ *     admin if riders report it falling outside the boundary.
+ *
  * Usage:
  *   node scripts/one-off/flagNairobiCountyZones.js           # dry run
  *   node scripts/one-off/flagNairobiCountyZones.js --apply   # make changes
