@@ -27,7 +27,7 @@ import { markRewardAsUsed, processOrderContribution } from './communitycampaign.
 import { nawiriBrand } from "../utils/brand.js";
 import { buildRiderCallMessage, notifyCustomerRiderWillCall } from "../utils/deliveryRiderCall.js";
 import { renderOrderNoticeEmail } from "../utils/emailTemplates.js";
-import { getOrderIdentifierQuery } from "../utils/orderIdentifier.js";
+import { getOrderIdentifierQuery, nextOrderId } from "../utils/orderIdentifier.js";
 import { hasLoyaltyAccess } from "../utils/loyaltySettings.js";
 import { getEffectiveUnitPrice, getWholesalePricingSettings, isWholesaleEligible } from "../utils/wholesalePricing.js";
 import { reserveStockGuarded } from '../utils/stockGuard.js';
@@ -392,7 +392,7 @@ export async function checkoutController(request, response) {
 
         // All items in one checkout share the same orderId so reports can
         // deduplicate by orderId and avoid counting the total multiple times.
-        const sharedOrderId = `ORD-${new mongoose.Types.ObjectId()}`;
+        const sharedOrderId = await nextOrderId();
 
         const payload = normalizedItems.map((item) => ({
             userId: userId,
@@ -742,7 +742,7 @@ export async function CashOnDeliveryOrderController(request, response) {
 
         // All items in one checkout share the same orderId so reports can
         // deduplicate by orderId and avoid counting the total multiple times.
-        const sharedOrderId = `ORD-${new mongoose.Types.ObjectId()}`;
+        const sharedOrderId = await nextOrderId();
 
         const payload = normalizedItems.map(el => ({
             userId: userId,
@@ -1126,7 +1126,7 @@ export async function guestCheckoutController(request, response) {
         const pickupVerificationCode = fulfillment_type === 'pickup' ? generateVerificationCode() : ''
 
         // Create order ID
-        const orderId = `ORD-${Date.now()}-${Math.random().toString(36).substring(2, 5).toUpperCase()}`
+        const orderId = await nextOrderId()
 
         // Create the order
         const normalizedGuestEmail = guestEmail ? guestEmail.toLowerCase().trim() : ''

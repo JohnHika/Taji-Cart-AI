@@ -113,7 +113,7 @@ function GuestOrderTracking() {
                 type="text"
                 value={orderId}
                 onChange={(e) => setOrderId(e.target.value.toUpperCase())}
-                placeholder="ORD-1234567890-ABC"
+                placeholder="ORD-20260926-0042"
                 className="w-full px-4 py-3 rounded-lg border border-brown-200 dark:border-brown-700 bg-white dark:bg-dm-surface text-charcoal dark:text-white focus:ring-2 focus:ring-gold-500 focus:border-transparent"
               />
               <p className="text-xs text-brown-500 mt-1">

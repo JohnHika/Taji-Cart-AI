@@ -21,6 +21,7 @@ import DeliveryZoneModel from '../models/deliveryzone.model.js';
 import SaccoOperatorModel from '../models/saccooperator.model.js';
 import DeliveryPersonnelModel from '../models/deliverypersonnel.model.js';
 import { nawiriBrand } from '../utils/brand.js';
+import { nextOrderId } from '../utils/orderIdentifier.js';
 import { normalizeKenyanPhone, isValidAmount, amountCovers } from '../utils/jengaValidation.js';
 import {
   DEFAULT_DELIVERY_CHARGE,
@@ -220,7 +221,7 @@ const buildPendingOrder = async (request, { orderReferenceLength = ORDER_REFEREN
   }
 
   const orderReference = await claimOrderReference(orderReferenceLength);
-  const sharedOrderId = `ORD-${new mongoose.Types.ObjectId()}`;
+  const sharedOrderId = await nextOrderId();
   // Staff release pickup orders against this code (completePickupController
   // rejects an empty one), same format as cash pickup orders.
   const pickupVerificationCode = fulfillment_type === 'pickup'

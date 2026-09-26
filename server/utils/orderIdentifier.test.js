@@ -17,3 +17,9 @@ test('resolves a MongoDB order document ID for direct callers', () => {
 test('rejects an empty order identifier', () => {
   assert.equal(getOrderIdentifierQuery('   '), null);
 });
+
+test('resolves the new date-stamped order number via orderId', () => {
+  assert.deepEqual(getOrderIdentifierQuery('ORD-20260926-0042'), {
+    orderId: 'ORD-20260926-0042',
+  });
+});
