@@ -53,6 +53,25 @@ const userSchema = new mongoose.Schema({
         type : Date,
         default : null
     },
+    // Multiple concurrent sessions (one entry per device/tab). Only sha256
+    // hashes are stored, never the raw token. Bounded to
+    // MAX_ACTIVE_REFRESH_SESSIONS (authSession.js) — oldest is evicted.
+    // The legacy refresh_token/previous_refresh_token pair above is kept in
+    // sync too, so a session issued before this field existed keeps working
+    // (and gets folded into this array the first time it refreshes) without
+    // being logged out by the deploy that introduced this.
+    refresh_sessions: {
+        type: [
+            {
+                _id: false,
+                tokenHash: { type: String, required: true },
+                previousTokenHash: { type: String, default: null },
+                rotatedAt: { type: Date, default: null },
+                createdAt: { type: Date, default: Date.now }
+            }
+        ],
+        default: []
+    },
     verify_email : {
         type : Boolean,
         default : false
@@ -108,6 +127,14 @@ const userSchema = new mongoose.Schema({
     forgot_password_expiry : {
         type : Date,
         default : ""
+    },
+    // Single-use nonce embedded in the short-lived reset token minted by
+    // verifyForgotPasswordOtp — resetpassword must present a token whose
+    // nonce still matches this, and clears it on use so the same token
+    // (or a captured copy of it) can't be replayed. See user.controller.js.
+    reset_password_nonce : {
+        type : String,
+        default : null
     },
     isAdmin: {
         type: Boolean,

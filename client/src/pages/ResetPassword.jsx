@@ -5,8 +5,9 @@ import { useDispatch } from 'react-redux'; // Add this import
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import SummaryApi from '../common/SummaryApi'
 import { logout } from '../store/userSlice'; // Add this import
-import Axios from '../utils/Axios'
+import Axios, { stopSessionTimers } from '../utils/Axios'
 import AxiosToastError from '../utils/AxiosToastError'
+import { clearAuthStorage } from '../utils/authStorage'
 
 const ResetPassword = () => {
   const location = useLocation()
@@ -19,11 +20,15 @@ const ResetPassword = () => {
   })
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
+  // Minted by verifyForgotPasswordOtp and carried here via navigation
+  // state (see OtpVerification.jsx) — resetpassword requires and verifies
+  // it, so without one there's no point showing this form at all.
+  const resetToken = location?.state?.resetToken
 
   const valideValue = Object.values(data).every(el => el)
 
   useEffect(() => {
-    if (!(location?.state?.data?.success)) {
+    if (!resetToken) {
       navigate("/")
     }
 
@@ -35,6 +40,7 @@ const ResetPassword = () => {
         }
       })
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const handleChange = (e) => {
@@ -60,7 +66,7 @@ const ResetPassword = () => {
     try {
       const response = await Axios({
         ...SummaryApi.resetPassword,
-        data: data
+        data: { ...data, resetToken }
       })
 
       if (response.data.error) {
@@ -68,23 +74,31 @@ const ResetPassword = () => {
       }
 
       if (response.data.success) {
-        // Complete session termination
-        
-        // 1. Clear all tokens from localStorage
-        localStorage.removeItem('token')
-        localStorage.removeItem('refreshToken')
-        // Clear any other auth items you might have
-        
-        // 2. Reset Redux state
+        // Complete session termination — a password reset invalidates every
+        // refresh token server-side, so any locally cached tokens for this
+        // account are already dead; clear them out here too.
+
+        // 1. Stop the auto-refresh timer so it doesn't keep firing against
+        //    tokens that no longer exist.
+        stopSessionTimers()
+
+        // 2. Clear every stored token (session + local storage, all key
+        //    variants) — clearAuthStorage covers this properly, unlike the
+        //    two individual localStorage.removeItem calls this replaced,
+        //    which missed the actual 'accesstoken' key and sessionStorage
+        //    entirely.
+        clearAuthStorage()
+
+        // 3. Reset Redux state
         dispatch(logout())
-        
-        // 3. Show success toast
+
+        // 4. Show success toast
         toast.success("Password updated successfully. Please login with your new password.")
-        
-        // 4. Redirect to login with replace (prevents back navigation)
+
+        // 5. Redirect to login with replace (prevents back navigation)
         navigate("/login", { replace: true })
-        
-        // 5. Clear form data
+
+        // 6. Clear form data
         setData({
           email: "",
           newPassword: "",

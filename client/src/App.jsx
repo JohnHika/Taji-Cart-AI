@@ -15,9 +15,8 @@ import WhatsAppOrderWidget from './components/WhatsAppOrderWidget';
 import AdminSecretGate from './components/AdminSecretGate';
 import GlobalProvider from './provider/GlobalProvider';
 import { WhatsAppOrderProvider } from './provider/WhatsAppOrderProvider';
-import { fetchCartItems } from './store/cartProduct';
-import { setAllCategory, setAllSubCategory, setLoadingCategory, setLoyaltyDetails } from './store/productSlice';
-import { setUserDetails } from './store/userSlice';
+import { setAllCategory, setAllSubCategory, setLoadingCategory } from './store/productSlice';
+import { logout, setSessionStatus, setUserDetails } from './store/userSlice';
 import { fetchWishlist } from './store/wishlistSlice';
 import Axios from './utils/Axios';
 import { clearAuthStorage, getStoredAccessToken, isAuthSessionError } from './utils/authStorage';
@@ -28,6 +27,11 @@ import { isStorePortalHost } from './utils/storePortalAccess';
 // lazy so its dependencies (including recharts) never load for the customer
 // storefront, which shares this same build.
 const StoreManagementApp = lazy(() => import('./pages/admin/StoreManagementApp'));
+
+// Pages a deploy-update reload must never interrupt — a customer mid-checkout
+// (including waiting on an M-Pesa STK push, or returning from the M-Pesa app
+// on refocus) would lose all in-progress state.
+const CHECKOUT_LIKE_PATHS = ['/dashboard/checkout', '/checkout', '/guest-checkout', '/order/card-result'];
 
 // Error fallback component
 function ErrorFallback({ error }) {
@@ -52,22 +56,6 @@ function ErrorFallback({ error }) {
   );
 }
 
-// CartSynchronizer component
-const CartSynchronizer = () => {
-  const location = useLocation();
-  const dispatch = useDispatch();
-  
-  useEffect(() => {
-    // Synchronize cart when navigating to certain routes
-    if (location.pathname === '/') {
-      console.log('Synchronizing cart on navigation to home');
-      dispatch(fetchCartItems());
-    }
-  }, [location.pathname, dispatch]);
-  
-  return null;
-};
-
 function App() {
   const dispatch = useDispatch();
   const location = useLocation();
@@ -80,6 +68,13 @@ function App() {
   const lastUserRefreshRef = useRef(0);
   const lastVersionCheckRef = useRef(0);
   const reloadingForUpdateRef = useRef(false);
+  // Deferred-reload state for the version-check effect (item C below): a
+  // reload found while on a checkout-like page waits here until navigation
+  // away from it. currentPathRef lets checkForUpdate (defined once, in a
+  // `[]`-dependency effect) read the up-to-date pathname without becoming a
+  // stale closure over the value from mount time.
+  const pendingReloadRef = useRef(false);
+  const currentPathRef = useRef(location.pathname);
 
   // Product/category fetching function
   const fetchProductData = async () => {
@@ -142,24 +137,6 @@ function App() {
     }
   };
 
-  // Fetch loyalty details function - pulls this logic out of the useEffect for better error handling
-  const fetchLoyaltyDetails = async (userId) => {
-    try {
-      const response = await Axios({
-        url: `/api/users/${userId}/loyalty-card`,
-        method: 'GET'
-      });
-      
-      if (response.data && response.data.data) {
-        const { points, class: loyaltyClass } = response.data.data;
-        dispatch(setLoyaltyDetails({ points, class: loyaltyClass }));
-      }
-    } catch (error) {
-      console.error("Error fetching loyalty details:", error);
-      // Don't throw - just log the error and continue
-    }
-  };
-
   // Auth + products initialization
   useEffect(() => {
     console.log("App initialization started");
@@ -172,22 +149,30 @@ function App() {
       if (isMounted) setIsLoading(false);
     }, 15000);
 
-    // Loads the logged-in user's data in the background; never blocks first paint
+    // Loads the logged-in user's data in the background; never blocks first
+    // paint. sessionStatus tracks this attempt (see userSlice.js) so
+    // PrivateRoute can wait on a real outcome instead of a fixed timeout.
     const hydrateUserSession = async () => {
       const token = getStoredAccessToken();
-      if (!token) return;
+      if (!token) {
+        if (isMounted) dispatch(setSessionStatus('none'));
+        return;
+      }
+
+      dispatch(setSessionStatus('loading'));
 
       try {
         const userDetails = await fetchUserDetails();
 
         if (userDetails?.data && isMounted) {
+          // setUserDetails itself marks sessionStatus 'ready'.
           dispatch(setUserDetails(userDetails.data));
-          dispatch(fetchCartItems());
           dispatch(fetchWishlist());
-
-          if (userDetails.data._id) {
-            fetchLoyaltyDetails(userDetails.data._id);
-          }
+          // Cart, address and Royal-card/loyalty data are fetched by
+          // GlobalProvider's own user-change effect — fetching them here too
+          // was a duplicate request pair on every load.
+        } else if (isMounted) {
+          dispatch(setSessionStatus('none'));
         }
       } catch (error) {
         console.error("Session hydration error:", error);
@@ -196,11 +181,19 @@ function App() {
         } else {
           console.warn('Keeping the saved session after a temporary hydration failure.');
         }
+        if (isMounted) dispatch(setSessionStatus('none'));
       }
     };
 
     const initializeApp = async () => {
       lastVisibilityFetchRef.current = Date.now(); // stamp so visibility cooldown applies immediately
+
+      // Start user-session hydration immediately, in parallel with product
+      // data — this used to only start once fetchProductData resolved,
+      // needlessly serializing two independent requests and delaying how
+      // soon a stored session was restored (see PrivateRoute.jsx).
+      hydrateUserSession();
+
       try {
         const productDataResult = await fetchProductData();
         console.log("Product data fetch result:", productDataResult);
@@ -212,9 +205,6 @@ function App() {
           setIsLoading(false);
         }
       }
-
-      // Fire and forget: user/cart/loyalty hydrate after the shell is visible
-      hydrateUserSession();
     };
 
     initializeApp();
@@ -276,6 +266,20 @@ function App() {
     };
   }, [dispatch]);
 
+  // Axios's gracefulLogout (see utils/Axios.js) can only touch storage and
+  // dispatch a plain DOM event — it can't reach into Redux without importing
+  // it into a transport module. Listen for that event here instead, so the
+  // UI (PrivateRoute, auth-gated menus) reflects the logout immediately
+  // rather than waiting for the full-page redirect it also triggers.
+  useEffect(() => {
+    const handleSessionExpired = () => {
+      dispatch(logout());
+    };
+
+    window.addEventListener('nawiri:session-expired', handleSessionExpired);
+    return () => window.removeEventListener('nawiri:session-expired', handleSessionExpired);
+  }, [dispatch]);
+
   // Detects when a newer deploy has gone live and reloads this tab onto it,
   // so cashiers/staff who leave a page open for a whole shift don't stay
   // stuck running old code (an already-loaded SPA never re-checks its own
@@ -298,6 +302,14 @@ function App() {
         if (!response.ok) return;
         const data = await response.json();
         if (data?.buildId && data.buildId !== __APP_BUILD_ID__) {
+          if (CHECKOUT_LIKE_PATHS.includes(currentPathRef.current)) {
+            // Reloading now would wipe in-progress checkout/guest-checkout/
+            // M-Pesa STK-wait UI — most commonly hit when a customer returns
+            // to the tab after switching to the M-Pesa app to approve a push.
+            // Defer the reload until they navigate away from that page instead.
+            pendingReloadRef.current = true;
+            return;
+          }
           reloadingForUpdateRef.current = true;
           window.location.reload();
         }
@@ -318,56 +330,60 @@ function App() {
     };
   }, []);
 
+  // Keeps currentPathRef current for checkForUpdate above (defined once, in
+  // a `[]`-dependency effect, so it can't read location.pathname directly
+  // without becoming a stale closure) and flushes a reload that effect
+  // deferred while the visitor was on a checkout-like page, the moment they
+  // navigate away from it.
+  useEffect(() => {
+    currentPathRef.current = location.pathname;
 
-  // Add a specific effect to handle dynamic routes
+    if (pendingReloadRef.current && !CHECKOUT_LIKE_PATHS.includes(location.pathname)) {
+      pendingReloadRef.current = false;
+      reloadingForUpdateRef.current = true;
+      window.location.reload();
+    }
+  }, [location.pathname]);
+
+  // Ensures categories are loaded for a direct/refreshed visit to a category
+  // route, and logs when navigation state (used elsewhere for breadcrumbs)
+  // is missing on one — was two near-duplicate effects, merged here. Both
+  // depended on the `categories` array itself; since the reducer stores a
+  // *new* empty array on every fetch, landing on a category route before the
+  // first successful fetch re-ran this effect on every render in a tight
+  // loop. Depending on categories.length instead is stable once loaded.
   useEffect(() => {
     // Treat category routes as /:slug-:id and not other dashed paths (e.g., /staff-pos)
     const isCategoryRoute = /^\/(category|categories|c)\/[^/]+-[a-f0-9]{8,}$/i.test(location.pathname) ||
-                            /^\/[a-z0-9-]+-[a-f0-9]{8,}$/i.test(location.pathname);
-    if (isCategoryRoute) {
-      console.log("App detected category route:", location.pathname);
-      console.log("App has navigation state:", location.state);
-      
-      // Ensure categories are loaded for category routes
-      if (!categories || categories.length === 0) {
-        console.log("Categories not loaded yet for category route - fetching now");
-        fetchProductData();
-      }
-    }
-  }, [location.pathname, categories]);
+                            /\/[^/]+-[a-f0-9]{8,}$/i.test(location.pathname);
+    if (!isCategoryRoute) return;
 
-  // Add a special handler for direct URL navigation to category routes
-  useEffect(() => {
-    // Check if we're on a category page strictly matching slug-id pattern
-    const isCategoryRoute = /\/[^/]+-[a-f0-9]{8,}$/.test(location.pathname);
-    if (isCategoryRoute) {
-      console.log("Direct navigation to category route detected:", location.pathname);
-      
-      // Force data loading for direct URL navigation
-      if (!categories || categories.length === 0) {
-        console.log("Categories not loaded for direct category navigation - loading now");
-        fetchProductData();
-      }
-      
-      // Check if state is missing (happens with direct URL navigation)
-      if (!location.state) {
-        console.log("[warn] No state available for category route - this likely means direct URL access");
-        
-        // Try to extract category/subcategory IDs from URL
-        const pathParts = location.pathname.split('/').filter(Boolean);
-        const categoryPart = pathParts[pathParts.length - 1] || '';
-          const categoryMatch = categoryPart.match(/-([\da-f]+)$/);
-          
-          if (categoryMatch && categoryMatch[1]) {
-            const extractedCategoryId = categoryMatch[1];
-            console.log("Extracted category ID from URL:", extractedCategoryId);
-            
-            // You might want to fetch specific data here or set state
-          }
-        
+    console.log("App detected category route:", location.pathname);
+    console.log("App has navigation state:", location.state);
+
+    // Ensure categories are loaded for category routes
+    if (categories.length === 0) {
+      console.log("Categories not loaded yet for category route - fetching now");
+      fetchProductData();
+    }
+
+    // Check if state is missing (happens with direct URL navigation)
+    if (!location.state) {
+      console.log("[warn] No state available for category route - this likely means direct URL access");
+
+      // Try to extract category/subcategory IDs from URL
+      const pathParts = location.pathname.split('/').filter(Boolean);
+      const categoryPart = pathParts[pathParts.length - 1] || '';
+      const categoryMatch = categoryPart.match(/-([\da-f]+)$/);
+
+      if (categoryMatch && categoryMatch[1]) {
+        const extractedCategoryId = categoryMatch[1];
+        console.log("Extracted category ID from URL:", extractedCategoryId);
+
+        // You might want to fetch specific data here or set state
       }
     }
-  }, [location.pathname, categories, location.state]);
+  }, [location.pathname, categories.length, location.state]);
 
   const isAuthPage = ['/login', '/register', '/forgot-password', '/verification-otp', '/reset-password', '/verify-email'].includes(location.pathname);
   const isDashboardShell = location.pathname.startsWith('/dashboard');

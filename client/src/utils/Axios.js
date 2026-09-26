@@ -105,6 +105,13 @@ const setupRefreshTimer = () => {
   if (refreshTimer) clearTimeout(refreshTimer);
 
   refreshTimer = setTimeout(() => {
+    // A logged-out/guest tab can still have this timer armed from before
+    // logout (nothing previously cancelled it) — with no refresh token to
+    // use, silently skip instead of calling refreshToken(), which would
+    // otherwise grace-log-out a shopper who was never signed in on this
+    // tab to begin with, up to 29 minutes after the fact.
+    if (!getStoredRefreshToken()) return;
+
     console.log('Auto-refreshing token before expiration');
     refreshToken().catch((error) => {
       console.error('Auto-refresh failed:', error);
@@ -114,11 +121,32 @@ const setupRefreshTimer = () => {
   console.log('Auto-refresh timer set for 29 minutes');
 };
 
+// Every logout path must call this — otherwise this timer keeps firing on
+// its original 29-minute cadence after logout and can still force a
+// logged-out/guest shopper through gracefulLogout's "session expired"
+// redirect long after they left.
+export const stopSessionTimers = () => {
+  if (refreshTimer) {
+    clearTimeout(refreshTimer);
+    refreshTimer = null;
+  }
+};
+
 if (typeof window !== 'undefined') {
   window.setupRefreshTimer = setupRefreshTimer;
+  window.stopSessionTimers = stopSessionTimers;
 }
 
 let hasGracefullyLoggedOut = false;
+
+// Login/OAuth success and any other point tokens are (re)saved must call
+// this — otherwise a tab that was grace-logged-out once (e.g. a stale
+// background tab) stays latched and silently ignores every subsequent
+// session-expired condition for the rest of the page's lifetime, even after
+// the user has genuinely signed back in on it.
+export const resetGracefulLogoutFlag = () => {
+  hasGracefullyLoggedOut = false;
+};
 
 // Clears the (unrecoverable) session and sends the user back to login with a
 // clear reason, instead of leaving a UI that looks logged in but silently
@@ -149,12 +177,14 @@ const refreshToken = async () => {
     const storedRefreshToken = getStoredRefreshToken();
 
     if (!storedRefreshToken) {
-      // Nothing to refresh with — the session is unrecoverable (storage was
-      // cleared, expired past its stored copy, or never existed). There's no
-      // server round-trip to confirm this against, so grace-logout locally
-      // right away instead of leaving the user stuck with a UI that looks
-      // logged in but silently fails every request from here on.
-      gracefulLogout();
+      // No refresh token AND no access token means there was never a
+      // session on this tab to begin with (e.g. a guest cart request that
+      // happened to 401) — grace-logging that out would wrongly bounce a
+      // guest to "/login" with a "session expired" message. Only force that
+      // redirect when there's other evidence a session actually existed.
+      if (getStoredAccessToken()) {
+        gracefulLogout();
+      }
       throw new Error('No refresh token available');
     }
 
@@ -216,8 +246,12 @@ if (typeof window !== 'undefined' && typeof document !== 'undefined') {
     const now = Date.now();
     if (now - lastFocusRefresh < 60 * 1000) return;
     const accessToken = getStoredAccessToken();
-    const refreshToken = getStoredRefreshToken();
-    if (!accessToken || !refreshToken) return;
+    // Named distinctly from the refreshToken() function below — this used
+    // to be named `refreshToken` too, shadowing it, so the call a few lines
+    // down silently tried to invoke a string and threw (swallowed by the
+    // catch as "malformed token").
+    const storedRefreshToken = getStoredRefreshToken();
+    if (!accessToken || !storedRefreshToken) return;
 
     // Decode the access token expiry without pulling in jwt-decode.
     try {
@@ -242,6 +276,16 @@ instance.interceptors.response.use(
     const isRefreshRequest = requestUrl.includes('/api/user/refresh-token');
 
     if (!error.response || error.response.status !== 401 || originalRequest._retry) {
+      return Promise.reject(error);
+    }
+
+    // A suspended account's access token is still cryptographically valid,
+    // but the server (auth middleware, and now refresh-token too) rejects it
+    // outright with `suspended: true`. Refreshing would either fail the same
+    // way or, worse, succeed and hand back a token for an account that must
+    // stay locked out — so skip straight to logout without attempting it.
+    if (error.response.data?.suspended) {
+      gracefulLogout('Your account has been suspended. Contact support for help.');
       return Promise.reject(error);
     }
 

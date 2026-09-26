@@ -2,19 +2,28 @@ import React, { useEffect, useRef, useState } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { FaEnvelope, FaRegEye, FaRegEyeSlash } from "react-icons/fa";
-import { useDispatch } from 'react-redux';
-import { Link, useNavigate } from 'react-router-dom';
+import { useDispatch, useSelector } from 'react-redux';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import SummaryApi from '../common/SummaryApi';
 import SocialAuth from '../components/SocialAuth';
 import { nawiriBrand } from '../config/brand';
 import { fetchCartItems } from '../store/cartProduct';
 import { setUserDetails } from '../store/userSlice';
-import Axios from '../utils/Axios';
+import Axios, { resetGracefulLogoutFlag } from '../utils/Axios';
 import AxiosToastError from '../utils/AxiosToastError';
 import fetchUserDetails from '../utils/fetchUserDetails';
 import { getPostLoginPath } from '../utils/postLoginRedirect';
-import useGuestCartMerge from '../hooks/useGuestCartMerge';
+import { hasGuestCart, mergeGuestCartWithUser } from '../utils/guestCart';
 import { getRememberMe, saveTokens } from '../utils/authStorage';
+
+// OAuth failures land back here as ?error=<code> (see server/routes/auth.routes.js)
+// — short codes get a friendlier message, anything else is shown as-is.
+const OAUTH_ERROR_MESSAGES = {
+    oauth_callback_failed: 'Google sign-in failed. Please try again.',
+    oauth_not_configured: 'Google sign-in is not available right now.',
+    account_suspended: 'This account has been suspended. Contact support if you believe this is a mistake.',
+    'Authentication failed': 'Google sign-in failed. Please try again.',
+};
 
 const Login = () => {
     const [data, setData] = useState({ email: "", password: "" });
@@ -28,10 +37,25 @@ const Login = () => {
     const reduceMotion = useReducedMotion();
     const submitLockRef = useRef(false);
     const navigate = useNavigate();
+    const location = useLocation();
     const dispatch = useDispatch();
 
-    // Auto-merge guest cart on login
-    useGuestCartMerge();
+    // Already signed in (e.g. a valid session restored while this tab had
+    // /login open) — don't make them log in again. justLoggedInRef guards
+    // against a second, redundant navigate: handleSubmit's own success path
+    // already calls navigate() (with returnTo awareness this effect doesn't
+    // have) once its dispatch(setUserDetails(...)) resolves, and that same
+    // dispatch is what would otherwise also satisfy this effect's condition.
+    const user = useSelector(state => state.user);
+    const justLoggedInRef = useRef(false);
+    useEffect(() => {
+        if (user?._id && !justLoggedInRef.current) {
+            navigate(getPostLoginPath(user), { replace: true });
+        }
+        // Only meant to catch an already-resolved session on mount/whenever
+        // it changes — not a reason to re-run on navigate/getPostLoginPath identity.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [user?._id]);
 
     // Surfaces why the user landed back here after Axios grace-logged them
     // out (e.g. a missing/unrecoverable session token) — read-once so it
@@ -47,6 +71,18 @@ const Login = () => {
             // sessionStorage unavailable — nothing to show, sign-in still works.
         }
     }, []);
+
+    // Surfaces an OAuth failure redirected back from the server
+    // (?error=<code>) — otherwise it silently lands on a blank login page.
+    useEffect(() => {
+        const params = new URLSearchParams(location.search);
+        const error = params.get('error');
+        if (error) {
+            toast.error(OAUTH_ERROR_MESSAGES[error] || 'Sign-in failed. Please try again.');
+            navigate('/login', { replace: true });
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [location.search]);
 
     const handleChange = (e) => {
         const { name, value } = e.target;
@@ -80,7 +116,33 @@ const Login = () => {
                     refreshToken: response.data.data.refreshToken,
                     rememberMe,
                 });
+                // A prior grace-logout on this tab must not stay latched
+                // through a fresh, successful sign-in.
+                resetGracefulLogoutFlag();
                 if (window.setupRefreshTimer) window.setupRefreshTimer();
+
+                // Guest-cart items only exist client-side until now — merge
+                // them into the just-authenticated account's server cart
+                // before navigating away. Must happen after saveTokens:
+                // the addToCartApi callback below needs a valid access token.
+                if (hasGuestCart()) {
+                    const mergeToast = toast.loading('Merging your cart...');
+                    try {
+                        const mergeResult = await mergeGuestCartWithUser(async (itemData) => {
+                            const mergeResponse = await Axios({ ...SummaryApi.addToCart, data: itemData });
+                            return mergeResponse.data;
+                        });
+                        toast.dismiss(mergeToast);
+                        if (mergeResult?.mergedCount) {
+                            toast.success(mergeResult.message);
+                        }
+                    } catch (mergeError) {
+                        toast.dismiss(mergeToast);
+                        console.error('Guest cart merge error:', mergeError);
+                        // Non-fatal — don't block sign-in over a cart merge failure.
+                    }
+                }
+
                 const userDetails = await fetchUserDetails();
                 const nextUser = {
                     ...userDetails.data,
@@ -93,7 +155,14 @@ const Login = () => {
                 dispatch(fetchCartItems());
                 setData({ email: "", password: "" });
                 toast.success(response.data.message);
-                navigate(getPostLoginPath(nextUser));
+
+                // Send the visitor back to the page that redirected them to
+                // /login (PrivateRoute's `state.from`), falling back to
+                // role-based routing when there isn't one (or it's unsafe).
+                const from = location.state?.from;
+                const returnTo = from ? `${from.pathname || ''}${from.search || ''}` : null;
+                justLoggedInRef.current = true;
+                navigate(getPostLoginPath(nextUser, returnTo));
             }
         } catch (error) {
             if (error.response?.status === 403 && error.response?.data?.requiresVerification) {
