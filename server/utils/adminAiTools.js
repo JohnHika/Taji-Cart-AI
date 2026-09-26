@@ -13,6 +13,7 @@ import StockCountModel from '../models/stockCount.model.js';
 import SupplierModel from '../models/supplier.model.js';
 import UserModel from '../models/user.model.js';
 import { buildAbcClassification, buildDeadStockReport, buildReplenishmentQueue } from './inventoryIntelligence.js';
+import { isStatusTransitionAllowed } from './orderStatusTransitions.js';
 
 // Kept local (not imported from adminAi.controller.js) to avoid a circular
 // module dependency -- that controller imports the tool system from here.
@@ -727,9 +728,12 @@ const runUpdateOrderStatus = async ({ orderId, status, reason }) => {
   if (!orderId || !AI_ORDER_STATUS_TO.includes(status)) {
     return { ok: false, summary: `update_order_status rejected: status must be one of ${AI_ORDER_STATUS_TO.join(', ')}.` };
   }
-  const order = await OrderModel.findOne({ orderId }).select('status').lean();
+  const order = await OrderModel.findOne({ orderId }).select('status fulfillment_type deliveryMethod').lean();
   if (!order) return { ok: false, summary: 'update_order_status rejected: order not found.' };
-  if (!isOrderStatusTransitionAllowed(order.status, status)) {
+  // Must pass both the AI's own narrow list and the store-wide rules for
+  // this fulfillment type — e.g. a store pickup only becomes picked_up by
+  // verifying the customer's pickup code, never by the AI.
+  if (!isOrderStatusTransitionAllowed(order.status, status) || !isStatusTransitionAllowed(order, status)) {
     await logAiAction({
       action: 'ai_update_order_status_rejected', target: { model: 'Order', id: orderId },
       reason: `Rejected: current status "${order.status}" is not eligible for AI transitions. Owner reason given: ${reason || 'none'}`,

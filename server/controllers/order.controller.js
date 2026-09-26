@@ -1696,6 +1696,18 @@ export async function updateOrderStatus(request, response) {
       });
     }
 
+    // Re-sending the status the order already has is a no-op. Without this,
+    // the guarded update below matches the current status and counts as a
+    // change, re-running its side effects (a second stock restore on
+    // cancelled, a second commission on delivered).
+    if (previousStatus === status) {
+      return response.json({
+        message: `Order is already ${status}`,
+        success: true,
+        data: order
+      });
+    }
+
     if (status === 'nearby' && !order.riderCallConfirmedAt && riderCallConfirmed !== true) {
       return response.status(400).json({
         message: 'Confirm that the rider has called the customer before marking this delivery as nearby',

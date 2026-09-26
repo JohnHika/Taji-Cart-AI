@@ -1117,7 +1117,9 @@ export async function forgotPasswordController(request,response) {
 
         await UserModel.findByIdAndUpdate(user._id,{
             forgot_password_otp : otp,
-            forgot_password_expiry : expireTime
+            forgot_password_expiry : expireTime,
+            // Requesting a new code cancels any reset token already issued.
+            reset_password_nonce : null
         })
 
         try {

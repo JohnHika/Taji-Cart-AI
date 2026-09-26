@@ -17,7 +17,18 @@ const auth = async(request, response, next) => {
 
         try {
             const decode = jwt.verify(token, process.env.SECRET_KEY_ACCESS_TOKEN || process.env.JWT_SECRET)
-            
+
+            // Single-purpose tokens (e.g. the password-reset token, which
+            // carries purpose: 'pwd-reset') are never valid as a login — even
+            // on a deployment where every token shares JWT_SECRET.
+            if (decode?.purpose) {
+                return response.status(401).json({
+                    message : "Authentication required",
+                    error: true,
+                    success: false
+                })
+            }
+
             // Updated to use _id instead of id for consistency with our token updates
             request.userId = decode._id
             

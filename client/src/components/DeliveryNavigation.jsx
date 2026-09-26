@@ -94,6 +94,11 @@ const DeliveryNavigation = () => {
     // or an already-expired access token) — the old `if (success)` guard
     // left a driver looking "logged in" locally with a dead session.
     try {
+      // Go offline first so staff don't keep seeing a signed-out rider as
+      // available for assignment. Best effort — logout proceeds regardless.
+      if (isOnline) {
+        await Axios({ url: '/api/delivery/presence', method: 'POST', data: { isOnline: false } }).catch(() => {});
+      }
       const response = await Axios({
         ...SummaryApi.logout
       });
