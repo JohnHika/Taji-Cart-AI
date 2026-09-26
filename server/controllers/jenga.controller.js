@@ -19,7 +19,7 @@ import AddressModel from '../models/address.model.js';
 import NotificationModel from '../models/notification.model.js';
 import DeliveryZoneModel from '../models/deliveryzone.model.js';
 import SaccoOperatorModel from '../models/saccooperator.model.js';
-import { normalizeKenyanPhone, isValidAmount, amountsMatch } from '../utils/jengaValidation.js';
+import { normalizeKenyanPhone, isValidAmount, amountCovers } from '../utils/jengaValidation.js';
 import {
   DEFAULT_DELIVERY_CHARGE,
   extractCoordinatesFromPayload,
@@ -684,8 +684,9 @@ const getRowsToCreate = (payment) => {
  * only set once the order exists, so if anything before that throws, the next
  * Jenga callback or status poll retries it (reconcilePayment,
  * getJengaPaymentStatus) — a paid customer is never left without an order.
+ * Also used by scripts/one-off/recoverRejectedJengaPayment.js.
  */
-const finalizePaidOrder = async (paymentDoc) => {
+export const finalizePaidOrder = async (paymentDoc) => {
   const now = new Date();
   const claimed = await JengaPayment.findOneAndUpdate(
     {
@@ -903,13 +904,23 @@ const reconcilePayment = async (paymentDoc, normalized) => {
   const { localStatus, returnedRef, returnedAmount, resultCode, resultDesc, raw } = normalized;
 
   if (localStatus === 'paid') {
+    // A rejected success is kept on the payment (status unchanged) so it can
+    // be checked by hand, and so scripts/one-off/voidUnpaidJengaOrders.js
+    // never voids a checkout Jenga reported as paid.
+    const keepRejected = async (reason) => {
+      console.error(`Jenga callback ${reason} for ${paymentDoc.orderReference}`);
+      await JengaPayment.updateOne(
+        { _id: paymentDoc._id },
+        { $set: { rawCallback: raw, resultDesc: `Success callback rejected: ${reason}` } }
+      );
+      return paymentDoc;
+    };
+
     if (returnedRef && String(returnedRef) !== String(paymentDoc.orderReference)) {
-      console.error(`Jenga callback reference mismatch for ${paymentDoc.orderReference}: got ${returnedRef}`);
-      return paymentDoc;
+      return keepRejected(`reference mismatch (got ${returnedRef})`);
     }
-    if (returnedAmount != null && !amountsMatch(returnedAmount, paymentDoc.amount)) {
-      console.error(`Jenga callback amount mismatch for ${paymentDoc.orderReference}: expected ${paymentDoc.amount}, got ${returnedAmount}`);
-      return paymentDoc;
+    if (returnedAmount != null && !amountCovers(returnedAmount, paymentDoc.amount)) {
+      return keepRejected(`amount short (expected ${paymentDoc.amount}, got ${returnedAmount})`);
     }
 
     // A success can follow a failed/cancelled attempt under the same
@@ -951,7 +962,12 @@ const reconcilePayment = async (paymentDoc, normalized) => {
     return updated || paymentDoc;
   }
 
-  // Unknown/malformed status — fail closed, stay pending.
+  // Unknown/malformed status — fail closed, stay pending, but keep the
+  // payload so an unexpected success wording can be spotted.
+  if (localStatus === 'unknown') {
+    console.error(`Jenga callback with unrecognized status "${resultCode}" for ${paymentDoc.orderReference}`);
+    await JengaPayment.updateOne({ _id: paymentDoc._id, status: 'pending' }, { $set: { rawCallback: raw } });
+  }
   return paymentDoc;
 };
 

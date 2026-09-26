@@ -44,12 +44,16 @@ const isValidAmount = (amount) => {
 };
 
 /**
- * Compares two KES amounts for exact equality using integer minor units
- * (cents) to avoid floating point comparison pitfalls.
+ * True when the KES amount Jenga reports as paid covers the amount due.
+ * Jenga's hosted checkout adds its M-Pesa charge on top of the order amount
+ * (e.g. 707 paid for a 700 order) and reports the gross, so an exact match
+ * would reject real payments. Compared in integer minor units (cents) to
+ * avoid floating point pitfalls.
  */
-const amountsMatch = (a, b) => {
+const amountCovers = (paid, due) => {
   const toCents = (value) => Math.round(Number(value) * 100);
-  return toCents(a) === toCents(b);
+  const paidCents = toCents(paid);
+  return Number.isFinite(paidCents) && paidCents >= toCents(due);
 };
 
-export { normalizeKenyanPhone, isValidAmount, amountsMatch, MAX_AMOUNT_KES };
+export { normalizeKenyanPhone, isValidAmount, amountCovers, MAX_AMOUNT_KES };
