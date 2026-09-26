@@ -1,13 +1,44 @@
+export const getRememberMe = () => {
+    if (typeof window === 'undefined') {
+        return false;
+    }
+
+    // Customer sessions persist by default. A customer can opt out on a shared device.
+    return localStorage.getItem('rememberMe') !== 'false';
+};
+
+export const setRememberMe = (value) => {
+    if (typeof window === 'undefined') {
+        return;
+    }
+
+    localStorage.setItem('rememberMe', value ? 'true' : 'false');
+};
+
+// sessionStorage is per-tab, so a "remember me" session (which lives in both
+// storages) reading sessionStorage first meant a token rotated by one tab
+// was invisible to every other tab, which kept using its own stale
+// sessionStorage copy until it diverged and 401'd unrecoverably. When
+// remember-me is on, prefer the localStorage copy — shared across tabs —
+// so every tab picks up the latest token on its very next request.
 export const getStoredAccessToken = () => {
     if (typeof window === 'undefined') {
         return '';
     }
 
+    if (getRememberMe()) {
+        return (
+            localStorage.getItem('accesstoken') ||
+            sessionStorage.getItem('accesstoken') ||
+            localStorage.getItem('token') ||
+            sessionStorage.getItem('token') ||
+            ''
+        );
+    }
+
     return (
         sessionStorage.getItem('accesstoken') ||
-        localStorage.getItem('accesstoken') ||
         sessionStorage.getItem('token') ||
-        localStorage.getItem('token') ||
         ''
     );
 };
@@ -26,28 +57,15 @@ export const getStoredRefreshToken = () => {
         return '';
     }
 
-    return (
-        sessionStorage.getItem('refreshToken') ||
-        localStorage.getItem('refreshToken') ||
-        ''
-    );
-};
-
-export const getRememberMe = () => {
-    if (typeof window === 'undefined') {
-        return false;
+    if (getRememberMe()) {
+        return (
+            localStorage.getItem('refreshToken') ||
+            sessionStorage.getItem('refreshToken') ||
+            ''
+        );
     }
 
-    // Customer sessions persist by default. A customer can opt out on a shared device.
-    return localStorage.getItem('rememberMe') !== 'false';
-};
-
-export const setRememberMe = (value) => {
-    if (typeof window === 'undefined') {
-        return;
-    }
-
-    localStorage.setItem('rememberMe', value ? 'true' : 'false');
+    return sessionStorage.getItem('refreshToken') || '';
 };
 
 export const saveTokens = ({ accessToken, refreshToken, rememberMe }) => {

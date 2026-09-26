@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React from 'react';
 import { useSelector } from 'react-redux';
 import { Navigate, useLocation } from 'react-router-dom';
 import CriteriaGateModal from './CriteriaGateModal';
@@ -7,64 +7,50 @@ import fetchUserDetails from '../utils/fetchUserDetails';
 
 /**
  * A wrapper component that redirects to login if user is not authenticated
- * 
- * @param {object} props 
+ *
+ * @param {object} props
  * @param {React.ReactNode} props.children - The component or elements to render when authenticated
  * @param {boolean} [props.requireAdmin=false] - Whether the route requires admin privileges
  * @param {boolean} [props.requireStaff=false] - Whether the route requires staff privileges
  * @param {boolean} [props.requireDelivery=false] - Whether the route requires delivery privileges
  * @returns {React.ReactNode}
  */
-const SESSION_RESTORE_TIMEOUT_MS = 5000;
-
 const PrivateRoute = ({ children, requireAdmin = false, requireStaff = false, requireDelivery = false }) => {
   const user = useSelector(state => state.user);
   const location = useLocation();
-  const [sessionTimedOut, setSessionTimedOut] = useState(false);
-  const timerRef = useRef(null);
 
-  const hasStoredSession = Boolean(
-    sessionStorage.getItem('accesstoken') ||
-    sessionStorage.getItem('refreshToken') ||
-    localStorage.getItem('accesstoken') ||
-    localStorage.getItem('refreshToken') ||
-    localStorage.getItem('token')
-  );
-  
   // Check if user is authenticated
   const isAuthenticated = user && user._id;
-  
+
+  // App.jsx's session-restore attempt (see userSlice.js): 'loading' while it
+  // runs, 'ready'/'none' once it resolves either way. Waiting on this instead
+  // of a fixed timeout means a slow-but-successful restore is never mistaken
+  // for "not logged in" and bounced to /login, while a genuinely resolved
+  // "no session" still redirects immediately rather than spinning forever.
+  const sessionStatus = user?.sessionStatus;
+  const isSessionResolved = sessionStatus === 'ready' || sessionStatus === 'none';
+
   // Check for admin status in multiple ways to be more robust
-  const isAdmin = 
-    user?.role === 'admin' || 
-    user?.role === 'Admin' || 
-    user?.isAdmin === true || 
+  const isAdmin =
+    user?.role === 'admin' ||
+    user?.role === 'Admin' ||
+    user?.isAdmin === true ||
     user?.userType === 'admin' ||
     user?.type === 'admin';
-    
+
   // Check for staff status
-  const isStaff = 
-    user?.role === 'staff' || 
-    user?.isStaff === true || 
+  const isStaff =
+    user?.role === 'staff' ||
+    user?.isStaff === true ||
     isAdmin; // Admins can do everything staff can do
 
   const isDelivery =
     user?.role === 'delivery' ||
     user?.isDelivery === true;
-  
-  // Start a timeout when waiting for session restore so the spinner can't get stuck
-  useEffect(() => {
-    if (!isAuthenticated && hasStoredSession && !sessionTimedOut) {
-      timerRef.current = setTimeout(() => setSessionTimedOut(true), SESSION_RESTORE_TIMEOUT_MS);
-    } else {
-      clearTimeout(timerRef.current);
-    }
-    return () => clearTimeout(timerRef.current);
-  }, [isAuthenticated, hasStoredSession, sessionTimedOut]);
 
   // Check if logged in
   if (!isAuthenticated) {
-    if (hasStoredSession && !sessionTimedOut) {
+    if (!isSessionResolved) {
       return (
         <div className="min-h-[50vh] flex items-center justify-center text-sm text-brown-400 dark:text-white/40">
           Restoring your session...

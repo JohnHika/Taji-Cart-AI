@@ -5,6 +5,7 @@ import { useDispatch } from 'react-redux';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { fetchCartItems } from '../store/cartProduct';
 import { setUserDetails } from '../store/userSlice';
+import { resetGracefulLogoutFlag } from '../utils/Axios';
 import fetchUserDetails from '../utils/fetchUserDetails';
 import { getPostLoginPath } from '../utils/postLoginRedirect';
 import { getRememberMe, saveTokens } from '../utils/authStorage';
@@ -131,6 +132,9 @@ const SocialAuthSuccess = () => {
         // Save tokens respecting the user's previous "Keep me signed in" choice.
         const rememberMe = getRememberMe();
         saveTokens({ accessToken: token, refreshToken, rememberMe });
+        // A prior grace-logout on this tab must not stay latched through a
+        // fresh, successful sign-in.
+        resetGracefulLogoutFlag();
 
         // Build user object from either JSON userData or individual params
         let userObject = null;
@@ -189,18 +193,18 @@ const SocialAuthSuccess = () => {
         // Fetch cart items after successful authentication
         dispatch(fetchCartItems());
 
-        // Check for returnTo parameter in hash or search params
+        // Check for returnTo parameter in hash or search params. The server
+        // defaults this to '/' when there was nothing better to send back
+        // (see server/routes/auth.routes.js) — that used to be treated as an
+        // "explicit" returnTo here and short-circuited straight to '/',
+        // skipping role-based routing for every admin/staff/delivery sign-in.
+        // getPostLoginPath's own sanitizer now decides whether returnTo is a
+        // real destination or should fall through to role-based routing.
         const returnTo = params.get('returnTo');
-        
+
         toast.success('Successfully logged in with social account!');
-        
-        if (returnTo) {
-          // Redirect to the stored returnTo URL
-          navigate(returnTo);
-        } else {
-          // Fallback to role-based redirect
-          navigate(getPostLoginPath(userObject));
-        }
+
+        navigate(getPostLoginPath(userObject, returnTo));
       } catch (error) {
         console.error('Social authentication error:', error);
         toast.error('Authentication failed. Please try again.');

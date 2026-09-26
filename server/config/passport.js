@@ -66,6 +66,13 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
           // Check if user already exists
           let user = await UserModel.findOne({ email });
 
+          // A suspended/inactive account must not be able to re-authenticate
+          // via Google either — mirrors the same check email/password login
+          // and token refresh already enforce.
+          if (user && user.status !== 'Active') {
+            return done(null, false, { message: 'This account has been suspended.', reason: 'account_suspended' });
+          }
+
           if (user) {
             // Update last login and Google ID if missing
             const updates = {

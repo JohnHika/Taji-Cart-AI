@@ -40,9 +40,14 @@ const OtpVerification = () => {
             if(response.data.success){
                 toast.success(response.data.message)
                 setData(["","","","","",""])
+                // The server now issues a short-lived, single-use reset token
+                // on successful OTP verification (see verifyForgotPasswordOtp)
+                // — ResetPassword must carry it back on the actual reset
+                // request, since resetpassword no longer trusts an emailed
+                // address alone as proof the OTP step happened.
                 navigate("/reset-password",{
                     state : {
-                        data : response.data,
+                        resetToken : response.data?.data?.resetToken,
                         email : location?.state?.email
                     }
                 })

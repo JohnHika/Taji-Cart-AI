@@ -35,6 +35,13 @@ const initialValue = {
     staffPermissions: [],
     accountType: "",
     isAuthenticated: false,
+    // Tracks the app's one-time session-restore attempt on load, independent
+    // of whether it resolves to a user: 'idle' (not started) -> 'loading'
+    // (App.jsx is checking a stored token) -> 'ready' (a user was restored,
+    // set implicitly by setUserDetails) | 'none' (no session, or restore
+    // failed). PrivateRoute waits on this instead of a fixed timeout so a
+    // slow-but-successful restore is never mistaken for "not logged in".
+    sessionStatus: 'idle',
 }
 
 const userSlice  = createSlice({
@@ -105,6 +112,15 @@ const userSlice  = createSlice({
             state.staffPermissions = Array.isArray(userData?.staffPermissions) ? userData.staffPermissions : []
             state.accountType = userData?.accountType || ''
             state.isAuthenticated = true;
+            state.sessionStatus = 'ready';
+        },
+        // Explicit status transitions for the session-restore attempt in
+        // App.jsx (see sessionStatus above). setUserDetails/logout already
+        // imply 'ready'/'none' on their own — this is for the in-between
+        // 'loading' state, and the 'none' case when there was nothing to
+        // restore in the first place (no dispatch(logout()) warranted).
+        setSessionStatus : (state, action) => {
+            state.sessionStatus = action.payload
         },
         updatedAvatar : (state,action)=>{
             state.avatar = action.payload
@@ -133,6 +149,7 @@ const userSlice  = createSlice({
             state.staffPermissions = []
             state.accountType = ""
             state.isAuthenticated = false;
+            state.sessionStatus = 'none';
         },
         logoutSuccess: (state) => {
             state.isAuthenticated = false;
@@ -155,6 +172,6 @@ const userSlice  = createSlice({
     }
 })
 
-export const { setUserDetails, logout ,updatedAvatar, logoutSuccess } = userSlice.actions
+export const { setUserDetails, logout, setSessionStatus, updatedAvatar, logoutSuccess } = userSlice.actions
 
 export default userSlice.reducer

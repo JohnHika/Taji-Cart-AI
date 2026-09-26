@@ -1,4 +1,5 @@
 import bcryptjs from 'bcryptjs'
+import crypto from 'crypto'
 import jwt from 'jsonwebtoken'
 import sendEmail, { isEmailConfigured } from '../config/sendEmail.js'
 import DeliveryPersonnelModel from '../models/deliverypersonnel.model.js'
@@ -13,13 +14,23 @@ import forgotPasswordTemplate from '../utils/forgotPasswordTemplate.js'
 import generatedAccessToken from '../utils/generatedAccessToken.js'
 import generatedOtp from '../utils/generatedOtp.js'
 import genertedRefreshToken from '../utils/generatedRefreshToken.js'
-import { isCurrentRefreshToken, isRefreshTokenInGraceWindow } from '../utils/authSession.js'
+import { isValidRefreshToken, removeRefreshSession } from '../utils/authSession.js'
 import { sendVerificationEmail } from '../utils/sendVerificationEmail.js'
 import uploadImageClodinary from '../utils/uploadImageClodinary.js'
 
 const passwordRegex = /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d@$!%*#?&]{8,}$/
 const verificationEmailUnavailableMessage = `Email verification is temporarily unavailable right now. Please contact ${nawiriBrand.supportEmail} or try again later.`
 const passwordResetUnavailableMessage = `Password reset email is temporarily unavailable right now. Please contact ${nawiriBrand.supportEmail} or try again later.`
+
+// Reset tokens are short-lived JWTs minted only after the OTP has been
+// verified — resetpassword requires and verifies one instead of trusting the
+// caller's word that the OTP step happened. Signed with the refresh-token
+// secret (already used for tokens) rather than the access-token secret so a
+// captured reset token can never double as a Bearer access token via the
+// auth middleware.
+const PASSWORD_RESET_TOKEN_PURPOSE = 'pwd-reset'
+const PASSWORD_RESET_TOKEN_TTL = '10m'
+const getPasswordResetSigningSecret = () => process.env.SECRET_KEY_REFRESH_TOKEN || process.env.JWT_SECRET
 
 const clearForgotPasswordResetState = async (userId) => {
     await UserModel.findByIdAndUpdate(userId, {
@@ -1099,11 +1110,14 @@ export async function forgotPasswordController(request,response) {
         }
 
         const otp = generatedOtp()
-        const expireTime = new Date() + 60 * 60 * 1000 // 1hr
+        // `new Date() + 60*60*1000` string-concatenates instead of adding
+        // milliseconds (Date's `+` coerces to a string), so the stored expiry
+        // used to be garbage. Build it from a real timestamp instead.
+        const expireTime = new Date(Date.now() + 60 * 60 * 1000) // 1hr
 
         await UserModel.findByIdAndUpdate(user._id,{
             forgot_password_otp : otp,
-            forgot_password_expiry : new Date(expireTime).toISOString()
+            forgot_password_expiry : expireTime
         })
 
         try {
@@ -1167,9 +1181,12 @@ export async function verifyForgotPasswordOtp(request,response){
             })
         }
 
-        const currentTime = new Date().toISOString()
+        const currentTime = new Date()
 
-        if(user.forgot_password_expiry < currentTime  ){
+        // Compare as Dates, not strings — forgot_password_expiry is a Date
+        // field; stringifying either side before comparing (the old
+        // `.toISOString()` on one side only) silently broke this check.
+        if(!user.forgot_password_expiry || new Date(user.forgot_password_expiry) < currentTime){
             return response.status(400).json({
                 message : "Invalid or expired code",
                 error : true,
@@ -1177,7 +1194,7 @@ export async function verifyForgotPasswordOtp(request,response){
             })
         }
 
-        if(otp !== user.forgot_password_otp){
+        if(!user.forgot_password_otp || otp !== user.forgot_password_otp){
             return response.status(400).json({
                 message : "Invalid or expired code",
                 error : true,
@@ -1188,15 +1205,32 @@ export async function verifyForgotPasswordOtp(request,response){
         //if otp is not expired
         //otp === user.forgot_password_otp
 
-        const updateUser = await UserModel.findByIdAndUpdate(user?._id,{
+        // Mint a short-lived, single-use reset token instead of just marking
+        // the OTP consumed — resetpassword used to trust the caller-supplied
+        // email with no proof the OTP step ever happened, letting anyone
+        // reset any account. The nonce is what makes it single-use: it's
+        // cleared the moment the token is spent (see resetpassword) or a new
+        // OTP is requested, so a captured token can't be replayed even
+        // within its 10-minute window.
+        const resetNonce = crypto.randomBytes(16).toString('hex')
+
+        await UserModel.findByIdAndUpdate(user?._id,{
             forgot_password_otp : "",
-            forgot_password_expiry : ""
+            forgot_password_expiry : "",
+            reset_password_nonce : resetNonce
         })
-        
+
+        const resetToken = jwt.sign(
+            { _id : user._id, purpose : PASSWORD_RESET_TOKEN_PURPOSE, nonce : resetNonce },
+            getPasswordResetSigningSecret(),
+            { expiresIn : PASSWORD_RESET_TOKEN_TTL }
+        )
+
         return response.json({
             message : "Verify otp successfully",
             error : false,
-            success : true
+            success : true,
+            data : { resetToken }
         })
 
     } catch (error) {
@@ -1211,12 +1245,38 @@ export async function verifyForgotPasswordOtp(request,response){
 //reset the password
 export async function resetpassword(request,response){
     try {
-        const { newPassword, confirmPassword } = request.body 
+        const { newPassword, confirmPassword, resetToken } = request.body
         const email = normalizeEmail(request.body?.email)
 
-        if(!email || !newPassword || !confirmPassword){
+        if(!email || !newPassword || !confirmPassword || !resetToken){
             return response.status(400).json({
-                message : "provide required fields email, newPassword, confirmPassword"
+                message : "provide required fields email, newPassword, confirmPassword, resetToken",
+                error : true,
+                success : false
+            })
+        }
+
+        // CRITICAL: this endpoint used to accept an email + new password with
+        // no proof the OTP step ever ran, so anyone could reset any account.
+        // A verified reset now requires the short-lived token verifyForgotPasswordOtp
+        // issues, and it must belong to this exact account and still match
+        // the single-use nonce minted at verify time.
+        let decodedResetToken
+        try {
+            decodedResetToken = jwt.verify(resetToken, getPasswordResetSigningSecret())
+        } catch (tokenError) {
+            return response.status(400).json({
+                message: "Invalid or expired reset session. Please verify the code again.",
+                error: true,
+                success: false
+            })
+        }
+
+        if (decodedResetToken?.purpose !== PASSWORD_RESET_TOKEN_PURPOSE) {
+            return response.status(400).json({
+                message: "Invalid or expired reset session. Please verify the code again.",
+                error: true,
+                success: false
             })
         }
 
@@ -1227,6 +1287,18 @@ export async function resetpassword(request,response){
                 message : "Email is not available",
                 error : true,
                 success : false
+            })
+        }
+
+        if (
+            String(decodedResetToken._id) !== String(user._id) ||
+            !user.reset_password_nonce ||
+            decodedResetToken.nonce !== user.reset_password_nonce
+        ) {
+            return response.status(400).json({
+                message: "Invalid or expired reset session. Please verify the code again.",
+                error: true,
+                success: false
             })
         }
 
@@ -1251,7 +1323,17 @@ export async function resetpassword(request,response){
 
         await UserModel.findByIdAndUpdate(user._id,{
             password : hashPassword,
-            passwordLastChanged: new Date()
+            passwordLastChanged: new Date(),
+            // Single-use: burn the nonce so this token (or a captured copy)
+            // can never be replayed.
+            reset_password_nonce: null,
+            // A password reset must invalidate every existing session —
+            // whoever had a valid refresh token before this (including an
+            // attacker who had the old password) is signed out everywhere.
+            refresh_token: "",
+            previous_refresh_token: "",
+            previous_refresh_token_rotated_at: null,
+            refresh_sessions: []
         })
 
         try {
@@ -1289,7 +1371,30 @@ export async function resetpassword(request,response){
 
 export async function logoutController(request, response) {
     try {
-        const userid = request.userId
+        // This route deliberately has no `auth` middleware in front of it —
+        // logout must still work with an access token that just expired
+        // (the common case: a stale tab), and `auth` would 401 that instead
+        // of revoking anything. Decode it ourselves, ignoring expiry but not
+        // a bad signature, so only someone who legitimately held a token for
+        // this account (even an expired one) can trigger revocation for it.
+        const accessToken = request.cookies?.accessToken || request?.headers?.authorization?.split(" ")[1]
+        let userid = null
+
+        if (accessToken) {
+            try {
+                const decoded = jwt.verify(accessToken, process.env.SECRET_KEY_ACCESS_TOKEN || process.env.JWT_SECRET, { ignoreExpiration: true })
+                userid = decoded?._id || null
+            } catch (tokenError) {
+                // Malformed/invalid signature — nothing to revoke server-side;
+                // the cookie clearing below still applies.
+            }
+        }
+
+        // Cookie first — it's sent automatically on this GET request
+        // (withCredentials on the client) with no client-side change needed;
+        // request.body is accepted too for any caller that explicitly
+        // passes it (e.g. a POST-based logout elsewhere).
+        const presentedRefreshToken = request.cookies?.refreshToken || request.body?.refreshToken || null
 
         const cookiesOption = {
             httpOnly: true,
@@ -1302,14 +1407,34 @@ export async function logoutController(request, response) {
 
         if (userid) {
             try {
-                // Clear the grace-window token too — an explicit logout must be
-                // immediate and absolute, not still honor a recently-rotated
-                // token for the next 60s.
-                await UserModel.findByIdAndUpdate(userid, {
-                    refresh_token: "",
-                    previous_refresh_token: "",
-                    previous_refresh_token_rotated_at: null
-                })
+                if (presentedRefreshToken) {
+                    // Revoke only this device/tab's session — every other
+                    // concurrent session (see generatedRefreshToken.js) stays live.
+                    const user = await UserModel.findById(userid).select('refresh_token previous_refresh_token refresh_sessions')
+                    if (user) {
+                        const update = { refresh_sessions: removeRefreshSession(user.refresh_sessions, presentedRefreshToken) }
+                        // Also clear the legacy single-slot fields if this was
+                        // that session — a session issued before the
+                        // multi-session migration still lives there.
+                        if (user.refresh_token === presentedRefreshToken) {
+                            update.refresh_token = ""
+                        }
+                        if (user.previous_refresh_token === presentedRefreshToken) {
+                            update.previous_refresh_token = ""
+                            update.previous_refresh_token_rotated_at = null
+                        }
+                        await UserModel.findByIdAndUpdate(userid, update)
+                    }
+                } else {
+                    // No token to target — fall back to clearing every
+                    // session rather than leaving a dangling one live.
+                    await UserModel.findByIdAndUpdate(userid, {
+                        refresh_token: "",
+                        previous_refresh_token: "",
+                        previous_refresh_token_rotated_at: null,
+                        refresh_sessions: []
+                    })
+                }
             } catch (error) {
                 console.log("Error updating user refresh token:", error.message)
             }
@@ -1363,16 +1488,14 @@ export async function refreshToken(request, response) {
 
             const userId = verifyToken?._id;
 
-            // A refresh token must still be the user's current server-side token,
-            // OR the one just rotated out within the grace window — a second
-            // tab/device can still be holding that previous token when this
-            // request lands. Logout clears both fields, so a logged-out token
+            // A refresh token must still belong to one of this user's live
+            // sessions (current token, the grace-window copy of one just
+            // rotated out, or the legacy single-slot pair for a session
+            // issued before multi-session support) — see authSession.js.
+            // Logout clears the matching session, so a logged-out token
             // cannot be reused either way.
-            const user = await UserModel.findById(userId).select('refresh_token previous_refresh_token previous_refresh_token_rotated_at');
-            const isValid = user && (
-                isCurrentRefreshToken(user.refresh_token, refreshToken) ||
-                isRefreshTokenInGraceWindow(user, refreshToken)
-            );
+            const user = await UserModel.findById(userId).select('refresh_token previous_refresh_token previous_refresh_token_rotated_at refresh_sessions status');
+            const isValid = isValidRefreshToken(user, refreshToken);
             if (!isValid) {
                 return response.status(401).json({
                     message: "Invalid or expired token",
@@ -1381,9 +1504,21 @@ export async function refreshToken(request, response) {
                 });
             }
 
+            // A suspended account must not be able to silently mint a fresh
+            // access token via refresh either — mirrors the same check the
+            // auth middleware applies per-request.
+            if (user.status !== 'Active') {
+                return response.status(401).json({
+                    message: "This account has been suspended",
+                    error: true,
+                    success: false,
+                    suspended: true
+                });
+            }
+
             // Generate new tokens
             const newAccessToken = await generatedAccessToken(userId);
-            const newRefreshToken = await genertedRefreshToken(userId);
+            const newRefreshToken = await genertedRefreshToken(userId, refreshToken);
 
             // Keep last-active timestamp current for sessions kept alive via refresh
             await UserModel.findByIdAndUpdate(userId, {
@@ -2106,13 +2241,15 @@ export async function blockUserController(req, res) {
         user.suspensionEndDate = suspensionEndDate;
         user.suspensionDuration = duration;
 
-        // Kill the session outright: the auth middleware already rejects
-        // Suspended users on their next request, but clearing both refresh
-        // token slots means they can't silently mint a new access token via
-        // /refresh-token either, even inside the grace window.
+        // Kill every session outright: the auth middleware already rejects
+        // Suspended users on their next request, but clearing the refresh
+        // token slots (legacy pair and the multi-session list) means they
+        // can't silently mint a new access token via /refresh-token either,
+        // on any device, even inside the grace window.
         user.refresh_token = '';
         user.previous_refresh_token = '';
         user.previous_refresh_token_rotated_at = null;
+        user.refresh_sessions = [];
 
         await user.save();
         

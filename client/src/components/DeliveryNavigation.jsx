@@ -17,7 +17,7 @@ import SummaryApi from '../common/SummaryApi';
 import { nawiriBrand } from '../config/brand';
 import { useTheme } from '../context/ThemeContext';
 import { logout } from '../store/userSlice';
-import Axios from '../utils/Axios';
+import Axios, { stopSessionTimers } from '../utils/Axios';
 import AxiosToastError from '../utils/AxiosToastError';
 import { clearAuthStorage } from '../utils/authStorage';
 
@@ -90,20 +90,22 @@ const DeliveryNavigation = () => {
   };
 
   const handleLogout = async () => {
+    // Local state must clear even if the server call fails (offline, a 5xx,
+    // or an already-expired access token) — the old `if (success)` guard
+    // left a driver looking "logged in" locally with a dead session.
     try {
       const response = await Axios({
         ...SummaryApi.logout
       });
-      
-      if(response.data.success) {
-        dispatch(logout());
-        clearAuthStorage();
-        toast.success(response.data.message);
-        navigate("/");
-      }
+      toast.success(response.data.message || 'Logged out successfully');
     } catch (error) {
       console.error("Logout error:", error);
       AxiosToastError(error);
+    } finally {
+      dispatch(logout());
+      stopSessionTimers();
+      clearAuthStorage();
+      navigate("/");
     }
   };
   

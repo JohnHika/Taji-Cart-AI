@@ -35,6 +35,23 @@ const getFrontendBaseUrl = () => {
   }
 };
 
+// Mirrors the client-side check in client/src/utils/postLoginRedirect.js —
+// only a same-site relative path the SPA itself generated is safe to bounce
+// back to after OAuth. Anything absolute/protocol-relative could redirect
+// off-site, and looping back into the auth pages themselves defeats the point.
+const AUTH_PAGE_PATHS = new Set(['/', '/login', '/register', '/forgot-password', '/verification-otp', '/reset-password', '/verify-email', '/social-auth-success']);
+
+const sanitizeReturnTo = (value) => {
+  if (typeof value !== 'string' || !value.startsWith('/') || value.startsWith('//')) {
+    return null;
+  }
+  const pathname = value.split(/[?#]/)[0];
+  if (AUTH_PAGE_PATHS.has(pathname)) {
+    return null;
+  }
+  return value;
+};
+
 const buildFrontendRedirectUrl = (path, { query = {}, hash = {} } = {}) => {
   const frontendBaseUrl = getFrontendBaseUrl();
   const normalizedPath = path.startsWith('/') ? path : `/${path}`;
@@ -128,8 +145,13 @@ const handleSocialAuthSuccess = async (req, res) => {
       // Non-fatal — hash delivery may still work; do not block the redirect.
     }
 
-    // Get the returnTo parameter from query string or default to login
-    const returnTo = req.query.returnTo || '/';
+    // The original returnTo never survives the round trip to Google as a
+    // plain query param — Google's redirect back to our fixed callback URL
+    // only echoes `code` and `state`, dropping any other query params we set
+    // on the initial authorize redirect. It's carried instead as the OAuth
+    // `state` param (set below, on the /google route) and re-validated here
+    // in case /google/callback is ever hit directly with a forged state.
+    const returnTo = sanitizeReturnTo(req.query.state ? decodeURIComponent(req.query.state) : null) || '/';
 
     // Redirect to frontend with tokens in the URL hash so edge/CDN layers do not
     // receive sensitive JWT query parameters (which can trigger 403 blocks).
@@ -196,7 +218,10 @@ const authenticateGoogleCallback = (req, res, next) => passport.authenticate(
 
     if (!user) {
       console.warn('Google OAuth callback was rejected:', info?.message || 'No user returned');
-      return res.redirect(buildOAuthFailureRedirect('Authentication failed'));
+      // `info.reason` carries a specific short code (e.g. a suspended
+      // account, set in passport.js) when the strategy's verify callback
+      // supplied one; otherwise fall back to the generic message.
+      return res.redirect(buildOAuthFailureRedirect(info?.reason || 'Authentication failed'));
     }
 
     req.user = user;
@@ -209,11 +234,16 @@ if (hasGoogleOAuthCredentials()) {
   // Availability probe for clients using HEAD
   router.head('/google', (req, res) => res.sendStatus(200));
   router.get('/google', (req, res, next) => {
-    const returnTo = req.query.returnTo || '/';
+    const returnTo = sanitizeReturnTo(req.query.returnTo) || '/';
 
     return passport.authenticate('google', {
       scope: ['profile', 'email'],
       callbackURL: GOOGLE_CALLBACK_URL,
+      // The only reliable way to carry our own data across the redirect to
+      // Google and back — Google echoes `state` verbatim on the callback,
+      // but drops any other query params we might have set here. Read back
+      // (and re-sanitized) as req.query.state in handleSocialAuthSuccess.
+      state: encodeURIComponent(returnTo),
     })(req, res, next);
   });
 
